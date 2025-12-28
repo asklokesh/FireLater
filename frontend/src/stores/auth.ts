@@ -30,7 +30,7 @@ export const useAuthStore = create<AuthState>()(
     (set, get) => ({
       user: null,
       tenantSlug: null,
-      isLoading: true,
+      isLoading: false, // Start with false - will be set to true only during actual auth operations
       isAuthenticated: false,
       error: null,
       _hasHydrated: false,
@@ -101,6 +101,7 @@ export const useAuthStore = create<AuthState>()(
               user: null,
               tenantSlug: null,
               isAuthenticated: false,
+              isLoading: false,
             });
           }
           return;

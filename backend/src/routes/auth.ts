@@ -12,7 +12,7 @@ const loginSchema = z.object({
 });
 
 const refreshSchema = z.object({
-  refreshToken: z.string().min(1),
+  refreshToken: z.string().optional(), // Can be empty if using httpOnly cookie
   tenant: z.string().min(1),
 });
 
