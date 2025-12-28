@@ -92,6 +92,13 @@ export default async function problemRoutes(app: FastifyInstance) {
   }, async (request, reply) => {
     const { tenantSlug } = request.user;
     const problem = await problemService.getById(tenantSlug, request.params.id);
+    if (!problem) {
+      return reply.status(404).send({
+        statusCode: 404,
+        error: 'Not Found',
+        message: `Problem with id '${request.params.id}' not found`,
+      });
+    }
     reply.send(problem);
   });
 

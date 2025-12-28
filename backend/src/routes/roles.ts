@@ -200,6 +200,45 @@ export default async function roleRoutes(app: FastifyInstance) {
     }
   });
 
+  // Delete role
+  app.delete<{ Params: { id: string } }>('/:id', {
+    preHandler: [requireRole('admin')],
+  }, async (request, reply) => {
+    const { tenantSlug } = request.user;
+    const schema = tenantService.getSchemaName(tenantSlug);
+
+    // Check if role exists and is not a system role
+    const existingResult = await pool.query(
+      `SELECT * FROM ${schema}.roles WHERE id = $1`,
+      [request.params.id]
+    );
+
+    if (existingResult.rows.length === 0) {
+      return reply.status(404).send({
+        statusCode: 404,
+        error: 'Not Found',
+        message: `Role with id '${request.params.id}' not found`,
+      });
+    }
+
+    const existing = existingResult.rows[0];
+    if (existing.is_system) {
+      return reply.status(400).send({
+        statusCode: 400,
+        error: 'Bad Request',
+        message: 'Cannot delete system roles',
+      });
+    }
+
+    // Delete role (cascade will handle role_permissions and user_roles)
+    await pool.query(
+      `DELETE FROM ${schema}.roles WHERE id = $1`,
+      [request.params.id]
+    );
+
+    reply.status(204).send();
+  });
+
   // List all permissions
   app.get('/permissions', {
     preHandler: [requirePermission('users:read')],
