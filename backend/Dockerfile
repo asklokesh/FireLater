@@ -34,9 +34,6 @@ RUN npm ci --only=production && npm cache clean --force
 # Copy built files from builder
 COPY --from=builder /app/dist ./dist
 
-# Copy email templates if they exist
-COPY --chown=firelater:nodejs src/templates ./dist/templates 2>/dev/null || true
-
 # Set ownership
 RUN chown -R firelater:nodejs /app
 
