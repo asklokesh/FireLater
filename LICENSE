@@ -1,0 +1,93 @@
+PROPRIETARY SOFTWARE LICENSE AGREEMENT
+
+Copyright (c) 2024 FireLater. All Rights Reserved.
+
+NOTICE: This is proprietary software. All rights are reserved by the copyright holder.
+
+1. DEFINITIONS
+
+"Software" means the FireLater ITSM Platform source code, documentation, and all
+associated files contained in this repository.
+
+"Licensor" means the copyright holder of this Software.
+
+"You" or "Licensee" means any individual or entity that accesses, views, or uses
+the Software.
+
+2. LICENSE RESTRICTIONS
+
+This Software is NOT open source. Subject to the terms of this Agreement:
+
+a) NO LICENSE GRANTED: No license, right, or permission is granted to any person
+   or entity to use, copy, modify, merge, publish, distribute, sublicense, sell,
+   or create derivative works of the Software, whether in source or binary form.
+
+b) VIEWING ONLY: The public availability of this repository is solely for
+   transparency and review purposes. Viewing the source code does not grant any
+   rights to use, copy, or distribute the Software.
+
+c) NO COMMERCIAL USE: Commercial use of this Software in any form is strictly
+   prohibited without explicit written permission from the Licensor.
+
+d) NO REDISTRIBUTION: Redistribution of the Software, in whole or in part, in
+   any form, is strictly prohibited.
+
+e) NO DERIVATIVE WORKS: Creation of derivative works based on this Software is
+   strictly prohibited.
+
+f) NO REVERSE ENGINEERING: Reverse engineering, decompilation, or disassembly of
+   any compiled portions of the Software is strictly prohibited.
+
+3. INTELLECTUAL PROPERTY
+
+All intellectual property rights, including but not limited to patents,
+copyrights, trademarks, trade secrets, and any other proprietary rights in and
+to the Software, remain the exclusive property of the Licensor.
+
+4. CONFIDENTIALITY
+
+The Software contains trade secrets and proprietary information of the Licensor.
+You agree to maintain the confidentiality of the Software and not to disclose
+any portion of the Software to any third party without the prior written consent
+of the Licensor.
+
+5. NO WARRANTY
+
+THE SOFTWARE IS PROVIDED "AS IS" WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE, TITLE, AND NON-INFRINGEMENT.
+
+6. LIMITATION OF LIABILITY
+
+IN NO EVENT SHALL THE LICENSOR BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR
+BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING
+IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY
+OF SUCH DAMAGE.
+
+7. TERMINATION
+
+Any violation of this Agreement will result in automatic termination of any
+implied rights and may result in legal action.
+
+8. GOVERNING LAW
+
+This Agreement shall be governed by and construed in accordance with the laws of
+the United States of America, without regard to its conflict of law provisions.
+
+9. ENTIRE AGREEMENT
+
+This Agreement constitutes the entire agreement between the parties concerning
+the Software and supersedes all prior or contemporaneous agreements,
+representations, warranties, and understandings.
+
+10. CONTACT
+
+For licensing inquiries, please contact the repository owner.
+
+BY ACCESSING THIS REPOSITORY, YOU ACKNOWLEDGE THAT YOU HAVE READ THIS LICENSE,
+UNDERSTAND IT, AND AGREE TO BE BOUND BY ITS TERMS AND CONDITIONS.
+
+ALL RIGHTS RESERVED.
