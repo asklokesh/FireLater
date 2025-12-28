@@ -92,6 +92,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Docker and Docker Compose support
 - Comprehensive test suite (86+ tests)
 
+## [1.1.0] - 2025-12-28
+
+### Added
+- Service Requests list page with filters and pagination
+- Pending Approvals dashboard with bulk approve/reject actions
+- Approval delegation API and UI for workflow flexibility
+- Problem RCA Tools (5 Whys analysis, Fishbone diagram, Summary generator)
+- CAB Meeting management UI with full lifecycle support
+- CAB Meeting API endpoints (CRUD, attendees, decisions)
+- Shift Swap workflow UI for on-call schedule management
+- Shift Swap API endpoints with approval workflow
+- iCal export for on-call schedules with token-based subscriptions
+- Real-time dashboard updates with 30-second auto-refresh
+- Microsoft Teams integration with Adaptive Cards
+- Enhanced Slack integration with Block Kit templates
+- Financial impact tracking for Problem records
+
+### Changed
+- Dashboard now uses react-query for data freshness indicators
+- On-call page consolidated with shift swap management tab
+
+### Database
+- Migration 019: RCA JSONB column for problems table
+- Migration 020: CAB meetings tables with indexes
+- Migration 021: Shift swap requests table
+- Migration 022: Financial tracking columns for problems
+- Migration 023: Calendar subscription table for iCal
+
 ## [Unreleased]
 
 ### Planned
