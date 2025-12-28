@@ -1,0 +1,515 @@
+import {
+  S3Client,
+  PutObjectCommand,
+  GetObjectCommand,
+  DeleteObjectCommand,
+} from '@aws-sdk/client-s3';
+import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
+import { createHash } from 'crypto';
+import { lookup } from 'mime-types';
+import { nanoid } from 'nanoid';
+import { config } from '../config/index.js';
+import { pool } from '../config/database.js';
+import { tenantService } from './tenant.js';
+import { logger } from '../utils/logger.js';
+import { NotFoundError, BadRequestError } from '../utils/errors.js';
+
+// ============================================
+// S3 CLIENT CONFIGURATION
+// ============================================
+
+const isConfigured = !!(config.s3.bucket && config.s3.accessKey && config.s3.secretKey);
+
+const s3Client = isConfigured
+  ? new S3Client({
+      endpoint: config.s3.endpoint,
+      region: config.s3.region,
+      credentials: {
+        accessKeyId: config.s3.accessKey!,
+        secretAccessKey: config.s3.secretKey!,
+      },
+      forcePathStyle: config.s3.forcePathStyle,
+    })
+  : null;
+
+// ============================================
+// TYPES
+// ============================================
+
+export type EntityType = 'issue' | 'change' | 'request' | 'application' | 'comment';
+
+export interface UploadOptions {
+  tenantSlug: string;
+  entityType: EntityType;
+  entityId: string;
+  filename: string;
+  content: Buffer | Uint8Array;
+  mimeType?: string;
+  uploadedBy: string;
+  metadata?: Record<string, unknown>;
+}
+
+export interface UploadResult {
+  id: string;
+  filename: string;
+  originalFilename: string;
+  fileSize: number;
+  mimeType: string;
+  storageKey: string;
+  checksum: string;
+}
+
+export interface AttachmentRecord {
+  id: string;
+  entity_type: string;
+  entity_id: string;
+  filename: string;
+  original_filename: string;
+  file_size: number;
+  mime_type: string;
+  file_extension: string;
+  storage_key: string;
+  uploaded_by: string;
+  uploaded_at: Date;
+  metadata: Record<string, unknown>;
+}
+
+// ============================================
+// ALLOWED FILE TYPES
+// ============================================
+
+const ALLOWED_MIME_TYPES = new Set([
+  // Documents
+  'application/pdf',
+  'application/msword',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  'application/vnd.ms-excel',
+  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  'application/vnd.ms-powerpoint',
+  'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+  'text/plain',
+  'text/csv',
+  'text/markdown',
+  'application/json',
+  'application/xml',
+  'text/xml',
+
+  // Images
+  'image/jpeg',
+  'image/png',
+  'image/gif',
+  'image/webp',
+  'image/svg+xml',
+  'image/bmp',
+
+  // Archives
+  'application/zip',
+  'application/x-tar',
+  'application/gzip',
+  'application/x-7z-compressed',
+
+  // Code/logs
+  'text/html',
+  'text/css',
+  'text/javascript',
+  'application/javascript',
+  'text/x-python',
+  'text/x-java',
+  'application/x-yaml',
+]);
+
+const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50 MB
+
+// ============================================
+// STORAGE SERVICE
+// ============================================
+
+class StorageService {
+  private bucket: string;
+
+  constructor() {
+    this.bucket = config.s3.bucket || 'firelater-attachments';
+  }
+
+  isConfigured(): boolean {
+    return isConfigured;
+  }
+
+  async upload(options: UploadOptions): Promise<UploadResult> {
+    const {
+      tenantSlug,
+      entityType,
+      entityId,
+      filename,
+      content,
+      mimeType,
+      uploadedBy,
+      metadata = {},
+    } = options;
+
+    // Validate file
+    const detectedMimeType = mimeType || lookup(filename) || 'application/octet-stream';
+
+    if (!ALLOWED_MIME_TYPES.has(detectedMimeType)) {
+      throw new BadRequestError(`File type not allowed: ${detectedMimeType}`);
+    }
+
+    const fileSize = content.length;
+    if (fileSize > MAX_FILE_SIZE) {
+      throw new BadRequestError(`File too large. Maximum size is ${MAX_FILE_SIZE / 1024 / 1024}MB`);
+    }
+
+    // Generate storage key
+    const fileExtension = this.getExtension(filename);
+    const uniqueId = nanoid(12);
+    const storedFilename = `${uniqueId}${fileExtension}`;
+    const storageKey = `${tenantSlug}/${entityType}/${entityId}/${storedFilename}`;
+
+    // Calculate checksum
+    const checksum = createHash('sha256').update(content).digest('hex');
+
+    // Upload to S3 (or simulate if not configured)
+    if (s3Client) {
+      await s3Client.send(
+        new PutObjectCommand({
+          Bucket: this.bucket,
+          Key: storageKey,
+          Body: content,
+          ContentType: detectedMimeType,
+          Metadata: {
+            originalFilename: filename,
+            uploadedBy,
+            checksum,
+          },
+        })
+      );
+    } else {
+      logger.info({ storageKey, fileSize }, 'File would be uploaded (S3 not configured)');
+    }
+
+    // Save to database
+    const schema = tenantService.getSchemaName(tenantSlug);
+
+    const result = await pool.query(
+      `INSERT INTO ${schema}.attachments (
+        entity_type, entity_id, filename, original_filename,
+        file_size, mime_type, file_extension, storage_key,
+        storage_bucket, checksum, metadata, uploaded_by
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+      RETURNING *`,
+      [
+        entityType,
+        entityId,
+        storedFilename,
+        filename,
+        fileSize,
+        detectedMimeType,
+        fileExtension,
+        storageKey,
+        this.bucket,
+        checksum,
+        JSON.stringify(metadata),
+        uploadedBy,
+      ]
+    );
+
+    logger.info(
+      { attachmentId: result.rows[0].id, storageKey, fileSize },
+      'File uploaded successfully'
+    );
+
+    return {
+      id: result.rows[0].id,
+      filename: storedFilename,
+      originalFilename: filename,
+      fileSize,
+      mimeType: detectedMimeType,
+      storageKey,
+      checksum,
+    };
+  }
+
+  async getDownloadUrl(
+    tenantSlug: string,
+    attachmentId: string,
+    expiresIn: number = 3600
+  ): Promise<string> {
+    const schema = tenantService.getSchemaName(tenantSlug);
+
+    const result = await pool.query(
+      `SELECT * FROM ${schema}.attachments WHERE id = $1 AND is_deleted = false`,
+      [attachmentId]
+    );
+
+    if (result.rows.length === 0) {
+      throw new NotFoundError('Attachment', attachmentId);
+    }
+
+    const attachment = result.rows[0];
+
+    if (!s3Client) {
+      // Return a mock URL for development
+      return `http://localhost:3001/mock-download/${attachment.storage_key}`;
+    }
+
+    const command = new GetObjectCommand({
+      Bucket: attachment.storage_bucket || this.bucket,
+      Key: attachment.storage_key,
+      ResponseContentDisposition: `attachment; filename="${attachment.original_filename}"`,
+    });
+
+    return getSignedUrl(s3Client, command, { expiresIn });
+  }
+
+  async getViewUrl(
+    tenantSlug: string,
+    attachmentId: string,
+    expiresIn: number = 3600
+  ): Promise<string> {
+    const schema = tenantService.getSchemaName(tenantSlug);
+
+    const result = await pool.query(
+      `SELECT * FROM ${schema}.attachments WHERE id = $1 AND is_deleted = false`,
+      [attachmentId]
+    );
+
+    if (result.rows.length === 0) {
+      throw new NotFoundError('Attachment', attachmentId);
+    }
+
+    const attachment = result.rows[0];
+
+    if (!s3Client) {
+      return `http://localhost:3001/mock-view/${attachment.storage_key}`;
+    }
+
+    const command = new GetObjectCommand({
+      Bucket: attachment.storage_bucket || this.bucket,
+      Key: attachment.storage_key,
+      ResponseContentType: attachment.mime_type,
+    });
+
+    return getSignedUrl(s3Client, command, { expiresIn });
+  }
+
+  async download(tenantSlug: string, attachmentId: string): Promise<{
+    content: Buffer;
+    filename: string;
+    mimeType: string;
+  }> {
+    const schema = tenantService.getSchemaName(tenantSlug);
+
+    const result = await pool.query(
+      `SELECT * FROM ${schema}.attachments WHERE id = $1 AND is_deleted = false`,
+      [attachmentId]
+    );
+
+    if (result.rows.length === 0) {
+      throw new NotFoundError('Attachment', attachmentId);
+    }
+
+    const attachment = result.rows[0];
+
+    if (!s3Client) {
+      throw new BadRequestError('S3 storage not configured');
+    }
+
+    const response = await s3Client.send(
+      new GetObjectCommand({
+        Bucket: attachment.storage_bucket || this.bucket,
+        Key: attachment.storage_key,
+      })
+    );
+
+    const content = Buffer.from(await response.Body!.transformToByteArray());
+
+    return {
+      content,
+      filename: attachment.original_filename,
+      mimeType: attachment.mime_type,
+    };
+  }
+
+  async delete(tenantSlug: string, attachmentId: string, deletedBy: string): Promise<void> {
+    const schema = tenantService.getSchemaName(tenantSlug);
+
+    const result = await pool.query(
+      `SELECT * FROM ${schema}.attachments WHERE id = $1 AND is_deleted = false`,
+      [attachmentId]
+    );
+
+    if (result.rows.length === 0) {
+      throw new NotFoundError('Attachment', attachmentId);
+    }
+
+    const attachment = result.rows[0];
+
+    // Soft delete in database
+    await pool.query(
+      `UPDATE ${schema}.attachments
+       SET is_deleted = true, deleted_at = NOW(), deleted_by = $2
+       WHERE id = $1`,
+      [attachmentId, deletedBy]
+    );
+
+    // Optionally delete from S3 (or keep for a retention period)
+    // For now, we'll keep the file but mark it as deleted
+    logger.info(
+      { attachmentId, storageKey: attachment.storage_key },
+      'Attachment marked as deleted'
+    );
+  }
+
+  async hardDelete(tenantSlug: string, attachmentId: string): Promise<void> {
+    const schema = tenantService.getSchemaName(tenantSlug);
+
+    const result = await pool.query(
+      `SELECT * FROM ${schema}.attachments WHERE id = $1`,
+      [attachmentId]
+    );
+
+    if (result.rows.length === 0) {
+      return;
+    }
+
+    const attachment = result.rows[0];
+
+    // Delete from S3
+    if (s3Client) {
+      try {
+        await s3Client.send(
+          new DeleteObjectCommand({
+            Bucket: attachment.storage_bucket || this.bucket,
+            Key: attachment.storage_key,
+          })
+        );
+      } catch (error) {
+        logger.warn({ err: error, storageKey: attachment.storage_key }, 'Failed to delete from S3');
+      }
+    }
+
+    // Delete from database
+    await pool.query(`DELETE FROM ${schema}.attachments WHERE id = $1`, [attachmentId]);
+
+    logger.info({ attachmentId, storageKey: attachment.storage_key }, 'Attachment permanently deleted');
+  }
+
+  async listByEntity(
+    tenantSlug: string,
+    entityType: EntityType,
+    entityId: string
+  ): Promise<AttachmentRecord[]> {
+    const schema = tenantService.getSchemaName(tenantSlug);
+
+    const result = await pool.query(
+      `SELECT a.*, u.name as uploaded_by_name
+       FROM ${schema}.attachments a
+       LEFT JOIN ${schema}.users u ON a.uploaded_by = u.id
+       WHERE a.entity_type = $1 AND a.entity_id = $2 AND a.is_deleted = false
+       ORDER BY a.uploaded_at DESC`,
+      [entityType, entityId]
+    );
+
+    return result.rows;
+  }
+
+  async getById(tenantSlug: string, attachmentId: string): Promise<AttachmentRecord | null> {
+    const schema = tenantService.getSchemaName(tenantSlug);
+
+    const result = await pool.query(
+      `SELECT a.*, u.name as uploaded_by_name
+       FROM ${schema}.attachments a
+       LEFT JOIN ${schema}.users u ON a.uploaded_by = u.id
+       WHERE a.id = $1 AND a.is_deleted = false`,
+      [attachmentId]
+    );
+
+    return result.rows[0] || null;
+  }
+
+  async getStorageUsage(tenantSlug: string): Promise<{
+    totalFiles: number;
+    totalSize: number;
+    byEntityType: Record<string, { files: number; size: number }>;
+  }> {
+    const schema = tenantService.getSchemaName(tenantSlug);
+
+    const result = await pool.query(
+      `SELECT entity_type, total_files, total_size
+       FROM ${schema}.storage_usage`
+    );
+
+    let totalFiles = 0;
+    let totalSize = 0;
+    const byEntityType: Record<string, { files: number; size: number }> = {};
+
+    for (const row of result.rows) {
+      totalFiles += parseInt(row.total_files, 10);
+      totalSize += parseInt(row.total_size, 10);
+      byEntityType[row.entity_type] = {
+        files: parseInt(row.total_files, 10),
+        size: parseInt(row.total_size, 10),
+      };
+    }
+
+    return { totalFiles, totalSize, byEntityType };
+  }
+
+  private getExtension(filename: string): string {
+    const lastDot = filename.lastIndexOf('.');
+    if (lastDot === -1) return '';
+    return filename.substring(lastDot).toLowerCase();
+  }
+
+  async generateUploadUrl(
+    tenantSlug: string,
+    entityType: EntityType,
+    entityId: string,
+    filename: string,
+    mimeType: string,
+    fileSize: number,
+    expiresIn: number = 3600
+  ): Promise<{
+    uploadUrl: string;
+    storageKey: string;
+    expiresAt: Date;
+  }> {
+    // Validate
+    if (!ALLOWED_MIME_TYPES.has(mimeType)) {
+      throw new BadRequestError(`File type not allowed: ${mimeType}`);
+    }
+    if (fileSize > MAX_FILE_SIZE) {
+      throw new BadRequestError(`File too large. Maximum size is ${MAX_FILE_SIZE / 1024 / 1024}MB`);
+    }
+
+    const fileExtension = this.getExtension(filename);
+    const uniqueId = nanoid(12);
+    const storedFilename = `${uniqueId}${fileExtension}`;
+    const storageKey = `${tenantSlug}/${entityType}/${entityId}/${storedFilename}`;
+
+    if (!s3Client) {
+      return {
+        uploadUrl: `http://localhost:3001/mock-upload/${storageKey}`,
+        storageKey,
+        expiresAt: new Date(Date.now() + expiresIn * 1000),
+      };
+    }
+
+    const command = new PutObjectCommand({
+      Bucket: this.bucket,
+      Key: storageKey,
+      ContentType: mimeType,
+      ContentLength: fileSize,
+    });
+
+    const uploadUrl = await getSignedUrl(s3Client, command, { expiresIn });
+
+    return {
+      uploadUrl,
+      storageKey,
+      expiresAt: new Date(Date.now() + expiresIn * 1000),
+    };
+  }
+}
+
+export const storageService = new StorageService();

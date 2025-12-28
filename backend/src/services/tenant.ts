@@ -1,0 +1,251 @@
+import { pool } from '../config/database.js';
+import { NotFoundError, ConflictError } from '../utils/errors.js';
+import { logger } from '../utils/logger.js';
+
+interface CreateTenantParams {
+  name: string;
+  slug: string;
+  planId?: string;
+  billingEmail?: string;
+  adminEmail: string;
+  adminName: string;
+  adminPassword: string;
+}
+
+interface Tenant {
+  id: string;
+  name: string;
+  slug: string;
+  plan_id: string | null;
+  status: string;
+  settings: Record<string, unknown>;
+  billing_email: string | null;
+  trial_ends_at: Date | null;
+  created_at: Date;
+  updated_at: Date;
+}
+
+export class TenantService {
+  async findBySlug(slug: string): Promise<Tenant | null> {
+    const result = await pool.query(
+      'SELECT * FROM tenants WHERE slug = $1',
+      [slug]
+    );
+    return result.rows[0] || null;
+  }
+
+  async findById(id: string): Promise<Tenant | null> {
+    const result = await pool.query(
+      'SELECT * FROM tenants WHERE id = $1',
+      [id]
+    );
+    return result.rows[0] || null;
+  }
+
+  async create(params: CreateTenantParams): Promise<Tenant> {
+    const client = await pool.connect();
+
+    try {
+      await client.query('BEGIN');
+
+      // Check if slug already exists
+      const existing = await client.query(
+        'SELECT id FROM tenants WHERE slug = $1',
+        [params.slug]
+      );
+
+      if (existing.rows.length > 0) {
+        throw new ConflictError(`Tenant with slug '${params.slug}' already exists`);
+      }
+
+      // Get default plan if not specified
+      let planId = params.planId;
+      if (!planId) {
+        const defaultPlan = await client.query(
+          "SELECT id FROM plans WHERE name = 'starter' LIMIT 1"
+        );
+        planId = defaultPlan.rows[0]?.id;
+      }
+
+      // Create tenant in public schema
+      const tenantResult = await client.query(
+        `INSERT INTO tenants (name, slug, plan_id, billing_email, trial_ends_at)
+         VALUES ($1, $2, $3, $4, NOW() + INTERVAL '14 days')
+         RETURNING *`,
+        [params.name, params.slug, planId, params.billingEmail]
+      );
+
+      const tenant = tenantResult.rows[0];
+      const schemaName = this.getSchemaName(params.slug);
+
+      // Create tenant schema by cloning template
+      await client.query(`CREATE SCHEMA ${schemaName}`);
+
+      // Copy all tables from template
+      const tables = await client.query(`
+        SELECT tablename FROM pg_tables WHERE schemaname = 'tenant_template'
+      `);
+
+      for (const row of tables.rows) {
+        await client.query(`
+          CREATE TABLE ${schemaName}.${row.tablename}
+          (LIKE tenant_template.${row.tablename} INCLUDING ALL)
+        `);
+      }
+
+      // Copy data from template tables
+      for (const row of tables.rows) {
+        await client.query(`
+          INSERT INTO ${schemaName}.${row.tablename}
+          SELECT * FROM tenant_template.${row.tablename}
+        `);
+      }
+
+      // Copy functions
+      await client.query(`
+        CREATE OR REPLACE FUNCTION ${schemaName}.next_id(p_entity_type VARCHAR(50))
+        RETURNS VARCHAR(50) AS $$
+        DECLARE
+            v_prefix VARCHAR(10);
+            v_next BIGINT;
+        BEGIN
+            UPDATE ${schemaName}.id_sequences
+            SET current_value = current_value + 1, updated_at = NOW()
+            WHERE entity_type = p_entity_type
+            RETURNING prefix, current_value INTO v_prefix, v_next;
+
+            RETURN v_prefix || '-' || LPAD(v_next::TEXT, 5, '0');
+        END;
+        $$ LANGUAGE plpgsql
+      `);
+
+      // Create admin user for this tenant
+      const bcrypt = await import('bcrypt');
+      const passwordHash = await bcrypt.hash(params.adminPassword, 12);
+
+      await client.query(`
+        INSERT INTO ${schemaName}.users (email, name, password_hash, status)
+        VALUES ($1, $2, $3, 'active')
+      `, [params.adminEmail, params.adminName, passwordHash]);
+
+      // Assign admin role to the user
+      await client.query(`
+        INSERT INTO ${schemaName}.user_roles (user_id, role_id)
+        SELECT u.id, r.id
+        FROM ${schemaName}.users u, ${schemaName}.roles r
+        WHERE u.email = $1 AND r.name = 'admin'
+      `, [params.adminEmail]);
+
+      await client.query('COMMIT');
+
+      logger.info({ tenantId: tenant.id, slug: params.slug }, 'Tenant created');
+      return tenant;
+    } catch (error) {
+      await client.query('ROLLBACK');
+      throw error;
+    } finally {
+      client.release();
+    }
+  }
+
+  async delete(slug: string): Promise<void> {
+    const client = await pool.connect();
+
+    try {
+      await client.query('BEGIN');
+
+      const tenant = await this.findBySlug(slug);
+      if (!tenant) {
+        throw new NotFoundError('Tenant', slug);
+      }
+
+      const schemaName = `tenant_${slug}`;
+      await client.query(`DROP SCHEMA IF EXISTS ${schemaName} CASCADE`);
+      await client.query('DELETE FROM tenants WHERE slug = $1', [slug]);
+
+      await client.query('COMMIT');
+      logger.info({ slug }, 'Tenant deleted');
+    } catch (error) {
+      await client.query('ROLLBACK');
+      throw error;
+    } finally {
+      client.release();
+    }
+  }
+
+  getSchemaName(slug: string): string {
+    // Replace hyphens with underscores for valid PostgreSQL schema names
+    const sanitizedSlug = slug.replace(/-/g, '_');
+    return `tenant_${sanitizedSlug}`;
+  }
+
+  async getSettings(slug: string): Promise<{ tenant: Tenant; settings: Record<string, unknown> }> {
+    const tenant = await this.findBySlug(slug);
+    if (!tenant) {
+      throw new NotFoundError('Tenant', slug);
+    }
+
+    return {
+      tenant: {
+        id: tenant.id,
+        name: tenant.name,
+        slug: tenant.slug,
+        plan_id: tenant.plan_id,
+        status: tenant.status,
+        settings: tenant.settings,
+        billing_email: tenant.billing_email,
+        trial_ends_at: tenant.trial_ends_at,
+        created_at: tenant.created_at,
+        updated_at: tenant.updated_at,
+      },
+      settings: tenant.settings || {},
+    };
+  }
+
+  async updateSettings(
+    slug: string,
+    updates: {
+      name?: string;
+      billingEmail?: string;
+      settings?: Record<string, unknown>;
+    }
+  ): Promise<Tenant> {
+    const tenant = await this.findBySlug(slug);
+    if (!tenant) {
+      throw new NotFoundError('Tenant', slug);
+    }
+
+    const setClauses: string[] = ['updated_at = NOW()'];
+    const values: unknown[] = [];
+    let paramIndex = 1;
+
+    if (updates.name !== undefined) {
+      setClauses.push(`name = $${paramIndex++}`);
+      values.push(updates.name);
+    }
+
+    if (updates.billingEmail !== undefined) {
+      setClauses.push(`billing_email = $${paramIndex++}`);
+      values.push(updates.billingEmail);
+    }
+
+    if (updates.settings !== undefined) {
+      // Merge with existing settings
+      const mergedSettings = { ...tenant.settings, ...updates.settings };
+      setClauses.push(`settings = $${paramIndex++}`);
+      values.push(JSON.stringify(mergedSettings));
+    }
+
+    values.push(slug);
+
+    const result = await pool.query(
+      `UPDATE tenants SET ${setClauses.join(', ')} WHERE slug = $${paramIndex} RETURNING *`,
+      values
+    );
+
+    logger.info({ slug }, 'Tenant settings updated');
+    return result.rows[0];
+  }
+}
+
+export const tenantService = new TenantService();

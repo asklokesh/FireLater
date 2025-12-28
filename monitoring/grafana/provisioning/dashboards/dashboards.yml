@@ -1,0 +1,11 @@
+apiVersion: 1
+
+providers:
+  - name: 'FireLater Dashboards'
+    orgId: 1
+    folder: 'FireLater'
+    type: file
+    disableDeletion: false
+    editable: true
+    options:
+      path: /var/lib/grafana/dashboards
