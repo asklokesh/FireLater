@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, FormEvent } from 'react';
 import Link from 'next/link';
 import {
   Plus,
@@ -12,9 +12,29 @@ import {
   ChevronRight,
   Shield,
   Loader2,
+  ArrowRightLeft,
+  X,
+  Check,
+  XCircle,
+  Send,
+  Eye,
+  Trash2,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { useOncallSchedules, useWhoIsOnCall, useIssues } from '@/hooks/useApi';
+import {
+  useOncallSchedules,
+  useWhoIsOnCall,
+  useIssues,
+  useMySwapRequests,
+  useAvailableSwaps,
+  useCreateSwapRequest,
+  useCancelSwapRequest,
+  useAcceptSwap,
+  useRejectSwap,
+  useUsers,
+  ShiftSwapRequest,
+  ShiftSwapStatus,
+} from '@/hooks/useApi';
 
 // Local interfaces for type safety
 interface OncallUser {
@@ -69,8 +89,793 @@ const severityColors: Record<string, { bg: string; text: string }> = {
   critical: { bg: 'bg-red-100', text: 'text-red-800' },
 };
 
+const swapStatusColors: Record<ShiftSwapStatus, { bg: string; text: string; label: string }> = {
+  pending: { bg: 'bg-yellow-100', text: 'text-yellow-800', label: 'Pending' },
+  accepted: { bg: 'bg-green-100', text: 'text-green-800', label: 'Accepted' },
+  rejected: { bg: 'bg-red-100', text: 'text-red-800', label: 'Rejected' },
+  cancelled: { bg: 'bg-gray-100', text: 'text-gray-800', label: 'Cancelled' },
+  expired: { bg: 'bg-gray-100', text: 'text-gray-600', label: 'Expired' },
+  completed: { bg: 'bg-blue-100', text: 'text-blue-800', label: 'Completed' },
+};
+
+// Create Swap Request Dialog
+function CreateSwapDialog({
+  isOpen,
+  onClose,
+  schedules,
+  users,
+}: {
+  isOpen: boolean;
+  onClose: () => void;
+  schedules: OncallSchedule[];
+  users: { id: string; name: string; email?: string }[];
+}) {
+  const [formData, setFormData] = useState({
+    scheduleId: '',
+    originalStart: '',
+    originalEnd: '',
+    offeredToUserId: '',
+    reason: '',
+    expiresAt: '',
+    offerToSpecific: false,
+  });
+  const [errors, setErrors] = useState<Record<string, string>>({});
+
+  const createSwap = useCreateSwapRequest();
+
+  const validateForm = () => {
+    const newErrors: Record<string, string> = {};
+
+    if (!formData.scheduleId) {
+      newErrors.scheduleId = 'Please select a schedule';
+    }
+    if (!formData.originalStart) {
+      newErrors.originalStart = 'Start date/time is required';
+    }
+    if (!formData.originalEnd) {
+      newErrors.originalEnd = 'End date/time is required';
+    }
+    if (formData.originalStart && formData.originalEnd) {
+      const start = new Date(formData.originalStart);
+      const end = new Date(formData.originalEnd);
+      if (end <= start) {
+        newErrors.originalEnd = 'End must be after start';
+      }
+    }
+    if (formData.offerToSpecific && !formData.offeredToUserId) {
+      newErrors.offeredToUserId = 'Please select a user';
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const handleSubmit = async (e: FormEvent) => {
+    e.preventDefault();
+    if (!validateForm()) return;
+
+    try {
+      await createSwap.mutateAsync({
+        scheduleId: formData.scheduleId,
+        originalStart: new Date(formData.originalStart).toISOString(),
+        originalEnd: new Date(formData.originalEnd).toISOString(),
+        offeredToUserId: formData.offerToSpecific ? formData.offeredToUserId : undefined,
+        reason: formData.reason || undefined,
+        expiresAt: formData.expiresAt ? new Date(formData.expiresAt).toISOString() : undefined,
+      });
+      onClose();
+      setFormData({
+        scheduleId: '',
+        originalStart: '',
+        originalEnd: '',
+        offeredToUserId: '',
+        reason: '',
+        expiresAt: '',
+        offerToSpecific: false,
+      });
+    } catch {
+      // Error handled by mutation
+    }
+  };
+
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center">
+      <div className="fixed inset-0 bg-black/50" onClick={onClose} />
+      <div className="relative bg-white rounded-lg shadow-xl w-full max-w-lg mx-4 max-h-[90vh] overflow-y-auto">
+        <div className="flex items-center justify-between p-4 border-b">
+          <h2 className="text-lg font-semibold text-gray-900">Request Shift Swap</h2>
+          <button onClick={onClose} className="p-1 hover:bg-gray-100 rounded">
+            <X className="h-5 w-5 text-gray-500" />
+          </button>
+        </div>
+
+        <form onSubmit={handleSubmit} className="p-4 space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Schedule <span className="text-red-500">*</span>
+            </label>
+            <select
+              value={formData.scheduleId}
+              onChange={(e) => setFormData({ ...formData, scheduleId: e.target.value })}
+              className={`w-full px-3 py-2 border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                errors.scheduleId ? 'border-red-500' : 'border-gray-300'
+              }`}
+            >
+              <option value="">Select a schedule</option>
+              {schedules.map((schedule) => (
+                <option key={schedule.id} value={schedule.id}>
+                  {schedule.name}
+                </option>
+              ))}
+            </select>
+            {errors.scheduleId && <p className="mt-1 text-sm text-red-500">{errors.scheduleId}</p>}
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Shift Start <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="datetime-local"
+                value={formData.originalStart}
+                onChange={(e) => setFormData({ ...formData, originalStart: e.target.value })}
+                className={`w-full px-3 py-2 border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                  errors.originalStart ? 'border-red-500' : 'border-gray-300'
+                }`}
+              />
+              {errors.originalStart && <p className="mt-1 text-sm text-red-500">{errors.originalStart}</p>}
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Shift End <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="datetime-local"
+                value={formData.originalEnd}
+                onChange={(e) => setFormData({ ...formData, originalEnd: e.target.value })}
+                className={`w-full px-3 py-2 border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                  errors.originalEnd ? 'border-red-500' : 'border-gray-300'
+                }`}
+              />
+              {errors.originalEnd && <p className="mt-1 text-sm text-red-500">{errors.originalEnd}</p>}
+            </div>
+          </div>
+
+          <div className="flex items-center space-x-2">
+            <input
+              type="checkbox"
+              id="offerToSpecific"
+              checked={formData.offerToSpecific}
+              onChange={(e) => setFormData({ ...formData, offerToSpecific: e.target.checked })}
+              className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+            />
+            <label htmlFor="offerToSpecific" className="text-sm text-gray-700">
+              Offer to a specific person
+            </label>
+          </div>
+
+          {formData.offerToSpecific && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Offer To <span className="text-red-500">*</span>
+              </label>
+              <select
+                value={formData.offeredToUserId}
+                onChange={(e) => setFormData({ ...formData, offeredToUserId: e.target.value })}
+                className={`w-full px-3 py-2 border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                  errors.offeredToUserId ? 'border-red-500' : 'border-gray-300'
+                }`}
+              >
+                <option value="">Select a user</option>
+                {users.map((user) => (
+                  <option key={user.id} value={user.id}>
+                    {user.name} {user.email ? `(${user.email})` : ''}
+                  </option>
+                ))}
+              </select>
+              {errors.offeredToUserId && <p className="mt-1 text-sm text-red-500">{errors.offeredToUserId}</p>}
+            </div>
+          )}
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Reason</label>
+            <textarea
+              value={formData.reason}
+              onChange={(e) => setFormData({ ...formData, reason: e.target.value })}
+              rows={3}
+              placeholder="Why do you need to swap this shift?"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Request Expires At</label>
+            <input
+              type="datetime-local"
+              value={formData.expiresAt}
+              onChange={(e) => setFormData({ ...formData, expiresAt: e.target.value })}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+            <p className="mt-1 text-xs text-gray-500">Leave empty for no expiration</p>
+          </div>
+
+          <div className="flex justify-end space-x-3 pt-4 border-t">
+            <Button type="button" variant="outline" onClick={onClose}>
+              Cancel
+            </Button>
+            <Button type="submit" isLoading={createSwap.isPending}>
+              <Send className="h-4 w-4 mr-2" />
+              Submit Request
+            </Button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+// Swap Detail Dialog
+function SwapDetailDialog({
+  swap,
+  isOpen,
+  onClose,
+  isMyRequest,
+}: {
+  swap: ShiftSwapRequest | null;
+  isOpen: boolean;
+  onClose: () => void;
+  isMyRequest: boolean;
+}) {
+  const [acceptMessage, setAcceptMessage] = useState('');
+  const [rejectMessage, setRejectMessage] = useState('');
+  const [showAcceptForm, setShowAcceptForm] = useState(false);
+  const [showRejectForm, setShowRejectForm] = useState(false);
+
+  const cancelSwap = useCancelSwapRequest();
+  const acceptSwap = useAcceptSwap();
+  const rejectSwap = useRejectSwap();
+
+  if (!isOpen || !swap) return null;
+
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString('en-US', {
+      weekday: 'short',
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+  };
+
+  const handleCancel = async () => {
+    try {
+      await cancelSwap.mutateAsync(swap.id);
+      onClose();
+    } catch {
+      // Error handled by mutation
+    }
+  };
+
+  const handleAccept = async () => {
+    try {
+      await acceptSwap.mutateAsync({ id: swap.id, message: acceptMessage || undefined });
+      onClose();
+    } catch {
+      // Error handled by mutation
+    }
+  };
+
+  const handleReject = async () => {
+    try {
+      await rejectSwap.mutateAsync({ id: swap.id, message: rejectMessage || undefined });
+      onClose();
+    } catch {
+      // Error handled by mutation
+    }
+  };
+
+  const status = swapStatusColors[swap.status];
+  const canAcceptOrReject = !isMyRequest && swap.status === 'pending';
+  const canCancel = isMyRequest && swap.status === 'pending';
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center">
+      <div className="fixed inset-0 bg-black/50" onClick={onClose} />
+      <div className="relative bg-white rounded-lg shadow-xl w-full max-w-lg mx-4 max-h-[90vh] overflow-y-auto">
+        <div className="flex items-center justify-between p-4 border-b">
+          <div className="flex items-center space-x-3">
+            <ArrowRightLeft className="h-5 w-5 text-blue-600" />
+            <h2 className="text-lg font-semibold text-gray-900">
+              Swap Request {swap.swap_number}
+            </h2>
+          </div>
+          <button onClick={onClose} className="p-1 hover:bg-gray-100 rounded">
+            <X className="h-5 w-5 text-gray-500" />
+          </button>
+        </div>
+
+        <div className="p-4 space-y-4">
+          {/* Status Badge */}
+          <div className="flex items-center justify-between">
+            <span className="text-sm text-gray-500">Status</span>
+            <span className={`px-2.5 py-0.5 rounded-full text-xs font-medium ${status.bg} ${status.text}`}>
+              {status.label}
+            </span>
+          </div>
+
+          {/* Schedule */}
+          <div className="flex items-center justify-between">
+            <span className="text-sm text-gray-500">Schedule</span>
+            <span className="text-sm font-medium text-gray-900">{swap.schedule_name}</span>
+          </div>
+
+          {/* Shift Dates */}
+          <div className="bg-gray-50 rounded-lg p-3 space-y-2">
+            <div className="flex items-center justify-between">
+              <span className="text-sm text-gray-500">Shift Start</span>
+              <span className="text-sm font-medium text-gray-900">{formatDate(swap.original_start)}</span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-sm text-gray-500">Shift End</span>
+              <span className="text-sm font-medium text-gray-900">{formatDate(swap.original_end)}</span>
+            </div>
+          </div>
+
+          {/* Requester */}
+          <div className="flex items-center justify-between">
+            <span className="text-sm text-gray-500">Requested By</span>
+            <span className="text-sm font-medium text-gray-900">{swap.requester_name}</span>
+          </div>
+
+          {/* Offered To */}
+          {swap.offered_to_name && (
+            <div className="flex items-center justify-between">
+              <span className="text-sm text-gray-500">Offered To</span>
+              <span className="text-sm font-medium text-gray-900">{swap.offered_to_name}</span>
+            </div>
+          )}
+
+          {/* Accepter */}
+          {swap.accepter_name && (
+            <div className="flex items-center justify-between">
+              <span className="text-sm text-gray-500">Accepted By</span>
+              <span className="text-sm font-medium text-green-600">{swap.accepter_name}</span>
+            </div>
+          )}
+
+          {/* Reason */}
+          {swap.reason && (
+            <div>
+              <span className="text-sm text-gray-500">Reason</span>
+              <p className="mt-1 text-sm text-gray-900 bg-gray-50 rounded-lg p-2">{swap.reason}</p>
+            </div>
+          )}
+
+          {/* Expires At */}
+          {swap.expires_at && (
+            <div className="flex items-center justify-between">
+              <span className="text-sm text-gray-500">Expires At</span>
+              <span className="text-sm font-medium text-gray-900">{formatDate(swap.expires_at)}</span>
+            </div>
+          )}
+
+          {/* Timeline */}
+          <div className="border-t pt-4">
+            <h4 className="text-sm font-medium text-gray-900 mb-3">Timeline</h4>
+            <div className="space-y-2 text-sm">
+              <div className="flex items-center space-x-2 text-gray-600">
+                <Clock className="h-4 w-4" />
+                <span>Created {formatDate(swap.created_at)}</span>
+              </div>
+              {swap.status === 'accepted' && swap.responded_at && (
+                <div className="flex items-center space-x-2 text-green-600">
+                  <Check className="h-4 w-4" />
+                  <span>Accepted {formatDate(swap.responded_at)}</span>
+                </div>
+              )}
+              {swap.status === 'rejected' && swap.responded_at && (
+                <div className="flex items-center space-x-2 text-red-600">
+                  <XCircle className="h-4 w-4" />
+                  <span>Rejected {formatDate(swap.responded_at)}</span>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Accept Form */}
+          {showAcceptForm && canAcceptOrReject && (
+            <div className="border-t pt-4 space-y-3">
+              <label className="block text-sm font-medium text-gray-700">Message (optional)</label>
+              <textarea
+                value={acceptMessage}
+                onChange={(e) => setAcceptMessage(e.target.value)}
+                rows={2}
+                placeholder="Add a message..."
+                className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+              />
+              <div className="flex justify-end space-x-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowAcceptForm(false)}
+                >
+                  Back
+                </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  onClick={handleAccept}
+                  isLoading={acceptSwap.isPending}
+                >
+                  <Check className="h-4 w-4 mr-1" />
+                  Confirm Accept
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {/* Reject Form */}
+          {showRejectForm && canAcceptOrReject && (
+            <div className="border-t pt-4 space-y-3">
+              <label className="block text-sm font-medium text-gray-700">Reason for rejection (optional)</label>
+              <textarea
+                value={rejectMessage}
+                onChange={(e) => setRejectMessage(e.target.value)}
+                rows={2}
+                placeholder="Add a reason..."
+                className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+              />
+              <div className="flex justify-end space-x-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowRejectForm(false)}
+                >
+                  Back
+                </Button>
+                <Button
+                  type="button"
+                  variant="danger"
+                  size="sm"
+                  onClick={handleReject}
+                  isLoading={rejectSwap.isPending}
+                >
+                  <XCircle className="h-4 w-4 mr-1" />
+                  Confirm Reject
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {/* Actions */}
+          {!showAcceptForm && !showRejectForm && (
+            <div className="flex justify-end space-x-3 pt-4 border-t">
+              {canCancel && (
+                <Button
+                  type="button"
+                  variant="danger"
+                  onClick={handleCancel}
+                  isLoading={cancelSwap.isPending}
+                >
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Cancel Request
+                </Button>
+              )}
+              {canAcceptOrReject && (
+                <>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => setShowRejectForm(true)}
+                  >
+                    <XCircle className="h-4 w-4 mr-2" />
+                    Reject
+                  </Button>
+                  <Button type="button" onClick={() => setShowAcceptForm(true)}>
+                    <Check className="h-4 w-4 mr-2" />
+                    Accept
+                  </Button>
+                </>
+              )}
+              {!canCancel && !canAcceptOrReject && (
+                <Button type="button" variant="outline" onClick={onClose}>
+                  Close
+                </Button>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Shift Swaps Tab Component
+function ShiftSwapsTab({ schedules }: { schedules: OncallSchedule[] }) {
+  const [showCreateDialog, setShowCreateDialog] = useState(false);
+  const [selectedSwap, setSelectedSwap] = useState<ShiftSwapRequest | null>(null);
+  const [showDetailDialog, setShowDetailDialog] = useState(false);
+  const [isMyRequestDetail, setIsMyRequestDetail] = useState(false);
+  const [activeSection, setActiveSection] = useState<'my-requests' | 'available'>('my-requests');
+
+  const { data: myRequestsData, isLoading: myRequestsLoading } = useMySwapRequests();
+  const { data: availableData, isLoading: availableLoading } = useAvailableSwaps();
+  const { data: usersData } = useUsers();
+
+  const myRequests: ShiftSwapRequest[] = myRequestsData?.data ?? [];
+  const availableSwaps: ShiftSwapRequest[] = availableData?.data ?? [];
+  const users = usersData?.data ?? [];
+
+  const cancelSwap = useCancelSwapRequest();
+  const acceptSwap = useAcceptSwap();
+  const rejectSwap = useRejectSwap();
+
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+  };
+
+  const openDetail = (swap: ShiftSwapRequest, isMyRequest: boolean) => {
+    setSelectedSwap(swap);
+    setIsMyRequestDetail(isMyRequest);
+    setShowDetailDialog(true);
+  };
+
+  const handleQuickCancel = async (id: string) => {
+    if (confirm('Are you sure you want to cancel this swap request?')) {
+      await cancelSwap.mutateAsync(id);
+    }
+  };
+
+  const handleQuickAccept = async (id: string) => {
+    await acceptSwap.mutateAsync({ id });
+  };
+
+  const handleQuickReject = async (id: string) => {
+    await rejectSwap.mutateAsync({ id });
+  };
+
+  return (
+    <div className="space-y-6">
+      {/* Header with Create Button */}
+      <div className="flex items-center justify-between">
+        <div className="flex space-x-4">
+          <button
+            onClick={() => setActiveSection('my-requests')}
+            className={`px-4 py-2 text-sm font-medium rounded-md ${
+              activeSection === 'my-requests'
+                ? 'bg-blue-100 text-blue-700'
+                : 'text-gray-600 hover:bg-gray-100'
+            }`}
+          >
+            My Requests
+            {myRequests.length > 0 && (
+              <span className="ml-2 bg-blue-600 text-white px-2 py-0.5 rounded-full text-xs">
+                {myRequests.length}
+              </span>
+            )}
+          </button>
+          <button
+            onClick={() => setActiveSection('available')}
+            className={`px-4 py-2 text-sm font-medium rounded-md ${
+              activeSection === 'available'
+                ? 'bg-blue-100 text-blue-700'
+                : 'text-gray-600 hover:bg-gray-100'
+            }`}
+          >
+            Available Swaps
+            {availableSwaps.length > 0 && (
+              <span className="ml-2 bg-green-600 text-white px-2 py-0.5 rounded-full text-xs">
+                {availableSwaps.length}
+              </span>
+            )}
+          </button>
+        </div>
+        <Button onClick={() => setShowCreateDialog(true)}>
+          <Plus className="h-4 w-4 mr-2" />
+          Request Swap
+        </Button>
+      </div>
+
+      {/* My Swap Requests Section */}
+      {activeSection === 'my-requests' && (
+        <div className="bg-white rounded-lg shadow overflow-hidden">
+          <div className="px-6 py-4 border-b border-gray-200">
+            <h2 className="text-lg font-semibold text-gray-900">My Swap Requests</h2>
+            <p className="mt-1 text-sm text-gray-500">Swap requests you have created</p>
+          </div>
+          {myRequestsLoading ? (
+            <div className="flex items-center justify-center h-48">
+              <Loader2 className="h-6 w-6 animate-spin text-blue-500" />
+              <span className="ml-2 text-gray-500">Loading your requests...</span>
+            </div>
+          ) : myRequests.length > 0 ? (
+            <ul className="divide-y divide-gray-200">
+              {myRequests.map((swap) => {
+                const status = swapStatusColors[swap.status];
+                return (
+                  <li key={swap.id} className="px-6 py-4 hover:bg-gray-50">
+                    <div className="flex items-center justify-between">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center space-x-3">
+                          <span className={`px-2.5 py-0.5 rounded-full text-xs font-medium ${status.bg} ${status.text}`}>
+                            {status.label}
+                          </span>
+                          <span className="text-sm font-medium text-gray-900">{swap.schedule_name}</span>
+                          <span className="text-xs text-gray-500">{swap.swap_number}</span>
+                        </div>
+                        <div className="mt-1 flex items-center space-x-4 text-sm text-gray-500">
+                          <span className="flex items-center">
+                            <Calendar className="h-4 w-4 mr-1" />
+                            {formatDate(swap.original_start)} - {formatDate(swap.original_end)}
+                          </span>
+                          {swap.offered_to_name && (
+                            <span className="flex items-center">
+                              <User className="h-4 w-4 mr-1" />
+                              Offered to: {swap.offered_to_name}
+                            </span>
+                          )}
+                          {swap.accepter_name && (
+                            <span className="flex items-center text-green-600">
+                              <Check className="h-4 w-4 mr-1" />
+                              Accepted by: {swap.accepter_name}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        {swap.status === 'pending' && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleQuickCancel(swap.id)}
+                            isLoading={cancelSwap.isPending}
+                          >
+                            <Trash2 className="h-4 w-4 text-red-500" />
+                          </Button>
+                        )}
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => openDetail(swap, true)}
+                        >
+                          <Eye className="h-4 w-4 text-gray-500" />
+                        </Button>
+                      </div>
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
+          ) : (
+            <div className="text-center py-12">
+              <ArrowRightLeft className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+              <h3 className="text-lg font-medium text-gray-900 mb-2">No swap requests</h3>
+              <p className="text-gray-500 mb-4">You have not created any swap requests yet</p>
+              <Button onClick={() => setShowCreateDialog(true)}>
+                <Plus className="h-4 w-4 mr-2" />
+                Request Swap
+              </Button>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Available Swaps Section */}
+      {activeSection === 'available' && (
+        <div className="bg-white rounded-lg shadow overflow-hidden">
+          <div className="px-6 py-4 border-b border-gray-200">
+            <h2 className="text-lg font-semibold text-gray-900">Available Swaps</h2>
+            <p className="mt-1 text-sm text-gray-500">Swap requests you can accept</p>
+          </div>
+          {availableLoading ? (
+            <div className="flex items-center justify-center h-48">
+              <Loader2 className="h-6 w-6 animate-spin text-blue-500" />
+              <span className="ml-2 text-gray-500">Loading available swaps...</span>
+            </div>
+          ) : availableSwaps.length > 0 ? (
+            <ul className="divide-y divide-gray-200">
+              {availableSwaps.map((swap) => (
+                <li key={swap.id} className="px-6 py-4 hover:bg-gray-50">
+                  <div className="flex items-center justify-between">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center space-x-3">
+                        <span className="text-sm font-medium text-gray-900">{swap.schedule_name}</span>
+                        <span className="text-xs text-gray-500">{swap.swap_number}</span>
+                      </div>
+                      <div className="mt-1 flex items-center space-x-4 text-sm text-gray-500">
+                        <span className="flex items-center">
+                          <User className="h-4 w-4 mr-1" />
+                          {swap.requester_name}
+                        </span>
+                        <span className="flex items-center">
+                          <Calendar className="h-4 w-4 mr-1" />
+                          {formatDate(swap.original_start)} - {formatDate(swap.original_end)}
+                        </span>
+                        {swap.expires_at && (
+                          <span className="flex items-center text-orange-600">
+                            <Clock className="h-4 w-4 mr-1" />
+                            Expires: {formatDate(swap.expires_at)}
+                          </span>
+                        )}
+                      </div>
+                      {swap.reason && (
+                        <p className="mt-1 text-sm text-gray-600 italic">&quot;{swap.reason}&quot;</p>
+                      )}
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleQuickReject(swap.id)}
+                        isLoading={rejectSwap.isPending}
+                      >
+                        <XCircle className="h-4 w-4 mr-1 text-red-500" />
+                        Reject
+                      </Button>
+                      <Button
+                        size="sm"
+                        onClick={() => handleQuickAccept(swap.id)}
+                        isLoading={acceptSwap.isPending}
+                      >
+                        <Check className="h-4 w-4 mr-1" />
+                        Accept
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => openDetail(swap, false)}
+                      >
+                        <Eye className="h-4 w-4 text-gray-500" />
+                      </Button>
+                    </div>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <div className="text-center py-12">
+              <ArrowRightLeft className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+              <h3 className="text-lg font-medium text-gray-900 mb-2">No available swaps</h3>
+              <p className="text-gray-500">There are no swap requests available for you to accept</p>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Create Dialog */}
+      <CreateSwapDialog
+        isOpen={showCreateDialog}
+        onClose={() => setShowCreateDialog(false)}
+        schedules={schedules}
+        users={users}
+      />
+
+      {/* Detail Dialog */}
+      <SwapDetailDialog
+        swap={selectedSwap}
+        isOpen={showDetailDialog}
+        onClose={() => {
+          setShowDetailDialog(false);
+          setSelectedSwap(null);
+        }}
+        isMyRequest={isMyRequestDetail}
+      />
+    </div>
+  );
+}
+
 export default function OnCallPage() {
-  const [activeTab, setActiveTab] = useState<'schedules' | 'incidents' | 'shifts'>('schedules');
+  const [activeTab, setActiveTab] = useState<'schedules' | 'incidents' | 'shifts' | 'swaps'>('schedules');
 
   const { data: schedulesData, isLoading: schedulesLoading, error: schedulesError } = useOncallSchedules({ is_active: true });
   const { data: whoIsOnCallData, isLoading: whoIsOnCallLoading } = useWhoIsOnCall();
@@ -209,6 +1014,17 @@ export default function OnCallPage() {
             }`}
           >
             Who is On-Call
+          </button>
+          <button
+            onClick={() => setActiveTab('swaps')}
+            className={`py-4 px-1 border-b-2 font-medium text-sm flex items-center ${
+              activeTab === 'swaps'
+                ? 'border-blue-500 text-blue-600'
+                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+            }`}
+          >
+            <ArrowRightLeft className="h-4 w-4 mr-1" />
+            Shift Swaps
           </button>
         </nav>
       </div>
@@ -404,6 +1220,9 @@ export default function OnCallPage() {
           )}
         </div>
       )}
+
+      {/* Shift Swaps Tab */}
+      {activeTab === 'swaps' && <ShiftSwapsTab schedules={schedules} />}
     </div>
   );
 }

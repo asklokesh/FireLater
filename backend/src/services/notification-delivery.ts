@@ -86,6 +86,8 @@ class NotificationDeliveryService {
         return this.deliverEmail(tenantSlug, channel.config, notification);
       case 'slack':
         return this.deliverSlack(channel.config, notification);
+      case 'teams':
+        return this.deliverTeams(channel.config, notification);
       case 'webhook':
         return this.deliverWebhook(channel.config, notification);
       case 'sms':
@@ -277,6 +279,86 @@ class NotificationDeliveryService {
       const message = error instanceof Error ? error.message : 'Slack API error';
       logger.error({ error }, 'Slack delivery failed');
       return { success: false, channelType: 'slack', error: message };
+    }
+  }
+
+  // ============================================
+  // MICROSOFT TEAMS DELIVERY
+  // ============================================
+
+  private async deliverTeams(
+    config: Record<string, unknown>,
+    notification: NotificationPayload
+  ): Promise<DeliveryResult> {
+    const webhookUrl = config.webhookUrl as string;
+
+    if (!webhookUrl) {
+      return { success: false, channelType: 'teams', error: 'Teams webhook URL not configured' };
+    }
+
+    try {
+      // Build Teams Adaptive Card
+      const card = {
+        type: 'message',
+        attachments: [{
+          contentType: 'application/vnd.microsoft.card.adaptive',
+          contentUrl: null,
+          content: {
+            $schema: 'http://adaptivecards.io/schemas/adaptive-card.json',
+            type: 'AdaptiveCard',
+            version: '1.4',
+            msteams: { width: 'Full' },
+            body: [
+              {
+                type: 'TextBlock',
+                text: notification.title,
+                size: 'Large',
+                weight: 'Bolder',
+              },
+              {
+                type: 'TextBlock',
+                text: notification.body || '',
+                wrap: true,
+              },
+              {
+                type: 'FactSet',
+                facts: [
+                  { title: 'Event', value: notification.eventType },
+                  { title: 'Entity', value: `${notification.entityType} ${notification.entityId || ''}`.trim() },
+                ],
+              },
+            ],
+            actions: notification.metadata?.url ? [{
+              type: 'Action.OpenUrl',
+              title: 'View Details',
+              url: notification.metadata.url,
+            }] : undefined,
+          },
+        }],
+      };
+
+      const response = await fetch(webhookUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(card),
+      });
+
+      if (!response.ok) {
+        throw new Error(`Teams webhook returned ${response.status}: ${response.statusText}`);
+      }
+
+      logger.info({
+        eventType: notification.eventType,
+      }, 'Teams notification sent');
+
+      return {
+        success: true,
+        channelType: 'teams',
+      };
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Teams API error';
+      logger.error({ error }, 'Teams delivery failed');
+      return { success: false, channelType: 'teams', error: message };
     }
   }
 

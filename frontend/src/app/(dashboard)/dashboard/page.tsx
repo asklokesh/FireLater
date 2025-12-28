@@ -1,5 +1,6 @@
 'use client';
 
+import { useState, useMemo, useCallback } from 'react';
 import Link from 'next/link';
 import {
   AlertCircle,
@@ -11,8 +12,15 @@ import {
   Loader2,
   ArrowUp,
   ArrowDown,
+  Radio,
+  Pause,
+  Play,
 } from 'lucide-react';
 import { useDashboard, useRecentActivity, useUpcomingChanges, useIssueTrends, useIssuesByPriority } from '@/hooks/useApi';
+import { useQueryClient } from '@tanstack/react-query';
+
+// Auto-refresh interval in milliseconds (30 seconds)
+const AUTO_REFRESH_INTERVAL = 30000;
 
 const statusColors: Record<string, string> = {
   open: 'bg-blue-100 text-blue-800',
@@ -148,11 +156,37 @@ function PriorityDistributionChart({ data }: { data: { priority: string; count: 
 }
 
 export default function DashboardPage() {
-  const { data: dashboardData, isLoading: dashboardLoading, error: dashboardError } = useDashboard();
-  const { data: activityData, isLoading: activityLoading } = useRecentActivity(10);
-  const { data: changesData, isLoading: changesLoading } = useUpcomingChanges(7);
-  const { data: trendsData, isLoading: trendsLoading } = useIssueTrends(14);
-  const { data: priorityData, isLoading: priorityLoading } = useIssuesByPriority();
+  const [autoRefresh, setAutoRefresh] = useState(true);
+  const [lastUpdatedKey, setLastUpdatedKey] = useState(0);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const queryClient = useQueryClient();
+
+  const refetchOptions = {
+    refetchInterval: autoRefresh ? AUTO_REFRESH_INTERVAL : false as const,
+  };
+
+  const { data: dashboardData, isLoading: dashboardLoading, error: dashboardError, isFetching: dashboardFetching, dataUpdatedAt } = useDashboard(refetchOptions);
+  const { data: activityData, isLoading: activityLoading, isFetching: activityFetching } = useRecentActivity(10, refetchOptions);
+  const { data: changesData, isLoading: changesLoading, isFetching: changesFetching } = useUpcomingChanges(7, refetchOptions);
+  const { data: trendsData, isLoading: trendsLoading, isFetching: trendsFetching } = useIssueTrends(14, refetchOptions);
+  const { data: priorityData, isLoading: priorityLoading, isFetching: priorityFetching } = useIssuesByPriority(refetchOptions);
+
+  const isAnyFetching = dashboardFetching || activityFetching || changesFetching || trendsFetching || priorityFetching;
+
+  // Derive last updated time from query's dataUpdatedAt timestamp
+  const lastUpdated = useMemo(() => {
+    // Use dataUpdatedAt from react-query if available, otherwise use current time
+    return dataUpdatedAt ? new Date(dataUpdatedAt) : new Date();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [dataUpdatedAt, lastUpdatedKey]);
+
+  // Manual refresh handler
+  const handleManualRefresh = useCallback(async () => {
+    setIsRefreshing(true);
+    await queryClient.invalidateQueries({ queryKey: ['dashboard'] });
+    setLastUpdatedKey(k => k + 1);
+    setIsRefreshing(false);
+  }, [queryClient]);
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
@@ -161,6 +195,14 @@ export default function DashboardPage() {
       day: 'numeric',
       hour: '2-digit',
       minute: '2-digit',
+    });
+  };
+
+  const formatLastUpdated = (date: Date) => {
+    return date.toLocaleTimeString('en-US', {
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
     });
   };
 
@@ -223,11 +265,55 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
-        <p className="mt-1 text-sm text-gray-500">
-          Overview of your IT service management metrics
-        </p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
+          <p className="mt-1 text-sm text-gray-500">
+            Overview of your IT service management metrics
+          </p>
+        </div>
+        <div className="flex items-center space-x-4">
+          {/* Last Updated Indicator */}
+          <div className="flex items-center text-sm text-gray-500">
+            {isAnyFetching && (
+              <Radio className="h-4 w-4 mr-2 text-blue-500 animate-pulse" />
+            )}
+            <span>Updated: {formatLastUpdated(lastUpdated)}</span>
+          </div>
+
+          {/* Auto-Refresh Toggle */}
+          <button
+            onClick={() => setAutoRefresh(!autoRefresh)}
+            className={`flex items-center px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
+              autoRefresh
+                ? 'bg-green-100 text-green-700 hover:bg-green-200'
+                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+            }`}
+            title={autoRefresh ? 'Auto-refresh enabled (30s)' : 'Auto-refresh disabled'}
+          >
+            {autoRefresh ? (
+              <>
+                <Pause className="h-4 w-4 mr-1.5" />
+                Live
+              </>
+            ) : (
+              <>
+                <Play className="h-4 w-4 mr-1.5" />
+                Paused
+              </>
+            )}
+          </button>
+
+          {/* Manual Refresh Button */}
+          <button
+            onClick={handleManualRefresh}
+            disabled={isRefreshing}
+            className="flex items-center px-3 py-1.5 bg-blue-600 text-white rounded-md text-sm font-medium hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          >
+            <RefreshCw className={`h-4 w-4 mr-1.5 ${isRefreshing ? 'animate-spin' : ''}`} />
+            Refresh
+          </button>
+        </div>
       </div>
 
       {/* Stats Grid */}

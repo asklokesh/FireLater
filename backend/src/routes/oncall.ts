@@ -1,8 +1,10 @@
 import { FastifyInstance } from 'fastify';
 import { z } from 'zod';
-import { oncallScheduleService, escalationPolicyService } from '../services/oncall.js';
-import { requirePermission } from '../middleware/auth.js';
+import { oncallScheduleService, escalationPolicyService, icalExportService } from '../services/oncall.js';
+import { shiftSwapService } from '../services/shiftSwaps.js';
+import { requirePermission, optionalAuth } from '../middleware/auth.js';
 import { parsePagination, createPaginatedResponse } from '../utils/pagination.js';
+import { tenantService } from '../services/tenant.js';
 
 // ============================================
 // SCHEDULE SCHEMAS
@@ -87,6 +89,34 @@ const addStepSchema = z.object({
   userId: z.string().uuid().optional(),
   groupId: z.string().uuid().optional(),
   notificationChannels: z.array(z.enum(['email', 'sms', 'slack', 'phone'])).optional(),
+});
+
+// ============================================
+// SHIFT SWAP SCHEMAS
+// ============================================
+
+const createShiftSwapSchema = z.object({
+  scheduleId: z.string().uuid(),
+  originalStart: z.string().datetime(),
+  originalEnd: z.string().datetime(),
+  offeredToUserId: z.string().uuid().optional(),
+  originalShiftId: z.string().uuid().optional(),
+  reason: z.string().max(500).optional(),
+  expiresAt: z.string().datetime().optional(),
+});
+
+const updateShiftSwapSchema = z.object({
+  reason: z.string().max(500).optional(),
+  offeredToUserId: z.string().uuid().nullable().optional(),
+  expiresAt: z.string().datetime().nullable().optional(),
+});
+
+const swapResponseSchema = z.object({
+  message: z.string().max(500).optional(),
+});
+
+const adminApproveSchema = z.object({
+  accepterUserId: z.string().uuid().optional(),
 });
 
 export default async function oncallRoutes(app: FastifyInstance) {
@@ -444,5 +474,236 @@ export default async function oncallRoutes(app: FastifyInstance) {
 
     await escalationPolicyService.deleteStep(tenantSlug, request.params.id, request.params.stepId);
     reply.status(204).send();
+  });
+
+  // ========================================
+  // SHIFT SWAPS
+  // ========================================
+
+  // List all shift swap requests with pagination and filters
+  app.get('/shift-swaps', {
+    preHandler: [requirePermission('oncall:read')],
+  }, async (request, reply) => {
+    const { tenantSlug } = request.user;
+    const query = request.query as Record<string, string>;
+    const pagination = parsePagination(query);
+
+    const filters = {
+      scheduleId: query.schedule_id,
+      status: query.status,
+      requesterId: query.requester_id,
+      offeredToUserId: query.offered_to_user_id,
+      fromDate: query.from_date,
+      toDate: query.to_date,
+    };
+
+    const { swaps, total } = await shiftSwapService.list(tenantSlug, pagination, filters);
+    reply.send(createPaginatedResponse(swaps, total, pagination));
+  });
+
+  // Get current user's outgoing swap requests
+  app.get('/shift-swaps/my-requests', {
+    preHandler: [requirePermission('oncall:read')],
+  }, async (request, reply) => {
+    const { tenantSlug, userId } = request.user;
+
+    const swaps = await shiftSwapService.getMyRequests(tenantSlug, userId);
+    reply.send({ data: swaps });
+  });
+
+  // Get swaps available for current user to accept
+  app.get('/shift-swaps/available', {
+    preHandler: [requirePermission('oncall:read')],
+  }, async (request, reply) => {
+    const { tenantSlug, userId } = request.user;
+
+    const swaps = await shiftSwapService.getAvailableToAccept(tenantSlug, userId);
+    reply.send({ data: swaps });
+  });
+
+  // Get shift swap by ID
+  app.get<{ Params: { id: string } }>('/shift-swaps/:id', {
+    preHandler: [requirePermission('oncall:read')],
+  }, async (request, reply) => {
+    const { tenantSlug } = request.user;
+
+    const swap = await shiftSwapService.getById(tenantSlug, request.params.id);
+    reply.send(swap);
+  });
+
+  // Create new shift swap request
+  app.post('/shift-swaps', {
+    preHandler: [requirePermission('oncall:update')],
+  }, async (request, reply) => {
+    const { tenantSlug, userId } = request.user;
+    const body = createShiftSwapSchema.parse(request.body);
+
+    const swap = await shiftSwapService.create(tenantSlug, userId, body);
+    reply.status(201).send(swap);
+  });
+
+  // Update swap request (reason, offeredToUserId, expiresAt)
+  app.put<{ Params: { id: string } }>('/shift-swaps/:id', {
+    preHandler: [requirePermission('oncall:update')],
+  }, async (request, reply) => {
+    const { tenantSlug, userId } = request.user;
+    const body = updateShiftSwapSchema.parse(request.body);
+
+    const swap = await shiftSwapService.update(tenantSlug, request.params.id, userId, body);
+    reply.send(swap);
+  });
+
+  // Cancel own swap request
+  app.post<{ Params: { id: string } }>('/shift-swaps/:id/cancel', {
+    preHandler: [requirePermission('oncall:update')],
+  }, async (request, reply) => {
+    const { tenantSlug, userId } = request.user;
+
+    const swap = await shiftSwapService.cancel(tenantSlug, request.params.id, userId);
+    reply.send(swap);
+  });
+
+  // Accept a swap offer
+  app.post<{ Params: { id: string } }>('/shift-swaps/:id/accept', {
+    preHandler: [requirePermission('oncall:update')],
+  }, async (request, reply) => {
+    const { tenantSlug, userId } = request.user;
+    const body = swapResponseSchema.parse(request.body || {});
+
+    const swap = await shiftSwapService.accept(tenantSlug, request.params.id, userId, body.message);
+    reply.send(swap);
+  });
+
+  // Reject a swap offer (if specifically offered)
+  app.post<{ Params: { id: string } }>('/shift-swaps/:id/reject', {
+    preHandler: [requirePermission('oncall:update')],
+  }, async (request, reply) => {
+    const { tenantSlug, userId } = request.user;
+    const body = swapResponseSchema.parse(request.body || {});
+
+    const swap = await shiftSwapService.reject(tenantSlug, request.params.id, userId, body.message);
+    reply.send(swap);
+  });
+
+  // Admin force-approve a swap
+  app.post<{ Params: { id: string } }>('/shift-swaps/:id/admin-approve', {
+    preHandler: [requirePermission('oncall:manage')],
+  }, async (request, reply) => {
+    const { tenantSlug, userId } = request.user;
+    const body = adminApproveSchema.parse(request.body || {});
+
+    const swap = await shiftSwapService.adminApprove(
+      tenantSlug,
+      request.params.id,
+      userId,
+      body.accepterUserId
+    );
+    reply.send(swap);
+  });
+
+  // Get swap statistics for a schedule
+  app.get<{ Params: { scheduleId: string } }>('/shift-swaps/schedule/:scheduleId/stats', {
+    preHandler: [requirePermission('oncall:read')],
+  }, async (request, reply) => {
+    const { tenantSlug } = request.user;
+    const query = request.query as Record<string, string>;
+
+    const stats = await shiftSwapService.getScheduleStats(
+      tenantSlug,
+      request.params.scheduleId,
+      query.from_date,
+      query.to_date
+    );
+    reply.send(stats);
+  });
+
+  // ============================================
+  // ICAL EXPORT ROUTES
+  // ============================================
+
+  // Get iCal export for a schedule (authenticated)
+  app.get<{ Params: { scheduleId: string } }>('/schedules/:scheduleId/ical', {
+    preHandler: [requirePermission('oncall:read')],
+  }, async (request, reply) => {
+    const { tenantSlug, userId } = request.user;
+    const query = request.query as Record<string, string>;
+
+    const from = query.from ? new Date(query.from) : undefined;
+    const to = query.to ? new Date(query.to) : undefined;
+
+    const icalContent = await icalExportService.generateICalendar(tenantSlug, {
+      scheduleId: request.params.scheduleId,
+      from,
+      to,
+      userId: query.user_id || userId,
+    });
+
+    reply
+      .header('Content-Type', 'text/calendar; charset=utf-8')
+      .header('Content-Disposition', `attachment; filename="oncall-schedule.ics"`)
+      .send(icalContent);
+  });
+
+  // Create a calendar subscription token
+  app.post<{ Params: { scheduleId: string } }>('/schedules/:scheduleId/ical/subscribe', {
+    preHandler: [requirePermission('oncall:read')],
+  }, async (request, reply) => {
+    const { tenantSlug, userId } = request.user;
+
+    const { token, url } = await icalExportService.createSubscriptionToken(
+      tenantSlug,
+      request.params.scheduleId,
+      userId
+    );
+
+    reply.send({ token, url });
+  });
+
+  // Public iCal subscription endpoint (token-based auth)
+  app.get<{ Params: { scheduleId: string; token: string } }>('/schedules/:scheduleId/ical/subscribe/:token', {
+    preHandler: [optionalAuth],
+  }, async (request, reply) => {
+    const query = request.query as Record<string, string>;
+
+    // Look up tenant from schedule and validate token (searches all tenant schemas)
+    const subscription = await icalExportService.validatePublicSubscriptionToken(
+      request.params.scheduleId,
+      request.params.token
+    );
+
+    if (!subscription) {
+      reply.code(401).send({ error: 'Invalid or expired subscription token' });
+      return;
+    }
+
+    const from = query.from ? new Date(query.from) : undefined;
+    const to = query.to ? new Date(query.to) : undefined;
+
+    const icalContent = await icalExportService.generateICalendar(subscription.tenantSlug, {
+      scheduleId: request.params.scheduleId,
+      from,
+      to,
+      userId: subscription.filterUserId || subscription.userId,
+    });
+
+    reply
+      .header('Content-Type', 'text/calendar; charset=utf-8')
+      .header('Cache-Control', 'no-cache, no-store, must-revalidate')
+      .send(icalContent);
+  });
+
+  // Revoke a calendar subscription
+  app.delete<{ Params: { scheduleId: string } }>('/schedules/:scheduleId/ical/subscribe', {
+    preHandler: [requirePermission('oncall:read')],
+  }, async (request, reply) => {
+    const { tenantSlug, userId } = request.user;
+
+    await icalExportService.revokeSubscriptionToken(
+      tenantSlug,
+      request.params.scheduleId,
+      userId
+    );
+
+    reply.send({ message: 'Subscription revoked' });
   });
 }

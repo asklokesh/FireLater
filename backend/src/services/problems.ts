@@ -19,6 +19,49 @@ interface CreateProblemParams {
   tags?: string[];
 }
 
+interface FiveWhyEntry {
+  why: string;
+  answer: string;
+}
+
+interface FishboneDiagram {
+  // Categories for fishbone diagram (Ishikawa)
+  people?: string[];
+  process?: string[];
+  equipment?: string[];
+  materials?: string[];
+  environment?: string[];
+  management?: string[];
+  // Custom categories
+  [key: string]: string[] | undefined;
+}
+
+interface RcaData {
+  fiveWhys?: FiveWhyEntry[];
+  fishbone?: FishboneDiagram;
+  summary?: string;
+  analysisDate?: string;
+  analyzedBy?: string;
+}
+
+interface CostBreakdown {
+  labor_hours?: number;
+  labor_rate?: number;
+  revenue_loss?: number;
+  recovery_costs?: number;
+  third_party_costs?: number;
+  customer_credits?: number;
+  other?: number;
+}
+
+interface FinancialImpactParams {
+  estimated?: number | null;
+  actual?: number | null;
+  currency?: string;
+  notes?: string | null;
+  costBreakdown?: CostBreakdown | null;
+}
+
 interface UpdateProblemParams {
   title?: string;
   description?: string;
@@ -34,6 +77,7 @@ interface UpdateProblemParams {
   resolution?: string;
   resolutionCode?: string;
   tags?: string[];
+  rcaData?: RcaData;
 }
 
 interface Problem {
@@ -72,6 +116,12 @@ interface Problem {
   recurrence_count: number;
   sla_breached: boolean;
   tags: string[] | null;
+  rca_data: RcaData | null;
+  financial_impact_estimated: number | null;
+  financial_impact_actual: number | null;
+  financial_impact_currency: string;
+  financial_impact_notes: string | null;
+  cost_breakdown: CostBreakdown | null;
   created_at: Date;
   updated_at: Date;
 }
@@ -313,6 +363,10 @@ export class ProblemService {
     if (params.tags !== undefined) {
       updates.push(`tags = $${paramIndex++}`);
       values.push(params.tags);
+    }
+    if (params.rcaData !== undefined) {
+      updates.push(`rca_data = $${paramIndex++}`);
+      values.push(JSON.stringify(params.rcaData));
     }
 
     if (updates.length === 0) {
@@ -576,6 +630,85 @@ export class ProblemService {
        WHERE id = $1`,
       [problemId]
     );
+  }
+
+  async updateFinancialImpact(tenantSlug: string, problemId: string, params: FinancialImpactParams): Promise<Problem> {
+    const schema = tenantService.getSchemaName(tenantSlug);
+
+    // Verify problem exists
+    await this.getById(tenantSlug, problemId);
+
+    const updates: string[] = [];
+    const values: unknown[] = [];
+    let paramIndex = 1;
+
+    if (params.estimated !== undefined) {
+      updates.push(`financial_impact_estimated = $${paramIndex++}`);
+      values.push(params.estimated);
+    }
+    if (params.actual !== undefined) {
+      updates.push(`financial_impact_actual = $${paramIndex++}`);
+      values.push(params.actual);
+    }
+    if (params.currency !== undefined) {
+      updates.push(`financial_impact_currency = $${paramIndex++}`);
+      values.push(params.currency);
+    }
+    if (params.notes !== undefined) {
+      updates.push(`financial_impact_notes = $${paramIndex++}`);
+      values.push(params.notes);
+    }
+    if (params.costBreakdown !== undefined) {
+      updates.push(`cost_breakdown = $${paramIndex++}`);
+      values.push(params.costBreakdown ? JSON.stringify(params.costBreakdown) : null);
+    }
+
+    if (updates.length === 0) {
+      return this.getById(tenantSlug, problemId);
+    }
+
+    updates.push('updated_at = NOW()');
+
+    const result = await pool.query(
+      `UPDATE ${schema}.problems SET ${updates.join(', ')} WHERE id = $${paramIndex} RETURNING *`,
+      [...values, problemId]
+    );
+
+    logger.info({ problemId, financialImpact: params }, 'Financial impact updated');
+
+    return result.rows[0];
+  }
+
+  async getFinancialImpact(tenantSlug: string, problemId: string): Promise<{
+    estimated: number | null;
+    actual: number | null;
+    currency: string;
+    notes: string | null;
+    costBreakdown: CostBreakdown | null;
+    calculatedTotal: number;
+  }> {
+    const problem = await this.getById(tenantSlug, problemId);
+
+    // Calculate total from cost breakdown if available
+    let calculatedTotal = 0;
+    if (problem.cost_breakdown) {
+      const breakdown = problem.cost_breakdown;
+      calculatedTotal += (breakdown.labor_hours || 0) * (breakdown.labor_rate || 0);
+      calculatedTotal += breakdown.revenue_loss || 0;
+      calculatedTotal += breakdown.recovery_costs || 0;
+      calculatedTotal += breakdown.third_party_costs || 0;
+      calculatedTotal += breakdown.customer_credits || 0;
+      calculatedTotal += breakdown.other || 0;
+    }
+
+    return {
+      estimated: problem.financial_impact_estimated,
+      actual: problem.financial_impact_actual,
+      currency: problem.financial_impact_currency,
+      notes: problem.financial_impact_notes,
+      costBreakdown: problem.cost_breakdown,
+      calculatedTotal,
+    };
   }
 }
 

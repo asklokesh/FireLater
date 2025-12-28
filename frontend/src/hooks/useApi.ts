@@ -20,6 +20,8 @@ import {
   assetApi,
   emailApi,
   integrationsApi,
+  requestsApi,
+  cabMeetingsApi,
 } from '@/lib/api';
 
 // Types
@@ -98,6 +100,20 @@ export interface Problem {
   resolver_name?: string;
   closed_at?: string;
   tags?: string[];
+  rca_data?: {
+    fiveWhys?: Array<{ why: string; answer: string }>;
+    fishbone?: {
+      people?: string[];
+      process?: string[];
+      equipment?: string[];
+      materials?: string[];
+      environment?: string[];
+      management?: string[];
+    };
+    summary?: string;
+    analysisDate?: string;
+    analyzedBy?: string;
+  };
   created_at: string;
   updated_at: string;
 }
@@ -604,6 +620,20 @@ export function useUpdateProblem() {
         resolution: string;
         resolutionCode: string;
         tags: string[];
+        rcaData: {
+          fiveWhys?: Array<{ why: string; answer: string }>;
+          fishbone?: {
+            people?: string[];
+            process?: string[];
+            equipment?: string[];
+            materials?: string[];
+            environment?: string[];
+            management?: string[];
+          };
+          summary?: string;
+          analysisDate?: string;
+          analyzedBy?: string;
+        };
       }>
     }) => problemsApi.update(id, data),
     onSuccess: (_, { id }) => {
@@ -1206,45 +1236,62 @@ export function useDeleteDashboardWidget() {
 }
 
 // Dashboard Hooks
-export function useDashboard() {
+interface RealTimeOptions {
+  enabled?: boolean;
+  refetchInterval?: number | false;
+}
+
+export function useDashboard(options?: RealTimeOptions) {
   return useQuery({
     queryKey: queryKeys.dashboard,
     queryFn: () => dashboardApi.getOverview(),
+    refetchInterval: options?.refetchInterval ?? false,
+    enabled: options?.enabled ?? true,
   });
 }
 
-export function useDashboardMobile() {
+export function useDashboardMobile(options?: RealTimeOptions) {
   return useQuery({
     queryKey: [...queryKeys.dashboard, 'mobile'],
     queryFn: () => dashboardApi.getMobileSummary(),
+    refetchInterval: options?.refetchInterval ?? false,
+    enabled: options?.enabled ?? true,
   });
 }
 
-export function useIssueTrends(days?: number) {
+export function useIssueTrends(days?: number, options?: RealTimeOptions) {
   return useQuery({
     queryKey: [...queryKeys.dashboard, 'issue-trends', days],
     queryFn: () => dashboardApi.getIssueTrends(days),
+    refetchInterval: options?.refetchInterval ?? false,
+    enabled: options?.enabled ?? true,
   });
 }
 
-export function useIssuesByPriority() {
+export function useIssuesByPriority(options?: RealTimeOptions) {
   return useQuery({
     queryKey: [...queryKeys.dashboard, 'issues-by-priority'],
     queryFn: () => dashboardApi.getIssuesByPriority(),
+    refetchInterval: options?.refetchInterval ?? false,
+    enabled: options?.enabled ?? true,
   });
 }
 
-export function useRecentActivity(limit?: number) {
+export function useRecentActivity(limit?: number, options?: RealTimeOptions) {
   return useQuery({
     queryKey: [...queryKeys.dashboard, 'activity', limit],
     queryFn: () => dashboardApi.getRecentActivity(limit),
+    refetchInterval: options?.refetchInterval ?? false,
+    enabled: options?.enabled ?? true,
   });
 }
 
-export function useUpcomingChanges(days?: number) {
+export function useUpcomingChanges(days?: number, options?: RealTimeOptions) {
   return useQuery({
     queryKey: [...queryKeys.dashboard, 'upcoming-changes', days],
     queryFn: () => dashboardApi.getUpcomingChanges(days),
+    refetchInterval: options?.refetchInterval ?? false,
+    enabled: options?.enabled ?? true,
   });
 }
 
@@ -1678,6 +1725,169 @@ export function useDeletePolicyStep() {
     onSuccess: (_, { policyId }) => {
       queryClient.invalidateQueries({ queryKey: oncallQueryKeys.policies.steps(policyId) });
       queryClient.invalidateQueries({ queryKey: oncallQueryKeys.policies.detail(policyId) });
+    },
+  });
+}
+
+// Shift Swap Types
+export type ShiftSwapStatus = 'pending' | 'accepted' | 'rejected' | 'cancelled' | 'expired' | 'completed';
+
+export interface ShiftSwapRequest {
+  id: string;
+  swap_number: string;
+  schedule_id: string;
+  schedule_name: string;
+  requester_id: string;
+  requester_name: string;
+  requester_email?: string;
+  original_start: string;
+  original_end: string;
+  offered_to_user_id?: string;
+  offered_to_name?: string;
+  accepter_id?: string;
+  accepter_name?: string;
+  status: ShiftSwapStatus;
+  reason?: string;
+  response_message?: string;
+  requested_at: string;
+  responded_at?: string;
+  expires_at?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ShiftSwapEvent {
+  id: string;
+  swap_id: string;
+  event_type: 'created' | 'updated' | 'accepted' | 'rejected' | 'cancelled' | 'expired' | 'completed';
+  user_id: string;
+  user_name?: string;
+  message?: string;
+  created_at: string;
+}
+
+// Shift Swap Query Keys
+export const shiftSwapQueryKeys = {
+  all: ['oncall', 'swaps'] as const,
+  list: (params?: Record<string, unknown>) => ['oncall', 'swaps', 'list', params] as const,
+  detail: (id: string) => ['oncall', 'swaps', 'detail', id] as const,
+  myRequests: (params?: Record<string, unknown>) => ['oncall', 'swaps', 'my-requests', params] as const,
+  available: (params?: Record<string, unknown>) => ['oncall', 'swaps', 'available', params] as const,
+};
+
+// Shift Swap Hooks
+export function useShiftSwaps(params?: {
+  page?: number;
+  limit?: number;
+  status?: ShiftSwapStatus;
+  schedule_id?: string;
+  requester_id?: string;
+}) {
+  return useQuery({
+    queryKey: shiftSwapQueryKeys.list(params),
+    queryFn: () => oncallApi.listSwaps(params),
+  });
+}
+
+export function useShiftSwap(id: string) {
+  return useQuery({
+    queryKey: shiftSwapQueryKeys.detail(id),
+    queryFn: () => oncallApi.getSwap(id),
+    enabled: !!id,
+  });
+}
+
+export function useMySwapRequests(params?: { page?: number; limit?: number }) {
+  return useQuery({
+    queryKey: shiftSwapQueryKeys.myRequests(params),
+    queryFn: () => oncallApi.getMySwapRequests(params),
+  });
+}
+
+export function useAvailableSwaps(params?: { page?: number; limit?: number }) {
+  return useQuery({
+    queryKey: shiftSwapQueryKeys.available(params),
+    queryFn: () => oncallApi.getAvailableSwaps(params),
+  });
+}
+
+export function useCreateSwapRequest() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (data: {
+      scheduleId: string;
+      originalStart: string;
+      originalEnd: string;
+      offeredToUserId?: string;
+      reason?: string;
+      expiresAt?: string;
+    }) => oncallApi.createSwapRequest(data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: shiftSwapQueryKeys.all });
+    },
+  });
+}
+
+export function useUpdateSwapRequest() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, data }: {
+      id: string;
+      data: {
+        offeredToUserId?: string;
+        reason?: string;
+        expiresAt?: string;
+      };
+    }) => oncallApi.updateSwapRequest(id, data),
+    onSuccess: (_, { id }) => {
+      queryClient.invalidateQueries({ queryKey: shiftSwapQueryKeys.detail(id) });
+      queryClient.invalidateQueries({ queryKey: shiftSwapQueryKeys.all });
+    },
+  });
+}
+
+export function useCancelSwapRequest() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => oncallApi.cancelSwapRequest(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: shiftSwapQueryKeys.all });
+    },
+  });
+}
+
+export function useAcceptSwap() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, message }: { id: string; message?: string }) =>
+      oncallApi.acceptSwap(id, { message }),
+    onSuccess: (_, { id }) => {
+      queryClient.invalidateQueries({ queryKey: shiftSwapQueryKeys.detail(id) });
+      queryClient.invalidateQueries({ queryKey: shiftSwapQueryKeys.all });
+    },
+  });
+}
+
+export function useRejectSwap() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, message }: { id: string; message?: string }) =>
+      oncallApi.rejectSwap(id, { message }),
+    onSuccess: (_, { id }) => {
+      queryClient.invalidateQueries({ queryKey: shiftSwapQueryKeys.detail(id) });
+      queryClient.invalidateQueries({ queryKey: shiftSwapQueryKeys.all });
+    },
+  });
+}
+
+export function useAdminApproveSwap() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, message }: { id: string; message?: string }) =>
+      oncallApi.adminApproveSwap(id, { message }),
+    onSuccess: (_, { id }) => {
+      queryClient.invalidateQueries({ queryKey: shiftSwapQueryKeys.detail(id) });
+      queryClient.invalidateQueries({ queryKey: shiftSwapQueryKeys.all });
     },
   });
 }
@@ -3300,5 +3510,699 @@ export function useIntegrationLogs(integrationId: string, params?: { direction?:
     queryKey: integrationsQueryKeys.integrations.logs(integrationId, params),
     queryFn: () => integrationsApi.getIntegrationLogs(integrationId, params),
     enabled: !!integrationId,
+  });
+}
+
+// Service Request Types
+export interface ServiceRequest {
+  id: string;
+  request_number: string;
+  catalog_item_id: string;
+  catalog_item_name: string;
+  catalog_item_category?: string;
+  requester_id: string;
+  requester_name?: string;
+  requester_email?: string;
+  requested_for_id?: string;
+  requested_for_name?: string;
+  requested_for_email?: string;
+  status: 'submitted' | 'pending_approval' | 'approved' | 'rejected' | 'assigned' | 'in_progress' | 'pending' | 'completed' | 'cancelled';
+  priority: 'low' | 'medium' | 'high' | 'critical';
+  form_data: Record<string, unknown>;
+  notes?: string;
+  assigned_to_id?: string;
+  assigned_to_name?: string;
+  assigned_group_id?: string;
+  assigned_group_name?: string;
+  cost_center?: string;
+  expected_completion?: string;
+  completed_at?: string;
+  cancelled_at?: string;
+  cancellation_reason?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface RequestApproval {
+  id: string;
+  request_id: string;
+  approver_id: string;
+  approver_name?: string;
+  approver_email?: string;
+  status: 'pending' | 'approved' | 'rejected' | 'delegated';
+  comments?: string;
+  delegated_to_id?: string;
+  delegated_to_name?: string;
+  approved_at?: string;
+  rejected_at?: string;
+  created_at: string;
+}
+
+// Service Request Query Keys
+export const requestQueryKeys = {
+  all: ['requests'] as const,
+  list: (params?: Record<string, unknown>) => ['requests', 'list', params] as const,
+  detail: (id: string) => ['requests', 'detail', id] as const,
+  myRequests: (params?: Record<string, unknown>) => ['requests', 'my', params] as const,
+  assigned: (params?: Record<string, unknown>) => ['requests', 'assigned', params] as const,
+  pendingApprovals: (params?: Record<string, unknown>) => ['requests', 'pending-approvals', params] as const,
+  approvals: (id: string) => ['requests', 'approvals', id] as const,
+  comments: (id: string) => ['requests', 'comments', id] as const,
+  history: (id: string) => ['requests', 'history', id] as const,
+};
+
+// Service Request Hooks
+export function useServiceRequests(params?: {
+  page?: number;
+  limit?: number;
+  status?: string;
+  priority?: string;
+  catalogItemId?: string;
+  assignedTo?: string;
+  requesterId?: string;
+  search?: string;
+}) {
+  return useQuery({
+    queryKey: requestQueryKeys.list(params),
+    queryFn: () => requestsApi.list(params),
+  });
+}
+
+export function useServiceRequest(id: string, options?: Omit<UseQueryOptions<ServiceRequest>, 'queryKey' | 'queryFn'>) {
+  return useQuery({
+    queryKey: requestQueryKeys.detail(id),
+    queryFn: () => requestsApi.get(id),
+    enabled: !!id,
+    ...options,
+  });
+}
+
+export function useMyRequests(params?: { page?: number; limit?: number }) {
+  return useQuery({
+    queryKey: requestQueryKeys.myRequests(params),
+    queryFn: () => requestsApi.getMyRequests(params),
+  });
+}
+
+export function useAssignedRequests(params?: { page?: number; limit?: number }) {
+  return useQuery({
+    queryKey: requestQueryKeys.assigned(params),
+    queryFn: () => requestsApi.getAssigned(params),
+  });
+}
+
+export function useCreateServiceRequest() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (data: {
+      catalogItemId: string;
+      requestedForId?: string;
+      priority?: 'low' | 'medium' | 'high' | 'critical';
+      formData: Record<string, unknown>;
+      notes?: string;
+      costCenter?: string;
+    }) => requestsApi.create(data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: requestQueryKeys.all });
+      queryClient.invalidateQueries({ queryKey: requestQueryKeys.myRequests() });
+    },
+  });
+}
+
+export function useUpdateServiceRequest() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, data }: {
+      id: string;
+      data: {
+        priority?: 'low' | 'medium' | 'high' | 'critical';
+        formData?: Record<string, unknown>;
+        notes?: string;
+        costCenter?: string;
+      }
+    }) => requestsApi.update(id, data),
+    onSuccess: (_, { id }) => {
+      queryClient.invalidateQueries({ queryKey: requestQueryKeys.detail(id) });
+      queryClient.invalidateQueries({ queryKey: requestQueryKeys.all });
+    },
+  });
+}
+
+export function useAssignServiceRequest() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, assignedTo }: { id: string; assignedTo: string }) =>
+      requestsApi.assign(id, assignedTo),
+    onSuccess: (_, { id }) => {
+      queryClient.invalidateQueries({ queryKey: requestQueryKeys.detail(id) });
+      queryClient.invalidateQueries({ queryKey: requestQueryKeys.all });
+      queryClient.invalidateQueries({ queryKey: requestQueryKeys.assigned() });
+    },
+  });
+}
+
+export function useStartServiceRequest() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => requestsApi.start(id),
+    onSuccess: (_, id) => {
+      queryClient.invalidateQueries({ queryKey: requestQueryKeys.detail(id) });
+      queryClient.invalidateQueries({ queryKey: requestQueryKeys.all });
+    },
+  });
+}
+
+export function useCompleteServiceRequest() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, notes }: { id: string; notes?: string }) =>
+      requestsApi.complete(id, notes),
+    onSuccess: (_, { id }) => {
+      queryClient.invalidateQueries({ queryKey: requestQueryKeys.detail(id) });
+      queryClient.invalidateQueries({ queryKey: requestQueryKeys.all });
+    },
+  });
+}
+
+export function useCancelServiceRequest() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, reason }: { id: string; reason: string }) =>
+      requestsApi.cancel(id, reason),
+    onSuccess: (_, { id }) => {
+      queryClient.invalidateQueries({ queryKey: requestQueryKeys.detail(id) });
+      queryClient.invalidateQueries({ queryKey: requestQueryKeys.all });
+    },
+  });
+}
+
+export function useRequestApprovals(id: string) {
+  return useQuery({
+    queryKey: requestQueryKeys.approvals(id),
+    queryFn: () => requestsApi.getApprovals(id),
+    enabled: !!id,
+  });
+}
+
+export function useApproveRequest() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ requestId, approvalId, comments }: { requestId: string; approvalId: string; comments?: string }) =>
+      requestsApi.approve(requestId, approvalId, comments),
+    onSuccess: (_, { requestId }) => {
+      queryClient.invalidateQueries({ queryKey: requestQueryKeys.detail(requestId) });
+      queryClient.invalidateQueries({ queryKey: requestQueryKeys.approvals(requestId) });
+      queryClient.invalidateQueries({ queryKey: requestQueryKeys.all });
+      queryClient.invalidateQueries({ queryKey: requestQueryKeys.pendingApprovals() });
+    },
+  });
+}
+
+export function useRejectRequest() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ requestId, approvalId, comments }: { requestId: string; approvalId: string; comments?: string }) =>
+      requestsApi.reject(requestId, approvalId, comments),
+    onSuccess: (_, { requestId }) => {
+      queryClient.invalidateQueries({ queryKey: requestQueryKeys.detail(requestId) });
+      queryClient.invalidateQueries({ queryKey: requestQueryKeys.approvals(requestId) });
+      queryClient.invalidateQueries({ queryKey: requestQueryKeys.all });
+      queryClient.invalidateQueries({ queryKey: requestQueryKeys.pendingApprovals() });
+    },
+  });
+}
+
+export function useDelegateApproval() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ requestId, approvalId, delegateTo, comments }: {
+      requestId: string;
+      approvalId: string;
+      delegateTo: string;
+      comments?: string;
+    }) => requestsApi.delegate(requestId, approvalId, delegateTo, comments),
+    onSuccess: (_, { requestId }) => {
+      queryClient.invalidateQueries({ queryKey: requestQueryKeys.detail(requestId) });
+      queryClient.invalidateQueries({ queryKey: requestQueryKeys.approvals(requestId) });
+      queryClient.invalidateQueries({ queryKey: requestQueryKeys.all });
+      queryClient.invalidateQueries({ queryKey: requestQueryKeys.pendingApprovals() });
+    },
+  });
+}
+
+export function useRequestComments(id: string) {
+  return useQuery({
+    queryKey: requestQueryKeys.comments(id),
+    queryFn: () => requestsApi.getComments(id),
+    enabled: !!id,
+  });
+}
+
+export function useAddRequestComment() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, content, isInternal }: { id: string; content: string; isInternal?: boolean }) =>
+      requestsApi.addComment(id, content, isInternal),
+    onSuccess: (_, { id }) => {
+      queryClient.invalidateQueries({ queryKey: requestQueryKeys.comments(id) });
+      queryClient.invalidateQueries({ queryKey: requestQueryKeys.detail(id) });
+    },
+  });
+}
+
+export function useRequestHistory(id: string) {
+  return useQuery({
+    queryKey: requestQueryKeys.history(id),
+    queryFn: () => requestsApi.getHistory(id),
+    enabled: !!id,
+  });
+}
+
+// ================================
+// CAB MEETINGS HOOKS
+// ================================
+
+// CAB Meeting Types
+export type CabMeetingStatus = 'scheduled' | 'in_progress' | 'completed' | 'cancelled';
+export type CabAttendeeRole = 'chair' | 'member' | 'guest';
+export type CabAttendeeRsvpStatus = 'pending' | 'accepted' | 'declined' | 'attended';
+export type CabDecision = 'approved' | 'rejected' | 'deferred';
+export type CabActionItemStatus = 'open' | 'completed';
+
+export interface CabMeeting {
+  id: string;
+  title: string;
+  description?: string;
+  meeting_date: string;
+  end_date?: string;
+  location?: string;
+  meeting_link?: string;
+  status: CabMeetingStatus;
+  organizer_id?: string;
+  organizer_name?: string;
+  agenda?: string;
+  minutes?: string;
+  attendee_count?: number;
+  changes_count?: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CabAttendee {
+  id: string;
+  meeting_id: string;
+  user_id: string;
+  user_name?: string;
+  user_email?: string;
+  role: CabAttendeeRole;
+  rsvp_status: CabAttendeeRsvpStatus;
+  created_at: string;
+}
+
+export interface CabMeetingChange {
+  id: string;
+  meeting_id: string;
+  change_id: string;
+  change_number?: string;
+  change_title?: string;
+  change_risk_level?: string;
+  requester_name?: string;
+  order: number;
+  decision?: CabDecision;
+  decision_notes?: string;
+  decided_at?: string;
+  decided_by_name?: string;
+}
+
+export interface CabActionItem {
+  id: string;
+  meeting_id: string;
+  description: string;
+  assignee_id?: string;
+  assignee_name?: string;
+  due_date?: string;
+  status: CabActionItemStatus;
+  created_at: string;
+  updated_at: string;
+}
+
+// CAB Query Keys
+export const cabQueryKeys = {
+  meetings: {
+    all: ['cab', 'meetings'] as const,
+    list: (params?: Record<string, unknown>) => ['cab', 'meetings', 'list', params] as const,
+    detail: (id: string) => ['cab', 'meetings', 'detail', id] as const,
+    upcoming: (days?: number) => ['cab', 'meetings', 'upcoming', days] as const,
+  },
+  attendees: (meetingId: string) => ['cab', 'meetings', meetingId, 'attendees'] as const,
+  changes: (meetingId: string) => ['cab', 'meetings', meetingId, 'changes'] as const,
+  decisions: (meetingId: string) => ['cab', 'meetings', meetingId, 'decisions'] as const,
+  actionItems: (meetingId: string) => ['cab', 'meetings', meetingId, 'action-items'] as const,
+  minutes: (meetingId: string) => ['cab', 'meetings', meetingId, 'minutes'] as const,
+};
+
+// CAB Meetings - List/Get
+export function useCabMeetings(params?: {
+  page?: number;
+  limit?: number;
+  status?: CabMeetingStatus;
+  startDate?: string;
+  endDate?: string;
+}) {
+  return useQuery({
+    queryKey: cabQueryKeys.meetings.list(params),
+    queryFn: () => cabMeetingsApi.list(params),
+  });
+}
+
+export function useCabMeeting(id: string, options?: Omit<UseQueryOptions<CabMeeting>, 'queryKey' | 'queryFn'>) {
+  return useQuery({
+    queryKey: cabQueryKeys.meetings.detail(id),
+    queryFn: () => cabMeetingsApi.get(id),
+    enabled: !!id,
+    ...options,
+  });
+}
+
+export function useUpcomingCabMeetings(days?: number) {
+  return useQuery({
+    queryKey: cabQueryKeys.meetings.upcoming(days),
+    queryFn: () => cabMeetingsApi.getUpcoming(days),
+  });
+}
+
+// CAB Meetings - Mutations
+export function useCreateCabMeeting() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (data: {
+      title: string;
+      description?: string;
+      meetingDate: string;
+      endDate?: string;
+      location?: string;
+      meetingLink?: string;
+    }) => cabMeetingsApi.create(data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: cabQueryKeys.meetings.all });
+    },
+  });
+}
+
+export function useUpdateCabMeeting() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, data }: {
+      id: string;
+      data: {
+        title?: string;
+        description?: string;
+        meetingDate?: string;
+        endDate?: string;
+        location?: string;
+        meetingLink?: string;
+      };
+    }) => cabMeetingsApi.update(id, data),
+    onSuccess: (_, { id }) => {
+      queryClient.invalidateQueries({ queryKey: cabQueryKeys.meetings.detail(id) });
+      queryClient.invalidateQueries({ queryKey: cabQueryKeys.meetings.all });
+    },
+  });
+}
+
+export function useDeleteCabMeeting() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => cabMeetingsApi.delete(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: cabQueryKeys.meetings.all });
+    },
+  });
+}
+
+// CAB Meeting Status Actions
+export function useStartCabMeeting() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => cabMeetingsApi.start(id),
+    onSuccess: (_, id) => {
+      queryClient.invalidateQueries({ queryKey: cabQueryKeys.meetings.detail(id) });
+      queryClient.invalidateQueries({ queryKey: cabQueryKeys.meetings.all });
+    },
+  });
+}
+
+export function useCompleteCabMeeting() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => cabMeetingsApi.complete(id),
+    onSuccess: (_, id) => {
+      queryClient.invalidateQueries({ queryKey: cabQueryKeys.meetings.detail(id) });
+      queryClient.invalidateQueries({ queryKey: cabQueryKeys.meetings.all });
+    },
+  });
+}
+
+export function useCancelCabMeeting() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, reason }: { id: string; reason?: string }) =>
+      cabMeetingsApi.cancel(id, reason),
+    onSuccess: (_, { id }) => {
+      queryClient.invalidateQueries({ queryKey: cabQueryKeys.meetings.detail(id) });
+      queryClient.invalidateQueries({ queryKey: cabQueryKeys.meetings.all });
+    },
+  });
+}
+
+// CAB Attendees
+export function useCabMeetingAttendees(meetingId: string) {
+  return useQuery({
+    queryKey: cabQueryKeys.attendees(meetingId),
+    queryFn: () => cabMeetingsApi.getAttendees(meetingId),
+    enabled: !!meetingId,
+  });
+}
+
+export function useAddCabAttendee() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ meetingId, userId, role }: {
+      meetingId: string;
+      userId: string;
+      role?: CabAttendeeRole;
+    }) => cabMeetingsApi.addAttendee(meetingId, { userId, role }),
+    onSuccess: (_, { meetingId }) => {
+      queryClient.invalidateQueries({ queryKey: cabQueryKeys.attendees(meetingId) });
+      queryClient.invalidateQueries({ queryKey: cabQueryKeys.meetings.detail(meetingId) });
+    },
+  });
+}
+
+export function useRemoveCabAttendee() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ meetingId, attendeeId }: { meetingId: string; attendeeId: string }) =>
+      cabMeetingsApi.removeAttendee(meetingId, attendeeId),
+    onSuccess: (_, { meetingId }) => {
+      queryClient.invalidateQueries({ queryKey: cabQueryKeys.attendees(meetingId) });
+      queryClient.invalidateQueries({ queryKey: cabQueryKeys.meetings.detail(meetingId) });
+    },
+  });
+}
+
+export function useUpdateAttendeeStatus() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ meetingId, attendeeId, status }: {
+      meetingId: string;
+      attendeeId: string;
+      status: CabAttendeeRsvpStatus;
+    }) => cabMeetingsApi.updateAttendeeStatus(meetingId, attendeeId, status),
+    onSuccess: (_, { meetingId }) => {
+      queryClient.invalidateQueries({ queryKey: cabQueryKeys.attendees(meetingId) });
+    },
+  });
+}
+
+// CAB Meeting Changes (Agenda Items)
+export function useCabMeetingChanges(meetingId: string) {
+  return useQuery({
+    queryKey: cabQueryKeys.changes(meetingId),
+    queryFn: () => cabMeetingsApi.getChanges(meetingId),
+    enabled: !!meetingId,
+  });
+}
+
+export function useAddCabChange() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ meetingId, changeId, order }: {
+      meetingId: string;
+      changeId: string;
+      order?: number;
+    }) => cabMeetingsApi.addChange(meetingId, changeId, order),
+    onSuccess: (_, { meetingId }) => {
+      queryClient.invalidateQueries({ queryKey: cabQueryKeys.changes(meetingId) });
+      queryClient.invalidateQueries({ queryKey: cabQueryKeys.meetings.detail(meetingId) });
+    },
+  });
+}
+
+export function useRemoveCabChange() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ meetingId, changeId }: { meetingId: string; changeId: string }) =>
+      cabMeetingsApi.removeChange(meetingId, changeId),
+    onSuccess: (_, { meetingId }) => {
+      queryClient.invalidateQueries({ queryKey: cabQueryKeys.changes(meetingId) });
+      queryClient.invalidateQueries({ queryKey: cabQueryKeys.meetings.detail(meetingId) });
+    },
+  });
+}
+
+export function useReorderCabChanges() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ meetingId, changeIds }: { meetingId: string; changeIds: string[] }) =>
+      cabMeetingsApi.reorderChanges(meetingId, changeIds),
+    onSuccess: (_, { meetingId }) => {
+      queryClient.invalidateQueries({ queryKey: cabQueryKeys.changes(meetingId) });
+    },
+  });
+}
+
+// CAB Agenda
+export function useGenerateAgenda() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (meetingId: string) => cabMeetingsApi.generateAgenda(meetingId),
+    onSuccess: (_, meetingId) => {
+      queryClient.invalidateQueries({ queryKey: cabQueryKeys.meetings.detail(meetingId) });
+    },
+  });
+}
+
+export function useUpdateAgenda() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ meetingId, agenda }: { meetingId: string; agenda: string }) =>
+      cabMeetingsApi.updateAgenda(meetingId, agenda),
+    onSuccess: (_, { meetingId }) => {
+      queryClient.invalidateQueries({ queryKey: cabQueryKeys.meetings.detail(meetingId) });
+    },
+  });
+}
+
+// CAB Decisions
+export function useCabMeetingDecisions(meetingId: string) {
+  return useQuery({
+    queryKey: cabQueryKeys.decisions(meetingId),
+    queryFn: () => cabMeetingsApi.getDecisions(meetingId),
+    enabled: !!meetingId,
+  });
+}
+
+export function useRecordDecision() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ meetingId, changeId, decision, notes }: {
+      meetingId: string;
+      changeId: string;
+      decision: CabDecision;
+      notes?: string;
+    }) => cabMeetingsApi.recordDecision(meetingId, { changeId, decision, notes }),
+    onSuccess: (_, { meetingId }) => {
+      queryClient.invalidateQueries({ queryKey: cabQueryKeys.changes(meetingId) });
+      queryClient.invalidateQueries({ queryKey: cabQueryKeys.decisions(meetingId) });
+      queryClient.invalidateQueries({ queryKey: cabQueryKeys.meetings.detail(meetingId) });
+      // Also invalidate the changes list as decisions may update change status
+      queryClient.invalidateQueries({ queryKey: queryKeys.changes.all });
+    },
+  });
+}
+
+// CAB Action Items
+export function useCabActionItems(meetingId: string) {
+  return useQuery({
+    queryKey: cabQueryKeys.actionItems(meetingId),
+    queryFn: () => cabMeetingsApi.getActionItems(meetingId),
+    enabled: !!meetingId,
+  });
+}
+
+export function useAddActionItem() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ meetingId, description, assigneeId, dueDate }: {
+      meetingId: string;
+      description: string;
+      assigneeId?: string;
+      dueDate?: string;
+    }) => cabMeetingsApi.addActionItem(meetingId, { description, assigneeId, dueDate }),
+    onSuccess: (_, { meetingId }) => {
+      queryClient.invalidateQueries({ queryKey: cabQueryKeys.actionItems(meetingId) });
+    },
+  });
+}
+
+export function useUpdateActionItem() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ meetingId, itemId, data }: {
+      meetingId: string;
+      itemId: string;
+      data: {
+        description?: string;
+        assigneeId?: string;
+        dueDate?: string;
+        status?: CabActionItemStatus;
+      };
+    }) => cabMeetingsApi.updateActionItem(meetingId, itemId, data),
+    onSuccess: (_, { meetingId }) => {
+      queryClient.invalidateQueries({ queryKey: cabQueryKeys.actionItems(meetingId) });
+    },
+  });
+}
+
+export function useDeleteActionItem() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ meetingId, itemId }: { meetingId: string; itemId: string }) =>
+      cabMeetingsApi.deleteActionItem(meetingId, itemId),
+    onSuccess: (_, { meetingId }) => {
+      queryClient.invalidateQueries({ queryKey: cabQueryKeys.actionItems(meetingId) });
+    },
+  });
+}
+
+// CAB Minutes
+export function useCabMinutes(meetingId: string) {
+  return useQuery({
+    queryKey: cabQueryKeys.minutes(meetingId),
+    queryFn: () => cabMeetingsApi.getMinutes(meetingId),
+    enabled: !!meetingId,
+  });
+}
+
+export function useSaveMinutes() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ meetingId, minutes }: { meetingId: string; minutes: string }) =>
+      cabMeetingsApi.saveMinutes(meetingId, minutes),
+    onSuccess: (_, { meetingId }) => {
+      queryClient.invalidateQueries({ queryKey: cabQueryKeys.minutes(meetingId) });
+      queryClient.invalidateQueries({ queryKey: cabQueryKeys.meetings.detail(meetingId) });
+    },
+  });
+}
+
+export function useDistributeMinutes() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (meetingId: string) => cabMeetingsApi.distributeMinutes(meetingId),
+    onSuccess: (_, meetingId) => {
+      queryClient.invalidateQueries({ queryKey: cabQueryKeys.meetings.detail(meetingId) });
+    },
   });
 }

@@ -513,6 +513,190 @@ export const changesApi = {
   },
 };
 
+// CAB Meetings API
+export const cabMeetingsApi = {
+  // List/Get meetings
+  list: async (params?: {
+    page?: number;
+    limit?: number;
+    status?: 'scheduled' | 'in_progress' | 'completed' | 'cancelled';
+    startDate?: string;
+    endDate?: string;
+  }) => {
+    const response = await api.get('/v1/changes/cab-meetings', { params });
+    return response.data;
+  },
+
+  get: async (id: string) => {
+    const response = await api.get(`/v1/changes/cab-meetings/${id}`);
+    return response.data;
+  },
+
+  getUpcoming: async (days?: number) => {
+    const response = await api.get('/v1/changes/cab-meetings/upcoming', { params: { days } });
+    return response.data;
+  },
+
+  // CRUD operations
+  create: async (data: {
+    title: string;
+    description?: string;
+    meetingDate: string;
+    endDate?: string;
+    location?: string;
+    meetingLink?: string;
+  }) => {
+    const response = await api.post('/v1/changes/cab-meetings', data);
+    return response.data;
+  },
+
+  update: async (id: string, data: {
+    title?: string;
+    description?: string;
+    meetingDate?: string;
+    endDate?: string;
+    location?: string;
+    meetingLink?: string;
+  }) => {
+    const response = await api.put(`/v1/changes/cab-meetings/${id}`, data);
+    return response.data;
+  },
+
+  delete: async (id: string) => {
+    await api.delete(`/v1/changes/cab-meetings/${id}`);
+  },
+
+  // Meeting status actions
+  start: async (id: string) => {
+    const response = await api.post(`/v1/changes/cab-meetings/${id}/start`);
+    return response.data;
+  },
+
+  complete: async (id: string) => {
+    const response = await api.post(`/v1/changes/cab-meetings/${id}/complete`);
+    return response.data;
+  },
+
+  cancel: async (id: string, reason?: string) => {
+    const response = await api.post(`/v1/changes/cab-meetings/${id}/cancel`, { reason });
+    return response.data;
+  },
+
+  // Attendees
+  getAttendees: async (meetingId: string) => {
+    const response = await api.get(`/v1/changes/cab-meetings/${meetingId}/attendees`);
+    return response.data;
+  },
+
+  addAttendee: async (meetingId: string, data: {
+    userId: string;
+    role?: 'chair' | 'member' | 'guest';
+  }) => {
+    const response = await api.post(`/v1/changes/cab-meetings/${meetingId}/attendees`, data);
+    return response.data;
+  },
+
+  removeAttendee: async (meetingId: string, attendeeId: string) => {
+    await api.delete(`/v1/changes/cab-meetings/${meetingId}/attendees/${attendeeId}`);
+  },
+
+  updateAttendeeStatus: async (meetingId: string, attendeeId: string, status: 'pending' | 'accepted' | 'declined' | 'attended') => {
+    const response = await api.put(`/v1/changes/cab-meetings/${meetingId}/attendees/${attendeeId}`, { status });
+    return response.data;
+  },
+
+  // Changes (Agenda Items)
+  getChanges: async (meetingId: string) => {
+    const response = await api.get(`/v1/changes/cab-meetings/${meetingId}/changes`);
+    return response.data;
+  },
+
+  addChange: async (meetingId: string, changeId: string, order?: number) => {
+    const response = await api.post(`/v1/changes/cab-meetings/${meetingId}/changes`, { changeId, order });
+    return response.data;
+  },
+
+  removeChange: async (meetingId: string, changeId: string) => {
+    await api.delete(`/v1/changes/cab-meetings/${meetingId}/changes/${changeId}`);
+  },
+
+  reorderChanges: async (meetingId: string, changeIds: string[]) => {
+    const response = await api.put(`/v1/changes/cab-meetings/${meetingId}/changes/reorder`, { changeIds });
+    return response.data;
+  },
+
+  // Agenda
+  generateAgenda: async (meetingId: string) => {
+    const response = await api.post(`/v1/changes/cab-meetings/${meetingId}/generate-agenda`);
+    return response.data;
+  },
+
+  updateAgenda: async (meetingId: string, agenda: string) => {
+    const response = await api.put(`/v1/changes/cab-meetings/${meetingId}/agenda`, { agenda });
+    return response.data;
+  },
+
+  // Decisions
+  recordDecision: async (meetingId: string, data: {
+    changeId: string;
+    decision: 'approved' | 'rejected' | 'deferred';
+    notes?: string;
+  }) => {
+    const response = await api.post(`/v1/changes/cab-meetings/${meetingId}/decisions`, data);
+    return response.data;
+  },
+
+  getDecisions: async (meetingId: string) => {
+    const response = await api.get(`/v1/changes/cab-meetings/${meetingId}/decisions`);
+    return response.data;
+  },
+
+  // Action Items
+  getActionItems: async (meetingId: string) => {
+    const response = await api.get(`/v1/changes/cab-meetings/${meetingId}/action-items`);
+    return response.data;
+  },
+
+  addActionItem: async (meetingId: string, data: {
+    description: string;
+    assigneeId?: string;
+    dueDate?: string;
+  }) => {
+    const response = await api.post(`/v1/changes/cab-meetings/${meetingId}/action-items`, data);
+    return response.data;
+  },
+
+  updateActionItem: async (meetingId: string, itemId: string, data: {
+    description?: string;
+    assigneeId?: string;
+    dueDate?: string;
+    status?: 'open' | 'completed';
+  }) => {
+    const response = await api.put(`/v1/changes/cab-meetings/${meetingId}/action-items/${itemId}`, data);
+    return response.data;
+  },
+
+  deleteActionItem: async (meetingId: string, itemId: string) => {
+    await api.delete(`/v1/changes/cab-meetings/${meetingId}/action-items/${itemId}`);
+  },
+
+  // Minutes
+  getMinutes: async (meetingId: string) => {
+    const response = await api.get(`/v1/changes/cab-meetings/${meetingId}/minutes`);
+    return response.data;
+  },
+
+  saveMinutes: async (meetingId: string, minutes: string) => {
+    const response = await api.put(`/v1/changes/cab-meetings/${meetingId}/minutes`, { minutes });
+    return response.data;
+  },
+
+  distributeMinutes: async (meetingId: string) => {
+    const response = await api.post(`/v1/changes/cab-meetings/${meetingId}/distribute-minutes`);
+    return response.data;
+  },
+};
+
 // Applications API
 export const applicationsApi = {
   list: async (params?: { page?: number; limit?: number; tier?: string; status?: string; search?: string }) => {
@@ -660,6 +844,11 @@ export const requestsApi = {
 
   reject: async (id: string, approvalId: string, comments?: string) => {
     const response = await api.post(`/v1/requests/${id}/approvals/${approvalId}/reject`, { comments });
+    return response.data;
+  },
+
+  delegate: async (id: string, approvalId: string, delegateTo: string, comments?: string) => {
+    const response = await api.post(`/v1/requests/${id}/approvals/${approvalId}/delegate`, { delegateTo, comments });
     return response.data;
   },
 
@@ -1392,6 +1581,73 @@ export const oncallApi = {
 
   deletePolicyStep: async (policyId: string, stepId: string) => {
     await api.delete(`/v1/oncall/escalation-policies/${policyId}/steps/${stepId}`);
+  },
+
+  // Shift Swaps
+  listSwaps: async (params?: {
+    page?: number;
+    limit?: number;
+    status?: 'pending' | 'accepted' | 'rejected' | 'cancelled' | 'expired' | 'completed';
+    schedule_id?: string;
+    requester_id?: string;
+  }) => {
+    const response = await api.get('/v1/oncall/swaps', { params });
+    return response.data;
+  },
+
+  getMySwapRequests: async (params?: { page?: number; limit?: number }) => {
+    const response = await api.get('/v1/oncall/swaps/my-requests', { params });
+    return response.data;
+  },
+
+  getAvailableSwaps: async (params?: { page?: number; limit?: number }) => {
+    const response = await api.get('/v1/oncall/swaps/available', { params });
+    return response.data;
+  },
+
+  getSwap: async (id: string) => {
+    const response = await api.get(`/v1/oncall/swaps/${id}`);
+    return response.data;
+  },
+
+  createSwapRequest: async (data: {
+    scheduleId: string;
+    originalStart: string;
+    originalEnd: string;
+    offeredToUserId?: string;
+    reason?: string;
+    expiresAt?: string;
+  }) => {
+    const response = await api.post('/v1/oncall/swaps', data);
+    return response.data;
+  },
+
+  updateSwapRequest: async (id: string, data: {
+    offeredToUserId?: string;
+    reason?: string;
+    expiresAt?: string;
+  }) => {
+    const response = await api.put(`/v1/oncall/swaps/${id}`, data);
+    return response.data;
+  },
+
+  cancelSwapRequest: async (id: string) => {
+    await api.delete(`/v1/oncall/swaps/${id}`);
+  },
+
+  acceptSwap: async (id: string, data?: { message?: string }) => {
+    const response = await api.post(`/v1/oncall/swaps/${id}/accept`, data);
+    return response.data;
+  },
+
+  rejectSwap: async (id: string, data?: { message?: string }) => {
+    const response = await api.post(`/v1/oncall/swaps/${id}/reject`, data);
+    return response.data;
+  },
+
+  adminApproveSwap: async (id: string, data?: { message?: string }) => {
+    const response = await api.post(`/v1/oncall/swaps/${id}/admin-approve`, data);
+    return response.data;
   },
 };
 

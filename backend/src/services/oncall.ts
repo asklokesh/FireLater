@@ -784,5 +784,295 @@ export class EscalationPolicyService {
   }
 }
 
+// ============================================
+// ICAL EXPORT
+// ============================================
+
+interface ICalShift {
+  id: string;
+  start_time: Date;
+  end_time: Date;
+  user_name: string;
+  user_email?: string;
+  shift_type: string;
+}
+
+interface ICalExportParams {
+  scheduleId: string;
+  from?: Date;
+  to?: Date;
+  userId?: string;
+}
+
+export class ICalExportService {
+  /**
+   * Format a date to iCal format (YYYYMMDDTHHMMSSZ)
+   */
+  private formatDateToICal(date: Date): string {
+    return date.toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, '');
+  }
+
+  /**
+   * Escape special characters in iCal text values
+   */
+  private escapeICalText(text: string): string {
+    return text
+      .replace(/\\/g, '\\\\')
+      .replace(/;/g, '\\;')
+      .replace(/,/g, '\\,')
+      .replace(/\n/g, '\\n');
+  }
+
+  /**
+   * Generate a unique UID for an iCal event
+   */
+  private generateUID(shiftId: string, tenantSlug: string): string {
+    return `shift-${shiftId}@${tenantSlug}.firelater.com`;
+  }
+
+  /**
+   * Generate an iCalendar file for on-call shifts
+   */
+  async generateICalendar(
+    tenantSlug: string,
+    params: ICalExportParams
+  ): Promise<string> {
+    const schema = tenantService.getSchemaName(tenantSlug);
+
+    // Get schedule details
+    const schedule = await oncallScheduleService.findById(tenantSlug, params.scheduleId);
+    if (!schedule) {
+      throw new NotFoundError('On-call schedule', params.scheduleId);
+    }
+
+    // Default date range: 30 days before to 90 days after
+    const now = new Date();
+    const from = params.from || new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+    const to = params.to || new Date(now.getTime() + 90 * 24 * 60 * 60 * 1000);
+
+    // Build query for shifts
+    let query = `
+      SELECT s.id, s.start_time, s.end_time, s.shift_type,
+             u.name as user_name, u.email as user_email
+      FROM ${schema}.oncall_shifts s
+      LEFT JOIN ${schema}.users u ON s.user_id = u.id
+      WHERE s.schedule_id = $1
+        AND s.start_time >= $2
+        AND s.end_time <= $3
+    `;
+    const values: unknown[] = [params.scheduleId, from, to];
+    let paramIndex = 4;
+
+    if (params.userId) {
+      query += ` AND s.user_id = $${paramIndex++}`;
+      values.push(params.userId);
+    }
+
+    query += ' ORDER BY s.start_time';
+
+    const result = await pool.query(query, values);
+    const shifts: ICalShift[] = result.rows;
+
+    // Generate iCalendar content
+    const lines: string[] = [
+      'BEGIN:VCALENDAR',
+      'VERSION:2.0',
+      `PRODID:-//FireLater//On-Call Schedule//${tenantSlug}//EN`,
+      'CALSCALE:GREGORIAN',
+      'METHOD:PUBLISH',
+      `X-WR-CALNAME:${this.escapeICalText(schedule.name)} - On-Call`,
+      `X-WR-TIMEZONE:${schedule.timezone || 'UTC'}`,
+    ];
+
+    // Add timezone definition
+    lines.push(
+      'BEGIN:VTIMEZONE',
+      `TZID:${schedule.timezone || 'UTC'}`,
+      'BEGIN:STANDARD',
+      'DTSTART:19700101T000000',
+      'TZOFFSETFROM:+0000',
+      'TZOFFSETTO:+0000',
+      'END:STANDARD',
+      'END:VTIMEZONE'
+    );
+
+    // Add events for each shift
+    for (const shift of shifts) {
+      const summary = `On-Call: ${shift.user_name} - ${schedule.name}`;
+      const description = `On-call shift for ${schedule.name}\\nShift type: ${shift.shift_type}`;
+      const uid = this.generateUID(shift.id, tenantSlug);
+
+      lines.push(
+        'BEGIN:VEVENT',
+        `UID:${uid}`,
+        `DTSTAMP:${this.formatDateToICal(new Date())}`,
+        `DTSTART:${this.formatDateToICal(new Date(shift.start_time))}`,
+        `DTEND:${this.formatDateToICal(new Date(shift.end_time))}`,
+        `SUMMARY:${this.escapeICalText(summary)}`,
+        `DESCRIPTION:${this.escapeICalText(description)}`,
+        `CATEGORIES:On-Call,${shift.shift_type}`,
+        'STATUS:CONFIRMED',
+        'TRANSP:TRANSPARENT'
+      );
+
+      // Add organizer if email available
+      if (shift.user_email) {
+        lines.push(`ORGANIZER;CN=${this.escapeICalText(shift.user_name)}:mailto:${shift.user_email}`);
+      }
+
+      // Add alarm (15 minutes before shift)
+      lines.push(
+        'BEGIN:VALARM',
+        'TRIGGER:-PT15M',
+        'ACTION:DISPLAY',
+        `DESCRIPTION:On-call shift starting in 15 minutes: ${this.escapeICalText(schedule.name)}`,
+        'END:VALARM'
+      );
+
+      lines.push('END:VEVENT');
+    }
+
+    lines.push('END:VCALENDAR');
+
+    return lines.join('\r\n');
+  }
+
+  /**
+   * Generate a subscription token for calendar subscription
+   */
+  async createSubscriptionToken(
+    tenantSlug: string,
+    scheduleId: string,
+    userId: string,
+    filterUserId?: string
+  ): Promise<{ token: string; url: string }> {
+    const schema = tenantService.getSchemaName(tenantSlug);
+
+    // Verify schedule exists
+    const schedule = await oncallScheduleService.findById(tenantSlug, scheduleId);
+    if (!schedule) {
+      throw new NotFoundError('On-call schedule', scheduleId);
+    }
+
+    // Generate a secure token
+    const crypto = await import('crypto');
+    const token = crypto.randomBytes(32).toString('hex');
+
+    // Store subscription in database
+    await pool.query(
+      `INSERT INTO ${schema}.oncall_calendar_subscriptions
+       (schedule_id, user_id, token, filter_user_id, created_at, last_accessed_at)
+       VALUES ($1, $2, $3, $4, NOW(), NOW())
+       ON CONFLICT (schedule_id, user_id, filter_user_id)
+       DO UPDATE SET token = $3, last_accessed_at = NOW()`,
+      [scheduleId, userId, token, filterUserId || null]
+    );
+
+    // Build the subscription URL
+    const baseUrl = process.env.API_BASE_URL || 'http://localhost:3001';
+    const url = `${baseUrl}/v1/oncall/schedules/${scheduleId}/ical/subscribe/${token}`;
+
+    logger.info({ scheduleId, userId }, 'Calendar subscription token created');
+    return { token, url };
+  }
+
+  /**
+   * Validate subscription token and return schedule/filter info
+   */
+  async validateSubscriptionToken(
+    tenantSlug: string,
+    scheduleId: string,
+    token: string
+  ): Promise<{ userId: string; filterUserId: string | null } | null> {
+    const schema = tenantService.getSchemaName(tenantSlug);
+
+    const result = await pool.query(
+      `SELECT user_id, filter_user_id FROM ${schema}.oncall_calendar_subscriptions
+       WHERE schedule_id = $1 AND token = $2`,
+      [scheduleId, token]
+    );
+
+    if (result.rows.length === 0) {
+      return null;
+    }
+
+    // Update last accessed timestamp
+    await pool.query(
+      `UPDATE ${schema}.oncall_calendar_subscriptions
+       SET last_accessed_at = NOW()
+       WHERE schedule_id = $1 AND token = $2`,
+      [scheduleId, token]
+    );
+
+    return {
+      userId: result.rows[0].user_id,
+      filterUserId: result.rows[0].filter_user_id,
+    };
+  }
+
+  /**
+   * Validate subscription token for public endpoint (no tenant context)
+   * Searches across all tenant schemas to find the subscription
+   */
+  async validatePublicSubscriptionToken(
+    scheduleId: string,
+    token: string
+  ): Promise<{ tenantSlug: string; userId: string; filterUserId: string | null } | null> {
+    // Get all tenant schemas
+    const schemasResult = await pool.query(
+      `SELECT nspname FROM pg_namespace WHERE nspname LIKE 'tenant_%'`
+    );
+
+    for (const row of schemasResult.rows) {
+      const schema = row.nspname;
+      const tenantSlug = schema.replace('tenant_', '').replace(/_/g, '-');
+
+      const result = await pool.query(
+        `SELECT user_id, filter_user_id FROM ${schema}.oncall_calendar_subscriptions
+         WHERE schedule_id = $1 AND token = $2`,
+        [scheduleId, token]
+      );
+
+      if (result.rows.length > 0) {
+        // Update last accessed timestamp
+        await pool.query(
+          `UPDATE ${schema}.oncall_calendar_subscriptions
+           SET last_accessed_at = NOW()
+           WHERE schedule_id = $1 AND token = $2`,
+          [scheduleId, token]
+        );
+
+        return {
+          tenantSlug,
+          userId: result.rows[0].user_id,
+          filterUserId: result.rows[0].filter_user_id,
+        };
+      }
+    }
+
+    return null;
+  }
+
+  /**
+   * Revoke a subscription token
+   */
+  async revokeSubscriptionToken(
+    tenantSlug: string,
+    scheduleId: string,
+    userId: string
+  ): Promise<void> {
+    const schema = tenantService.getSchemaName(tenantSlug);
+
+    await pool.query(
+      `DELETE FROM ${schema}.oncall_calendar_subscriptions
+       WHERE schedule_id = $1 AND user_id = $2`,
+      [scheduleId, userId]
+    );
+
+    logger.info({ scheduleId, userId }, 'Calendar subscription token revoked');
+  }
+}
+
 export const oncallScheduleService = new OnCallScheduleService();
 export const escalationPolicyService = new EscalationPolicyService();
+export const icalExportService = new ICalExportService();

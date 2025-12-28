@@ -230,6 +230,270 @@ const slackTemplates: Record<string, (data: Record<string, unknown>) => SlackMes
     attachments: [{ color: '#2563eb', blocks: [] }],
   }),
 
+  oncall_shift_reminder: (data) => ({
+    text: `On-call shift reminder: Your shift starts soon`,
+    blocks: [
+      {
+        type: 'header',
+        text: { type: 'plain_text', text: 'On-Call Shift Reminder', emoji: true },
+      },
+      {
+        type: 'section',
+        text: {
+          type: 'mrkdwn',
+          text: `Your on-call shift for *${data.scheduleName}* starts in *${data.timeUntil}*.`,
+        },
+      },
+      {
+        type: 'section',
+        fields: [
+          { type: 'mrkdwn', text: `*Shift Starts:*\n${data.shiftStart}` },
+          { type: 'mrkdwn', text: `*Shift Ends:*\n${data.shiftEnd}` },
+        ],
+      },
+      {
+        type: 'actions',
+        elements: [
+          {
+            type: 'button',
+            text: { type: 'plain_text', text: 'View Schedule', emoji: true },
+            url: `${data.baseUrl}/oncall`,
+            action_id: 'view_schedule',
+          },
+          {
+            type: 'button',
+            text: { type: 'plain_text', text: 'Request Swap', emoji: true },
+            url: `${data.baseUrl}/oncall?tab=swaps`,
+            action_id: 'request_swap',
+          },
+        ],
+      },
+    ],
+    attachments: [{ color: '#2563eb', blocks: [] }],
+  }),
+
+  shift_swap_request: (data) => ({
+    text: `Shift swap request from ${data.requesterName}`,
+    blocks: [
+      {
+        type: 'header',
+        text: { type: 'plain_text', text: 'Shift Swap Request', emoji: true },
+      },
+      {
+        type: 'section',
+        text: {
+          type: 'mrkdwn',
+          text: `*${data.requesterName}* is requesting a shift swap for *${data.scheduleName}*.`,
+        },
+      },
+      {
+        type: 'section',
+        fields: [
+          { type: 'mrkdwn', text: `*Original Shift:*\n${data.originalStart} - ${data.originalEnd}` },
+          { type: 'mrkdwn', text: `*Reason:*\n${data.reason || 'Not specified'}` },
+        ],
+      },
+      {
+        type: 'actions',
+        elements: [
+          {
+            type: 'button',
+            text: { type: 'plain_text', text: 'Accept Swap', emoji: true },
+            url: `${data.baseUrl}/oncall?tab=swaps&action=accept&id=${data.swapId}`,
+            action_id: 'accept_swap',
+          },
+          {
+            type: 'button',
+            text: { type: 'plain_text', text: 'View Details', emoji: true },
+            url: `${data.baseUrl}/oncall?tab=swaps`,
+            action_id: 'view_swap',
+          },
+        ],
+      },
+    ],
+    attachments: [{ color: '#d97706', blocks: [] }],
+  }),
+
+  shift_swap_accepted: (data) => ({
+    text: `Your shift swap has been accepted by ${data.accepterName}`,
+    blocks: [
+      {
+        type: 'section',
+        text: {
+          type: 'mrkdwn',
+          text: `Your shift swap request for *${data.scheduleName}* has been accepted by *${data.accepterName}*.`,
+        },
+      },
+      {
+        type: 'section',
+        fields: [
+          { type: 'mrkdwn', text: `*Original Shift:*\n${data.originalStart} - ${data.originalEnd}` },
+        ],
+      },
+    ],
+    attachments: [{ color: '#16a34a', blocks: [] }],
+  }),
+
+  cab_meeting_reminder: (data) => ({
+    text: `CAB Meeting scheduled: ${data.meetingTitle}`,
+    blocks: [
+      {
+        type: 'header',
+        text: { type: 'plain_text', text: 'CAB Meeting Reminder', emoji: true },
+      },
+      {
+        type: 'section',
+        text: {
+          type: 'mrkdwn',
+          text: `A CAB meeting is scheduled for *${data.meetingDate}*.`,
+        },
+      },
+      {
+        type: 'section',
+        fields: [
+          { type: 'mrkdwn', text: `*Changes to Review:*\n${data.changeCount}` },
+          { type: 'mrkdwn', text: `*Location:*\n${data.location || 'Virtual'}` },
+        ],
+      },
+      {
+        type: 'actions',
+        elements: [
+          {
+            type: 'button',
+            text: { type: 'plain_text', text: 'View Agenda', emoji: true },
+            url: `${data.baseUrl}/changes/cab/${data.meetingId}`,
+            action_id: 'view_agenda',
+          },
+          {
+            type: 'button',
+            text: { type: 'plain_text', text: 'Join Meeting', emoji: true },
+            url: (data.meetingLink as string) || `${data.baseUrl}/changes/cab/${data.meetingId}`,
+            action_id: 'join_meeting',
+          },
+        ],
+      },
+    ],
+    attachments: [{ color: '#7c3aed', blocks: [] }],
+  }),
+
+  problem_rca_completed: (data) => ({
+    text: `RCA completed for problem ${data.problemNumber}`,
+    blocks: [
+      {
+        type: 'header',
+        text: { type: 'plain_text', text: 'Root Cause Analysis Completed', emoji: true },
+      },
+      {
+        type: 'section',
+        text: {
+          type: 'mrkdwn',
+          text: `Root cause analysis has been completed for *${data.problemNumber}*.`,
+        },
+      },
+      {
+        type: 'section',
+        fields: [
+          { type: 'mrkdwn', text: `*Title:*\n${data.title}` },
+          { type: 'mrkdwn', text: `*Root Cause:*\n${data.rootCause}` },
+          { type: 'mrkdwn', text: `*Analyzed By:*\n${data.analyzedBy}` },
+        ],
+      },
+      {
+        type: 'actions',
+        elements: [
+          {
+            type: 'button',
+            text: { type: 'plain_text', text: 'View RCA', emoji: true },
+            url: `${data.baseUrl}/problems/${data.problemId}`,
+            action_id: 'view_rca',
+          },
+        ],
+      },
+    ],
+    attachments: [{ color: '#0ea5e9', blocks: [] }],
+  }),
+
+  issue_escalated: (data) => ({
+    text: `Issue ${data.issueNumber} has been escalated`,
+    blocks: [
+      {
+        type: 'header',
+        text: { type: 'plain_text', text: 'Issue Escalated', emoji: true },
+      },
+      {
+        type: 'section',
+        text: {
+          type: 'mrkdwn',
+          text: `Issue *${data.issueNumber}* has been escalated to *${data.escalationLevel}*.`,
+        },
+      },
+      {
+        type: 'section',
+        fields: [
+          { type: 'mrkdwn', text: `*Title:*\n${data.title}` },
+          { type: 'mrkdwn', text: `*Priority:*\n${(data.priority as string).toUpperCase()}` },
+          { type: 'mrkdwn', text: `*Reason:*\n${data.reason || 'SLA approaching breach'}` },
+        ],
+      },
+      {
+        type: 'actions',
+        elements: [
+          {
+            type: 'button',
+            text: { type: 'plain_text', text: 'Take Action', emoji: true },
+            url: `${data.baseUrl}/issues/${data.issueId}`,
+            action_id: 'take_action',
+          },
+          {
+            type: 'button',
+            text: { type: 'plain_text', text: 'Acknowledge', emoji: true },
+            url: `${data.baseUrl}/issues/${data.issueId}?action=acknowledge`,
+            action_id: 'acknowledge_issue',
+          },
+        ],
+      },
+    ],
+    attachments: [{ color: '#dc2626', blocks: [] }],
+  }),
+
+  daily_summary: (data) => ({
+    text: 'Daily ITSM Summary',
+    blocks: [
+      {
+        type: 'header',
+        text: { type: 'plain_text', text: 'Daily ITSM Summary', emoji: true },
+      },
+      {
+        type: 'section',
+        text: {
+          type: 'mrkdwn',
+          text: `*${data.date}* summary:`,
+        },
+      },
+      {
+        type: 'section',
+        fields: [
+          { type: 'mrkdwn', text: `*Open Issues:*\n${data.openIssues}` },
+          { type: 'mrkdwn', text: `*Resolved Today:*\n${data.resolvedToday}` },
+          { type: 'mrkdwn', text: `*Pending Changes:*\n${data.pendingChanges}` },
+          { type: 'mrkdwn', text: `*SLA Breaches:*\n${data.slaBreaches}` },
+        ],
+      },
+      {
+        type: 'actions',
+        elements: [
+          {
+            type: 'button',
+            text: { type: 'plain_text', text: 'View Dashboard', emoji: true },
+            url: `${data.baseUrl}/dashboard`,
+            action_id: 'view_dashboard',
+          },
+        ],
+      },
+    ],
+    attachments: [{ color: '#2563eb', blocks: [] }],
+  }),
+
   default: (data) => ({
     text: (data.message as string) || 'New notification from FireLater',
     blocks: [

@@ -5,6 +5,7 @@ import {
   changeTemplateService,
   changeRequestService,
 } from '../services/changes.js';
+import { cabMeetingService } from '../services/cabMeetings.js';
 import { requirePermission } from '../middleware/auth.js';
 import { parsePagination, createPaginatedResponse } from '../utils/pagination.js';
 
@@ -118,6 +119,62 @@ const updateTaskSchema = createTaskSchema.partial().extend({
 const commentSchema = z.object({
   content: z.string().min(1).max(5000),
   isInternal: z.boolean().optional(),
+});
+
+// ============================================
+// CAB MEETING SCHEMAS
+// ============================================
+
+const createCabMeetingSchema = z.object({
+  title: z.string().min(2).max(500),
+  description: z.string().max(5000).optional(),
+  meetingDate: z.string().datetime(),
+  meetingEnd: z.string().datetime().optional(),
+  location: z.string().max(500).optional(),
+  meetingLink: z.string().url().max(1000).optional(),
+});
+
+const updateCabMeetingSchema = createCabMeetingSchema.partial().extend({
+  status: z.enum(['scheduled', 'in_progress', 'completed', 'cancelled']).optional(),
+  agenda: z.string().max(50000).optional(),
+});
+
+const addAttendeeSchema = z.object({
+  userId: z.string().uuid(),
+  role: z.enum(['chair', 'member', 'guest']).optional(),
+});
+
+const updateAttendeeSchema = z.object({
+  status: z.enum(['pending', 'accepted', 'declined', 'attended']),
+  notes: z.string().max(2000).optional(),
+});
+
+const addMeetingChangeSchema = z.object({
+  changeId: z.string().uuid(),
+  timeAllocatedMinutes: z.number().int().min(1).max(120).optional(),
+  sortOrder: z.number().int().min(0).optional(),
+});
+
+const updateMeetingChangeSchema = z.object({
+  discussionNotes: z.string().max(10000).optional(),
+  timeAllocatedMinutes: z.number().int().min(1).max(120).optional(),
+  sortOrder: z.number().int().min(0).optional(),
+});
+
+const recordDecisionSchema = z.object({
+  changeId: z.string().uuid(),
+  decision: z.enum(['approved', 'rejected', 'deferred', 'more_info_needed']),
+  notes: z.string().max(5000).optional(),
+});
+
+const addActionItemSchema = z.object({
+  description: z.string().min(1).max(2000),
+  assigneeId: z.string().uuid().optional(),
+  dueDate: z.string().datetime().optional(),
+});
+
+const saveMinutesSchema = z.object({
+  minutes: z.string().min(1).max(100000),
 });
 
 export default async function changeRoutes(app: FastifyInstance) {
@@ -600,5 +657,305 @@ export default async function changeRoutes(app: FastifyInstance) {
       body.isInternal
     );
     reply.status(201).send(comment);
+  });
+
+  // ========================================
+  // CAB MEETINGS
+  // ========================================
+
+  // List CAB meetings
+  app.get('/cab-meetings', {
+    preHandler: [requirePermission('changes:read')],
+  }, async (request, reply) => {
+    const { tenantSlug } = request.user;
+    const query = request.query as Record<string, string>;
+    const pagination = parsePagination(query);
+
+    const filters = {
+      status: query.status,
+      organizerId: query.organizer_id,
+      fromDate: query.from_date,
+      toDate: query.to_date,
+    };
+
+    const { meetings, total } = await cabMeetingService.list(tenantSlug, pagination, filters);
+    reply.send(createPaginatedResponse(meetings, total, pagination));
+  });
+
+  // Get upcoming CAB meetings
+  app.get('/cab-meetings/upcoming', {
+    preHandler: [requirePermission('changes:read')],
+  }, async (request, reply) => {
+    const { tenantSlug } = request.user;
+    const query = request.query as Record<string, string>;
+    const days = query.days ? parseInt(query.days, 10) : 14;
+
+    const meetings = await cabMeetingService.getUpcoming(tenantSlug, days);
+    reply.send({ data: meetings });
+  });
+
+  // Get pending changes for CAB review
+  app.get('/cab-meetings/pending-changes', {
+    preHandler: [requirePermission('changes:read')],
+  }, async (request, reply) => {
+    const { tenantSlug } = request.user;
+
+    const changes = await cabMeetingService.getPendingChanges(tenantSlug);
+    reply.send({ data: changes });
+  });
+
+  // Get CAB meeting by ID
+  app.get<{ Params: { id: string } }>('/cab-meetings/:id', {
+    preHandler: [requirePermission('changes:read')],
+  }, async (request, reply) => {
+    const { tenantSlug } = request.user;
+
+    const meeting = await cabMeetingService.getById(tenantSlug, request.params.id);
+    reply.send(meeting);
+  });
+
+  // Create CAB meeting
+  app.post('/cab-meetings', {
+    preHandler: [requirePermission('changes:approve')],
+  }, async (request, reply) => {
+    const { tenantSlug, userId } = request.user;
+    const body = createCabMeetingSchema.parse(request.body);
+
+    const meeting = await cabMeetingService.create(tenantSlug, userId, body);
+    reply.status(201).send(meeting);
+  });
+
+  // Update CAB meeting
+  app.put<{ Params: { id: string } }>('/cab-meetings/:id', {
+    preHandler: [requirePermission('changes:approve')],
+  }, async (request, reply) => {
+    const { tenantSlug } = request.user;
+    const body = updateCabMeetingSchema.parse(request.body);
+
+    const meeting = await cabMeetingService.update(tenantSlug, request.params.id, body);
+    reply.send(meeting);
+  });
+
+  // Delete CAB meeting
+  app.delete<{ Params: { id: string } }>('/cab-meetings/:id', {
+    preHandler: [requirePermission('changes:approve')],
+  }, async (request, reply) => {
+    const { tenantSlug } = request.user;
+
+    await cabMeetingService.delete(tenantSlug, request.params.id);
+    reply.status(204).send();
+  });
+
+  // ========================================
+  // CAB MEETING ATTENDEES
+  // ========================================
+
+  // List attendees
+  app.get<{ Params: { id: string } }>('/cab-meetings/:id/attendees', {
+    preHandler: [requirePermission('changes:read')],
+  }, async (request, reply) => {
+    const { tenantSlug } = request.user;
+
+    const attendees = await cabMeetingService.getAttendees(tenantSlug, request.params.id);
+    reply.send({ data: attendees });
+  });
+
+  // Add attendee
+  app.post<{ Params: { id: string } }>('/cab-meetings/:id/attendees', {
+    preHandler: [requirePermission('changes:approve')],
+  }, async (request, reply) => {
+    const { tenantSlug } = request.user;
+    const body = addAttendeeSchema.parse(request.body);
+
+    const attendee = await cabMeetingService.addAttendee(
+      tenantSlug,
+      request.params.id,
+      body.userId,
+      body.role
+    );
+    reply.status(201).send(attendee);
+  });
+
+  // Remove attendee
+  app.delete<{ Params: { id: string; userId: string } }>('/cab-meetings/:id/attendees/:userId', {
+    preHandler: [requirePermission('changes:approve')],
+  }, async (request, reply) => {
+    const { tenantSlug } = request.user;
+
+    await cabMeetingService.removeAttendee(
+      tenantSlug,
+      request.params.id,
+      request.params.userId
+    );
+    reply.status(204).send();
+  });
+
+  // Update attendee status (RSVP)
+  app.put<{ Params: { id: string; userId: string } }>('/cab-meetings/:id/attendees/:userId', {
+    preHandler: [requirePermission('changes:read')],
+  }, async (request, reply) => {
+    const { tenantSlug } = request.user;
+    const body = updateAttendeeSchema.parse(request.body);
+
+    const attendee = await cabMeetingService.updateAttendeeStatus(
+      tenantSlug,
+      request.params.id,
+      request.params.userId,
+      body.status,
+      body.notes
+    );
+    reply.send(attendee);
+  });
+
+  // ========================================
+  // CAB MEETING CHANGES (AGENDA)
+  // ========================================
+
+  // List changes for meeting
+  app.get<{ Params: { id: string } }>('/cab-meetings/:id/changes', {
+    preHandler: [requirePermission('changes:read')],
+  }, async (request, reply) => {
+    const { tenantSlug } = request.user;
+
+    const changes = await cabMeetingService.getChanges(tenantSlug, request.params.id);
+    reply.send({ data: changes });
+  });
+
+  // Add change to meeting
+  app.post<{ Params: { id: string } }>('/cab-meetings/:id/changes', {
+    preHandler: [requirePermission('changes:approve')],
+  }, async (request, reply) => {
+    const { tenantSlug } = request.user;
+    const body = addMeetingChangeSchema.parse(request.body);
+
+    const change = await cabMeetingService.addChange(
+      tenantSlug,
+      request.params.id,
+      body.changeId,
+      body.timeAllocatedMinutes,
+      body.sortOrder
+    );
+    reply.status(201).send(change);
+  });
+
+  // Remove change from meeting
+  app.delete<{ Params: { id: string; changeId: string } }>('/cab-meetings/:id/changes/:changeId', {
+    preHandler: [requirePermission('changes:approve')],
+  }, async (request, reply) => {
+    const { tenantSlug } = request.user;
+
+    await cabMeetingService.removeChange(
+      tenantSlug,
+      request.params.id,
+      request.params.changeId
+    );
+    reply.status(204).send();
+  });
+
+  // Update change in meeting (notes, time, order)
+  app.put<{ Params: { id: string; changeId: string } }>('/cab-meetings/:id/changes/:changeId', {
+    preHandler: [requirePermission('changes:approve')],
+  }, async (request, reply) => {
+    const { tenantSlug } = request.user;
+    const body = updateMeetingChangeSchema.parse(request.body);
+
+    const change = await cabMeetingService.updateChange(
+      tenantSlug,
+      request.params.id,
+      request.params.changeId,
+      body
+    );
+    reply.send(change);
+  });
+
+  // ========================================
+  // CAB MEETING ACTIONS
+  // ========================================
+
+  // Start meeting
+  app.post<{ Params: { id: string } }>('/cab-meetings/:id/start', {
+    preHandler: [requirePermission('changes:approve')],
+  }, async (request, reply) => {
+    const { tenantSlug, userId } = request.user;
+
+    const meeting = await cabMeetingService.startMeeting(tenantSlug, request.params.id, userId);
+    reply.send(meeting);
+  });
+
+  // Complete meeting
+  app.post<{ Params: { id: string } }>('/cab-meetings/:id/complete', {
+    preHandler: [requirePermission('changes:approve')],
+  }, async (request, reply) => {
+    const { tenantSlug, userId } = request.user;
+
+    const meeting = await cabMeetingService.completeMeeting(tenantSlug, request.params.id, userId);
+    reply.send(meeting);
+  });
+
+  // Cancel meeting
+  app.post<{ Params: { id: string } }>('/cab-meetings/:id/cancel', {
+    preHandler: [requirePermission('changes:approve')],
+  }, async (request, reply) => {
+    const { tenantSlug, userId } = request.user;
+
+    const meeting = await cabMeetingService.cancelMeeting(tenantSlug, request.params.id, userId);
+    reply.send(meeting);
+  });
+
+  // Generate agenda
+  app.post<{ Params: { id: string } }>('/cab-meetings/:id/generate-agenda', {
+    preHandler: [requirePermission('changes:approve')],
+  }, async (request, reply) => {
+    const { tenantSlug } = request.user;
+
+    const agenda = await cabMeetingService.generateAgenda(tenantSlug, request.params.id);
+    reply.send({ agenda });
+  });
+
+  // Save minutes
+  app.post<{ Params: { id: string } }>('/cab-meetings/:id/minutes', {
+    preHandler: [requirePermission('changes:approve')],
+  }, async (request, reply) => {
+    const { tenantSlug } = request.user;
+    const body = saveMinutesSchema.parse(request.body);
+
+    const meeting = await cabMeetingService.saveMinutes(
+      tenantSlug,
+      request.params.id,
+      body.minutes
+    );
+    reply.send(meeting);
+  });
+
+  // Record decision for a change
+  app.post<{ Params: { id: string } }>('/cab-meetings/:id/decisions', {
+    preHandler: [requirePermission('changes:approve')],
+  }, async (request, reply) => {
+    const { tenantSlug } = request.user;
+    const body = recordDecisionSchema.parse(request.body);
+
+    const meeting = await cabMeetingService.recordDecision(
+      tenantSlug,
+      request.params.id,
+      body.changeId,
+      body.decision,
+      body.notes
+    );
+    reply.send(meeting);
+  });
+
+  // Add action item
+  app.post<{ Params: { id: string } }>('/cab-meetings/:id/action-items', {
+    preHandler: [requirePermission('changes:approve')],
+  }, async (request, reply) => {
+    const { tenantSlug } = request.user;
+    const body = addActionItemSchema.parse(request.body);
+
+    const result = await cabMeetingService.addActionItem(
+      tenantSlug,
+      request.params.id,
+      body
+    );
+    reply.status(201).send(result);
   });
 }

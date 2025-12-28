@@ -612,6 +612,80 @@ export class RequestService {
     return result.rows[0];
   }
 
+  // Delegate approval to another user
+  async delegateApproval(
+    tenantSlug: string,
+    requestId: string,
+    approvalId: string,
+    delegateToUserId: string,
+    comments: string,
+    userId: string
+  ): Promise<unknown> {
+    const schema = tenantService.getSchemaName(tenantSlug);
+
+    const request = await this.findById(tenantSlug, requestId);
+    if (!request) {
+      throw new NotFoundError('Service request', requestId);
+    }
+
+    // Verify the approval exists and belongs to the current user
+    const approvalResult = await pool.query(
+      `SELECT * FROM ${schema}.request_approvals
+       WHERE id = $1 AND request_id = $2 AND approver_id = $3 AND status = 'pending'`,
+      [approvalId, request.id, userId]
+    );
+
+    if (approvalResult.rows.length === 0) {
+      throw new BadRequestError('Approval not found or you are not authorized to delegate it');
+    }
+
+    // Verify the delegate user exists
+    const delegateUserResult = await pool.query(
+      `SELECT id, name, email FROM ${schema}.users WHERE id = $1 AND status = 'active'`,
+      [delegateToUserId]
+    );
+
+    if (delegateUserResult.rows.length === 0) {
+      throw new NotFoundError('User to delegate to', delegateToUserId);
+    }
+
+    // Update the approval with delegation
+    const result = await pool.query(
+      `UPDATE ${schema}.request_approvals
+       SET status = 'delegated',
+           delegated_to = $1,
+           comments = $2,
+           updated_at = NOW()
+       WHERE id = $3
+       RETURNING *`,
+      [delegateToUserId, comments, approvalId]
+    );
+
+    // Create a new pending approval for the delegate
+    await pool.query(
+      `INSERT INTO ${schema}.request_approvals
+       (request_id, approver_id, step_number, status, created_at)
+       SELECT request_id, $1, step_number, 'pending', NOW()
+       FROM ${schema}.request_approvals WHERE id = $2`,
+      [delegateToUserId, approvalId]
+    );
+
+    // Log activity
+    await pool.query(
+      `INSERT INTO ${schema}.request_status_history (request_id, from_status, to_status, changed_by, notes)
+       VALUES ($1, 'pending_approval', 'pending_approval', $2, $3)`,
+      [request.id, userId, `Approval delegated to ${delegateUserResult.rows[0].name}`]
+    );
+
+    logger.info({ requestId: request.id, approvalId, delegateTo: delegateToUserId }, 'Approval delegated');
+
+    return {
+      ...result.rows[0],
+      delegated_to_name: delegateUserResult.rows[0].name,
+      delegated_to_email: delegateUserResult.rows[0].email,
+    };
+  }
+
   // History
   async getStatusHistory(tenantSlug: string, requestId: string): Promise<unknown[]> {
     const schema = tenantService.getSchemaName(tenantSlug);

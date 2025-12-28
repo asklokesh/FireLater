@@ -18,6 +18,21 @@ const createProblemSchema = z.object({
   tags: z.array(z.string()).optional(),
 });
 
+const fiveWhyEntrySchema = z.object({
+  why: z.string().max(500),
+  answer: z.string().max(2000),
+});
+
+const fishboneDiagramSchema = z.record(z.array(z.string().max(500)));
+
+const rcaDataSchema = z.object({
+  fiveWhys: z.array(fiveWhyEntrySchema).max(10).optional(),
+  fishbone: fishboneDiagramSchema.optional(),
+  summary: z.string().max(5000).optional(),
+  analysisDate: z.string().optional(),
+  analyzedBy: z.string().optional(),
+}).optional();
+
 const updateProblemSchema = z.object({
   title: z.string().min(5).max(500).optional(),
   description: z.string().max(10000).optional(),
@@ -33,6 +48,7 @@ const updateProblemSchema = z.object({
   resolution: z.string().max(10000).optional(),
   resolutionCode: z.string().max(100).optional(),
   tags: z.array(z.string()).optional(),
+  rcaData: rcaDataSchema,
 });
 
 const assignSchema = z.object({
@@ -59,6 +75,24 @@ const linkIssueSchema = z.object({
   issueId: z.string().uuid(),
   relationshipType: z.enum(['caused_by', 'related_to', 'duplicate_of']).optional(),
   notes: z.string().max(1000).optional(),
+});
+
+const costBreakdownSchema = z.object({
+  labor_hours: z.number().min(0).optional(),
+  labor_rate: z.number().min(0).optional(),
+  revenue_loss: z.number().min(0).optional(),
+  recovery_costs: z.number().min(0).optional(),
+  third_party_costs: z.number().min(0).optional(),
+  customer_credits: z.number().min(0).optional(),
+  other: z.number().min(0).optional(),
+}).optional().nullable();
+
+const financialImpactSchema = z.object({
+  estimated: z.number().min(0).nullable().optional(),
+  actual: z.number().min(0).nullable().optional(),
+  currency: z.string().length(3).optional(),
+  notes: z.string().max(5000).nullable().optional(),
+  costBreakdown: costBreakdownSchema,
 });
 
 export default async function problemRoutes(app: FastifyInstance) {

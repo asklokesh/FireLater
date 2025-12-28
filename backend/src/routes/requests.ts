@@ -28,6 +28,11 @@ const approvalActionSchema = z.object({
   comments: z.string().max(2000).optional(),
 });
 
+const delegateApprovalSchema = z.object({
+  delegateTo: z.string().uuid(),
+  comments: z.string().max(2000).optional(),
+});
+
 const cancelRequestSchema = z.object({
   reason: z.string().min(1).max(2000),
 });
@@ -223,6 +228,24 @@ export default async function requestRoutes(app: FastifyInstance) {
       userId
     );
     reply.send(serviceRequest);
+  });
+
+  // Delegate approval to another user
+  app.post<{ Params: { id: string; approvalId: string } }>('/:id/approvals/:approvalId/delegate', {
+    preHandler: [requirePermission('approvals:approve')],
+  }, async (request, reply) => {
+    const { tenantSlug, userId } = request.user;
+    const body = delegateApprovalSchema.parse(request.body);
+
+    const delegation = await requestService.delegateApproval(
+      tenantSlug,
+      request.params.id,
+      request.params.approvalId,
+      body.delegateTo,
+      body.comments || '',
+      userId
+    );
+    reply.send(delegation);
   });
 
   // Get request comments

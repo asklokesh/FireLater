@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import {
@@ -23,6 +23,9 @@ import {
   Timer,
   Save,
   BookOpen,
+  Search,
+  Trash2,
+  GitBranch,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -49,6 +52,38 @@ import {
   LinkedIssue,
   KBArticle,
 } from '@/hooks/useApi';
+
+// RCA Data Types
+interface FiveWhyEntry {
+  why: string;
+  answer: string;
+}
+
+interface FishboneDiagram {
+  people?: string[];
+  process?: string[];
+  equipment?: string[];
+  materials?: string[];
+  environment?: string[];
+  management?: string[];
+}
+
+interface RcaData {
+  fiveWhys?: FiveWhyEntry[];
+  fishbone?: FishboneDiagram;
+  summary?: string;
+  analysisDate?: string;
+  analyzedBy?: string;
+}
+
+const FISHBONE_CATEGORIES = [
+  { key: 'people', label: 'People', color: 'bg-blue-100 text-blue-800 border-blue-300' },
+  { key: 'process', label: 'Process', color: 'bg-green-100 text-green-800 border-green-300' },
+  { key: 'equipment', label: 'Equipment', color: 'bg-yellow-100 text-yellow-800 border-yellow-300' },
+  { key: 'materials', label: 'Materials', color: 'bg-orange-100 text-orange-800 border-orange-300' },
+  { key: 'environment', label: 'Environment', color: 'bg-purple-100 text-purple-800 border-purple-300' },
+  { key: 'management', label: 'Management', color: 'bg-red-100 text-red-800 border-red-300' },
+] as const;
 
 const statusColors: Record<string, { bg: string; text: string }> = {
   new: { bg: 'bg-blue-100', text: 'text-blue-800' },
@@ -88,10 +123,38 @@ export default function ProblemDetailPage() {
   const [showWorkaroundModal, setShowWorkaroundModal] = useState(false);
   const [rootCause, setRootCause] = useState('');
   const [workaround, setWorkaround] = useState('');
-  const [activeTab, setActiveTab] = useState<'comments' | 'issues' | 'history' | 'kb'>('comments');
+  const [activeTab, setActiveTab] = useState<'comments' | 'issues' | 'history' | 'kb' | 'rca'>('comments');
   const [isEditing, setIsEditing] = useState(false);
   const [showLinkKBModal, setShowLinkKBModal] = useState(false);
   const [selectedKBArticleId, setSelectedKBArticleId] = useState('');
+
+  // RCA Tools State
+  const [fiveWhys, setFiveWhys] = useState<FiveWhyEntry[]>([
+    { why: '', answer: '' },
+    { why: '', answer: '' },
+    { why: '', answer: '' },
+    { why: '', answer: '' },
+    { why: '', answer: '' },
+  ]);
+  const [fishbone, setFishbone] = useState<FishboneDiagram>({
+    people: [],
+    process: [],
+    equipment: [],
+    materials: [],
+    environment: [],
+    management: [],
+  });
+  const [rcaSummary, setRcaSummary] = useState('');
+  const [rcaSaving, setRcaSaving] = useState(false);
+  const [rcaSaveSuccess, setRcaSaveSuccess] = useState<string | null>(null);
+  const [newCauseInputs, setNewCauseInputs] = useState<Record<string, string>>({
+    people: '',
+    process: '',
+    equipment: '',
+    materials: '',
+    environment: '',
+    management: '',
+  });
 
   const problemId = params.id as string;
   const { data: problem, isLoading, error: fetchError } = useProblem(problemId);
@@ -123,6 +186,34 @@ export default function ProblemDetailPage() {
   const groups = groupsData?.data ?? [];
   const linkedKBArticles: KBArticle[] = linkedKBArticlesData?.data ?? [];
   const allKBArticles: KBArticle[] = allKBArticlesData?.data ?? [];
+
+  // Initialize RCA data from problem when loaded
+  useEffect(() => {
+    if (problem?.rca_data) {
+      const rcaData = problem.rca_data as RcaData;
+      if (rcaData.fiveWhys && rcaData.fiveWhys.length > 0) {
+        // Ensure we always have 5 entries
+        const whys = [...rcaData.fiveWhys];
+        while (whys.length < 5) {
+          whys.push({ why: '', answer: '' });
+        }
+        setFiveWhys(whys.slice(0, 5));
+      }
+      if (rcaData.fishbone) {
+        setFishbone({
+          people: rcaData.fishbone.people || [],
+          process: rcaData.fishbone.process || [],
+          equipment: rcaData.fishbone.equipment || [],
+          materials: rcaData.fishbone.materials || [],
+          environment: rcaData.fishbone.environment || [],
+          management: rcaData.fishbone.management || [],
+        });
+      }
+      if (rcaData.summary) {
+        setRcaSummary(rcaData.summary);
+      }
+    }
+  }, [problem?.rca_data]);
 
   const [editForm, setEditForm] = useState({
     title: '',
@@ -320,6 +411,61 @@ export default function ProblemDetailPage() {
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to link KB article';
       setError(message);
+    }
+  };
+
+  // RCA Tools Handlers
+  const handleFiveWhyChange = (index: number, field: 'why' | 'answer', value: string) => {
+    const updated = [...fiveWhys];
+    updated[index] = { ...updated[index], [field]: value };
+    setFiveWhys(updated);
+  };
+
+  const handleAddCause = (category: keyof FishboneDiagram) => {
+    const cause = newCauseInputs[category]?.trim();
+    if (!cause) return;
+    setFishbone(prev => ({
+      ...prev,
+      [category]: [...(prev[category] || []), cause],
+    }));
+    setNewCauseInputs(prev => ({ ...prev, [category]: '' }));
+  };
+
+  const handleRemoveCause = (category: keyof FishboneDiagram, index: number) => {
+    setFishbone(prev => ({
+      ...prev,
+      [category]: (prev[category] || []).filter((_, i) => i !== index),
+    }));
+  };
+
+  const handleSaveRcaData = async (section: 'fiveWhys' | 'fishbone' | 'all') => {
+    setRcaSaving(true);
+    setRcaSaveSuccess(null);
+    setError(null);
+
+    try {
+      const rcaData: RcaData = {
+        fiveWhys: section === 'fiveWhys' || section === 'all' ? fiveWhys.filter(w => w.why || w.answer) : problem?.rca_data?.fiveWhys,
+        fishbone: section === 'fishbone' || section === 'all' ? fishbone : problem?.rca_data?.fishbone,
+        summary: rcaSummary || problem?.rca_data?.summary,
+        analysisDate: new Date().toISOString(),
+      };
+
+      await updateProblem.mutateAsync({
+        id: problemId,
+        data: { rcaData },
+      });
+
+      setRcaSaveSuccess(section === 'all' ? 'All RCA data saved successfully' :
+        section === 'fiveWhys' ? '5 Whys analysis saved' : 'Fishbone diagram saved');
+
+      // Clear success message after 3 seconds
+      setTimeout(() => setRcaSaveSuccess(null), 3000);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to save RCA data';
+      setError(message);
+    } finally {
+      setRcaSaving(false);
     }
   };
 
@@ -607,6 +753,17 @@ export default function ProblemDetailPage() {
                     <BookOpen className="h-4 w-4 inline mr-2" />
                     KB Articles ({linkedKBArticles.length})
                   </button>
+                  <button
+                    onClick={() => setActiveTab('rca')}
+                    className={`px-6 py-3 text-sm font-medium border-b-2 ${
+                      activeTab === 'rca'
+                        ? 'border-blue-500 text-blue-600'
+                        : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                    }`}
+                  >
+                    <Search className="h-4 w-4 inline mr-2" />
+                    RCA Tools
+                  </button>
                 </nav>
               </div>
 
@@ -796,6 +953,206 @@ export default function ProblemDetailPage() {
                     ) : (
                       <p className="text-sm text-gray-500">No linked KB articles. Link articles to document solutions for this problem.</p>
                     )}
+                  </div>
+                )}
+
+                {activeTab === 'rca' && (
+                  <div className="space-y-8">
+                    {/* RCA Success/Error Feedback */}
+                    {rcaSaveSuccess && (
+                      <div className="flex items-center gap-2 p-3 text-sm text-green-800 bg-green-100 rounded-md">
+                        <CheckCircle className="h-4 w-4" />
+                        {rcaSaveSuccess}
+                      </div>
+                    )}
+
+                    {/* 5 Whys Section */}
+                    <div className="space-y-4">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center space-x-2">
+                          <Search className="h-5 w-5 text-blue-600" />
+                          <h3 className="text-lg font-semibold text-gray-900">5 Whys Analysis</h3>
+                        </div>
+                        <Button
+                          size="sm"
+                          onClick={() => handleSaveRcaData('fiveWhys')}
+                          disabled={rcaSaving}
+                        >
+                          {rcaSaving ? (
+                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                          ) : (
+                            <Save className="h-4 w-4 mr-2" />
+                          )}
+                          Save 5 Whys
+                        </Button>
+                      </div>
+                      <p className="text-sm text-gray-500">
+                        Ask &quot;Why?&quot; repeatedly to drill down to the root cause of the problem.
+                      </p>
+                      <div className="space-y-4">
+                        {fiveWhys.map((entry, index) => (
+                          <div key={index} className="bg-gray-50 rounded-lg p-4 border border-gray-200">
+                            <div className="flex items-start space-x-3">
+                              <div className="flex-shrink-0 w-8 h-8 rounded-full bg-blue-600 text-white flex items-center justify-center text-sm font-bold">
+                                {index + 1}
+                              </div>
+                              <div className="flex-1 space-y-3">
+                                <div>
+                                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                                    Why? (Question {index + 1})
+                                  </label>
+                                  <Input
+                                    value={entry.why}
+                                    onChange={(e) => handleFiveWhyChange(index, 'why', e.target.value)}
+                                    placeholder={index === 0 ? "Why did this problem occur?" : "Why is that?"}
+                                    className="w-full"
+                                  />
+                                </div>
+                                <div>
+                                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                                    Answer
+                                  </label>
+                                  <textarea
+                                    value={entry.answer}
+                                    onChange={(e) => handleFiveWhyChange(index, 'answer', e.target.value)}
+                                    placeholder="Enter the answer to this Why question..."
+                                    rows={2}
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+                                  />
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Fishbone Diagram Section */}
+                    <div className="space-y-4 pt-6 border-t border-gray-200">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center space-x-2">
+                          <GitBranch className="h-5 w-5 text-purple-600" />
+                          <h3 className="text-lg font-semibold text-gray-900">Fishbone Diagram (Ishikawa)</h3>
+                        </div>
+                        <Button
+                          size="sm"
+                          onClick={() => handleSaveRcaData('fishbone')}
+                          disabled={rcaSaving}
+                        >
+                          {rcaSaving ? (
+                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                          ) : (
+                            <Save className="h-4 w-4 mr-2" />
+                          )}
+                          Save Fishbone
+                        </Button>
+                      </div>
+                      <p className="text-sm text-gray-500">
+                        Categorize potential causes of the problem across different dimensions.
+                      </p>
+
+                      {/* Fishbone Visual Representation */}
+                      <div className="bg-gray-50 rounded-lg p-6 border border-gray-200">
+                        {/* Main spine with effect */}
+                        <div className="flex items-center justify-center mb-6">
+                          <div className="flex-1 h-1 bg-gray-400"></div>
+                          <div className="px-4 py-2 bg-red-100 border-2 border-red-400 rounded-lg">
+                            <span className="font-semibold text-red-800">Problem: {problem?.title || 'Effect'}</span>
+                          </div>
+                        </div>
+
+                        {/* Categories Grid */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                          {FISHBONE_CATEGORIES.map((category) => (
+                            <div
+                              key={category.key}
+                              className={`p-4 rounded-lg border ${category.color}`}
+                            >
+                              <h4 className="font-semibold mb-3">{category.label}</h4>
+
+                              {/* Existing causes */}
+                              <div className="space-y-2 mb-3">
+                                {fishbone[category.key as keyof FishboneDiagram]?.map((cause, index) => (
+                                  <div
+                                    key={index}
+                                    className="flex items-center justify-between bg-white rounded px-3 py-1.5 text-sm"
+                                  >
+                                    <span className="text-gray-800">{cause}</span>
+                                    <button
+                                      onClick={() => handleRemoveCause(category.key as keyof FishboneDiagram, index)}
+                                      className="text-gray-400 hover:text-red-500 ml-2"
+                                    >
+                                      <Trash2 className="h-3.5 w-3.5" />
+                                    </button>
+                                  </div>
+                                ))}
+                              </div>
+
+                              {/* Add new cause */}
+                              <div className="flex items-center space-x-2">
+                                <Input
+                                  value={newCauseInputs[category.key] || ''}
+                                  onChange={(e) => setNewCauseInputs(prev => ({
+                                    ...prev,
+                                    [category.key]: e.target.value,
+                                  }))}
+                                  onKeyDown={(e) => {
+                                    if (e.key === 'Enter') {
+                                      e.preventDefault();
+                                      handleAddCause(category.key as keyof FishboneDiagram);
+                                    }
+                                  }}
+                                  placeholder="Add cause..."
+                                  className="flex-1 h-8 text-sm bg-white"
+                                />
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => handleAddCause(category.key as keyof FishboneDiagram)}
+                                  className="h-8 px-2"
+                                >
+                                  <Plus className="h-4 w-4" />
+                                </Button>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* RCA Summary */}
+                    <div className="space-y-4 pt-6 border-t border-gray-200">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center space-x-2">
+                          <FileSearch className="h-5 w-5 text-green-600" />
+                          <h3 className="text-lg font-semibold text-gray-900">Analysis Summary</h3>
+                        </div>
+                        <Button
+                          size="sm"
+                          onClick={() => handleSaveRcaData('all')}
+                          disabled={rcaSaving}
+                        >
+                          {rcaSaving ? (
+                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                          ) : (
+                            <Save className="h-4 w-4 mr-2" />
+                          )}
+                          Save All RCA Data
+                        </Button>
+                      </div>
+                      <textarea
+                        value={rcaSummary}
+                        onChange={(e) => setRcaSummary(e.target.value)}
+                        placeholder="Summarize the root cause analysis findings and recommended actions..."
+                        rows={4}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+                      />
+                      {problem?.rca_data?.analysisDate && (
+                        <p className="text-xs text-gray-500">
+                          Last updated: {formatDate(problem.rca_data.analysisDate)}
+                        </p>
+                      )}
+                    </div>
                   </div>
                 )}
               </div>

@@ -20,6 +20,8 @@ const envSchema = z.object({
   EMAIL_FROM_NAME: z.string().default('FireLater'),
   // Slack configuration
   SLACK_DEFAULT_WEBHOOK_URL: z.string().url().optional(),
+  // Microsoft Teams configuration
+  TEAMS_DEFAULT_WEBHOOK_URL: z.string().url().optional(),
   // S3/MinIO configuration
   S3_ENDPOINT: z.string().url().optional(),
   S3_REGION: z.string().default('us-east-1'),
@@ -66,6 +68,9 @@ export const config = {
   },
   slack: {
     defaultWebhookUrl: parsed.data.SLACK_DEFAULT_WEBHOOK_URL,
+  },
+  teams: {
+    defaultWebhookUrl: parsed.data.TEAMS_DEFAULT_WEBHOOK_URL,
   },
   s3: {
     endpoint: parsed.data.S3_ENDPOINT,
