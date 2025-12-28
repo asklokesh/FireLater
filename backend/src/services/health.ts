@@ -358,7 +358,7 @@ class HealthScoreService {
         const uptimePercent = ((thirtyDaysInSeconds - downtimeSeconds) / thirtyDaysInSeconds) * 100;
         return Math.max(0, Math.min(100, uptimePercent));
       }
-    } catch (error) {
+    } catch (_error) {
       // If tables don't exist or query fails, return default
     }
 

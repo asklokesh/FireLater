@@ -105,7 +105,7 @@ export default async function cloudRoutes(app: FastifyInstance) {
     preHandler: [requirePermission('cloud_accounts:manage')],
   }, async (request, reply) => {
     const { tenantSlug } = request.user;
-    const data = request.body as z.infer<typeof createAccountSchema>;
+    const data = createAccountSchema.parse(request.body);
     const account = await cloudAccountService.create(tenantSlug, data);
     reply.status(201).send({ account });
   });
@@ -115,7 +115,7 @@ export default async function cloudRoutes(app: FastifyInstance) {
     preHandler: [requirePermission('cloud_accounts:manage')],
   }, async (request, reply) => {
     const { tenantSlug } = request.user;
-    const data = request.body as z.infer<typeof updateAccountSchema>;
+    const data = updateAccountSchema.parse(request.body);
     const account = await cloudAccountService.update(tenantSlug, request.params.id, data);
     reply.send({ account });
   });
@@ -193,7 +193,7 @@ export default async function cloudRoutes(app: FastifyInstance) {
     preHandler: [requirePermission('cloud_resources:manage')],
   }, async (request, reply) => {
     const { tenantSlug } = request.user;
-    const { applicationId, environmentId } = request.body as z.infer<typeof mapResourceSchema>;
+    const { applicationId, environmentId } = mapResourceSchema.parse(request.body);
 
     const resource = await cloudResourceService.mapToApplication(
       tenantSlug,
@@ -277,7 +277,7 @@ export default async function cloudRoutes(app: FastifyInstance) {
     preHandler: [requirePermission('cloud_resources:manage')],
   }, async (request, reply) => {
     const { tenantSlug } = request.user;
-    const data = request.body as z.infer<typeof createMappingRuleSchema>;
+    const data = createMappingRuleSchema.parse(request.body);
     const rule = await cloudMappingRuleService.create(tenantSlug, data);
     reply.status(201).send({ rule });
   });

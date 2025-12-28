@@ -632,7 +632,7 @@ async function getCloudAccount(schema: string, accountId: string): Promise<{
 // Encryption algorithm for cloud credentials
 const ALGORITHM = 'aes-256-gcm';
 const IV_LENGTH = 16;
-const AUTH_TAG_LENGTH = 16;
+const _AUTH_TAG_LENGTH = 16; // Used for documentation - auth tag is extracted from ciphertext
 
 function getEncryptionKey(): Buffer | null {
   const key = config.encryption?.key;

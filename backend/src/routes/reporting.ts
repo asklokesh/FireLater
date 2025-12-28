@@ -106,7 +106,7 @@ export default async function reportingRoutes(app: FastifyInstance) {
     preHandler: [requirePermission('reports:create')],
   }, async (request, reply) => {
     const { tenantSlug, userId } = request.user;
-    const data = request.body as z.infer<typeof createTemplateSchema>;
+    const data = createTemplateSchema.parse(request.body);
     const template = await reportTemplateService.create(tenantSlug, userId, data);
     reply.status(201).send({ template });
   });
@@ -116,7 +116,7 @@ export default async function reportingRoutes(app: FastifyInstance) {
     preHandler: [requirePermission('reports:manage')],
   }, async (request, reply) => {
     const { tenantSlug } = request.user;
-    const data = request.body as Partial<z.infer<typeof createTemplateSchema>>;
+    const data = createTemplateSchema.partial().parse(request.body);
     const template = await reportTemplateService.update(tenantSlug, request.params.id, data);
     reply.send({ template });
   });
@@ -169,7 +169,7 @@ export default async function reportingRoutes(app: FastifyInstance) {
     preHandler: [requirePermission('reports:manage')],
   }, async (request, reply) => {
     const { tenantSlug, userId } = request.user;
-    const data = request.body as z.infer<typeof createScheduleSchema>;
+    const data = createScheduleSchema.parse(request.body);
     const schedule = await scheduledReportService.create(tenantSlug, userId, data);
     reply.status(201).send({ schedule });
   });
@@ -179,7 +179,7 @@ export default async function reportingRoutes(app: FastifyInstance) {
     preHandler: [requirePermission('reports:manage')],
   }, async (request, reply) => {
     const { tenantSlug } = request.user;
-    const data = request.body as Partial<z.infer<typeof createScheduleSchema>>;
+    const data = createScheduleSchema.partial().parse(request.body);
     const schedule = await scheduledReportService.update(tenantSlug, request.params.id, data);
     reply.send({ schedule });
   });
@@ -314,7 +314,7 @@ export default async function reportingRoutes(app: FastifyInstance) {
     preHandler: [requirePermission('dashboards:manage')],
   }, async (request, reply) => {
     const { tenantSlug, userId } = request.user;
-    const data = request.body as z.infer<typeof createWidgetSchema>;
+    const data = createWidgetSchema.parse(request.body);
     const widget = await dashboardWidgetService.create(tenantSlug, userId, data);
     reply.status(201).send({ widget });
   });
@@ -324,7 +324,7 @@ export default async function reportingRoutes(app: FastifyInstance) {
     preHandler: [requirePermission('dashboards:manage')],
   }, async (request, reply) => {
     const { tenantSlug, userId } = request.user;
-    const data = request.body as Partial<z.infer<typeof createWidgetSchema>>;
+    const data = createWidgetSchema.partial().parse(request.body);
     const widget = await dashboardWidgetService.update(tenantSlug, userId, request.params.id, data);
     reply.send({ widget });
   });

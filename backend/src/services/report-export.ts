@@ -1,3 +1,4 @@
+import fs from 'fs';
 import ExcelJS from 'exceljs';
 import { logger } from '../utils/logger.js';
 
@@ -275,7 +276,6 @@ class ReportExportService {
 
     for (const path of paths) {
       try {
-        const fs = require('fs');
         if (fs.existsSync(path)) {
           return path;
         }
