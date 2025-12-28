@@ -8,11 +8,16 @@ import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { createHash } from 'crypto';
 import { lookup } from 'mime-types';
 import { nanoid } from 'nanoid';
+import { promises as fs } from 'fs';
+import { join, dirname } from 'path';
 import { config } from '../config/index.js';
 import { pool } from '../config/database.js';
 import { tenantService } from './tenant.js';
 import { logger } from '../utils/logger.js';
 import { NotFoundError, BadRequestError } from '../utils/errors.js';
+
+// Local storage directory for development (when S3 is not configured)
+const LOCAL_STORAGE_DIR = join(process.cwd(), 'uploads');
 
 // ============================================
 // S3 CLIENT CONFIGURATION
@@ -168,7 +173,7 @@ class StorageService {
     // Calculate checksum
     const checksum = createHash('sha256').update(content).digest('hex');
 
-    // Upload to S3 (or simulate if not configured)
+    // Upload to S3 or local storage
     if (s3Client) {
       await s3Client.send(
         new PutObjectCommand({
@@ -184,7 +189,11 @@ class StorageService {
         })
       );
     } else {
-      logger.info({ storageKey, fileSize }, 'File would be uploaded (S3 not configured)');
+      // Fall back to local storage for development
+      const localPath = join(LOCAL_STORAGE_DIR, storageKey);
+      await fs.mkdir(dirname(localPath), { recursive: true });
+      await fs.writeFile(localPath, content);
+      logger.info({ storageKey, fileSize, localPath }, 'File uploaded to local storage');
     }
 
     // Save to database
@@ -248,8 +257,9 @@ class StorageService {
     const attachment = result.rows[0];
 
     if (!s3Client) {
-      // Return a mock URL for development
-      return `http://localhost:3001/mock-download/${attachment.storage_key}`;
+      // Return URL to local file endpoint (handled by attachments route)
+      const baseUrl = process.env.API_URL || 'http://localhost:3001';
+      return `${baseUrl}/api/attachments/${attachmentId}/download?tenant=${tenantSlug}`;
     }
 
     const command = new GetObjectCommand({
@@ -280,7 +290,9 @@ class StorageService {
     const attachment = result.rows[0];
 
     if (!s3Client) {
-      return `http://localhost:3001/mock-view/${attachment.storage_key}`;
+      // Return URL to local file endpoint (handled by attachments route)
+      const baseUrl = process.env.API_URL || 'http://localhost:3001';
+      return `${baseUrl}/api/attachments/${attachmentId}/view?tenant=${tenantSlug}`;
     }
 
     const command = new GetObjectCommand({
@@ -310,18 +322,26 @@ class StorageService {
 
     const attachment = result.rows[0];
 
-    if (!s3Client) {
-      throw new BadRequestError('S3 storage not configured');
+    let content: Buffer;
+
+    if (s3Client) {
+      const response = await s3Client.send(
+        new GetObjectCommand({
+          Bucket: attachment.storage_bucket || this.bucket,
+          Key: attachment.storage_key,
+        })
+      );
+      content = Buffer.from(await response.Body!.transformToByteArray());
+    } else {
+      // Read from local storage
+      const localPath = join(LOCAL_STORAGE_DIR, attachment.storage_key);
+      try {
+        content = await fs.readFile(localPath);
+      } catch (error) {
+        logger.error({ error, localPath, attachmentId }, 'Failed to read file from local storage');
+        throw new NotFoundError('Attachment file', attachmentId);
+      }
     }
-
-    const response = await s3Client.send(
-      new GetObjectCommand({
-        Bucket: attachment.storage_bucket || this.bucket,
-        Key: attachment.storage_key,
-      })
-    );
-
-    const content = Buffer.from(await response.Body!.transformToByteArray());
 
     return {
       content,
@@ -374,7 +394,7 @@ class StorageService {
 
     const attachment = result.rows[0];
 
-    // Delete from S3
+    // Delete from storage
     if (s3Client) {
       try {
         await s3Client.send(
@@ -385,6 +405,14 @@ class StorageService {
         );
       } catch (error) {
         logger.warn({ err: error, storageKey: attachment.storage_key }, 'Failed to delete from S3');
+      }
+    } else {
+      // Delete from local storage
+      const localPath = join(LOCAL_STORAGE_DIR, attachment.storage_key);
+      try {
+        await fs.unlink(localPath);
+      } catch (error) {
+        logger.warn({ err: error, localPath }, 'Failed to delete from local storage');
       }
     }
 
@@ -488,8 +516,10 @@ class StorageService {
     const storageKey = `${tenantSlug}/${entityType}/${entityId}/${storedFilename}`;
 
     if (!s3Client) {
+      // For local storage, use the regular upload endpoint
+      const baseUrl = process.env.API_URL || 'http://localhost:3001';
       return {
-        uploadUrl: `http://localhost:3001/mock-upload/${storageKey}`,
+        uploadUrl: `${baseUrl}/api/attachments/upload?tenant=${tenantSlug}&entityType=${entityType}&entityId=${entityId}`,
         storageKey,
         expiresAt: new Date(Date.now() + expiresIn * 1000),
       };

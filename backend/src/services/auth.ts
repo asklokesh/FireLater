@@ -3,6 +3,7 @@ import crypto from 'crypto';
 import { pool } from '../config/database.js';
 import { redis } from '../config/redis.js';
 import { tenantService } from './tenant.js';
+import { emailService } from './email.js';
 import { UnauthorizedError, NotFoundError, BadRequestError } from '../utils/errors.js';
 import { logger } from '../utils/logger.js';
 import type { JwtPayload } from '../types/index.js';
@@ -308,17 +309,14 @@ export class AuthService {
       email: user.email,
     }));
 
-    // Log the reset token for development (in production, send email)
+    // Send password reset email
+    await emailService.sendPasswordResetEmail(user.email, user.name, resetToken, tenantSlug);
+
     logger.info({
       userId: user.id,
       email: user.email,
-      resetToken,
       expiresAt,
-    }, 'Password reset token generated');
-
-    // TODO: Send email with reset link
-    // For now, the token is logged. In production, integrate with email service:
-    // await emailService.sendPasswordResetEmail(user.email, user.name, resetToken, tenantSlug);
+    }, 'Password reset email sent');
   }
 
   async resetPassword(tenantSlug: string, token: string, newPassword: string): Promise<void> {
@@ -456,31 +454,25 @@ export class AuthService {
     // Generate new verification token
     const verificationToken = await this.createEmailVerificationToken(user.id, schema);
 
-    // Log the verification token for development (in production, send email)
+    // Send verification email
+    await emailService.sendVerificationEmail(user.email, user.name, verificationToken, tenantSlug);
+
     logger.info({
       userId: user.id,
       email: user.email,
-      verificationToken,
-      verifyUrl: `${process.env.FRONTEND_URL || 'http://localhost:3000'}/verify-email?token=${verificationToken}&tenant=${tenantSlug}`,
-    }, 'Email verification token generated');
-
-    // TODO: Send email with verification link
-    // await emailService.sendVerificationEmail(user.email, user.name, verificationToken, tenantSlug);
+    }, 'Verification email resent');
   }
 
   async sendVerificationEmailForNewUser(userId: string, email: string, name: string, tenantSlug: string, schema: string): Promise<void> {
     const verificationToken = await this.createEmailVerificationToken(userId, schema);
 
-    // Log the verification token for development (in production, send email)
+    // Send verification email
+    await emailService.sendVerificationEmail(email, name, verificationToken, tenantSlug);
+
     logger.info({
       userId,
       email,
-      verificationToken,
-      verifyUrl: `${process.env.FRONTEND_URL || 'http://localhost:3000'}/verify-email?token=${verificationToken}&tenant=${tenantSlug}`,
-    }, 'Email verification token generated for new user');
-
-    // TODO: Send email with verification link
-    // await emailService.sendVerificationEmail(email, name, verificationToken, tenantSlug);
+    }, 'Verification email sent for new user');
   }
 }
 

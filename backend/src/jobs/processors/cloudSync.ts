@@ -1,4 +1,9 @@
 import { Job, Worker } from 'bullmq';
+import { EC2Client, DescribeInstancesCommand, DescribeVpcsCommand } from '@aws-sdk/client-ec2';
+import { RDSClient, DescribeDBInstancesCommand } from '@aws-sdk/client-rds';
+import { LambdaClient, ListFunctionsCommand } from '@aws-sdk/client-lambda';
+import { CostExplorerClient, GetCostAndUsageCommand } from '@aws-sdk/client-cost-explorer';
+import crypto from 'crypto';
 import { config } from '../../config/index.js';
 import { pool } from '../../config/database.js';
 import { logger } from '../../utils/logger.js';
@@ -55,39 +60,285 @@ interface CloudCost {
   periodEnd: Date;
 }
 
-async function syncAwsResources(_credentials: Record<string, unknown>): Promise<CloudResource[]> {
-  // TODO: Implement with AWS SDK
-  logger.info('AWS resource sync would run (SDK not configured)');
+// ============================================
+// AWS SYNC IMPLEMENTATION
+// ============================================
+
+interface AwsCredentials {
+  accessKeyId: string;
+  secretAccessKey: string;
+  region: string;
+  assumeRoleArn?: string;
+}
+
+async function syncAwsResources(credentials: Record<string, unknown>): Promise<CloudResource[]> {
+  const awsCreds = credentials as unknown as AwsCredentials;
+
+  if (!awsCreds.accessKeyId || !awsCreds.secretAccessKey) {
+    logger.warn('AWS credentials not configured, skipping resource sync');
+    return [];
+  }
+
+  const resources: CloudResource[] = [];
+  const clientConfig = {
+    region: awsCreds.region || 'us-east-1',
+    credentials: {
+      accessKeyId: awsCreds.accessKeyId,
+      secretAccessKey: awsCreds.secretAccessKey,
+    },
+  };
+
+  try {
+    // Sync EC2 Instances
+    const ec2Client = new EC2Client(clientConfig);
+    const ec2Response = await ec2Client.send(new DescribeInstancesCommand({}));
+
+    for (const reservation of ec2Response.Reservations || []) {
+      for (const instance of reservation.Instances || []) {
+        const nameTag = instance.Tags?.find(t => t.Key === 'Name');
+        resources.push({
+          resourceId: instance.InstanceId || '',
+          resourceType: 'ec2:instance',
+          name: nameTag?.Value || instance.InstanceId || 'Unnamed Instance',
+          region: awsCreds.region || 'us-east-1',
+          status: instance.State?.Name || 'unknown',
+          metadata: {
+            instanceType: instance.InstanceType,
+            platform: instance.Platform || 'linux',
+            privateIp: instance.PrivateIpAddress,
+            publicIp: instance.PublicIpAddress,
+            vpcId: instance.VpcId,
+            launchTime: instance.LaunchTime?.toISOString(),
+            tags: instance.Tags?.reduce((acc, t) => ({ ...acc, [t.Key || '']: t.Value }), {}),
+          },
+        });
+      }
+    }
+
+    // Sync VPCs
+    const vpcResponse = await ec2Client.send(new DescribeVpcsCommand({}));
+    for (const vpc of vpcResponse.Vpcs || []) {
+      const nameTag = vpc.Tags?.find(t => t.Key === 'Name');
+      resources.push({
+        resourceId: vpc.VpcId || '',
+        resourceType: 'ec2:vpc',
+        name: nameTag?.Value || vpc.VpcId || 'Unnamed VPC',
+        region: awsCreds.region || 'us-east-1',
+        status: vpc.State || 'unknown',
+        metadata: {
+          cidrBlock: vpc.CidrBlock,
+          isDefault: vpc.IsDefault,
+          tags: vpc.Tags?.reduce((acc, t) => ({ ...acc, [t.Key || '']: t.Value }), {}),
+        },
+      });
+    }
+
+    // Sync RDS Instances
+    const rdsClient = new RDSClient(clientConfig);
+    const rdsResponse = await rdsClient.send(new DescribeDBInstancesCommand({}));
+
+    for (const db of rdsResponse.DBInstances || []) {
+      resources.push({
+        resourceId: db.DBInstanceIdentifier || '',
+        resourceType: 'rds:instance',
+        name: db.DBInstanceIdentifier || 'Unnamed Database',
+        region: awsCreds.region || 'us-east-1',
+        status: db.DBInstanceStatus || 'unknown',
+        metadata: {
+          engine: db.Engine,
+          engineVersion: db.EngineVersion,
+          instanceClass: db.DBInstanceClass,
+          allocatedStorage: db.AllocatedStorage,
+          multiAz: db.MultiAZ,
+          endpoint: db.Endpoint?.Address,
+          port: db.Endpoint?.Port,
+        },
+      });
+    }
+
+    // Sync Lambda Functions
+    const lambdaClient = new LambdaClient(clientConfig);
+    const lambdaResponse = await lambdaClient.send(new ListFunctionsCommand({}));
+
+    for (const fn of lambdaResponse.Functions || []) {
+      resources.push({
+        resourceId: fn.FunctionArn || '',
+        resourceType: 'lambda:function',
+        name: fn.FunctionName || 'Unnamed Function',
+        region: awsCreds.region || 'us-east-1',
+        status: fn.State || 'Active',
+        metadata: {
+          runtime: fn.Runtime,
+          handler: fn.Handler,
+          memorySize: fn.MemorySize,
+          timeout: fn.Timeout,
+          lastModified: fn.LastModified,
+          codeSize: fn.CodeSize,
+        },
+      });
+    }
+
+    logger.info({ resourceCount: resources.length }, 'AWS resources synced successfully');
+  } catch (error) {
+    logger.error({ error }, 'Failed to sync AWS resources');
+    throw error;
+  }
+
+  return resources;
+}
+
+async function syncAwsCosts(credentials: Record<string, unknown>): Promise<CloudCost[]> {
+  const awsCreds = credentials as unknown as AwsCredentials;
+
+  if (!awsCreds.accessKeyId || !awsCreds.secretAccessKey) {
+    logger.warn('AWS credentials not configured, skipping cost sync');
+    return [];
+  }
+
+  const costs: CloudCost[] = [];
+
+  try {
+    const costClient = new CostExplorerClient({
+      region: 'us-east-1', // Cost Explorer is only available in us-east-1
+      credentials: {
+        accessKeyId: awsCreds.accessKeyId,
+        secretAccessKey: awsCreds.secretAccessKey,
+      },
+    });
+
+    // Get costs for the last 30 days
+    const endDate = new Date();
+    const startDate = new Date();
+    startDate.setDate(startDate.getDate() - 30);
+
+    const costResponse = await costClient.send(new GetCostAndUsageCommand({
+      TimePeriod: {
+        Start: startDate.toISOString().split('T')[0],
+        End: endDate.toISOString().split('T')[0],
+      },
+      Granularity: 'DAILY',
+      Metrics: ['UnblendedCost'],
+      GroupBy: [{ Type: 'DIMENSION', Key: 'SERVICE' }],
+    }));
+
+    for (const result of costResponse.ResultsByTime || []) {
+      for (const group of result.Groups || []) {
+        const serviceName = group.Keys?.[0] || 'Unknown Service';
+        const amount = parseFloat(group.Metrics?.UnblendedCost?.Amount || '0');
+
+        if (amount > 0) {
+          costs.push({
+            serviceName,
+            cost: amount,
+            currency: group.Metrics?.UnblendedCost?.Unit || 'USD',
+            periodStart: new Date(result.TimePeriod?.Start || ''),
+            periodEnd: new Date(result.TimePeriod?.End || ''),
+          });
+        }
+      }
+    }
+
+    logger.info({ costEntries: costs.length }, 'AWS costs synced successfully');
+  } catch (error) {
+    logger.error({ error }, 'Failed to sync AWS costs');
+    throw error;
+  }
+
+  return costs;
+}
+
+// ============================================
+// AZURE SYNC IMPLEMENTATION (Placeholder with structure)
+// ============================================
+
+interface AzureCredentials {
+  tenantId: string;
+  clientId: string;
+  clientSecret: string;
+  subscriptionId: string;
+}
+
+async function syncAzureResources(credentials: Record<string, unknown>): Promise<CloudResource[]> {
+  const azureCreds = credentials as unknown as AzureCredentials;
+
+  if (!azureCreds.tenantId || !azureCreds.clientId || !azureCreds.clientSecret) {
+    logger.info('Azure credentials not configured, skipping resource sync');
+    return [];
+  }
+
+  // Azure SDK implementation would go here
+  // Install: npm install @azure/arm-resources @azure/identity
+  // Example:
+  // const credential = new ClientSecretCredential(tenantId, clientId, clientSecret);
+  // const resourceClient = new ResourceManagementClient(credential, subscriptionId);
+  // const resources = await resourceClient.resources.list();
+
+  logger.info('Azure resource sync requires @azure/arm-resources package. Install with: npm install @azure/arm-resources @azure/identity');
   return [];
 }
 
-async function syncAwsCosts(_credentials: Record<string, unknown>): Promise<CloudCost[]> {
-  // TODO: Implement with AWS Cost Explorer API
-  logger.info('AWS cost sync would run (SDK not configured)');
+async function syncAzureCosts(credentials: Record<string, unknown>): Promise<CloudCost[]> {
+  const azureCreds = credentials as unknown as AzureCredentials;
+
+  if (!azureCreds.tenantId || !azureCreds.clientId || !azureCreds.clientSecret) {
+    logger.info('Azure credentials not configured, skipping cost sync');
+    return [];
+  }
+
+  // Azure Cost Management SDK implementation would go here
+  // Install: npm install @azure/arm-costmanagement @azure/identity
+  // Example:
+  // const credential = new ClientSecretCredential(tenantId, clientId, clientSecret);
+  // const costClient = new CostManagementClient(credential);
+  // const costs = await costClient.query.usage(scope, { ... });
+
+  logger.info('Azure cost sync requires @azure/arm-costmanagement package. Install with: npm install @azure/arm-costmanagement @azure/identity');
   return [];
 }
 
-async function syncAzureResources(_credentials: Record<string, unknown>): Promise<CloudResource[]> {
-  // TODO: Implement with Azure SDK
-  logger.info('Azure resource sync would run (SDK not configured)');
+// ============================================
+// GCP SYNC IMPLEMENTATION (Placeholder with structure)
+// ============================================
+
+interface GcpCredentials {
+  projectId: string;
+  clientEmail: string;
+  privateKey: string;
+}
+
+async function syncGcpResources(credentials: Record<string, unknown>): Promise<CloudResource[]> {
+  const gcpCreds = credentials as unknown as GcpCredentials;
+
+  if (!gcpCreds.projectId || !gcpCreds.clientEmail || !gcpCreds.privateKey) {
+    logger.info('GCP credentials not configured, skipping resource sync');
+    return [];
+  }
+
+  // GCP SDK implementation would go here
+  // Install: npm install @google-cloud/compute @google-cloud/resource-manager
+  // Example:
+  // const compute = new Compute({ projectId, credentials: { client_email, private_key } });
+  // const [vms] = await compute.getVMs();
+
+  logger.info('GCP resource sync requires @google-cloud/compute package. Install with: npm install @google-cloud/compute @google-cloud/resource-manager');
   return [];
 }
 
-async function syncAzureCosts(_credentials: Record<string, unknown>): Promise<CloudCost[]> {
-  // TODO: Implement with Azure Cost Management API
-  logger.info('Azure cost sync would run (SDK not configured)');
-  return [];
-}
+async function syncGcpCosts(credentials: Record<string, unknown>): Promise<CloudCost[]> {
+  const gcpCreds = credentials as unknown as GcpCredentials;
 
-async function syncGcpResources(_credentials: Record<string, unknown>): Promise<CloudResource[]> {
-  // TODO: Implement with GCP SDK
-  logger.info('GCP resource sync would run (SDK not configured)');
-  return [];
-}
+  if (!gcpCreds.projectId || !gcpCreds.clientEmail || !gcpCreds.privateKey) {
+    logger.info('GCP credentials not configured, skipping cost sync');
+    return [];
+  }
 
-async function syncGcpCosts(_credentials: Record<string, unknown>): Promise<CloudCost[]> {
-  // TODO: Implement with GCP Billing API
-  logger.info('GCP cost sync would run (SDK not configured)');
+  // GCP Billing SDK implementation would go here
+  // Install: npm install @google-cloud/bigquery
+  // Example:
+  // const bigquery = new BigQuery({ projectId, credentials: { client_email, private_key } });
+  // Query the billing export table in BigQuery
+
+  logger.info('GCP cost sync requires @google-cloud/bigquery package. Install with: npm install @google-cloud/bigquery');
   return [];
 }
 
@@ -110,24 +361,81 @@ async function getCloudAccount(schema: string, accountId: string): Promise<{
   return result.rows[0] || null;
 }
 
+// Encryption algorithm for cloud credentials
+const ALGORITHM = 'aes-256-gcm';
+const IV_LENGTH = 16;
+const AUTH_TAG_LENGTH = 16;
+
+function getEncryptionKey(): Buffer | null {
+  const key = config.encryption?.key;
+  if (!key) {
+    return null;
+  }
+  // Key should be 32 bytes for AES-256
+  return crypto.createHash('sha256').update(key).digest();
+}
+
+function encryptCredentials(credentials: Record<string, unknown>): string {
+  const key = getEncryptionKey();
+  if (!key) {
+    // Development mode: store as plain JSON (not secure)
+    logger.warn('ENCRYPTION_KEY not set - storing credentials as plain JSON (NOT SECURE)');
+    return JSON.stringify(credentials);
+  }
+
+  const iv = crypto.randomBytes(IV_LENGTH);
+  const cipher = crypto.createCipheriv(ALGORITHM, key, iv);
+
+  const plaintext = JSON.stringify(credentials);
+  const encrypted = Buffer.concat([cipher.update(plaintext, 'utf8'), cipher.final()]);
+  const authTag = cipher.getAuthTag();
+
+  // Format: iv:authTag:encrypted (all base64)
+  return `${iv.toString('base64')}:${authTag.toString('base64')}:${encrypted.toString('base64')}`;
+}
+
 async function decryptCredentials(encrypted: string): Promise<Record<string, unknown>> {
-  // TODO: Implement proper encryption/decryption for cloud credentials
-  // Production requirements:
-  // 1. Use a key management service (AWS KMS, HashiCorp Vault, etc.)
-  // 2. Encrypt credentials at rest using AES-256-GCM
-  // 3. Store encryption key separately from encrypted data
-  // 4. Implement key rotation strategy
-  // 5. Consider using IAM roles for AWS instead of access keys
-  // 6. For Azure, use managed identities
-  // 7. For GCP, use service account impersonation
-  //
-  // Current implementation: credentials stored as plain JSON (NOT SECURE - development only)
+  const key = getEncryptionKey();
+
+  // Check if this is encrypted format (contains colons)
+  if (!encrypted.includes(':')) {
+    // Legacy format: plain JSON (development mode)
+    try {
+      return JSON.parse(encrypted);
+    } catch {
+      logger.error('Failed to parse credentials as JSON');
+      return {};
+    }
+  }
+
+  if (!key) {
+    logger.error('ENCRYPTION_KEY not set but credentials appear to be encrypted');
+    return {};
+  }
+
   try {
-    return JSON.parse(encrypted);
-  } catch {
+    const parts = encrypted.split(':');
+    if (parts.length !== 3) {
+      throw new Error('Invalid encrypted credential format');
+    }
+
+    const iv = Buffer.from(parts[0], 'base64');
+    const authTag = Buffer.from(parts[1], 'base64');
+    const encryptedData = Buffer.from(parts[2], 'base64');
+
+    const decipher = crypto.createDecipheriv(ALGORITHM, key, iv);
+    decipher.setAuthTag(authTag);
+
+    const decrypted = Buffer.concat([decipher.update(encryptedData), decipher.final()]);
+    return JSON.parse(decrypted.toString('utf8'));
+  } catch (error) {
+    logger.error({ error }, 'Failed to decrypt credentials');
     return {};
   }
 }
+
+// Export for use by cloud service
+export { encryptCredentials, decryptCredentials };
 
 async function updateResources(
   schema: string,

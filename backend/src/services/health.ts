@@ -182,11 +182,17 @@ class HealthScoreService {
     }
     changeScore = Math.max(0, Math.min(100, changeScore));
 
-    // Calculate SLA score (0-100) - placeholder for now
-    const slaScore = 100; // Would calculate from SLA breaches
+    // Calculate SLA score (0-100) from actual breach data
+    const slaStats = await this.getSlaStats(schema, applicationId);
+    let slaScore = 100;
+    if (slaStats.total > 0) {
+      // SLA score is the percentage of issues that met SLA
+      slaScore = ((slaStats.total - slaStats.breached) / slaStats.total) * 100;
+    }
+    slaScore = Math.max(0, Math.min(100, slaScore));
 
-    // Uptime score - placeholder (would come from cloud metrics)
-    const uptimeScore = 99.9;
+    // Calculate uptime score from cloud resources and health checks
+    const uptimeScore = await this.getUptimeScore(schema, applicationId);
 
     // Calculate overall score with tier adjustment
     const rawScore = (
@@ -283,6 +289,81 @@ class HealthScoreService {
       failed: parseInt(result.rows[0].failed, 10),
       rolledBack: parseInt(result.rows[0].rolled_back, 10),
     };
+  }
+
+  private async getSlaStats(schema: string, applicationId: string): Promise<{
+    total: number;
+    breached: number;
+  }> {
+    // Get SLA breach stats for issues related to this application
+    const result = await pool.query(
+      `SELECT
+         COUNT(*) as total,
+         COUNT(*) FILTER (WHERE sla_breached = true) as breached
+       FROM ${schema}.issues
+       WHERE application_id = $1
+       AND created_at >= NOW() - INTERVAL '30 days'`,
+      [applicationId]
+    );
+
+    return {
+      total: parseInt(result.rows[0].total, 10) || 0,
+      breached: parseInt(result.rows[0].breached, 10) || 0,
+    };
+  }
+
+  private async getUptimeScore(schema: string, applicationId: string): Promise<number> {
+    // Try to get uptime from cloud resources associated with this application
+    // First check if there are health check results
+    try {
+      const healthResult = await pool.query(
+        `SELECT
+           COUNT(*) as total_checks,
+           COUNT(*) FILTER (WHERE status = 'healthy') as healthy_checks
+         FROM ${schema}.cloud_resources cr
+         WHERE cr.application_id = $1
+         AND cr.is_deleted = false
+         AND cr.last_seen >= NOW() - INTERVAL '30 days'`,
+        [applicationId]
+      );
+
+      const totalChecks = parseInt(healthResult.rows[0].total_checks, 10) || 0;
+      const healthyChecks = parseInt(healthResult.rows[0].healthy_checks, 10) || 0;
+
+      if (totalChecks > 0) {
+        return (healthyChecks / totalChecks) * 100;
+      }
+
+      // If no cloud resources, try to calculate from issue downtime
+      const downtimeResult = await pool.query(
+        `SELECT
+           COALESCE(SUM(
+             CASE WHEN status IN ('resolved', 'closed')
+             THEN EXTRACT(EPOCH FROM (resolved_at - created_at))
+             ELSE EXTRACT(EPOCH FROM (NOW() - created_at))
+             END
+           ), 0) as total_downtime_seconds
+         FROM ${schema}.issues
+         WHERE application_id = $1
+         AND priority IN ('critical', 'high')
+         AND created_at >= NOW() - INTERVAL '30 days'
+         AND (title ILIKE '%outage%' OR title ILIKE '%down%' OR title ILIKE '%unavailable%')`,
+        [applicationId]
+      );
+
+      const downtimeSeconds = parseFloat(downtimeResult.rows[0].total_downtime_seconds) || 0;
+      const thirtyDaysInSeconds = 30 * 24 * 60 * 60;
+
+      if (downtimeSeconds > 0) {
+        const uptimePercent = ((thirtyDaysInSeconds - downtimeSeconds) / thirtyDaysInSeconds) * 100;
+        return Math.max(0, Math.min(100, uptimePercent));
+      }
+    } catch (error) {
+      // If tables don't exist or query fails, return default
+    }
+
+    // Default to 99.9% if no data available (assume application is up)
+    return 99.9;
   }
 
   async listAllScores(

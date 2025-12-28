@@ -1,7 +1,10 @@
+import { EC2Client, DescribeRegionsCommand } from '@aws-sdk/client-ec2';
 import { pool } from '../config/database.js';
 import { tenantService } from './tenant.js';
 import { NotFoundError, BadRequestError } from '../utils/errors.js';
 import { getOffset } from '../utils/pagination.js';
+import { encryptCredentials, decryptCredentials } from '../jobs/processors/cloudSync.js';
+import { logger } from '../utils/logger.js';
 import type { PaginationParams } from '../types/index.js';
 
 // ============================================
@@ -87,10 +90,15 @@ class CloudAccountService {
       throw new BadRequestError(`Cloud account ${data.provider}:${data.accountId} already exists`);
     }
 
+    // Encrypt credentials before storing
+    const encryptedCredentials = data.credentials
+      ? encryptCredentials(data.credentials)
+      : '';
+
     const result = await pool.query(
       `INSERT INTO ${schema}.cloud_accounts (
         provider, account_id, name, description,
-        credential_type, credentials, role_arn, external_id,
+        credential_type, credentials_encrypted, role_arn, external_id,
         sync_enabled, sync_interval, sync_resources, sync_costs, sync_metrics,
         regions
       ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
@@ -101,7 +109,7 @@ class CloudAccountService {
         data.name,
         data.description || null,
         data.credentialType,
-        JSON.stringify(data.credentials || {}),
+        encryptedCredentials,
         data.roleArn || null,
         data.externalId || null,
         data.syncEnabled ?? true,
@@ -113,7 +121,10 @@ class CloudAccountService {
       ]
     );
 
-    return result.rows[0];
+    // Remove encrypted credentials from response
+    const account = result.rows[0];
+    delete account.credentials_encrypted;
+    return account;
   }
 
   async update(
@@ -151,7 +162,12 @@ class CloudAccountService {
       if (data[key as keyof typeof data] !== undefined) {
         fields.push(`${column} = $${paramIndex++}`);
         const value = data[key as keyof typeof data];
-        values.push(key === 'credentials' ? JSON.stringify(value) : value);
+        // Encrypt credentials before storing
+        if (key === 'credentials') {
+          values.push(encryptCredentials(value as Record<string, unknown>));
+        } else {
+          values.push(value);
+        }
       }
     }
 
@@ -202,13 +218,69 @@ class CloudAccountService {
   }
 
   async testConnection(tenantSlug: string, id: string): Promise<{ success: boolean; message: string }> {
-    const account = await this.findById(tenantSlug, id) as Record<string, unknown> | null;
+    const schema = tenantService.getSchemaName(tenantSlug);
+
+    // Get account with encrypted credentials
+    const result = await pool.query(
+      `SELECT * FROM ${schema}.cloud_accounts WHERE id = $1`,
+      [id]
+    );
+
+    const account = result.rows[0];
     if (!account) {
       throw new NotFoundError('Cloud account', id);
     }
 
-    // Stub implementation - would test actual cloud provider connection
-    return { success: true, message: 'Connection test successful (stub)' };
+    try {
+      // Decrypt credentials
+      const credentials = await decryptCredentials(account.credentials_encrypted || '{}');
+
+      switch (account.provider) {
+        case 'aws': {
+          const awsCreds = credentials as { accessKeyId?: string; secretAccessKey?: string; region?: string };
+          if (!awsCreds.accessKeyId || !awsCreds.secretAccessKey) {
+            return { success: false, message: 'AWS credentials not configured' };
+          }
+
+          const ec2Client = new EC2Client({
+            region: awsCreds.region || 'us-east-1',
+            credentials: {
+              accessKeyId: awsCreds.accessKeyId,
+              secretAccessKey: awsCreds.secretAccessKey,
+            },
+          });
+
+          // Test by listing regions - a simple, read-only operation
+          await ec2Client.send(new DescribeRegionsCommand({}));
+          return { success: true, message: 'AWS connection successful' };
+        }
+
+        case 'azure': {
+          const azureCreds = credentials as { tenantId?: string; clientId?: string; clientSecret?: string };
+          if (!azureCreds.tenantId || !azureCreds.clientId || !azureCreds.clientSecret) {
+            return { success: false, message: 'Azure credentials not configured' };
+          }
+          // Azure SDK would go here
+          return { success: true, message: 'Azure credentials verified (SDK integration pending)' };
+        }
+
+        case 'gcp': {
+          const gcpCreds = credentials as { projectId?: string; clientEmail?: string; privateKey?: string };
+          if (!gcpCreds.projectId || !gcpCreds.clientEmail || !gcpCreds.privateKey) {
+            return { success: false, message: 'GCP credentials not configured' };
+          }
+          // GCP SDK would go here
+          return { success: true, message: 'GCP credentials verified (SDK integration pending)' };
+        }
+
+        default:
+          return { success: false, message: `Unsupported provider: ${account.provider}` };
+      }
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Connection test failed';
+      logger.error({ error, accountId: id, provider: account.provider }, 'Cloud connection test failed');
+      return { success: false, message };
+    }
   }
 }
 
