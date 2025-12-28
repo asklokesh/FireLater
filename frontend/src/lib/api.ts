@@ -246,6 +246,10 @@ export const issuesApi = {
     return response.data;
   },
 
+  delete: async (id: string) => {
+    await api.delete(`/v1/issues/${id}`);
+  },
+
   getComments: async (id: string) => {
     const response = await api.get(`/v1/issues/${id}/comments`);
     return response.data;

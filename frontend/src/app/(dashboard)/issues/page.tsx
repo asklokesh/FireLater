@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import {
   Plus,
   Search,
@@ -11,9 +12,16 @@ import {
   Clock,
   MoreHorizontal,
   Loader2,
+  Edit,
+  Trash2,
+  UserPlus,
+  CheckCircle,
+  XCircle,
+  Eye,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { useIssues, Issue } from '@/hooks/useApi';
+import { DropdownMenu, DropdownMenuItem, DropdownMenuDivider } from '@/components/ui/dropdown-menu';
+import { useIssues, Issue, useChangeIssueStatus, useDeleteIssue } from '@/hooks/useApi';
 
 const statusColors: Record<string, { bg: string; text: string }> = {
   new: { bg: 'bg-blue-100', text: 'text-blue-800' },
@@ -41,6 +49,7 @@ const statusLabels: Record<string, string> = {
 };
 
 export default function IssuesPage() {
+  const router = useRouter();
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [priorityFilter, setPriorityFilter] = useState<string>('all');
@@ -48,7 +57,7 @@ export default function IssuesPage() {
   const [showFilters, setShowFilters] = useState(false);
   const [page, setPage] = useState(1);
 
-  const { data, isLoading, error } = useIssues({
+  const { data, isLoading, error, refetch } = useIssues({
     page,
     limit: 20,
     status: statusFilter !== 'all' ? statusFilter : undefined,
@@ -59,6 +68,29 @@ export default function IssuesPage() {
 
   const issues = data?.data ?? [];
   const pagination = data?.pagination ?? { page: 1, limit: 20, total: 0, totalPages: 1 };
+
+  const changeStatusMutation = useChangeIssueStatus();
+  const deleteIssueMutation = useDeleteIssue();
+
+  const handleStatusChange = async (issueId: string, newStatus: string) => {
+    try {
+      await changeStatusMutation.mutateAsync({ id: issueId, status: newStatus });
+      refetch();
+    } catch (error) {
+      console.error('Failed to update issue status:', error);
+    }
+  };
+
+  const handleDelete = async (issueId: string, issueNumber: string) => {
+    if (window.confirm(`Are you sure you want to delete issue ${issueNumber}?`)) {
+      try {
+        await deleteIssueMutation.mutateAsync(issueId);
+        refetch();
+      } catch (error) {
+        console.error('Failed to delete issue:', error);
+      }
+    }
+  };
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
@@ -279,9 +311,49 @@ export default function IssuesPage() {
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-right">
-                        <button className="text-gray-400 hover:text-gray-600">
-                          <MoreHorizontal className="h-5 w-5" />
-                        </button>
+                        <DropdownMenu
+                          trigger={
+                            <button className="text-gray-400 hover:text-gray-600 p-1 rounded hover:bg-gray-100">
+                              <MoreHorizontal className="h-5 w-5" />
+                            </button>
+                          }
+                        >
+                          <DropdownMenuItem onClick={() => router.push(`/issues/${issue.id}`)}>
+                            <Eye className="h-4 w-4 mr-2" />
+                            View Details
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => router.push(`/issues/${issue.id}/edit`)}>
+                            <Edit className="h-4 w-4 mr-2" />
+                            Edit
+                          </DropdownMenuItem>
+                          <DropdownMenuDivider />
+                          {issue.status !== 'in_progress' && (
+                            <DropdownMenuItem onClick={() => handleStatusChange(issue.id, 'in_progress')}>
+                              <CheckCircle className="h-4 w-4 mr-2" />
+                              Mark In Progress
+                            </DropdownMenuItem>
+                          )}
+                          {issue.status !== 'resolved' && (
+                            <DropdownMenuItem onClick={() => handleStatusChange(issue.id, 'resolved')}>
+                              <CheckCircle className="h-4 w-4 mr-2" />
+                              Mark Resolved
+                            </DropdownMenuItem>
+                          )}
+                          {issue.status !== 'closed' && (
+                            <DropdownMenuItem onClick={() => handleStatusChange(issue.id, 'closed')}>
+                              <XCircle className="h-4 w-4 mr-2" />
+                              Close Issue
+                            </DropdownMenuItem>
+                          )}
+                          <DropdownMenuDivider />
+                          <DropdownMenuItem
+                            variant="danger"
+                            onClick={() => handleDelete(issue.id, issue.issue_number)}
+                          >
+                            <Trash2 className="h-4 w-4 mr-2" />
+                            Delete
+                          </DropdownMenuItem>
+                        </DropdownMenu>
                       </td>
                     </tr>
                   );

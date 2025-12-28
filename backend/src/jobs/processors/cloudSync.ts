@@ -3,6 +3,11 @@ import { EC2Client, DescribeInstancesCommand, DescribeVpcsCommand } from '@aws-s
 import { RDSClient, DescribeDBInstancesCommand } from '@aws-sdk/client-rds';
 import { LambdaClient, ListFunctionsCommand } from '@aws-sdk/client-lambda';
 import { CostExplorerClient, GetCostAndUsageCommand } from '@aws-sdk/client-cost-explorer';
+import { ClientSecretCredential } from '@azure/identity';
+import { ResourceManagementClient } from '@azure/arm-resources';
+import { ComputeManagementClient } from '@azure/arm-compute';
+import { CostManagementClient } from '@azure/arm-costmanagement';
+import { InstancesClient, DisksClient } from '@google-cloud/compute';
 import crypto from 'crypto';
 import { config } from '../../config/index.js';
 import { pool } from '../../config/database.js';
@@ -266,15 +271,75 @@ async function syncAzureResources(credentials: Record<string, unknown>): Promise
     return [];
   }
 
-  // Azure SDK implementation would go here
-  // Install: npm install @azure/arm-resources @azure/identity
-  // Example:
-  // const credential = new ClientSecretCredential(tenantId, clientId, clientSecret);
-  // const resourceClient = new ResourceManagementClient(credential, subscriptionId);
-  // const resources = await resourceClient.resources.list();
+  const resources: CloudResource[] = [];
 
-  logger.info('Azure resource sync requires @azure/arm-resources package. Install with: npm install @azure/arm-resources @azure/identity');
-  return [];
+  try {
+    const credential = new ClientSecretCredential(
+      azureCreds.tenantId,
+      azureCreds.clientId,
+      azureCreds.clientSecret
+    );
+
+    // Sync all Azure resources
+    const resourceClient = new ResourceManagementClient(credential, azureCreds.subscriptionId);
+    const resourceIterator = resourceClient.resources.list();
+
+    for await (const resource of resourceIterator) {
+      resources.push({
+        resourceId: resource.id || '',
+        resourceType: resource.type || 'unknown',
+        name: resource.name || 'Unnamed Resource',
+        region: resource.location || 'unknown',
+        status: 'available',
+        metadata: {
+          kind: resource.kind,
+          sku: resource.sku,
+          plan: resource.plan,
+          tags: resource.tags,
+          managedBy: resource.managedBy,
+        },
+      });
+    }
+
+    // Sync VMs with detailed info
+    const computeClient = new ComputeManagementClient(credential, azureCreds.subscriptionId);
+    const vmIterator = computeClient.virtualMachines.listAll();
+
+    for await (const vm of vmIterator) {
+      // Find and update the existing VM resource with more details
+      const existingIdx = resources.findIndex(r => r.resourceId === vm.id);
+      const vmResource: CloudResource = {
+        resourceId: vm.id || '',
+        resourceType: 'Microsoft.Compute/virtualMachines',
+        name: vm.name || 'Unnamed VM',
+        region: vm.location || 'unknown',
+        status: vm.provisioningState || 'unknown',
+        metadata: {
+          vmSize: vm.hardwareProfile?.vmSize,
+          osType: vm.storageProfile?.osDisk?.osType,
+          osDiskSize: vm.storageProfile?.osDisk?.diskSizeGB,
+          imageReference: vm.storageProfile?.imageReference,
+          networkInterfaces: vm.networkProfile?.networkInterfaces?.map(nic => nic.id),
+          availabilitySet: vm.availabilitySet?.id,
+          zones: vm.zones,
+          tags: vm.tags,
+        },
+      };
+
+      if (existingIdx >= 0) {
+        resources[existingIdx] = vmResource;
+      } else {
+        resources.push(vmResource);
+      }
+    }
+
+    logger.info({ resourceCount: resources.length }, 'Azure resources synced successfully');
+  } catch (error) {
+    logger.error({ error }, 'Failed to sync Azure resources');
+    throw error;
+  }
+
+  return resources;
 }
 
 async function syncAzureCosts(credentials: Record<string, unknown>): Promise<CloudCost[]> {
@@ -285,15 +350,78 @@ async function syncAzureCosts(credentials: Record<string, unknown>): Promise<Clo
     return [];
   }
 
-  // Azure Cost Management SDK implementation would go here
-  // Install: npm install @azure/arm-costmanagement @azure/identity
-  // Example:
-  // const credential = new ClientSecretCredential(tenantId, clientId, clientSecret);
-  // const costClient = new CostManagementClient(credential);
-  // const costs = await costClient.query.usage(scope, { ... });
+  const costs: CloudCost[] = [];
 
-  logger.info('Azure cost sync requires @azure/arm-costmanagement package. Install with: npm install @azure/arm-costmanagement @azure/identity');
-  return [];
+  try {
+    const credential = new ClientSecretCredential(
+      azureCreds.tenantId,
+      azureCreds.clientId,
+      azureCreds.clientSecret
+    );
+
+    const costClient = new CostManagementClient(credential);
+    const scope = `/subscriptions/${azureCreds.subscriptionId}`;
+
+    // Get costs for the last 30 days
+    const endDate = new Date();
+    const startDate = new Date();
+    startDate.setDate(startDate.getDate() - 30);
+
+    const queryResult = await costClient.query.usage(scope, {
+      type: 'ActualCost',
+      timeframe: 'Custom',
+      timePeriod: {
+        from: startDate,
+        to: endDate,
+      },
+      dataset: {
+        granularity: 'Daily',
+        aggregation: {
+          totalCost: {
+            name: 'Cost',
+            function: 'Sum',
+          },
+        },
+        grouping: [
+          {
+            type: 'Dimension',
+            name: 'ServiceName',
+          },
+        ],
+      },
+    });
+
+    // Parse the query result
+    if (queryResult.rows) {
+      for (const row of queryResult.rows) {
+        // Row format: [cost, date, serviceName]
+        const cost = parseFloat(String(row[0])) || 0;
+        const dateStr = String(row[1]);
+        const serviceName = String(row[2]) || 'Unknown Service';
+
+        if (cost > 0) {
+          const periodDate = new Date(dateStr);
+          const periodEnd = new Date(periodDate);
+          periodEnd.setDate(periodEnd.getDate() + 1);
+
+          costs.push({
+            serviceName,
+            cost,
+            currency: 'USD',
+            periodStart: periodDate,
+            periodEnd,
+          });
+        }
+      }
+    }
+
+    logger.info({ costEntries: costs.length }, 'Azure costs synced successfully');
+  } catch (error) {
+    logger.error({ error }, 'Failed to sync Azure costs');
+    throw error;
+  }
+
+  return costs;
 }
 
 // ============================================
@@ -314,32 +442,172 @@ async function syncGcpResources(credentials: Record<string, unknown>): Promise<C
     return [];
   }
 
-  // GCP SDK implementation would go here
-  // Install: npm install @google-cloud/compute @google-cloud/resource-manager
-  // Example:
-  // const compute = new Compute({ projectId, credentials: { client_email, private_key } });
-  // const [vms] = await compute.getVMs();
+  const resources: CloudResource[] = [];
 
-  logger.info('GCP resource sync requires @google-cloud/compute package. Install with: npm install @google-cloud/compute @google-cloud/resource-manager');
-  return [];
+  try {
+    const authOptions = {
+      projectId: gcpCreds.projectId,
+      credentials: {
+        client_email: gcpCreds.clientEmail,
+        private_key: gcpCreds.privateKey.replace(/\\n/g, '\n'),
+      },
+    };
+
+    // Sync Compute Engine instances
+    const instancesClient = new InstancesClient(authOptions);
+    const aggListRequest = instancesClient.aggregatedListAsync({
+      project: gcpCreds.projectId,
+    });
+
+    for await (const [zone, instancesObject] of aggListRequest) {
+      const instances = instancesObject.instances || [];
+      for (const instance of instances) {
+        resources.push({
+          resourceId: String(instance.id) || '',
+          resourceType: 'compute:instance',
+          name: instance.name || 'Unnamed Instance',
+          region: zone.replace(/^zones\//, ''),
+          status: instance.status || 'UNKNOWN',
+          metadata: {
+            machineType: instance.machineType?.split('/').pop(),
+            zone: zone,
+            networkInterfaces: instance.networkInterfaces?.map(ni => ({
+              network: ni.network?.split('/').pop(),
+              internalIp: ni.networkIP,
+              externalIp: ni.accessConfigs?.[0]?.natIP,
+            })),
+            disks: instance.disks?.map(d => ({
+              name: d.source?.split('/').pop(),
+              sizeGb: d.diskSizeGb,
+              type: d.type,
+            })),
+            labels: instance.labels,
+            creationTimestamp: instance.creationTimestamp,
+          },
+        });
+      }
+    }
+
+    // Sync Persistent Disks
+    const disksClient = new DisksClient(authOptions);
+    const diskAggListRequest = disksClient.aggregatedListAsync({
+      project: gcpCreds.projectId,
+    });
+
+    for await (const [zone, disksObject] of diskAggListRequest) {
+      const disks = disksObject.disks || [];
+      for (const disk of disks) {
+        resources.push({
+          resourceId: String(disk.id) || '',
+          resourceType: 'compute:disk',
+          name: disk.name || 'Unnamed Disk',
+          region: zone.replace(/^zones\//, ''),
+          status: disk.status || 'UNKNOWN',
+          metadata: {
+            sizeGb: disk.sizeGb,
+            type: disk.type?.split('/').pop(),
+            sourceImage: disk.sourceImage?.split('/').pop(),
+            users: disk.users?.map(u => u.split('/').pop()),
+            labels: disk.labels,
+            creationTimestamp: disk.creationTimestamp,
+          },
+        });
+      }
+    }
+
+    logger.info({ resourceCount: resources.length }, 'GCP resources synced successfully');
+  } catch (error) {
+    logger.error({ error }, 'Failed to sync GCP resources');
+    throw error;
+  }
+
+  return resources;
+}
+
+interface GcpCredentialsExtended extends GcpCredentials {
+  billingAccountId?: string;
+  billingDataset?: string;
+  billingTable?: string;
 }
 
 async function syncGcpCosts(credentials: Record<string, unknown>): Promise<CloudCost[]> {
-  const gcpCreds = credentials as unknown as GcpCredentials;
+  const gcpCreds = credentials as unknown as GcpCredentialsExtended;
 
   if (!gcpCreds.projectId || !gcpCreds.clientEmail || !gcpCreds.privateKey) {
     logger.info('GCP credentials not configured, skipping cost sync');
     return [];
   }
 
-  // GCP Billing SDK implementation would go here
-  // Install: npm install @google-cloud/bigquery
-  // Example:
-  // const bigquery = new BigQuery({ projectId, credentials: { client_email, private_key } });
-  // Query the billing export table in BigQuery
+  // GCP costs require BigQuery billing export to be configured
+  // If billing dataset info is not provided, we can't query costs
+  if (!gcpCreds.billingDataset || !gcpCreds.billingTable) {
+    logger.info({
+      projectId: gcpCreds.projectId,
+    }, 'GCP billing dataset not configured. To enable cost sync, export billing to BigQuery and provide billingDataset and billingTable in credentials.');
+    return [];
+  }
 
-  logger.info('GCP cost sync requires @google-cloud/bigquery package. Install with: npm install @google-cloud/bigquery');
-  return [];
+  const costs: CloudCost[] = [];
+
+  try {
+    // Dynamic import for BigQuery to avoid requiring it when not used
+    const { BigQuery } = await import('@google-cloud/bigquery');
+
+    const bigquery = new BigQuery({
+      projectId: gcpCreds.projectId,
+      credentials: {
+        client_email: gcpCreds.clientEmail,
+        private_key: gcpCreds.privateKey.replace(/\\n/g, '\n'),
+      },
+    });
+
+    // Get costs for the last 30 days
+    const endDate = new Date();
+    const startDate = new Date();
+    startDate.setDate(startDate.getDate() - 30);
+
+    const query = `
+      SELECT
+        DATE(usage_start_time) as usage_date,
+        service.description as service_name,
+        SUM(cost) as total_cost,
+        currency
+      FROM \`${gcpCreds.projectId}.${gcpCreds.billingDataset}.${gcpCreds.billingTable}\`
+      WHERE DATE(usage_start_time) >= DATE('${startDate.toISOString().split('T')[0]}')
+        AND DATE(usage_start_time) < DATE('${endDate.toISOString().split('T')[0]}')
+      GROUP BY usage_date, service_name, currency
+      HAVING total_cost > 0
+      ORDER BY usage_date DESC, total_cost DESC
+    `;
+
+    const [rows] = await bigquery.query({ query });
+
+    for (const row of rows) {
+      const periodDate = new Date(row.usage_date.value);
+      const periodEnd = new Date(periodDate);
+      periodEnd.setDate(periodEnd.getDate() + 1);
+
+      costs.push({
+        serviceName: row.service_name || 'Unknown Service',
+        cost: parseFloat(row.total_cost) || 0,
+        currency: row.currency || 'USD',
+        periodStart: periodDate,
+        periodEnd,
+      });
+    }
+
+    logger.info({ costEntries: costs.length }, 'GCP costs synced successfully');
+  } catch (error) {
+    // Check if it's a "module not found" error for BigQuery
+    if (error instanceof Error && error.message.includes('Cannot find module')) {
+      logger.info('GCP cost sync requires @google-cloud/bigquery package. Install with: npm install @google-cloud/bigquery');
+      return [];
+    }
+    logger.error({ error }, 'Failed to sync GCP costs');
+    throw error;
+  }
+
+  return costs;
 }
 
 // ============================================

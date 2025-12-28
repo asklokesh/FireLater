@@ -685,22 +685,152 @@ export const integrationsService = {
   },
 
   async testConnection(tenantSlug: string, id: string): Promise<{ success: boolean; error?: string }> {
-    // This would implement actual connection tests for each integration type
-    // For now, just return a placeholder
     const integration = await this.findById(tenantSlug, id);
     if (!integration) {
       return { success: false, error: 'Integration not found' };
     }
 
-    // Update connection status
     const schema = getSchema(tenantSlug);
+    let success = false;
+    let error: string | undefined;
+
+    try {
+      switch (integration.type) {
+        case 'slack': {
+          const token = integration.config.botToken as string;
+          if (!token) {
+            throw new Error('Slack bot token not configured');
+          }
+          // Test Slack API connection
+          const response = await fetch('https://slack.com/api/auth.test', {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${token}`,
+              'Content-Type': 'application/x-www-form-urlencoded',
+            },
+          });
+          const data = await response.json() as { ok: boolean; error?: string };
+          if (!data.ok) {
+            throw new Error(data.error || 'Slack authentication failed');
+          }
+          success = true;
+          break;
+        }
+
+        case 'teams': {
+          const webhookUrl = integration.config.webhookUrl as string;
+          if (!webhookUrl) {
+            throw new Error('Teams webhook URL not configured');
+          }
+          // Test Teams webhook by sending a connectivity test
+          const response = await fetch(webhookUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              '@type': 'MessageCard',
+              text: 'FireLater ITSM connection test - this message can be ignored.',
+            }),
+          });
+          if (!response.ok) {
+            throw new Error(`Teams webhook returned ${response.status}`);
+          }
+          success = true;
+          break;
+        }
+
+        case 'jira': {
+          const baseUrl = integration.config.baseUrl as string;
+          const email = integration.config.email as string;
+          const apiToken = integration.config.apiToken as string;
+          if (!baseUrl || !email || !apiToken) {
+            throw new Error('Jira configuration incomplete (baseUrl, email, apiToken required)');
+          }
+          // Test Jira API connection
+          const auth = Buffer.from(`${email}:${apiToken}`).toString('base64');
+          const response = await fetch(`${baseUrl}/rest/api/3/myself`, {
+            headers: { 'Authorization': `Basic ${auth}` },
+          });
+          if (!response.ok) {
+            throw new Error(`Jira API returned ${response.status}`);
+          }
+          success = true;
+          break;
+        }
+
+        case 'pagerduty': {
+          const apiKey = integration.config.apiKey as string;
+          if (!apiKey) {
+            throw new Error('PagerDuty API key not configured');
+          }
+          // Test PagerDuty API connection
+          const response = await fetch('https://api.pagerduty.com/abilities', {
+            headers: {
+              'Authorization': `Token token=${apiKey}`,
+              'Content-Type': 'application/json',
+            },
+          });
+          if (!response.ok) {
+            throw new Error(`PagerDuty API returned ${response.status}`);
+          }
+          success = true;
+          break;
+        }
+
+        case 'servicenow': {
+          const instanceUrl = integration.config.instanceUrl as string;
+          const username = integration.config.username as string;
+          const password = integration.config.password as string;
+          if (!instanceUrl || !username || !password) {
+            throw new Error('ServiceNow configuration incomplete (instanceUrl, username, password required)');
+          }
+          // Test ServiceNow API connection
+          const auth = Buffer.from(`${username}:${password}`).toString('base64');
+          const response = await fetch(`${instanceUrl}/api/now/table/sys_user?sysparm_limit=1`, {
+            headers: { 'Authorization': `Basic ${auth}` },
+          });
+          if (!response.ok) {
+            throw new Error(`ServiceNow API returned ${response.status}`);
+          }
+          success = true;
+          break;
+        }
+
+        case 'webhook': {
+          const url = integration.config.url as string;
+          if (!url) {
+            throw new Error('Webhook URL not configured');
+          }
+          // Test webhook endpoint with a HEAD or OPTIONS request
+          const response = await fetch(url, { method: 'HEAD' }).catch(() =>
+            fetch(url, { method: 'OPTIONS' })
+          );
+          if (!response.ok && response.status !== 405) {
+            throw new Error(`Webhook endpoint returned ${response.status}`);
+          }
+          success = true;
+          break;
+        }
+
+        default:
+          // For unknown types, just mark as connected if config exists
+          success = Object.keys(integration.config || {}).length > 0;
+          if (!success) {
+            error = `Integration type '${integration.type}' has no configuration`;
+          }
+      }
+    } catch (err) {
+      error = err instanceof Error ? err.message : 'Connection test failed';
+      logger.warn({ integrationId: id, type: integration.type, error }, 'Integration connection test failed');
+    }
+
+    // Update connection status
     await pool.query(`
       UPDATE ${schema}.integrations
-      SET connection_status = 'connected', last_sync_at = NOW(), last_error = NULL
+      SET connection_status = $2, last_sync_at = NOW(), last_error = $3
       WHERE id = $1
-    `, [id]);
+    `, [id, success ? 'connected' : 'error', error || null]);
 
-    return { success: true };
+    return success ? { success: true } : { success: false, error };
   },
 
   async getSyncLogs(tenantSlug: string, integrationId?: string, limit = 50): Promise<unknown[]> {

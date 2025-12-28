@@ -640,7 +640,7 @@ class ReportExecutionService {
       }
 
       default:
-        return { data: {}, rowCount: 0 };
+        throw new Error(`Unknown report type: ${reportType}. Supported types: issue_summary, issue_trends, sla_compliance, change_analysis, problem_summary, asset_inventory, request_fulfillment, team_performance, cloud_costs`);
     }
   }
 }

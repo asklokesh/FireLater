@@ -23,6 +23,10 @@
     "@aws-sdk/client-rds": "^3.958.0",
     "@aws-sdk/client-s3": "^3.948.0",
     "@aws-sdk/s3-request-presigner": "^3.948.0",
+    "@azure/arm-compute": "^23.2.0",
+    "@azure/arm-costmanagement": "^1.0.0-beta.1",
+    "@azure/arm-resources": "^7.0.0",
+    "@azure/identity": "^4.13.0",
     "@fastify/cookie": "^9.4.0",
     "@fastify/cors": "^9.0.1",
     "@fastify/helmet": "^11.1.1",
@@ -31,6 +35,9 @@
     "@fastify/rate-limit": "^9.1.0",
     "@fastify/swagger": "^8.15.0",
     "@fastify/swagger-ui": "^4.2.0",
+    "@google-cloud/bigquery": "^8.1.1",
+    "@google-cloud/billing": "^5.1.1",
+    "@google-cloud/compute": "^6.6.0",
     "@sendgrid/mail": "^8.1.6",
     "@slack/web-api": "^7.13.0",
     "@types/puppeteer-core": "^5.4.0",
@@ -49,6 +56,7 @@
     "pino": "^9.4.0",
     "pino-pretty": "^11.2.2",
     "puppeteer-core": "^24.34.0",
+    "twilio": "^5.11.1",
     "zod": "^3.23.8"
   },
   "devDependencies": {

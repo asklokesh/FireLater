@@ -347,39 +347,66 @@ class NotificationDeliveryService {
   }
 
   // ============================================
-  // SMS DELIVERY (Placeholder)
+  // SMS DELIVERY (Twilio)
   // ============================================
 
   private async deliverSms(
     config: Record<string, unknown>,
     notification: NotificationPayload
   ): Promise<DeliveryResult> {
-    // SMS would be implemented with Twilio or similar
-    // For now, log that we would send
     const phoneNumber = config.phoneNumber as string;
+    const accountSid = config.twilioAccountSid as string || process.env.TWILIO_ACCOUNT_SID;
+    const authToken = config.twilioAuthToken as string || process.env.TWILIO_AUTH_TOKEN;
+    const fromNumber = config.twilioFromNumber as string || process.env.TWILIO_FROM_NUMBER;
 
     if (!phoneNumber) {
       return { success: false, channelType: 'sms', error: 'Phone number not configured' };
     }
 
-    // Twilio implementation would go here:
-    // const client = new Twilio(accountSid, authToken);
-    // await client.messages.create({
-    //   body: `${notification.title}: ${notification.body}`,
-    //   from: twilioPhoneNumber,
-    //   to: phoneNumber,
-    // });
+    if (!accountSid || !authToken || !fromNumber) {
+      // Log in development mode without sending
+      logger.info({
+        phoneNumber,
+        eventType: notification.eventType,
+        mode: 'development',
+      }, 'SMS notification skipped (Twilio not configured)');
+      return {
+        success: true,
+        channelType: 'sms',
+        metadata: { phoneNumber, mode: 'development' },
+      };
+    }
 
-    logger.info({
-      phoneNumber,
-      eventType: notification.eventType,
-    }, 'SMS notification would be sent (Twilio integration pending)');
+    try {
+      // Dynamic import to avoid requiring twilio when not used
+      const twilio = await import('twilio');
+      const client = twilio.default(accountSid, authToken);
 
-    return {
-      success: true,
-      channelType: 'sms',
-      metadata: { phoneNumber, note: 'SMS delivery requires Twilio integration' },
-    };
+      // Truncate message to SMS-friendly length (160 chars for single SMS, or up to 1600 for concatenated)
+      const messageBody = `${notification.title}${notification.body ? `: ${notification.body}` : ''}`.substring(0, 1600);
+
+      const message = await client.messages.create({
+        body: messageBody,
+        from: fromNumber,
+        to: phoneNumber,
+      });
+
+      logger.info({
+        phoneNumber,
+        eventType: notification.eventType,
+        messageSid: message.sid,
+      }, 'SMS notification sent');
+
+      return {
+        success: true,
+        channelType: 'sms',
+        metadata: { phoneNumber, messageSid: message.sid },
+      };
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'SMS delivery error';
+      logger.error({ error, phoneNumber }, 'SMS delivery failed');
+      return { success: false, channelType: 'sms', error: message };
+    }
   }
 
   // ============================================

@@ -464,6 +464,16 @@ export function useReopenIssue() {
   });
 }
 
+export function useDeleteIssue() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => issuesApi.delete(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.issues.all });
+    },
+  });
+}
+
 export interface IssueComment {
   id: string;
   content: string;
