@@ -185,11 +185,15 @@ export class RequestService {
       const requestNumberResult = await client.query(
         `SELECT ${schema}.next_id('request') as request_number`
       );
+      if (!requestNumberResult.rows[0]) {
+        throw new Error('Failed to generate request number - ID sequence not found');
+      }
       const requestNumber = requestNumberResult.rows[0].request_number;
 
-      // Calculate due date
+      // Calculate due date (default to 5 days if not configured)
       const dueDate = new Date();
-      dueDate.setDate(dueDate.getDate() + catalogItem.expected_completion_days);
+      const completionDays = catalogItem.expected_completion_days ?? 5;
+      dueDate.setDate(dueDate.getDate() + completionDays);
 
       // Determine initial status
       let status: RequestStatus = 'submitted';

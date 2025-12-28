@@ -198,6 +198,9 @@ export class IssueService {
       const issueNumberResult = await client.query(
         `SELECT ${schema}.next_id('issue') as issue_number`
       );
+      if (!issueNumberResult.rows[0]) {
+        throw new Error('Failed to generate issue number - ID sequence not found');
+      }
       const issueNumber = issueNumberResult.rows[0].issue_number;
 
       // Get SLA policy and calculate due dates

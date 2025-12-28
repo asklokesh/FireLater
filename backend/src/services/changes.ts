@@ -590,6 +590,9 @@ class ChangeRequestService {
   private async generateChangeNumber(tenantSlug: string): Promise<string> {
     const schema = tenantService.getSchemaName(tenantSlug);
     const result = await pool.query(`SELECT ${schema}.next_id('change') as id`);
+    if (!result.rows[0]) {
+      throw new Error('Failed to generate change number - ID sequence not found');
+    }
     return result.rows[0].id;
   }
 
