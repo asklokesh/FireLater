@@ -1,4 +1,7 @@
 import { EC2Client, DescribeRegionsCommand } from '@aws-sdk/client-ec2';
+import { ClientSecretCredential } from '@azure/identity';
+import { ResourceManagementClient } from '@azure/arm-resources';
+import { InstancesClient } from '@google-cloud/compute';
 import { pool } from '../config/database.js';
 import { tenantService } from './tenant.js';
 import { NotFoundError, BadRequestError } from '../utils/errors.js';
@@ -256,21 +259,48 @@ class CloudAccountService {
         }
 
         case 'azure': {
-          const azureCreds = credentials as { tenantId?: string; clientId?: string; clientSecret?: string };
+          const azureCreds = credentials as { tenantId?: string; clientId?: string; clientSecret?: string; subscriptionId?: string };
           if (!azureCreds.tenantId || !azureCreds.clientId || !azureCreds.clientSecret) {
-            return { success: false, message: 'Azure credentials not configured' };
+            return { success: false, message: 'Azure credentials not configured (tenantId, clientId, clientSecret required)' };
           }
-          // Azure SDK would go here
-          return { success: true, message: 'Azure credentials verified (SDK integration pending)' };
+          if (!azureCreds.subscriptionId) {
+            return { success: false, message: 'Azure subscriptionId is required' };
+          }
+
+          // Test Azure connection by listing resource groups
+          const credential = new ClientSecretCredential(
+            azureCreds.tenantId,
+            azureCreds.clientId,
+            azureCreds.clientSecret
+          );
+          const resourceClient = new ResourceManagementClient(credential, azureCreds.subscriptionId);
+          // Try to list resource groups (a simple read operation)
+          const groups = resourceClient.resourceGroups.list();
+          await groups.next(); // Fetch at least one to test auth
+          return { success: true, message: 'Azure connection successful' };
         }
 
         case 'gcp': {
           const gcpCreds = credentials as { projectId?: string; clientEmail?: string; privateKey?: string };
           if (!gcpCreds.projectId || !gcpCreds.clientEmail || !gcpCreds.privateKey) {
-            return { success: false, message: 'GCP credentials not configured' };
+            return { success: false, message: 'GCP credentials not configured (projectId, clientEmail, privateKey required)' };
           }
-          // GCP SDK would go here
-          return { success: true, message: 'GCP credentials verified (SDK integration pending)' };
+
+          // Test GCP connection by listing zones
+          const instancesClient = new InstancesClient({
+            projectId: gcpCreds.projectId,
+            credentials: {
+              client_email: gcpCreds.clientEmail,
+              private_key: gcpCreds.privateKey.replace(/\\n/g, '\n'),
+            },
+          });
+          // Try to list instances (will return empty if none exist, but validates auth)
+          const aggList = instancesClient.aggregatedListAsync({ project: gcpCreds.projectId, maxResults: 1 });
+          // Iterate to fetch at least one result to test auth
+          for await (const _item of aggList) {
+            break; // Just need to test auth, not fetch all
+          }
+          return { success: true, message: 'GCP connection successful' };
         }
 
         default:

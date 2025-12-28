@@ -209,17 +209,20 @@ export default function ChangeDetailPage() {
   const handleSubmitComment = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newComment.trim()) return;
+    setError(null);
 
     try {
       await addComment.mutateAsync({ id: changeId, content: newComment.trim() });
       setNewComment('');
     } catch (err) {
       console.error('Failed to add comment:', err);
+      setError(err instanceof Error ? err.message : 'Failed to add comment. Please try again.');
     }
   };
 
   const handleAction = async (action: string) => {
     setActionLoading(action);
+    setError(null);
     try {
       switch (action) {
         case 'submit':
@@ -228,14 +231,15 @@ export default function ChangeDetailPage() {
         case 'approve':
           await changesApi.approve(changeId);
           break;
-        case 'reject':
-          const reason = prompt('Please provide a reason for rejection:');
+        case 'reject': {
+          const reason = window.prompt('Please provide a reason for rejection:');
           if (!reason) {
             setActionLoading(null);
             return;
           }
           await changesApi.reject(changeId, reason);
           break;
+        }
         case 'schedule':
           await changesApi.schedule(changeId);
           break;
@@ -245,31 +249,34 @@ export default function ChangeDetailPage() {
         case 'complete':
           await changesApi.complete(changeId);
           break;
-        case 'fail':
-          const failNotes = prompt('Please describe what went wrong:');
+        case 'fail': {
+          const failNotes = window.prompt('Please describe what went wrong:');
           if (!failNotes) {
             setActionLoading(null);
             return;
           }
           await changesApi.fail(changeId, failNotes);
           break;
-        case 'rollback':
-          const rollbackNotes = prompt('Please describe the rollback:');
+        }
+        case 'rollback': {
+          const rollbackNotes = window.prompt('Please describe the rollback:');
           if (!rollbackNotes) {
             setActionLoading(null);
             return;
           }
           await changesApi.rollback(changeId, rollbackNotes);
           break;
-        case 'cancel':
-          const cancelReason = prompt('Please provide a reason for cancellation (optional):');
+        }
+        case 'cancel': {
+          const cancelReason = window.prompt('Please provide a reason for cancellation (optional):');
           await changesApi.cancel(changeId, cancelReason || undefined);
           break;
+        }
       }
       refetch();
     } catch (err) {
       console.error(`Failed to ${action} change:`, err);
-      alert(`Failed to ${action} change. Please try again.`);
+      setError(err instanceof Error ? err.message : `Failed to ${action} change. Please try again.`);
     } finally {
       setActionLoading(null);
     }

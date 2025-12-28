@@ -1,6 +1,10 @@
 import axios, { AxiosInstance, AxiosError, InternalAxiosRequestConfig } from 'axios';
 
+// Warn if API URL is not configured in production
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+if (!process.env.NEXT_PUBLIC_API_URL && typeof window !== 'undefined' && process.env.NODE_ENV === 'production') {
+  console.warn('[FireLater] NEXT_PUBLIC_API_URL is not configured. API calls will default to localhost which will likely fail in production.');
+}
 
 // Create axios instance
 export const api: AxiosInstance = axios.create({

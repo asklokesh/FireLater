@@ -140,7 +140,7 @@ async function markIssuesAsBreached(schema: string, issueIds: string[]): Promise
 
   await pool.query(`
     UPDATE ${schema}.issues
-    SET sla_breached = true, sla_breached_at = NOW(), updated_at = NOW()
+    SET sla_breached = true, updated_at = NOW()
     WHERE id = ANY($1)
   `, [issueIds]);
 }

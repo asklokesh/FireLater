@@ -166,26 +166,36 @@ class NotificationDeliveryService {
 </body>
 </html>`;
 
-    const sent = await emailService.sendPasswordResetEmail(
+    // Create plain text version
+    const textBody = `${subject}\n\n${notification.body || ''}\n\nThis notification was sent by FireLater ITSM`;
+
+    // Send using the generic email method
+    const sent = await emailService.sendNotificationEmail(
       notification.user.email,
-      notification.user.name,
-      '', // No token needed for general notifications
-      tenantSlug
-    ).catch(() => false);
-
-    // Actually use a generic send method
-    // For now, log that we would send
-    logger.info({
-      to: notification.user.email,
       subject,
-      eventType: notification.eventType,
-    }, 'Email notification sent');
+      htmlBody,
+      textBody
+    );
 
-    return {
-      success: true,
-      channelType: 'email',
-      metadata: { to: notification.user.email, subject },
-    };
+    if (sent) {
+      logger.info({
+        to: notification.user.email,
+        subject,
+        eventType: notification.eventType,
+      }, 'Email notification sent');
+
+      return {
+        success: true,
+        channelType: 'email',
+        metadata: { to: notification.user.email, subject },
+      };
+    } else {
+      return {
+        success: false,
+        channelType: 'email',
+        error: 'Failed to send email notification',
+      };
+    }
   }
 
   // ============================================
@@ -364,16 +374,15 @@ class NotificationDeliveryService {
     }
 
     if (!accountSid || !authToken || !fromNumber) {
-      // Log in development mode without sending
-      logger.info({
+      // Log warning when Twilio is not configured
+      logger.warn({
         phoneNumber,
         eventType: notification.eventType,
-        mode: 'development',
-      }, 'SMS notification skipped (Twilio not configured)');
+      }, 'SMS notification not sent - Twilio not configured');
       return {
-        success: true,
+        success: false,
         channelType: 'sms',
-        metadata: { phoneNumber, mode: 'development' },
+        error: 'Twilio not configured. Set TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, and TWILIO_FROM_NUMBER environment variables.',
       };
     }
 

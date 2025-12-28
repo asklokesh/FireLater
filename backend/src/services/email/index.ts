@@ -352,16 +352,19 @@ class EmailService {
   async send(options: SendEmailOptions): Promise<SendEmailResult> {
     const { to, type, data, tenantSlug } = options;
 
-    // Add base URL to data
-    const baseUrl = config.isDev ? 'http://localhost:3000' : 'https://app.firelater.io';
+    // Add base URL to data - use environment variable or sensible default
+    const baseUrl = process.env.APP_BASE_URL || (config.isDev ? 'http://localhost:3000' : 'https://app.firelater.io');
     const templateData = { ...data, baseUrl };
 
     // Compile template
     const { subject, html, text } = compileTemplate(type, templateData);
 
     if (!this.isConfigured) {
-      logger.info({ to, subject, type }, 'Email would be sent (not configured)');
-      return { success: true, messageId: `mock-${Date.now()}` };
+      logger.warn({ to, subject, type }, 'Email not sent - SendGrid not configured');
+      return {
+        success: false,
+        error: 'Email service not configured. Set SENDGRID_API_KEY environment variable.',
+      };
     }
 
     try {

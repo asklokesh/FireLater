@@ -2,6 +2,18 @@
 
 import { useMemo } from 'react';
 import { TrendingUp, TrendingDown, Minus } from 'lucide-react';
+import {
+  AreaChart,
+  Area,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+  Legend,
+  BarChart,
+  Bar,
+} from 'recharts';
 
 interface TrendDataPoint {
   date: string;
@@ -16,11 +28,8 @@ interface IssueTrendsChartProps {
   showLegend?: boolean;
   height?: number;
   className?: string;
+  chartType?: 'area' | 'bar';
 }
-
-// Note: This component requires recharts to be installed
-// Run: npm install recharts
-// After installation, uncomment the recharts import and replace the placeholder chart
 
 export function IssueTrendsChart({
   data,
@@ -28,6 +37,7 @@ export function IssueTrendsChart({
   showLegend = true,
   height = 300,
   className = '',
+  chartType = 'area',
 }: IssueTrendsChartProps) {
   // Calculate statistics
   const stats = useMemo(() => {
@@ -60,16 +70,6 @@ export function IssueTrendsChart({
     };
   }, [data]);
 
-  // Calculate chart bounds for the placeholder
-  const chartBounds = useMemo(() => {
-    if (data.length === 0) return { maxValue: 10, minValue: 0 };
-    const values = data.flatMap((d) => [d.opened, d.resolved, d.total]);
-    return {
-      maxValue: Math.max(...values, 1),
-      minValue: Math.min(...values),
-    };
-  }, [data]);
-
   const formatDate = (dateStr: string) => {
     const date = new Date(dateStr);
     return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
@@ -80,6 +80,14 @@ export function IssueTrendsChart({
     if (change < -5) return <TrendingDown className="h-4 w-4 text-green-500" />;
     return <Minus className="h-4 w-4 text-gray-500" />;
   };
+
+  // Format data for recharts
+  const chartData = useMemo(() => {
+    return data.slice(-14).map((point) => ({
+      ...point,
+      date: formatDate(point.date),
+    }));
+  }, [data]);
 
   if (data.length === 0) {
     return (
@@ -137,62 +145,88 @@ export function IssueTrendsChart({
           </div>
         )}
 
-        {/* Placeholder Chart - Replace with Recharts when installed */}
-        <div style={{ height }} className="relative border border-gray-200 rounded-lg overflow-hidden">
-          {/* Y-axis labels */}
-          <div className="absolute left-0 top-0 bottom-0 w-12 flex flex-col justify-between py-2 text-xs text-gray-500">
-            <span>{chartBounds.maxValue}</span>
-            <span>{Math.round(chartBounds.maxValue / 2)}</span>
-            <span>{chartBounds.minValue}</span>
-          </div>
-
-          {/* Chart area */}
-          <div className="absolute left-12 right-0 top-0 bottom-6 flex items-end space-x-1 px-2">
-            {data.slice(-14).map((point, index) => {
-              const openedHeight = (point.opened / chartBounds.maxValue) * 100;
-              const resolvedHeight = (point.resolved / chartBounds.maxValue) * 100;
-
-              return (
-                <div key={index} className="flex-1 flex space-x-0.5" title={`${formatDate(point.date)}: ${point.opened} opened, ${point.resolved} resolved`}>
-                  <div
-                    className="flex-1 bg-red-400 rounded-t opacity-75 hover:opacity-100 transition-opacity"
-                    style={{ height: `${openedHeight}%` }}
-                  />
-                  <div
-                    className="flex-1 bg-green-400 rounded-t opacity-75 hover:opacity-100 transition-opacity"
-                    style={{ height: `${resolvedHeight}%` }}
-                  />
-                </div>
-              );
-            })}
-          </div>
-
-          {/* X-axis labels */}
-          <div className="absolute left-12 right-0 bottom-0 h-6 flex justify-between px-2 text-xs text-gray-500">
-            {data.slice(-14).filter((_, i) => i % 2 === 0).map((point, index) => (
-              <span key={index}>{formatDate(point.date)}</span>
-            ))}
-          </div>
+        {/* Recharts Chart */}
+        <div style={{ height }}>
+          <ResponsiveContainer width="100%" height="100%">
+            {chartType === 'area' ? (
+              <AreaChart data={chartData} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
+                <defs>
+                  <linearGradient id="colorOpened" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#f87171" stopOpacity={0.8} />
+                    <stop offset="95%" stopColor="#f87171" stopOpacity={0.1} />
+                  </linearGradient>
+                  <linearGradient id="colorResolved" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#4ade80" stopOpacity={0.8} />
+                    <stop offset="95%" stopColor="#4ade80" stopOpacity={0.1} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                <XAxis
+                  dataKey="date"
+                  tick={{ fontSize: 12, fill: '#6b7280' }}
+                  tickLine={false}
+                  axisLine={{ stroke: '#e5e7eb' }}
+                />
+                <YAxis
+                  tick={{ fontSize: 12, fill: '#6b7280' }}
+                  tickLine={false}
+                  axisLine={{ stroke: '#e5e7eb' }}
+                />
+                <Tooltip
+                  contentStyle={{
+                    backgroundColor: 'white',
+                    border: '1px solid #e5e7eb',
+                    borderRadius: '8px',
+                    fontSize: '12px',
+                  }}
+                />
+                {showLegend && <Legend />}
+                <Area
+                  type="monotone"
+                  dataKey="opened"
+                  name="Opened"
+                  stroke="#f87171"
+                  fillOpacity={1}
+                  fill="url(#colorOpened)"
+                />
+                <Area
+                  type="monotone"
+                  dataKey="resolved"
+                  name="Resolved"
+                  stroke="#4ade80"
+                  fillOpacity={1}
+                  fill="url(#colorResolved)"
+                />
+              </AreaChart>
+            ) : (
+              <BarChart data={chartData} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                <XAxis
+                  dataKey="date"
+                  tick={{ fontSize: 12, fill: '#6b7280' }}
+                  tickLine={false}
+                  axisLine={{ stroke: '#e5e7eb' }}
+                />
+                <YAxis
+                  tick={{ fontSize: 12, fill: '#6b7280' }}
+                  tickLine={false}
+                  axisLine={{ stroke: '#e5e7eb' }}
+                />
+                <Tooltip
+                  contentStyle={{
+                    backgroundColor: 'white',
+                    border: '1px solid #e5e7eb',
+                    borderRadius: '8px',
+                    fontSize: '12px',
+                  }}
+                />
+                {showLegend && <Legend />}
+                <Bar dataKey="opened" name="Opened" fill="#f87171" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="resolved" name="Resolved" fill="#4ade80" radius={[4, 4, 0, 0]} />
+              </BarChart>
+            )}
+          </ResponsiveContainer>
         </div>
-
-        {/* Legend */}
-        {showLegend && (
-          <div className="flex items-center justify-center space-x-6 mt-4">
-            <div className="flex items-center">
-              <div className="h-3 w-3 bg-red-400 rounded mr-2" />
-              <span className="text-sm text-gray-600">Opened</span>
-            </div>
-            <div className="flex items-center">
-              <div className="h-3 w-3 bg-green-400 rounded mr-2" />
-              <span className="text-sm text-gray-600">Resolved</span>
-            </div>
-          </div>
-        )}
-
-        {/* Install Note */}
-        <p className="text-xs text-gray-400 text-center mt-4">
-          For enhanced charts, install recharts: npm install recharts
-        </p>
       </div>
     </div>
   );
@@ -208,21 +242,33 @@ interface IssueTrendsSparklineProps {
 export function IssueTrendsSparkline({ data, type, className = '' }: IssueTrendsSparklineProps) {
   if (data.length === 0) return null;
 
-  const values = data.slice(-7).map((d) => d[type]);
-  const max = Math.max(...values, 1);
+  const sparklineData = data.slice(-7).map((d, index) => ({
+    index,
+    value: d[type],
+  }));
+
+  const color = type === 'opened' ? '#f87171' : type === 'resolved' ? '#4ade80' : '#60a5fa';
 
   return (
-    <div className={`flex items-end space-x-0.5 h-8 ${className}`}>
-      {values.map((value, index) => (
-        <div
-          key={index}
-          className={`flex-1 rounded-t ${
-            type === 'opened' ? 'bg-red-300' :
-            type === 'resolved' ? 'bg-green-300' : 'bg-blue-300'
-          }`}
-          style={{ height: `${(value / max) * 100}%` }}
-        />
-      ))}
+    <div className={`h-8 ${className}`}>
+      <ResponsiveContainer width="100%" height="100%">
+        <AreaChart data={sparklineData} margin={{ top: 0, right: 0, left: 0, bottom: 0 }}>
+          <defs>
+            <linearGradient id={`sparkline-${type}`} x1="0" y1="0" x2="0" y2="1">
+              <stop offset="5%" stopColor={color} stopOpacity={0.6} />
+              <stop offset="95%" stopColor={color} stopOpacity={0.1} />
+            </linearGradient>
+          </defs>
+          <Area
+            type="monotone"
+            dataKey="value"
+            stroke={color}
+            strokeWidth={1.5}
+            fillOpacity={1}
+            fill={`url(#sparkline-${type})`}
+          />
+        </AreaChart>
+      </ResponsiveContainer>
     </div>
   );
 }

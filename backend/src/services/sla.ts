@@ -542,12 +542,11 @@ export async function getSlaConfigFromDb(
       st.priority,
       st.metric_type,
       st.target_minutes,
-      st.warning_threshold_percent
+      st.warning_percent
     FROM ${schema}.sla_targets st
     JOIN ${schema}.sla_policies sp ON st.policy_id = sp.id
     WHERE sp.entity_type = $1
     AND sp.is_default = true
-    AND sp.is_active = true
     ORDER BY st.priority, st.metric_type
   `, [entityType]);
 
@@ -560,7 +559,7 @@ export async function getSlaConfigFromDb(
         priority: row.priority,
         responseTimeMinutes: 0,
         resolutionTimeMinutes: 0,
-        warningThresholdPercent: row.warning_threshold_percent || 80,
+        warningThresholdPercent: row.warning_percent || 80,
       });
     }
 

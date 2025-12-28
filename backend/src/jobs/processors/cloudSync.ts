@@ -672,13 +672,13 @@ async function decryptCredentials(encrypted: string): Promise<Record<string, unk
       return JSON.parse(encrypted);
     } catch {
       logger.error('Failed to parse credentials as JSON');
-      return {};
+      throw new Error('Invalid credentials format');
     }
   }
 
   if (!key) {
     logger.error('ENCRYPTION_KEY not set but credentials appear to be encrypted');
-    return {};
+    throw new Error('ENCRYPTION_KEY environment variable is required for encrypted credentials');
   }
 
   try {
@@ -698,7 +698,7 @@ async function decryptCredentials(encrypted: string): Promise<Record<string, unk
     return JSON.parse(decrypted.toString('utf8'));
   } catch (error) {
     logger.error({ error }, 'Failed to decrypt credentials');
-    return {};
+    throw new Error('Failed to decrypt cloud credentials');
   }
 }
 

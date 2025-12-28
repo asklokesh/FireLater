@@ -369,11 +369,14 @@ async function getNextIssueNumber(tenantSlug: string): Promise<string> {
   const result = await pool.query(
     `UPDATE ${schema}.id_sequences
      SET current_value = current_value + 1
-     WHERE entity_type = 'ISSUE'
+     WHERE entity_type = 'issue'
      RETURNING prefix, current_value`
   );
 
   const row = result.rows[0];
+  if (!row) {
+    throw new Error(`ID sequence for 'issue' not found in tenant ${tenantSlug}`);
+  }
   return `${row.prefix}-${String(row.current_value).padStart(5, '0')}`;
 }
 

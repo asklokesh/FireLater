@@ -314,13 +314,13 @@ class EmailService {
   private async send(options: EmailOptions): Promise<boolean> {
     if (!this.isConfigured) {
       // Log email in development instead of sending
-      logger.info({
+      logger.warn({
         to: options.to,
         subject: options.subject,
         text: options.text?.substring(0, 200),
         mode: 'development',
-      }, 'Email would be sent (SendGrid not configured)');
-      return true;
+      }, 'Email not sent - SendGrid not configured');
+      return false;
     }
 
     try {
@@ -546,6 +546,21 @@ class EmailService {
 
   isReady(): boolean {
     return this.isConfigured;
+  }
+
+  // Public method for sending notification emails
+  async sendNotificationEmail(
+    to: string,
+    subject: string,
+    htmlBody: string,
+    textBody?: string
+  ): Promise<boolean> {
+    return this.send({
+      to,
+      subject,
+      html: htmlBody,
+      text: textBody,
+    });
   }
 }
 
