@@ -51,7 +51,7 @@ interface AdaptiveCard {
 }
 
 // Priority/Severity color mapping for Teams
-const priorityColors: Record<string, string> = {
+const _priorityColors: Record<string, string> = {
   critical: 'attention',
   high: 'warning',
   medium: 'accent',

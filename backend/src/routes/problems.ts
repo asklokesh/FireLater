@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { problemService } from '../services/problems.js';
 import { requirePermission } from '../middleware/auth.js';
 import { parsePagination, createPaginatedResponse } from '../utils/pagination.js';
+import { isValidUUID } from '../utils/errors.js';
 
 const createProblemSchema = z.object({
   title: z.string().min(5).max(500),
@@ -87,7 +88,7 @@ const costBreakdownSchema = z.object({
   other: z.number().min(0).optional(),
 }).optional().nullable();
 
-const financialImpactSchema = z.object({
+const _financialImpactSchema = z.object({
   estimated: z.number().min(0).nullable().optional(),
   actual: z.number().min(0).nullable().optional(),
   currency: z.string().length(3).optional(),
@@ -124,13 +125,24 @@ export default async function problemRoutes(app: FastifyInstance) {
   app.get<{ Params: { id: string } }>('/:id', {
     preHandler: [requirePermission('problems:read')],
   }, async (request, reply) => {
+    const { id } = request.params;
+
+    // Validate UUID format
+    if (!isValidUUID(id)) {
+      return reply.status(404).send({
+        statusCode: 404,
+        error: 'Not Found',
+        message: `Problem with id '${id}' not found`,
+      });
+    }
+
     const { tenantSlug } = request.user;
-    const problem = await problemService.getById(tenantSlug, request.params.id);
+    const problem = await problemService.getById(tenantSlug, id);
     if (!problem) {
       return reply.status(404).send({
         statusCode: 404,
         error: 'Not Found',
-        message: `Problem with id '${request.params.id}' not found`,
+        message: `Problem with id '${id}' not found`,
       });
     }
     reply.send(problem);

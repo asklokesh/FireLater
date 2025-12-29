@@ -4,7 +4,8 @@ import { oncallScheduleService, escalationPolicyService, icalExportService } fro
 import { shiftSwapService } from '../services/shiftSwaps.js';
 import { requirePermission, optionalAuth } from '../middleware/auth.js';
 import { parsePagination, createPaginatedResponse } from '../utils/pagination.js';
-import { tenantService } from '../services/tenant.js';
+import { tenantService as _tenantService } from '../services/tenant.js';
+import { isValidUUID } from '../utils/errors.js';
 
 // ============================================
 // SCHEDULE SCHEMAS
@@ -145,14 +146,25 @@ export default async function oncallRoutes(app: FastifyInstance) {
   app.get<{ Params: { id: string } }>('/schedules/:id', {
     preHandler: [requirePermission('oncall:read')],
   }, async (request, reply) => {
+    const { id } = request.params;
+
+    // Validate UUID format to prevent PostgreSQL errors
+    if (!isValidUUID(id)) {
+      return reply.status(404).send({
+        statusCode: 404,
+        error: 'Not Found',
+        message: `Schedule with id '${id}' not found`,
+      });
+    }
+
     const { tenantSlug } = request.user;
-    const schedule = await oncallScheduleService.findById(tenantSlug, request.params.id);
+    const schedule = await oncallScheduleService.findById(tenantSlug, id);
 
     if (!schedule) {
       return reply.status(404).send({
         statusCode: 404,
         error: 'Not Found',
-        message: `Schedule with id '${request.params.id}' not found`,
+        message: `Schedule with id '${id}' not found`,
       });
     }
 
@@ -195,9 +207,19 @@ export default async function oncallRoutes(app: FastifyInstance) {
   app.get<{ Params: { id: string } }>('/schedules/:id/rotations', {
     preHandler: [requirePermission('oncall:read')],
   }, async (request, reply) => {
-    const { tenantSlug } = request.user;
+    const { id } = request.params;
 
-    const rotations = await oncallScheduleService.getRotations(tenantSlug, request.params.id);
+    // Validate UUID format
+    if (!isValidUUID(id)) {
+      return reply.status(404).send({
+        statusCode: 404,
+        error: 'Not Found',
+        message: `Schedule with id '${id}' not found`,
+      });
+    }
+
+    const { tenantSlug } = request.user;
+    const rotations = await oncallScheduleService.getRotations(tenantSlug, id);
     reply.send({ data: rotations });
   });
 
@@ -247,13 +269,24 @@ export default async function oncallRoutes(app: FastifyInstance) {
   app.get<{ Params: { id: string } }>('/schedules/:id/shifts', {
     preHandler: [requirePermission('oncall:read')],
   }, async (request, reply) => {
+    const { id } = request.params;
+
+    // Validate UUID format
+    if (!isValidUUID(id)) {
+      return reply.status(404).send({
+        statusCode: 404,
+        error: 'Not Found',
+        message: `Schedule with id '${id}' not found`,
+      });
+    }
+
     const { tenantSlug } = request.user;
     const query = request.query as Record<string, string>;
 
     const startDate = query.start_date ? new Date(query.start_date) : new Date();
     const endDate = query.end_date ? new Date(query.end_date) : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
 
-    const shifts = await oncallScheduleService.getShifts(tenantSlug, request.params.id, startDate, endDate);
+    const shifts = await oncallScheduleService.getShifts(tenantSlug, id, startDate, endDate);
     reply.send({ data: shifts });
   });
 
