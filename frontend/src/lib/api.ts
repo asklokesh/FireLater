@@ -1038,8 +1038,14 @@ export const reportsApi = {
     columns?: string[];
     filters?: Record<string, unknown>;
   }) => {
-    const response = await api.post('/v1/reports/templates', data);
-    return response.data;
+    // Map frontend 'type' to backend 'reportType'
+    const payload = {
+      ...data,
+      reportType: data.type,
+      outputFormat: Array.isArray(data.outputFormat) ? data.outputFormat[0] : data.outputFormat,
+    };
+    const response = await api.post('/v1/reports/templates', payload);
+    return response.data.template || response.data;
   },
 
   updateTemplate: async (id: string, data: Record<string, unknown>) => {

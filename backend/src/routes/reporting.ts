@@ -45,6 +45,7 @@ const createScheduleSchema = z.object({
   outputFormat: z.enum(['json', 'csv', 'pdf', 'excel']).optional(),
   customFilters: z.record(z.unknown()).optional(),
   dateRangeType: z.string().optional(),
+  isActive: z.boolean().optional(),
 });
 
 const createWidgetSchema = z.object({
@@ -128,6 +129,63 @@ export default async function reportingRoutes(app: FastifyInstance) {
     const { tenantSlug } = request.user;
     await reportTemplateService.delete(tenantSlug, request.params.id);
     reply.status(204).send();
+  });
+
+  // Preview report data (for report builder)
+  app.post<{ Params: { id: string } }>('/templates/:id/preview', {
+    preHandler: [requirePermission('reports:read')],
+  }, async (request, reply) => {
+    const { tenantSlug, userId } = request.user;
+    const { id } = request.params;
+    const body = request.body as { parameters?: Record<string, unknown> };
+
+    // Handle 'custom' as a special case for the report builder preview
+    if (id === 'custom') {
+      const queryConfig = body.parameters as {
+        dataSource: string;
+        columns: { field: string; label: string; aggregation?: string }[];
+        filters: { field: string; operator: string; value: unknown }[];
+        sort?: { field: string; direction: 'asc' | 'desc' } | null;
+        limit?: number;
+      };
+
+      if (!queryConfig?.dataSource) {
+        return reply.status(400).send({
+          statusCode: 400,
+          error: 'Bad Request',
+          message: 'dataSource is required for custom preview',
+        });
+      }
+
+      // Execute a preview query based on the data source
+      const result = await reportExecutionService.preview(
+        tenantSlug,
+        queryConfig.dataSource,
+        queryConfig.columns,
+        queryConfig.filters,
+        queryConfig.sort,
+        queryConfig.limit || 20
+      );
+
+      return reply.send(result);
+    }
+
+    // For existing templates, get the template and run a preview
+    const template = await reportTemplateService.findById(tenantSlug, id) as Record<string, unknown> | null;
+    if (!template) {
+      return reply.status(404).send({
+        statusCode: 404,
+        error: 'Not Found',
+        message: `Report template '${id}' not found`,
+      });
+    }
+
+    // Execute preview with template config
+    const result = await reportExecutionService.execute(tenantSlug, userId, id, {
+      filters: body.parameters,
+    });
+
+    reply.send(result);
   });
 
   // ============================================

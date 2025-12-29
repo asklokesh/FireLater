@@ -295,6 +295,7 @@ class ScheduledReportService {
       outputFormat: 'output_format',
       customFilters: 'custom_filters',
       dateRangeType: 'date_range_type',
+      isActive: 'is_active',
     };
 
     for (const [key, column] of Object.entries(fieldMap)) {
@@ -642,6 +643,115 @@ class ReportExecutionService {
       default:
         throw new Error(`Unknown report type: ${reportType}. Supported types: issue_summary, issue_trends, sla_compliance, change_analysis, problem_summary, asset_inventory, request_fulfillment, team_performance, cloud_costs`);
     }
+  }
+
+  async preview(
+    tenantSlug: string,
+    dataSource: string,
+    columns: { field: string; label: string; aggregation?: string }[],
+    filters: { field: string; operator: string; value: unknown }[],
+    sort?: { field: string; direction: 'asc' | 'desc' } | null,
+    limit: number = 20
+  ): Promise<{ rows: Record<string, unknown>[]; total: number }> {
+    const schema = tenantService.getSchemaName(tenantSlug);
+
+    // Map data source to table name
+    const tableMap: Record<string, string> = {
+      issues: 'issues',
+      changes: 'change_requests',
+      applications: 'applications',
+      requests: 'service_requests',
+    };
+
+    const tableName = tableMap[dataSource];
+    if (!tableName) {
+      throw new Error(`Unknown data source: ${dataSource}`);
+    }
+
+    // Build SELECT clause
+    const selectFields = columns.map(col => {
+      if (col.aggregation && col.aggregation !== 'none') {
+        return `${col.aggregation.toUpperCase()}(${col.field}) as ${col.field}`;
+      }
+      return col.field;
+    }).join(', ');
+
+    // Build WHERE clause from filters
+    const whereConditions: string[] = [];
+    const values: unknown[] = [];
+    let paramIndex = 1;
+
+    for (const filter of filters) {
+      if (filter.value === '' || filter.value === undefined || filter.value === null) continue;
+
+      switch (filter.operator) {
+        case 'equals':
+          whereConditions.push(`${filter.field} = $${paramIndex++}`);
+          values.push(filter.value);
+          break;
+        case 'not_equals':
+          whereConditions.push(`${filter.field} != $${paramIndex++}`);
+          values.push(filter.value);
+          break;
+        case 'contains':
+          whereConditions.push(`${filter.field} ILIKE $${paramIndex++}`);
+          values.push(`%${filter.value}%`);
+          break;
+        case 'gt':
+          whereConditions.push(`${filter.field} > $${paramIndex++}`);
+          values.push(filter.value);
+          break;
+        case 'lt':
+          whereConditions.push(`${filter.field} < $${paramIndex++}`);
+          values.push(filter.value);
+          break;
+        case 'gte':
+          whereConditions.push(`${filter.field} >= $${paramIndex++}`);
+          values.push(filter.value);
+          break;
+        case 'lte':
+          whereConditions.push(`${filter.field} <= $${paramIndex++}`);
+          values.push(filter.value);
+          break;
+        case 'in':
+          const inValues = String(filter.value).split(',').map(v => v.trim());
+          whereConditions.push(`${filter.field} = ANY($${paramIndex++})`);
+          values.push(inValues);
+          break;
+      }
+    }
+
+    const whereClause = whereConditions.length > 0 ? `WHERE ${whereConditions.join(' AND ')}` : '';
+
+    // Build ORDER BY clause
+    const orderClause = sort ? `ORDER BY ${sort.field} ${sort.direction.toUpperCase()}` : 'ORDER BY created_at DESC';
+
+    // Check if we need GROUP BY (if any aggregation is used)
+    const hasAggregation = columns.some(col => col.aggregation && col.aggregation !== 'none');
+    const nonAggregatedFields = columns.filter(col => !col.aggregation || col.aggregation === 'none').map(col => col.field);
+    const groupByClause = hasAggregation && nonAggregatedFields.length > 0
+      ? `GROUP BY ${nonAggregatedFields.join(', ')}`
+      : '';
+
+    // Get count first
+    const countQuery = `SELECT COUNT(*) FROM ${schema}.${tableName} ${whereClause}`;
+    const countResult = await pool.query(countQuery, values);
+    const total = parseInt(countResult.rows[0].count, 10);
+
+    // Get data
+    values.push(limit);
+    const dataQuery = `
+      SELECT ${selectFields || '*'}
+      FROM ${schema}.${tableName}
+      ${whereClause}
+      ${groupByClause}
+      ${orderClause}
+      LIMIT $${paramIndex}
+    `;
+
+    const result = await pool.query(dataQuery, values);
+
+    return { rows: result.rows, total };
   }
 }
 
