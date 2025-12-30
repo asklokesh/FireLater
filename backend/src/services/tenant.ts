@@ -1,6 +1,7 @@
 import { pool } from '../config/database.js';
 import { NotFoundError, ConflictError } from '../utils/errors.js';
 import { logger } from '../utils/logger.js';
+import format from 'pg-format';
 
 interface CreateTenantParams {
   name: string;
@@ -79,7 +80,7 @@ export class TenantService {
       const schemaName = this.getSchemaName(params.slug);
 
       // Create tenant schema by cloning template
-      await client.query(`CREATE SCHEMA ${schemaName}`);
+      await client.query(format('CREATE SCHEMA %I', schemaName));
 
       // Copy all tables from template
       const tables = await client.query(`
@@ -87,54 +88,75 @@ export class TenantService {
       `);
 
       for (const row of tables.rows) {
-        await client.query(`
-          CREATE TABLE ${schemaName}.${row.tablename}
-          (LIKE tenant_template.${row.tablename} INCLUDING ALL)
-        `);
+        await client.query(
+          format(
+            'CREATE TABLE %I.%I (LIKE tenant_template.%I INCLUDING ALL)',
+            schemaName,
+            row.tablename,
+            row.tablename
+          )
+        );
       }
 
       // Copy data from template tables
       for (const row of tables.rows) {
-        await client.query(`
-          INSERT INTO ${schemaName}.${row.tablename}
-          SELECT * FROM tenant_template.${row.tablename}
-        `);
+        await client.query(
+          format(
+            'INSERT INTO %I.%I SELECT * FROM tenant_template.%I',
+            schemaName,
+            row.tablename,
+            row.tablename
+          )
+        );
       }
 
       // Copy functions
-      await client.query(`
-        CREATE OR REPLACE FUNCTION ${schemaName}.next_id(p_entity_type VARCHAR(50))
-        RETURNS VARCHAR(50) AS $$
-        DECLARE
-            v_prefix VARCHAR(10);
-            v_next BIGINT;
-        BEGIN
-            UPDATE ${schemaName}.id_sequences
-            SET current_value = current_value + 1, updated_at = NOW()
-            WHERE entity_type = p_entity_type
-            RETURNING prefix, current_value INTO v_prefix, v_next;
+      await client.query(
+        format(
+          `CREATE OR REPLACE FUNCTION %I.next_id(p_entity_type VARCHAR(50))
+          RETURNS VARCHAR(50) AS $func$
+          DECLARE
+              v_prefix VARCHAR(10);
+              v_next BIGINT;
+          BEGIN
+              UPDATE %I.id_sequences
+              SET current_value = current_value + 1, updated_at = NOW()
+              WHERE entity_type = p_entity_type
+              RETURNING prefix, current_value INTO v_prefix, v_next;
 
-            RETURN v_prefix || '-' || LPAD(v_next::TEXT, 5, '0');
-        END;
-        $$ LANGUAGE plpgsql
-      `);
+              RETURN v_prefix || '-' || LPAD(v_next::TEXT, 5, '0');
+          END;
+          $func$ LANGUAGE plpgsql`,
+          schemaName,
+          schemaName
+        )
+      );
 
       // Create admin user for this tenant
       const bcrypt = await import('bcrypt');
       const passwordHash = await bcrypt.hash(params.adminPassword, 12);
 
-      await client.query(`
-        INSERT INTO ${schemaName}.users (email, name, password_hash, status)
-        VALUES ($1, $2, $3, 'active')
-      `, [params.adminEmail, params.adminName, passwordHash]);
+      await client.query(
+        format(
+          'INSERT INTO %I.users (email, name, password_hash, status) VALUES ($1, $2, $3, $4)',
+          schemaName
+        ),
+        [params.adminEmail, params.adminName, passwordHash, 'active']
+      );
 
       // Assign admin role to the user
-      await client.query(`
-        INSERT INTO ${schemaName}.user_roles (user_id, role_id)
-        SELECT u.id, r.id
-        FROM ${schemaName}.users u, ${schemaName}.roles r
-        WHERE u.email = $1 AND r.name = 'admin'
-      `, [params.adminEmail]);
+      await client.query(
+        format(
+          `INSERT INTO %I.user_roles (user_id, role_id)
+          SELECT u.id, r.id
+          FROM %I.users u, %I.roles r
+          WHERE u.email = $1 AND r.name = $2`,
+          schemaName,
+          schemaName,
+          schemaName
+        ),
+        [params.adminEmail, 'admin']
+      );
 
       await client.query('COMMIT');
 
@@ -159,8 +181,8 @@ export class TenantService {
         throw new NotFoundError('Tenant', slug);
       }
 
-      const schemaName = `tenant_${slug}`;
-      await client.query(`DROP SCHEMA IF EXISTS ${schemaName} CASCADE`);
+      const schemaName = this.getSchemaName(slug);
+      await client.query(format('DROP SCHEMA IF EXISTS %I CASCADE', schemaName));
       await client.query('DELETE FROM tenants WHERE slug = $1', [slug]);
 
       await client.query('COMMIT');
@@ -174,8 +196,8 @@ export class TenantService {
   }
 
   getSchemaName(slug: string): string {
-    // Replace hyphens with underscores for valid PostgreSQL schema names
-    const sanitizedSlug = slug.replace(/-/g, '_');
+    // Sanitize slug: remove all non-alphanumeric except hyphens, then replace hyphens with underscores
+    const sanitizedSlug = slug.replace(/[^a-z0-9-]/gi, '').replace(/-/g, '_');
     return `tenant_${sanitizedSlug}`;
   }
 

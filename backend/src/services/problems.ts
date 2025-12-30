@@ -396,6 +396,21 @@ export class ProblemService {
       );
     }
 
+    // Require root cause before resolution or closure
+    if (newStatus === 'resolved' || newStatus === 'closed') {
+      if (!problem.root_cause_identified) {
+        throw new BadRequestError(
+          'Cannot resolve or close problem without identifying root cause. Please set root_cause_identified to true first.'
+        );
+      }
+
+      if (!problem.root_cause || (problem.root_cause as string).trim().length === 0) {
+        throw new BadRequestError(
+          'Root cause description is required before resolving or closing the problem.'
+        );
+      }
+    }
+
     const updates: string[] = ['status = $1', 'updated_at = NOW()'];
     const values: unknown[] = [newStatus];
     let paramIndex = 2;

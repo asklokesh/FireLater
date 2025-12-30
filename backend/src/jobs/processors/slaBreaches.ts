@@ -5,6 +5,7 @@ import { logger } from '../../utils/logger.js';
 import { tenantService } from '../../services/tenant.js';
 import { notificationQueue } from '../queues.js';
 import { slaService, SlaConfigForBreachCheck } from '../../services/sla.js';
+import format from 'pg-format';
 
 // Redis connection for worker
 const connection = {
@@ -80,15 +81,19 @@ async function checkResponseTimeBreaches(
   const breaches: SlaBreachResult[] = [];
 
   for (const config of slaConfig) {
-    const result = await pool.query(`
-      SELECT id, issue_number, priority, created_at
-      FROM ${schema}.issues
-      WHERE priority = $1
-      AND status NOT IN ('resolved', 'closed')
-      AND first_response_at IS NULL
-      AND sla_breached = false
-      AND created_at < NOW() - INTERVAL '1 minute' * $2
-    `, [config.priority, config.responseTimeMinutes]);
+    const result = await pool.query(
+      format(
+        `SELECT id, issue_number, priority, created_at
+        FROM %I.issues
+        WHERE priority = $1
+        AND status NOT IN ('resolved', 'closed')
+        AND first_response_at IS NULL
+        AND sla_breached = false
+        AND created_at < NOW() - INTERVAL '1 minute' * $2`,
+        schema
+      ),
+      [config.priority, config.responseTimeMinutes]
+    );
 
     for (const issue of result.rows) {
       breaches.push({
@@ -112,14 +117,18 @@ async function checkResolutionTimeBreaches(
   const breaches: SlaBreachResult[] = [];
 
   for (const config of slaConfig) {
-    const result = await pool.query(`
-      SELECT id, issue_number, priority, created_at
-      FROM ${schema}.issues
-      WHERE priority = $1
-      AND status NOT IN ('resolved', 'closed')
-      AND sla_breached = false
-      AND created_at < NOW() - INTERVAL '1 minute' * $2
-    `, [config.priority, config.resolutionTimeMinutes]);
+    const result = await pool.query(
+      format(
+        `SELECT id, issue_number, priority, created_at
+        FROM %I.issues
+        WHERE priority = $1
+        AND status NOT IN ('resolved', 'closed')
+        AND sla_breached = false
+        AND created_at < NOW() - INTERVAL '1 minute' * $2`,
+        schema
+      ),
+      [config.priority, config.resolutionTimeMinutes]
+    );
 
     for (const issue of result.rows) {
       breaches.push({
@@ -138,29 +147,38 @@ async function checkResolutionTimeBreaches(
 async function markIssuesAsBreached(schema: string, issueIds: string[]): Promise<void> {
   if (issueIds.length === 0) return;
 
-  await pool.query(`
-    UPDATE ${schema}.issues
-    SET sla_breached = true, updated_at = NOW()
-    WHERE id = ANY($1)
-  `, [issueIds]);
+  await pool.query(
+    format(
+      'UPDATE %I.issues SET sla_breached = true, updated_at = NOW() WHERE id = ANY($1)',
+      schema
+    ),
+    [issueIds]
+  );
 }
 
 async function getIssueAssigneeAndManager(
   schema: string,
   issueId: string
 ): Promise<{ assigneeId?: string; managerId?: string; assigneeEmail?: string; managerEmail?: string }> {
-  const result = await pool.query(`
-    SELECT
-      i.assigned_to as assignee_id,
-      au.email as assignee_email,
-      g.manager_id,
-      mu.email as manager_email
-    FROM ${schema}.issues i
-    LEFT JOIN ${schema}.users au ON i.assigned_to = au.id
-    LEFT JOIN ${schema}.groups g ON i.assigned_group = g.id
-    LEFT JOIN ${schema}.users mu ON g.manager_id = mu.id
-    WHERE i.id = $1
-  `, [issueId]);
+  const result = await pool.query(
+    format(
+      `SELECT
+        i.assigned_to as assignee_id,
+        au.email as assignee_email,
+        g.manager_id,
+        mu.email as manager_email
+      FROM %I.issues i
+      LEFT JOIN %I.users au ON i.assigned_to = au.id
+      LEFT JOIN %I.groups g ON i.assigned_group = g.id
+      LEFT JOIN %I.users mu ON g.manager_id = mu.id
+      WHERE i.id = $1`,
+      schema,
+      schema,
+      schema,
+      schema
+    ),
+    [issueId]
+  );
 
   if (result.rows.length > 0) {
     const row = result.rows[0];
@@ -350,20 +368,24 @@ export async function checkApproachingSla(
   for (const config of slaConfig) {
     const warningThreshold = config.resolutionTimeMinutes * (warningThresholdPercent / 100);
 
-    const result = await pool.query(`
-      SELECT
-        id,
-        issue_number,
-        priority,
-        created_at,
-        EXTRACT(EPOCH FROM (NOW() - created_at)) / 60 as elapsed_minutes
-      FROM ${schema}.issues
-      WHERE priority = $1
-      AND status NOT IN ('resolved', 'closed')
-      AND sla_breached = false
-      AND created_at > NOW() - INTERVAL '1 minute' * $2
-      AND created_at < NOW() - INTERVAL '1 minute' * $3
-    `, [config.priority, config.resolutionTimeMinutes, warningThreshold]);
+    const result = await pool.query(
+      format(
+        `SELECT
+          id,
+          issue_number,
+          priority,
+          created_at,
+          EXTRACT(EPOCH FROM (NOW() - created_at)) / 60 as elapsed_minutes
+        FROM %I.issues
+        WHERE priority = $1
+        AND status NOT IN ('resolved', 'closed')
+        AND sla_breached = false
+        AND created_at > NOW() - INTERVAL '1 minute' * $2
+        AND created_at < NOW() - INTERVAL '1 minute' * $3`,
+        schema
+      ),
+      [config.priority, config.resolutionTimeMinutes, warningThreshold]
+    );
 
     for (const issue of result.rows) {
       const timeRemaining = config.resolutionTimeMinutes - parseFloat(issue.elapsed_minutes);

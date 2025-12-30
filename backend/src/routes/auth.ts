@@ -18,7 +18,11 @@ const refreshSchema = z.object({
 
 const changePasswordSchema = z.object({
   oldPassword: z.string().min(1),
-  newPassword: z.string().min(8),
+  newPassword: z.string().min(12)
+    .regex(/[A-Z]/, 'Password must contain at least one uppercase letter')
+    .regex(/[a-z]/, 'Password must contain at least one lowercase letter')
+    .regex(/[0-9]/, 'Password must contain at least one number')
+    .regex(/[^A-Za-z0-9]/, 'Password must contain at least one special character'),
 });
 
 const forgotPasswordSchema = z.object({
@@ -29,7 +33,11 @@ const forgotPasswordSchema = z.object({
 const resetPasswordSchema = z.object({
   tenant: z.string().min(1),
   token: z.string().min(1),
-  newPassword: z.string().min(8),
+  newPassword: z.string().min(12)
+    .regex(/[A-Z]/, 'Password must contain at least one uppercase letter')
+    .regex(/[a-z]/, 'Password must contain at least one lowercase letter')
+    .regex(/[0-9]/, 'Password must contain at least one number')
+    .regex(/[^A-Za-z0-9]/, 'Password must contain at least one special character'),
 });
 
 const verifyEmailSchema = z.object({
@@ -42,12 +50,22 @@ const resendVerificationSchema = z.object({
   email: z.string().email(),
 });
 
+const RESERVED_SLUGS = ['public', 'pg_catalog', 'information_schema', 'admin', 'api', 'www', 'mail', 'ftp', 'localhost', 'tenant_template'];
+
 const registerTenantSchema = z.object({
   tenantName: z.string().min(2).max(255),
-  tenantSlug: z.string().min(2).max(100).regex(/^[a-z0-9-]+$/),
+  tenantSlug: z.string()
+    .min(3)
+    .max(63)
+    .regex(/^[a-z][a-z0-9-]*$/, 'Slug must start with a letter and contain only lowercase letters, numbers, and hyphens')
+    .refine((slug) => !RESERVED_SLUGS.includes(slug), 'This slug is reserved and cannot be used'),
   adminEmail: z.string().email(),
   adminName: z.string().min(2).max(255),
-  adminPassword: z.string().min(8),
+  adminPassword: z.string().min(12)
+    .regex(/[A-Z]/, 'Password must contain at least one uppercase letter')
+    .regex(/[a-z]/, 'Password must contain at least one lowercase letter')
+    .regex(/[0-9]/, 'Password must contain at least one number')
+    .regex(/[^A-Za-z0-9]/, 'Password must contain at least one special character'),
 });
 
 export default async function authRoutes(app: FastifyInstance) {

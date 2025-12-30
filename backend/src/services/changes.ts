@@ -19,6 +19,24 @@ interface ChangeFilters {
 }
 
 // ============================================
+// VALID STATUS TRANSITIONS FOR CHANGES
+// ============================================
+
+const VALID_CHANGE_TRANSITIONS: Record<string, string[]> = {
+  'draft': ['submitted', 'cancelled'],
+  'submitted': ['review', 'approved', 'rejected', 'cancelled'],
+  'review': ['approved', 'rejected', 'cancelled'],
+  'approved': ['scheduled', 'cancelled'],
+  'scheduled': ['implementing', 'cancelled'],
+  'implementing': ['completed', 'failed', 'cancelled'],
+  'completed': ['closed'],
+  'failed': ['scheduled', 'cancelled'],
+  'closed': [],
+  'cancelled': [],
+  'rejected': []
+};
+
+// ============================================
 // CHANGE WINDOW SERVICE
 // ============================================
 
@@ -777,6 +795,28 @@ class ChangeRequestService {
       throw new BadRequestError('Change must be approved before scheduling');
     }
 
+    // Check CAB approval requirement
+    if (change.cab_required === true) {
+      // Count approvals
+      const approvalCount = await pool.query(
+        `SELECT COUNT(*) as count FROM ${schema}.change_approvals
+         WHERE change_id = $1 AND status = 'approved'`,
+        [change.id]
+      );
+
+      const numApprovals = parseInt(approvalCount.rows[0]?.count || '0', 10);
+
+      // Require at least 2 CAB approvals for CAB-required changes
+      const minRequiredApprovals = 2;
+
+      if (numApprovals < minRequiredApprovals) {
+        throw new BadRequestError(
+          `CAB approval required: ${numApprovals}/${minRequiredApprovals} approvals received. ` +
+          `This change requires CAB approval before it can be scheduled.`
+        );
+      }
+    }
+
     // Update schedule if provided
     if (plannedStart || plannedEnd) {
       await pool.query(
@@ -913,6 +953,17 @@ class ChangeRequestService {
 
     if (change.status !== fromStatus && fromStatus !== null) {
       throw new BadRequestError(`Expected status '${fromStatus}' but got '${change.status}'`);
+    }
+
+    // Validate status transition
+    const currentStatus = change.status as string;
+    const allowedTransitions = VALID_CHANGE_TRANSITIONS[currentStatus] || [];
+
+    if (!allowedTransitions.includes(toStatus)) {
+      throw new BadRequestError(
+        `Invalid transition: Cannot change from '${currentStatus}' to '${toStatus}'. ` +
+        `Allowed transitions: ${allowedTransitions.length > 0 ? allowedTransitions.join(', ') : 'none'}`
+      );
     }
 
     await pool.query(

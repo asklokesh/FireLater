@@ -1,6 +1,8 @@
 import crypto from 'crypto';
 import { pool } from '../config/database.js';
 import { logger } from '../utils/logger.js';
+import { encrypt, decrypt } from '../utils/encryption.js';
+import { validateUrlForSSRF } from '../utils/ssrf.js';
 
 // ============================================
 // TYPES
@@ -275,6 +277,10 @@ export const webhooksService = {
     customHeaders?: Record<string, string>;
   }): Promise<Webhook> {
     const schema = getSchema(tenantSlug);
+
+    // Validate URL for SSRF vulnerabilities
+    await validateUrlForSSRF(data.url);
+
     const secret = data.secret || crypto.randomBytes(32).toString('hex');
 
     const result = await pool.query(`
@@ -313,6 +319,12 @@ export const webhooksService = {
     customHeaders?: Record<string, string>;
   }): Promise<Webhook | null> {
     const schema = getSchema(tenantSlug);
+
+    // Validate URL for SSRF vulnerabilities if URL is being updated
+    if (data.url !== undefined) {
+      await validateUrlForSSRF(data.url);
+    }
+
     const updates: string[] = [];
     const values: unknown[] = [];
     let paramIndex = 1;
@@ -413,6 +425,17 @@ export const webhooksService = {
           ...webhook.custom_headers,
         };
 
+        // Validate webhook URL before making request (defense-in-depth)
+        try {
+          await validateUrlForSSRF(webhook.url);
+        } catch (ssrfError) {
+          logger.error(
+            { webhookId: webhook.id, url: webhook.url, error: ssrfError },
+            'Webhook URL failed SSRF validation'
+          );
+          throw ssrfError;
+        }
+
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), webhook.timeout * 1000);
 
@@ -510,6 +533,9 @@ export const webhooksService = {
     };
 
     try {
+      // Validate webhook URL before making test request
+      await validateUrlForSSRF(webhook.url);
+
       const timestamp = Date.now();
       const signature = crypto
         .createHmac('sha256', webhook.secret || '')
@@ -580,6 +606,10 @@ export const integrationsService = {
   }): Promise<Integration> {
     const schema = getSchema(tenantSlug);
 
+    // Encrypt credentials before storing
+    const credentialsJson = JSON.stringify(data.credentials || {});
+    const encryptedCredentials = credentialsJson !== '{}' ? encrypt(credentialsJson) : credentialsJson;
+
     const result = await pool.query(`
       INSERT INTO ${schema}.integrations (
         name, type, description, config, credentials,
@@ -591,7 +621,7 @@ export const integrationsService = {
       data.type,
       data.description || null,
       JSON.stringify(data.config || {}),
-      JSON.stringify(data.credentials || {}),
+      encryptedCredentials,
       data.syncEnabled ?? false,
       data.syncInterval ?? 60,
       data.syncDirection ?? 'both',
@@ -634,7 +664,10 @@ export const integrationsService = {
     }
     if (data.credentials !== undefined) {
       updates.push(`credentials = $${paramIndex++}`);
-      values.push(JSON.stringify(data.credentials));
+      // Encrypt credentials before storing
+      const credentialsJson = JSON.stringify(data.credentials);
+      const encryptedCredentials = credentialsJson !== '{}' ? encrypt(credentialsJson) : credentialsJson;
+      values.push(encryptedCredentials);
     }
     if (data.isActive !== undefined) {
       updates.push(`is_active = $${paramIndex++}`);
@@ -682,6 +715,38 @@ export const integrationsService = {
       DELETE FROM ${schema}.integrations WHERE id = $1
     `, [id]);
     return (result.rowCount ?? 0) > 0;
+  },
+
+  // Internal helper to get integration with decrypted credentials
+  async getWithCredentials(tenantSlug: string, id: string): Promise<(Integration & { credentials?: Record<string, unknown> }) | null> {
+    const schema = getSchema(tenantSlug);
+    const result = await pool.query(`
+      SELECT i.*, u.name as created_by_name
+      FROM ${schema}.integrations i
+      LEFT JOIN ${schema}.users u ON i.created_by = u.id
+      WHERE i.id = $1
+    `, [id]);
+
+    const row = result.rows[0];
+    if (!row) return null;
+
+    // Decrypt credentials if they exist
+    if (row.credentials) {
+      try {
+        const decryptedJson = decrypt(row.credentials);
+        row.credentials = JSON.parse(decryptedJson);
+      } catch (error) {
+        // If decryption fails, credentials might be unencrypted (migration scenario)
+        try {
+          row.credentials = JSON.parse(row.credentials);
+        } catch {
+          logger.warn({ integrationId: id }, 'Failed to decrypt or parse integration credentials');
+          row.credentials = {};
+        }
+      }
+    }
+
+    return row;
   },
 
   async testConnection(tenantSlug: string, id: string): Promise<{ success: boolean; error?: string }> {

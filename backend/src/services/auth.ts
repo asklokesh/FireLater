@@ -60,7 +60,7 @@ export class AuthService {
       [params.email]
     );
 
-    const user = userResult.rows[0] as User & { roles: string[] };
+    const user = userResult.rows[0] as User & { roles: string[]; failed_login_attempts?: number; locked_until?: Date };
     if (!user) {
       throw new UnauthorizedError('Invalid email or password');
     }
@@ -69,18 +69,56 @@ export class AuthService {
       throw new UnauthorizedError('Account is not active');
     }
 
+    // Check if account is locked
+    if (user.locked_until && new Date(user.locked_until) > new Date()) {
+      const lockoutMinutesRemaining = Math.ceil((new Date(user.locked_until).getTime() - Date.now()) / 60000);
+      throw new UnauthorizedError(
+        `Account is temporarily locked due to multiple failed login attempts. Please try again in ${lockoutMinutesRemaining} minute(s).`
+      );
+    }
+
     if (user.auth_provider !== 'local' || !user.password_hash) {
       throw new UnauthorizedError('Please use SSO to login');
     }
 
     const validPassword = await bcrypt.compare(params.password, user.password_hash);
     if (!validPassword) {
-      throw new UnauthorizedError('Invalid email or password');
+      // Increment failed login attempts
+      const newAttempts = (user.failed_login_attempts || 0) + 1;
+      const lockoutThreshold = 5;
+
+      if (newAttempts >= lockoutThreshold) {
+        // Lock account for 30 minutes
+        const lockoutDurationMs = 30 * 60 * 1000;
+        const lockedUntil = new Date(Date.now() + lockoutDurationMs);
+
+        await pool.query(
+          `UPDATE ${schema}.users SET failed_login_attempts = $1, locked_until = $2 WHERE id = $3`,
+          [newAttempts, lockedUntil, user.id]
+        );
+
+        throw new UnauthorizedError(
+          'Account has been temporarily locked due to too many failed login attempts. Please try again in 30 minutes.'
+        );
+      } else {
+        // Just increment the counter
+        await pool.query(
+          `UPDATE ${schema}.users SET failed_login_attempts = $1 WHERE id = $2`,
+          [newAttempts, user.id]
+        );
+
+        const attemptsRemaining = lockoutThreshold - newAttempts;
+        throw new UnauthorizedError(
+          `Invalid email or password. ${attemptsRemaining} attempt(s) remaining before account lockout.`
+        );
+      }
     }
 
-    // Update last login
+    // Successful login - reset failed attempts and lockout
     await pool.query(
-      `UPDATE ${schema}.users SET last_login_at = NOW() WHERE id = $1`,
+      `UPDATE ${schema}.users
+       SET last_login_at = NOW(), failed_login_attempts = 0, locked_until = NULL
+       WHERE id = $1`,
       [user.id]
     );
 
