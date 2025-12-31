@@ -13,59 +13,20 @@
              r.name as reviewer_name,
              c.id as category_id, c.name as category_name,
              ts_rank_cd(a.search_vector, plainto_tsquery('english', $1)) as rank,
-             COALESCE(
-               (SELECT json_agg(row_to_json(asset)) 
-                FROM (
-                  SELECT id, name, type, url 
-                  FROM kb_assets 
-                  WHERE article_id = a.id AND tenant_id = a.tenant_id
-                ) asset
-               ), '[]'::json
-             ) as assets
+             COALESCE(ka.assets, '[]'::json) as assets
       FROM kb_articles a
       LEFT JOIN users u ON a.author_id = u.id AND u.tenant_id = a.tenant_id
       LEFT JOIN users r ON a.reviewer_id = r.id AND r.tenant_id = a.tenant_id
       LEFT JOIN kb_categories c ON a.category_id = c.id AND c.tenant_id = a.tenant_id
+      LEFT JOIN (
+        SELECT article_id, json_agg(row_to_json(asset)) as assets
+        FROM (
+          SELECT article_id, id, name, type, url 
+          FROM kb_assets 
+          WHERE tenant_id = (SELECT id FROM tenants WHERE slug = $2)
+        ) asset
+        GROUP BY article_id
+      ) ka ON ka.article_id = a.id
       WHERE a.tenant_id = (SELECT id FROM tenants WHERE slug = $2)
         AND a.search_vector @@ plainto_tsquery('english', $1)
     `;
-    
-    const params: unknown[] = [query, tenantSlug];
-    let paramIndex = 3;
-    
-    if (filters?.categoryId) {
-      searchQuery += ` AND a.category_id = $${paramIndex++}`;
-      params.push(filters.categoryId);
-    }
-    
-    if (filters?.status) {
-      searchQuery += ` AND a.status = $${paramIndex++}`;
-      params.push(filters.status);
-    }
-    
-    // Complete search query with ordering and pagination
-    searchQuery += `
-      ORDER BY rank DESC, a.created_at DESC
-      LIMIT $${paramIndex++} OFFSET $${paramIndex}
-    `;
-    params.push(pagination.perPage, offset);
-    
-    // Use a single query with window function for better performance
-    const finalQuery = `
-      WITH search_results AS (
-        ${searchQuery}
-      )
-      SELECT 
-        *,
-        COUNT(*) OVER() as total
-      FROM search_results
-    `;
-    
-    const result = await databaseService.executeQuery(
-      finalQuery,
-      params
-    );
-    
-    const total = result.rows.length > 0 ? parseInt(result.rows[0].total, 10) : 0;
-    return { articles: result.rows, total };
-  }
