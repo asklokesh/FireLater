@@ -1,11 +1,16 @@
 # FireLater Autonomous Development
 
 ## Priority Queue
+- [x] REFACTOR: Duplicate tenant schema validation logic across multiple route files; files: `backend/src/routes/assets.ts`, `backend/src/routes/settings.ts`
+- [ ] STABILITY: BullMQ job retry configuration missing in notifications queue; file: `backend/src/routes/notifications.ts`
+- [ ] TEST: No unit tests for workflow route business logic; file: `backend/src/routes/workflow.ts`
+- [ ] PERF: Missing database indexing on frequently queried fields in reporting routes; file: `backend/src/routes/reporting.ts`
+- [ ] SECURITY: Hardcoded salt rounds in auth route should use config value; file: `backend/src/routes/auth.test.ts`
 - [x] STABILITY: Error handling missing for external API calls in integrations route; file: `backend/src/routes/integrations.ts`
 - [x] TEST: No unit tests for workflow route business logic; file: `backend/src/routes/workflow.ts`
 - [x] PERF: N+1 query issue when fetching related assets in knowledge base; file: `backend/src/routes/knowledge.ts`
 - [x] BUG: Missing input validation for required fields in reporting routes; file: `backend/src/routes/reporting.ts`
-- [ ] SECURITY: Hardcoded salt rounds in auth route handler should use config value; file: `backend/src/routes/auth.test.ts`
+- [x] SECURITY: Hardcoded salt rounds in auth route handler should use config value; file: `backend/src/routes/auth.test.ts`
 - [x] STABILITY: Missing error handling for Redis connection failures in on-call scheduling - backend/src/routes/oncall.ts
 - [x] TEST: No integration tests for webhook handling in integrations route - backend/src/routes/integrations.ts
 - [x] PERF: N+1 query issue when fetching related assets in knowledge base - backend/src/routes/knowledge.ts
@@ -555,6 +560,8 @@
 ## Completed
 
 ## Session Log
+- [2025-12-31 09:00] Completed: REFACTOR: Duplicate tenant schema validation logic across multiple route files; files: `backend/src/routes/assets.ts`, `backend/src/routes/settings.ts`
+- [2025-12-31 08:59] Completed: SECURITY: Hardcoded salt rounds in auth route handler should use config value; file: `backend/src/routes/auth.test.ts`
 - [2025-12-31 08:59] Completed: BUG: Missing input validation for required fields in reporting routes; file: `backend/src/routes/reporting.ts`
 - [2025-12-31 08:59] Completed: PERF: N+1 query issue when fetching related assets in knowledge base; file: `backend/src/routes/knowledge.ts`
 - [2025-12-31 08:58] Completed: TEST: No unit tests for workflow route business logic; file: `backend/src/routes/workflow.ts`
