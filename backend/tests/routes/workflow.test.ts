@@ -1,216 +1,172 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { FastifyInstance } from 'fastify';
-import { buildTestServer } from '../utils/server.js';
+import { test, expect, beforeEach, afterEach } from 'vitest';
+import { buildApp } from '../../src/app.js';
+import { createTestTenant, createTestUser, cleanupTestTenant } from '../test-utils.js';
 import { workflowService } from '../../src/services/workflow.js';
 
-// Mock the workflow service
-vi.mock('../../src/services/workflow.js', () => ({
-  workflowService: {
-    approveChangeRequest: vi.fn(),
-    rejectChangeRequest: vi.fn(),
-    getChangeRequest: vi.fn(),
-  }
-}));
+let app: any;
+let tenant: any;
+let user: any;
+let authToken: string;
 
-describe('Workflow Routes - Change Request Approval', () => {
-  let server: FastifyInstance;
+beforeEach(async () => {
+  app = await buildApp();
+  tenant = await createTestTenant();
+  user = await createTestUser(tenant.slug, { permissions: ['workflow:approve'] });
   
-  beforeEach(async () => {
-    server = await buildTestServer();
-    vi.clearAllMocks();
+  // Login to get auth token
+  const loginResponse = await app.inject({
+    method: 'POST',
+    url: '/auth/login',
+    payload: {
+      email: user.email,
+      password: 'testpassword123'
+    }
+  });
+  
+  authToken = loginResponse.json().token;
+});
+
+afterEach(async () => {
+  await cleanupTestTenant(tenant.slug);
+  await app.close();
+});
+
+test('should approve workflow step when user has permission', async () => {
+  // Create a test workflow with pending approval
+  const workflow = await workflowService.create(tenant.slug, {
+    name: 'Test Workflow',
+    description: 'Test workflow for approval',
+    steps: [
+      {
+        id: 'step1',
+        type: 'approval',
+        name: 'Manager Approval',
+        config: {
+          approvers: [user.id]
+        }
+      }
+    ],
+    startStepId: 'step1'
   });
 
-  describe('POST /workflow/change-requests/:id/approve', () => {
-    it('should approve a change request successfully', async () => {
-      const changeRequestId = '123e4567-e89b-12d3-a456-426614174000';
-      const mockApprovedRequest = {
-        id: changeRequestId,
-        status: 'approved',
-        approvedAt: new Date().toISOString(),
-        approvedBy: 'user-123'
-      };
-
-      (workflowService.approveChangeRequest as vi.Mock).mockResolvedValue(mockApprovedRequest);
-
-      const response = await server.inject({
-        method: 'POST',
-        url: `/api/workflow/change-requests/${changeRequestId}/approve`,
-        headers: {
-          authorization: 'Bearer valid-token'
-        },
-        payload: {
-          approverId: 'user-123',
-          comments: 'Looks good to me'
-        }
-      });
-
-      expect(response.statusCode).toBe(200);
-      expect(JSON.parse(response.body)).toEqual({
-        success: true,
-        changeRequest: mockApprovedRequest
-      });
-      expect(workflowService.approveChangeRequest).toHaveBeenCalledWith(
-        changeRequestId,
-        'user-123',
-        'Looks good to me'
-      );
-    });
-
-    it('should return 404 when change request does not exist', async () => {
-      const changeRequestId = '123e4567-e89b-12d3-a456-426614174000';
-      
-      (workflowService.approveChangeRequest as vi.Mock).mockRejectedValue(
-        new Error('Change request not found')
-      );
-
-      const response = await server.inject({
-        method: 'POST',
-        url: `/api/workflow/change-requests/${changeRequestId}/approve`,
-        headers: {
-          authorization: 'Bearer valid-token'
-        },
-        payload: {
-          approverId: 'user-123'
-        }
-      });
-
-      expect(response.statusCode).toBe(404);
-      expect(JSON.parse(response.body)).toEqual({
-        error: 'Change request not found'
-      });
-    });
-
-    it('should return 400 when approver is not authorized', async () => {
-      const changeRequestId = '123e4567-e89b-12d3-a456-426614174000';
-      
-      (workflowService.approveChangeRequest as vi.Mock).mockRejectedValue(
-        new Error('Unauthorized approver')
-      );
-
-      const response = await server.inject({
-        method: 'POST',
-        url: `/api/workflow/change-requests/${changeRequestId}/approve`,
-        headers: {
-          authorization: 'Bearer valid-token'
-        },
-        payload: {
-          approverId: 'unauthorized-user'
-        }
-      });
-
-      expect(response.statusCode).toBe(403);
-      expect(JSON.parse(response.body)).toEqual({
-        error: 'Unauthorized approver'
-      });
-    });
-
-    it('should return 500 when service fails unexpectedly', async () => {
-      const changeRequestId = '123e4567-e89b-12d3-a456-426614174000';
-      
-      (workflowService.approveChangeRequest as vi.Mock).mockRejectedValue(
-        new Error('Database connection failed')
-      );
-
-      const response = await server.inject({
-        method: 'POST',
-        url: `/api/workflow/change-requests/${changeRequestId}/approve`,
-        headers: {
-          authorization: 'Bearer valid-token'
-        },
-        payload: {
-          approverId: 'user-123'
-        }
-      });
-
-      expect(response.statusCode).toBe(500);
-      expect(JSON.parse(response.body)).toEqual({
-        error: 'Failed to approve change request'
-      });
-    });
+  const response = await app.inject({
+    method: 'POST',
+    url: `/workflows/${workflow.id}/approve`,
+    headers: {
+      authorization: `Bearer ${authToken}`,
+      'x-tenant-slug': tenant.slug
+    },
+    payload: {
+      stepId: 'step1',
+      approved: true,
+      comment: 'Approved by manager'
+    }
   });
 
-  describe('POST /workflow/change-requests/:id/reject', () => {
-    it('should reject a change request successfully', async () => {
-      const changeRequestId = '123e4567-e89b-12d3-a456-426614174000';
-      const mockRejectedRequest = {
-        id: changeRequestId,
-        status: 'rejected',
-        rejectedAt: new Date().toISOString(),
-        rejectedBy: 'user-123'
-      };
+  expect(response.statusCode).toBe(200);
+  const result = response.json();
+  expect(result.success).toBe(true);
+  expect(result.step.status).toBe('approved');
+});
 
-      (workflowService.rejectChangeRequest as vi.Mock).mockResolvedValue(mockRejectedRequest);
-
-      const response = await server.inject({
-        method: 'POST',
-        url: `/api/workflow/change-requests/${changeRequestId}/reject`,
-        headers: {
-          authorization: 'Bearer valid-token'
-        },
-        payload: {
-          rejectorId: 'user-123',
-          reason: 'Does not meet security requirements'
+test('should reject workflow step with comment', async () => {
+  const workflow = await workflowService.create(tenant.slug, {
+    name: 'Test Workflow',
+    description: 'Test workflow for approval',
+    steps: [
+      {
+        id: 'step1',
+        type: 'approval',
+        name: 'Manager Approval',
+        config: {
+          approvers: [user.id]
         }
-      });
-
-      expect(response.statusCode).toBe(200);
-      expect(JSON.parse(response.body)).toEqual({
-        success: true,
-        changeRequest: mockRejectedRequest
-      });
-      expect(workflowService.rejectChangeRequest).toHaveBeenCalledWith(
-        changeRequestId,
-        'user-123',
-        'Does not meet security requirements'
-      );
-    });
-
-    it('should return 404 when change request does not exist', async () => {
-      const changeRequestId = '123e4567-e89b-12d3-a456-426614174000';
-      
-      (workflowService.rejectChangeRequest as vi.Mock).mockRejectedValue(
-        new Error('Change request not found')
-      );
-
-      const response = await server.inject({
-        method: 'POST',
-        url: `/api/workflow/change-requests/${changeRequestId}/reject`,
-        headers: {
-          authorization: 'Bearer valid-token'
-        },
-        payload: {
-          rejectorId: 'user-123'
-        }
-      });
-
-      expect(response.statusCode).toBe(404);
-      expect(JSON.parse(response.body)).toEqual({
-        error: 'Change request not found'
-      });
-    });
-
-    it('should return 400 when rejector is not authorized', async () => {
-      const changeRequestId = '123e4567-e89b-12d3-a456-426614174000';
-      
-      (workflowService.rejectChangeRequest as vi.Mock).mockRejectedValue(
-        new Error('Unauthorized rejector')
-      );
-
-      const response = await server.inject({
-        method: 'POST',
-        url: `/api/workflow/change-requests/${changeRequestId}/reject`,
-        headers: {
-          authorization: 'Bearer valid-token'
-        },
-        payload: {
-          rejectorId: 'unauthorized-user'
-        }
-      });
-
-      expect(response.statusCode).toBe(403);
-      expect(JSON.parse(response.body)).toEqual({
-        error: 'Unauthorized rejector'
-      });
-    });
+      }
+    ],
+    startStepId: 'step1'
   });
+
+  const response = await app.inject({
+    method: 'POST',
+    url: `/workflows/${workflow.id}/approve`,
+    headers: {
+      authorization: `Bearer ${authToken}`,
+      'x-tenant-slug': tenant.slug
+    },
+    payload: {
+      stepId: 'step1',
+      approved: false,
+      comment: 'More information needed'
+    }
+  });
+
+  expect(response.statusCode).toBe(200);
+  const result = response.json();
+  expect(result.success).toBe(true);
+  expect(result.step.status).toBe('rejected');
+  expect(result.step.comment).toBe('More information needed');
+});
+
+test('should fail to approve workflow step when user lacks permission', async () => {
+  // Create user without approval permissions
+  const regularUser = await createTestUser(tenant.slug, { permissions: ['workflow:read'] });
+  
+  const loginResponse = await app.inject({
+    method: 'POST',
+    url: '/auth/login',
+    payload: {
+      email: regularUser.email,
+      password: 'testpassword123'
+    }
+  });
+  
+  const regularUserToken = loginResponse.json().token;
+
+  const workflow = await workflowService.create(tenant.slug, {
+    name: 'Test Workflow',
+    description: 'Test workflow for approval',
+    steps: [
+      {
+        id: 'step1',
+        type: 'approval',
+        name: 'Manager Approval',
+        config: {
+          approvers: [user.id]
+        }
+      }
+    ],
+    startStepId: 'step1'
+  });
+
+  const response = await app.inject({
+    method: 'POST',
+    url: `/workflows/${workflow.id}/approve`,
+    headers: {
+      authorization: `Bearer ${regularUserToken}`,
+      'x-tenant-slug': tenant.slug
+    },
+    payload: {
+      stepId: 'step1',
+      approved: true
+    }
+  });
+
+  expect(response.statusCode).toBe(403);
+});
+
+test('should fail to approve non-existent workflow', async () => {
+  const response = await app.inject({
+    method: 'POST',
+    url: '/workflows/non-existent-id/approve',
+    headers: {
+      authorization: `Bearer ${authToken}`,
+      'x-tenant-slug': tenant.slug
+    },
+    payload: {
+      stepId: 'step1',
+      approved: true
+    }
+  });
+
+  expect(response.statusCode).toBe(404);
 });
