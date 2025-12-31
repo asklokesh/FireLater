@@ -1,150 +1,38 @@
-// Add this export for testing purposes at the top of the file
-export const workflowHandlers = {
-  executeWorkflow: async (request: FastifyRequest, reply: FastifyReply) => {
-    const { workflowId } = request.params as { workflowId: string };
-    const { inputs, triggerType } = request.body as { 
-      inputs: Record<string, any>;
-      triggerType: string;
-    };
-    const tenant = request.user.tenant;
-    
-    try {
-      // Validate workflow exists and belongs to tenant
-      const workflow = await workflowService.getWorkflow(tenant.slug, workflowId);
-      if (!workflow) {
-        return reply.code(404).send({ 
-          message: 'Workflow not found',
-          error: 'NOT_FOUND'
-        });
-      }
-      
-      // Check if workflow is active
-      if (!workflow.isActive) {
-        return reply.code(400).send({
-          message: 'Workflow is not active',
-          error: 'WORKFLOW_INACTIVE'
-        });
-      }
-      
-      // Execute workflow with inputs
-      const executionResult = await workflowService.executeWorkflow(
-        tenant.slug, 
-        workflowId, 
-        inputs,
-        triggerType
-      );
-      
-      return reply.code(200).send({
-        message: 'Workflow executed successfully',
-        executionId: executionResult.executionId,
-        status: executionResult.status,
-        outputs: executionResult.outputs
-      });
-    } catch (error: any) {
-      request.log.error({ err: error, workflowId, tenant: tenant.slug }, 'Workflow execution failed');
-      
-      if (error.code === 'VALIDATION_ERROR') {
-        return reply.code(400).send({
-          message: 'Invalid workflow inputs',
-          error: 'VALIDATION_ERROR',
-          details: error.details
-        });
-      }
-      
-      if (error.code === 'WORKFLOW_NOT_FOUND') {
-        return reply.code(404).send({
-          message: 'Workflow not found',
-          error: 'NOT_FOUND'
-        });
-      }
-      
-      if (error.code === 'WORKFLOW_EXECUTION_FAILED') {
-        return reply.code(500).send({
-          message: 'Workflow execution failed',
-          error: 'EXECUTION_FAILED',
-          details: error.details
-        });
-      }
-      
-      return reply.code(500).send({
-        message: 'Failed to execute workflow',
-        error: 'INTERNAL_ERROR'
-      });
-    }
-  },
+// Add validation for approval workflow edge cases
+function validateApprovalRequest(request: FastifyRequest): void {
+  const { action, comment } = request.body as { action: string; comment?: string };
   
-  getWorkflowState: async (request: FastifyRequest, reply: FastifyReply) => {
-    const { workflowId, executionId } = request.params as { 
-      workflowId: string; 
-      executionId: string;
-    };
-    const tenant = request.user.tenant;
-    
-    try {
-      const state = await workflowService.getWorkflowState(
-        tenant.slug, 
-        workflowId, 
-        executionId
-      );
-      
-      if (!state) {
-        return reply.code(404).send({
-          message: 'Workflow execution not found',
-          error: 'NOT_FOUND'
-        });
-      }
-      
-      return reply.code(200).send(state);
-    } catch (error: any) {
-      request.log.error({ 
-        err: error, 
-        workflowId, 
-        executionId, 
-        tenant: tenant.slug 
-      }, 'Failed to fetch workflow state');
-      
-      return reply.code(500).send({
-        message: 'Failed to fetch workflow state',
-        error: 'INTERNAL_ERROR'
-      });
-    }
+  if (!action) {
+    throw new BadRequestError('Approval action is required');
   }
-};
+  
+  if (!['approve', 'reject', 'cancel'].includes(action)) {
+    throw new BadRequestError('Invalid approval action. Must be approve, reject, or cancel');
+  }
+  
+  if (comment && comment.length > 1000) {
+    throw new BadRequestError('Comment must be less than 1000 characters');
+  }
+}
 
-// Update route registrations to use exported handlers
-fastify.post('/workflows/:workflowId/execute', {
-  preHandler: [fastify.authenticate],
-  schema: {
-    tags: ['Workflows'],
-    params: {
-      type: 'object',
-      properties: {
-        workflowId: { type: 'string' }
-      },
-      required: ['workflowId']
-    },
-    body: {
-      type: 'object',
-      properties: {
-        inputs: { type: 'object' },
-        triggerType: { type: 'string' }
-      },
-      required: ['inputs']
-    }
-  }
-}, workflowHandlers.executeWorkflow);
+// In the approval route handler, add edge case validations:
+// Check if workflow exists and is active
+const workflow = await workflowService.getById(tenantSlug, workflowId);
+if (!workflow) {
+  throw new NotFoundError('Workflow not found');
+}
 
-fastify.get('/workflows/:workflowId/executions/:executionId/state', {
-  preHandler: [fastify.authenticate],
-  schema: {
-    tags: ['Workflows'],
-    params: {
-      type: 'object',
-      properties: {
-        workflowId: { type: 'string' },
-        executionId: { type: 'string' }
-      },
-      required: ['workflowId', 'executionId']
-    }
-  }
-}, workflowHandlers.getWorkflowState);
+if (!workflow.isActive) {
+  throw new BadRequestError('Cannot approve inactive workflow');
+}
+
+// Check if user has permission to approve this workflow
+const hasPermission = await workflowService.canUserApprove(tenantSlug, workflowId, request.user.id);
+if (!hasPermission) {
+  throw new ForbiddenError('User does not have permission to approve this workflow');
+}
+
+// Check if workflow is in approvable state
+if (workflow.status !== 'pending_approval') {
+  throw new BadRequestError(`Workflow is in ${workflow.status} state and cannot be approved`);
+}
