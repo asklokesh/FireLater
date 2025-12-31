@@ -4,7 +4,7 @@
 - [x] STABILITY: Missing error handling for Redis connection failures in on-call scheduling - backend/src/routes/oncall.ts
 - [x] TEST: No integration tests for webhook handling in integrations route - backend/src/routes/integrations.ts
 - [x] PERF: N+1 query issue when fetching related assets in knowledge base - backend/src/routes/knowledge.ts
-- [ ] BUG: Missing input validation for required fields in reporting routes - backend/src/routes/reporting.ts
+- [x] BUG: Missing input validation for required fields in reporting routes - backend/src/routes/reporting.ts
 - [ ] SECURITY: Hardcoded salt rounds in auth route should use config value - backend/src/routes/auth.test.ts
 - [x] STABILITY: Redis connection not properly closed in on-call scheduler; file: `backend/src/routes/oncall.ts`
 - [x] TEST: No tests for workflow approval chain logic; file: `backend/src/routes/workflow.ts`
@@ -550,6 +550,7 @@
 ## Completed
 
 ## Session Log
+- [2025-12-31 08:57] Completed: BUG: Missing input validation for required fields in reporting routes - backend/src/routes/reporting.ts
 - [2025-12-31 08:57] Completed: PERF: N+1 query issue when fetching related assets in knowledge base - backend/src/routes/knowledge.ts
 - [2025-12-31 08:56] Completed: TEST: No integration tests for webhook handling in integrations route - backend/src/routes/integrations.ts
 - [2025-12-31 08:56] Completed: STABILITY: Missing error handling for Redis connection failures in on-call scheduling - backend/src/routes/oncall.ts
