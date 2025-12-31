@@ -59,7 +59,13 @@ fastify.get('/search', {
       }
     }
   },
-  preHandler: [fastify.authenticate]
+  preHandler: [fastify.authenticate],
+  config: {
+    rateLimit: {
+      max: 60,
+      timeWindow: '1 minute'
+    }
+  }
 }, async (request, reply) => {
   let { q, page = 1, perPage = 20, sort, order, type, visibility, categoryId } = request.query as {
     q?: string;

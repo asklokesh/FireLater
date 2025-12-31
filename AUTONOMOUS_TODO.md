@@ -1,6 +1,11 @@
 # FireLater Autonomous Development
 
 ## Priority Queue
+- [x] STABILITY: No rate limiting or request validation middleware implemented - backend/src/routes/*.ts
+- [ ] TEST: Auth route has inadequate test coverage for edge cases and error scenarios - backend/src/routes/auth.test.ts
+- [ ] PERF: No database query optimization or connection pooling configuration - backend/src/routes/reporting.ts
+- [ ] BUG: Missing input validation and sanitization across all route handlers - backend/src/routes/*.ts
+- [ ] SECURITY: Direct error.message exposure in auth route responses may leak sensitive information - backend/src/routes/auth.test.ts
 - [x] STABILITY: Oncall rotation updates lack transaction handling, causing data inconsistency during concurrent modifications (backend/src/routes/oncall.ts)
 - [x] TEST: No integration tests for workflow route state transitions; critical for change management reliability (backend/src/routes/workflow.ts)
 - [x] PERF: Knowledge base search endpoint performs full-table scans without proper indexing on title/content fields (backend/src/routes/knowledge.ts)
@@ -185,6 +190,7 @@
 ## Completed
 
 ## Session Log
+- [2025-12-31 04:55] Completed: STABILITY: No rate limiting or request validation middleware implemented - backend/src/routes/*.ts
 - [2025-12-31 04:54] Completed: SECURITY: Direct error.message exposure in auth route responses may leak sensitive info; use getSafeErrorMessage utility instead (backend/src/routes/auth.test.ts)
 - [2025-12-31 04:54] Completed: BUG: Missing input validation in reporting route query parameters causes 500 errors on malformed requests (backend/src/routes/reporting.ts)
 - [2025-12-31 04:54] Completed: PERF: Knowledge base search endpoint performs full-table scans without proper indexing on title/content fields (backend/src/routes/knowledge.ts)

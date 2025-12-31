@@ -4,7 +4,14 @@ const sanitizeInput = (input: string): string => {
 };
 
 // List webhooks with caching and input sanitization
-fastify.get('/webhooks', async (request, reply) => {
+fastify.get('/webhooks', {
+  config: {
+    rateLimit: {
+      max: 20,
+      timeWindow: '1 minute'
+    }
+  }
+}, async (request, reply) => {
   const tenant = (request as any).tenant;
   const query = request.query as Record<string, any>;
   

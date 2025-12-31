@@ -29,7 +29,13 @@ export default async function reportingRoutes(fastify: FastifyInstance) {
     '/templates',
     {
       preHandler: [authenticate, authorize('read:reports'), validateTenantAccess],
-      schema: queryParamsSchema
+      schema: queryParamsSchema,
+      config: {
+        rateLimit: {
+          max: 30,
+          timeWindow: '1 minute'
+        }
+      }
     },
     async (request, reply) => {
       const { tenantSlug } = request.params as { tenantSlug: string };
