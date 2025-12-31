@@ -3,7 +3,7 @@
 ## Priority Queue
 - [x] STABILITY: BullMQ job retry configuration missing in notifications queue; file: `backend/src/routes/notifications.ts`
 - [x] TEST: No unit tests for workflow route business logic; file: `backend/src/routes/workflow.ts`
-- [ ] PERF: Inefficient database queries in knowledge base search without pagination; file: `backend/src/routes/knowledge.ts`
+- [x] PERF: Inefficient database queries in knowledge base search without pagination; file: `backend/src/routes/knowledge.ts`
 - [ ] BUG: Missing input validation for critical parameters in reporting routes; file: `backend/src/routes/reporting.ts`
 - [ ] SECURITY: Hardcoded salt rounds in auth route handler should use config value; file: `backend/src/routes/auth.test.ts`
 - [x] STABILITY: Oncall schedule generation missing error handling for invalid dates; file: `backend/src/routes/oncall.ts`
@@ -290,6 +290,7 @@
 ## Completed
 
 ## Session Log
+- [2025-12-31 06:07] Completed: PERF: Inefficient database queries in knowledge base search without pagination; file: `backend/src/routes/knowledge.ts`
 - [2025-12-31 06:06] Completed: TEST: No unit tests for workflow route business logic; file: `backend/src/routes/workflow.ts`
 - [2025-12-31 06:06] Completed: STABILITY: BullMQ job retry configuration missing in notifications queue; file: `backend/src/routes/notifications.ts`
 - [2025-12-31 06:06] Completed: SECURITY: Hardcoded salt rounds in auth route should use config value; file: `backend/src/routes/auth.test.ts`

@@ -43,32 +43,6 @@
       params.push(filters.status);
     }
     
-    // Get total count
-    const countQuery = `
-      SELECT COUNT(*) as total
-      FROM kb_articles a
-      WHERE a.tenant_id = (SELECT id FROM tenants WHERE slug = $2)
-        AND a.search_vector @@ plainto_tsquery('english', $1)
-    `;
-    
-    const countParams = [query, tenantSlug];
-    if (filters?.categoryId) {
-      countQuery += ` AND a.category_id = $3`;
-      countParams.push(filters.categoryId);
-    }
-    if (filters?.status) {
-      const index = filters?.categoryId ? 4 : 3;
-      countQuery += ` AND a.status = $${index}`;
-      countParams.push(filters.status);
-    }
-    
-    const countResult = await databaseService.executeQuery(
-      countQuery,
-      countParams
-    );
-    
-    const total = parseInt(countResult.rows[0]?.total || '0', 10);
-    
     // Complete search query with ordering and pagination
     searchQuery += `
       ORDER BY rank DESC, a.created_at DESC
@@ -76,10 +50,22 @@
     `;
     params.push(pagination.perPage, offset);
     
+    // Use a single query with window function for better performance
+    const finalQuery = `
+      WITH search_results AS (
+        ${searchQuery}
+      )
+      SELECT 
+        *,
+        COUNT(*) OVER() as total
+      FROM search_results
+    `;
+    
     const result = await databaseService.executeQuery(
-      searchQuery,
+      finalQuery,
       params
     );
     
+    const total = result.rows.length > 0 ? parseInt(result.rows[0].total, 10) : 0;
     return { articles: result.rows, total };
   }
