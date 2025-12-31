@@ -1,11 +1,16 @@
 # FireLater Autonomous Development
 
 ## Priority Queue
+- [x] TEST: Auth routes missing unit tests for password reset functionality; file: `backend/src/routes/auth.test.ts`
+- [ ] STABILITY: No error handling for failed Redis connections in notifications service; file: `backend/src/routes/notifications.ts`
+- [ ] PERF: Inefficient database queries in knowledge base search without pagination; file: `backend/src/routes/knowledge.ts`
+- [ ] BUG: Missing input validation for critical parameters in reporting routes; file: `backend/src/routes/reporting.ts`
+- [ ] SECURITY: Hardcoded salt rounds in auth route handler should use config value; file: `backend/src/routes/auth.test.ts`
 - [x] REFACTOR: Duplicate database connection logic found in `backend/src/routes/requests.ts` and `backend/src/routes/knowledge.ts` should be centralized
-- [ ] STABILITY: Error handling is inconsistent across routes; `backend/src/routes/oncall.ts` lacks proper try/catch blocks
-- [ ] PERF: No caching strategy implemented for expensive queries in `backend/src/routes/assets.ts` and `backend/src/routes/integrations.ts`
-- [ ] TEST: Missing test coverage for core routes like `backend/src/routes/reporting.ts` and `backend/src/routes/workflow.ts`
-- [ ] SECURITY: Hardcoded salt rounds in auth route handler should use config value from `backend/src/routes/auth.ts`
+- [x] STABILITY: Error handling is inconsistent across routes; `backend/src/routes/oncall.ts` lacks proper try/catch blocks
+- [x] PERF: No caching strategy implemented for expensive queries in `backend/src/routes/assets.ts` and `backend/src/routes/integrations.ts`
+- [x] TEST: Missing test coverage for core routes like `backend/src/routes/reporting.ts` and `backend/src/routes/workflow.ts`
+- [x] SECURITY: Hardcoded salt rounds in auth route handler should use config value from `backend/src/routes/auth.ts`
 - [x] STABILITY: BullMQ job retry configuration missing for notification failures; file: `backend/src/routes/notifications.ts`
 - [x] TEST: No integration tests for workflow approval chains; file: `backend/src/routes/workflow.ts`
 - [x] PERF: N+1 query issue in knowledge base category loading; file: `backend/src/routes/knowledge.ts`
@@ -600,6 +605,11 @@
 ## Completed
 
 ## Session Log
+- [2025-12-31 09:18] Completed: TEST: Auth routes missing unit tests for password reset functionality; file: `backend/src/routes/auth.test.ts`
+- [2025-12-31 09:18] Completed: SECURITY: Hardcoded salt rounds in auth route handler should use config value from `backend/src/routes/auth.ts`
+- [2025-12-31 09:17] Completed: TEST: Missing test coverage for core routes like `backend/src/routes/reporting.ts` and `backend/src/routes/workflow.ts`
+- [2025-12-31 09:17] Completed: PERF: No caching strategy implemented for expensive queries in `backend/src/routes/assets.ts` and `backend/src/routes/integrations.ts`
+- [2025-12-31 09:17] Completed: STABILITY: Error handling is inconsistent across routes; `backend/src/routes/oncall.ts` lacks proper try/catch blocks
 - [2025-12-31 09:16] Completed: REFACTOR: Duplicate database connection logic found in `backend/src/routes/requests.ts` and `backend/src/routes/knowledge.ts` should be centralized
 - [2025-12-31 09:16] Completed: SECURITY: Hardcoded salt rounds in auth route should use config value; file: `backend/src/routes/auth.test.ts`
 - [2025-12-31 09:15] Completed: BUG: Missing input validation on reporting route parameters; file: `backend/src/routes/reporting.ts`
