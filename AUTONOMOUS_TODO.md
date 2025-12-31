@@ -1,6 +1,11 @@
 # FireLater Autonomous Development
 
 ## Priority Queue
+- [x] STABILITY: Background job processing logic in `backend/src/routes/notifications.ts` lacks proper error handling and retry mechanisms for failed notifications
+- [ ] TEST: Auth routes missing comprehensive test coverage for edge cases and error scenarios in `backend/src/routes/auth.test.ts` - only happy path testing present
+- [ ] PERF: No caching strategy implemented for expensive reporting queries in `backend/src/routes/reporting.ts` despite Redis being available in the stack
+- [ ] BUG: Missing input validation and sanitization across route handlers in `backend/src/routes/reporting.ts` and `backend/src/routes/knowledge.ts` - direct database queries without parameter binding risk SQL injection
+- [ ] SECURITY: Auth route handlers use direct `error.message` instead of `getSafeErrorMessage()` utility, exposing internal error details to clients in `backend/src/routes/auth.test.ts`
 - [x] STABILITY: BullMQ job processors missing retry logic and dead-letter queue configuration; background tasks may be lost during transient failures (backend/src/routes/notifications.ts)
 - [x] TEST: Auth route lacks unit tests for `validateCIDR` function and error handling paths; only happy path appears covered (backend/src/routes/auth.test.ts)
 - [x] PERF: No caching strategy implemented for knowledge base or asset inventory queries; high-frequency reads will impact DB performance (backend/src/routes/knowledge.ts, backend/src/routes/assets.ts)
@@ -160,6 +165,7 @@
 ## Completed
 
 ## Session Log
+- [2025-12-31 04:20] Completed: STABILITY: Background job processing logic in `backend/src/routes/notifications.ts` lacks proper error handling and retry mechanisms for failed notifications
 - [2025-12-31 04:16] Completed: SECURITY: Auth route exposes raw error messages to client via `getSafeErrorMessage` which may leak internal details; should sanitize all error responses in production (backend/src/routes/auth.test.ts)
 - [2025-12-31 04:16] Completed: BUG: Missing input validation on CIDR field allows potential injection or malformed data; validation occurs after error catch block (backend/src/routes/auth.test.ts)
 - [2025-12-31 04:16] Completed: PERF: No caching strategy implemented for knowledge base or asset inventory queries; high-frequency reads will impact DB performance (backend/src/routes/knowledge.ts, backend/src/routes/assets.ts)
