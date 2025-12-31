@@ -1,83 +1,201 @@
-import { test, describe, beforeEach, afterEach } from 'node:test';
-import { deepEqual, equal, rejects } from 'node:assert';
-import { buildApp } from '../helpers/app.js';
-import { createTestTenant, createTestUser } from '../helpers/auth.js';
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { FastifyInstance } from 'fastify';
+import { buildTestServer } from '../utils/server.js';
+import { createTestTenant, removeTestTenant } from '../utils/tenant.js';
+import { webhooksService } from '../../src/services/webhooks.js';
+import { vi, Mock } from 'vitest';
 
 describe('Integrations - Webhooks', () => {
-  let app: any;
-  let tenant: any;
-  let user: any;
-  let token: string;
+  let server: FastifyInstance;
+  let tenantSlug: string;
 
   beforeEach(async () => {
-    app = await buildApp();
-    tenant = await createTestTenant();
-    user = await createTestUser(tenant.id);
-    token = await app.jwt.sign({ 
-      userId: user.id, 
-      tenantId: tenant.id,
-      permissions: [] 
-    });
+    server = await buildTestServer();
+    const tenant = await createTestTenant();
+    tenantSlug = tenant.slug;
   });
 
   afterEach(async () => {
-    await app.close();
+    await removeTestTenant(tenantSlug);
+    await server.close();
   });
 
-  test('should process valid GitHub webhook', async () => {
-    const payload = {
-      action: 'opened',
-      issue: {
-        id: 123,
-        title: 'Test issue'
-      }
-    };
+  describe('POST /api/integrations/webhooks/:provider', () => {
+    it('should process valid webhook successfully', async () => {
+      const processSpy = vi.spyOn(webhooksService, 'process').mockResolvedValueOnce(undefined);
+      
+      const response = await server.inject({
+        method: 'POST',
+        url: '/api/integrations/webhooks/github',
+        headers: {
+          'x-tenant-slug': tenantSlug,
+          'content-type': 'application/json'
+        },
+        payload: {
+          action: 'opened',
+          issue: {
+            id: 123,
+            title: 'Test issue'
+          }
+        }
+      });
 
-    const response = await app.inject({
-      method: 'POST',
-      url: '/api/integrations/webhooks/github',
-      headers: {
-        authorization: `Bearer ${token}`
-      },
-      payload
+      expect(response.statusCode).toBe(200);
+      expect(response.json()).toEqual({ message: 'Webhook processed successfully' });
+      expect(processSpy).toHaveBeenCalledWith(
+        tenantSlug,
+        'github',
+        {
+          action: 'opened',
+          issue: {
+            id: 123,
+            title: 'Test issue'
+          }
+        },
+        {
+          attempts: 3,
+          backoff: {
+            type: 'exponential',
+            delay: 1000
+          }
+        }
+      );
     });
 
-    equal(response.statusCode, 200);
-    deepEqual(response.json(), { message: 'Webhook processed successfully' });
-  });
+    it('should reject invalid provider', async () => {
+      const response = await server.inject({
+        method: 'POST',
+        url: '/api/integrations/webhooks/invalidprovider',
+        headers: {
+          'x-tenant-slug': tenantSlug,
+          'content-type': 'application/json'
+        },
+        payload: {
+          test: 'data'
+        }
+      });
 
-  test('should reject unsupported provider', async () => {
-    const response = await app.inject({
-      method: 'POST',
-      url: '/api/integrations/webhooks/unsupported',
-      headers: {
-        authorization: `Bearer ${token}`
-      },
-      payload: { test: 'data' }
+      expect(response.statusCode).toBe(400);
     });
 
-    equal(response.statusCode, 400);
-    deepEqual(response.json(), {
-      error: 'Unsupported webhook provider',
-      code: 'INVALID_PROVIDER'
-    });
-  });
+    it('should handle service unavailable errors', async () => {
+      vi.spyOn(webhooksService, 'process').mockRejectedValueOnce({
+        code: 'ECONNREFUSED'
+      });
 
-  test('should handle validation error from service', async () => {
-    const response = await app.inject({
-      method: 'POST',
-      url: '/api/integrations/webhooks/github',
-      headers: {
-        authorization: `Bearer ${token}`
-      },
-      payload: {} // Invalid payload
+      const response = await server.inject({
+        method: 'POST',
+        url: '/api/integrations/webhooks/github',
+        headers: {
+          'x-tenant-slug': tenantSlug,
+          'content-type': 'application/json'
+        },
+        payload: {
+          action: 'opened',
+          issue: {
+            id: 123,
+            title: 'Test issue'
+          }
+        }
+      });
+
+      expect(response.statusCode).toBe(503);
+      expect(response.json()).toEqual({
+        message: 'External service unavailable',
+        provider: 'github',
+        error: 'SERVICE_UNAVAILABLE'
+      });
     });
 
-    equal(response.statusCode, 400);
-    deepEqual(response.json(), {
-      error: 'Invalid webhook payload',
-      code: 'VALIDATION_ERROR',
-      details: 'Payload missing required fields'
+    it('should handle bad request errors', async () => {
+      vi.spyOn(webhooksService, 'process').mockRejectedValueOnce({
+        response: {
+          status: 400,
+          data: { message: 'Invalid payload' }
+        }
+      });
+
+      const response = await server.inject({
+        method: 'POST',
+        url: '/api/integrations/webhooks/github',
+        headers: {
+          'x-tenant-slug': tenantSlug,
+          'content-type': 'application/json'
+        },
+        payload: {
+          action: 'opened',
+          issue: {
+            id: 123,
+            title: 'Test issue'
+          }
+        }
+      });
+
+      expect(response.statusCode).toBe(400);
+      expect(response.json()).toEqual({
+        message: 'Invalid webhook payload or configuration',
+        provider: 'github',
+        error: 'BAD_REQUEST',
+        details: { message: 'Invalid payload' }
+      });
+    });
+
+    it('should handle external service errors', async () => {
+      vi.spyOn(webhooksService, 'process').mockRejectedValueOnce({
+        response: {
+          status: 500
+        }
+      });
+
+      const response = await server.inject({
+        method: 'POST',
+        url: '/api/integrations/webhooks/github',
+        headers: {
+          'x-tenant-slug': tenantSlug,
+          'content-type': 'application/json'
+        },
+        payload: {
+          action: 'opened',
+          issue: {
+            id: 123,
+            title: 'Test issue'
+          }
+        }
+      });
+
+      expect(response.statusCode).toBe(502);
+      expect(response.json()).toEqual({
+        message: 'External service error',
+        provider: 'github',
+        error: 'BAD_GATEWAY'
+      });
+    });
+
+    it('should handle internal processing errors', async () => {
+      vi.spyOn(webhooksService, 'process').mockRejectedValueOnce(new Error('Processing failed'));
+
+      const response = await server.inject({
+        method: 'POST',
+        url: '/api/integrations/webhooks/github',
+        headers: {
+          'x-tenant-slug': tenantSlug,
+          'content-type': 'application/json'
+        },
+        payload: {
+          action: 'opened',
+          issue: {
+            id: 123,
+            title: 'Test issue'
+          }
+        }
+      });
+
+      expect(response.statusCode).toBe(500);
+      expect(response.json()).toEqual({
+        message: 'Failed to process webhook',
+        provider: 'github',
+        error: 'INTERNAL_ERROR'
+      });
     });
   });
 });
