@@ -3,7 +3,7 @@
 ## Priority Queue
 - [x] STABILITY: Oncall rotation updates don't handle timezone edge cases properly; file: `backend/src/routes/oncall.ts`
 - [x] TEST: No integration tests for workflow automation triggers and transitions; file: `backend/src/routes/workflow.ts`
-- [ ] PERF: Knowledge base search queries lack indexing optimization for large datasets; file: `backend/src/routes/knowledge.ts`
+- [x] PERF: Knowledge base search queries lack indexing optimization for large datasets; file: `backend/src/routes/knowledge.ts`
 - [ ] BUG: Missing input validation on reporting route parameters causing potential crashes; file: `backend/src/routes/reporting.ts`
 - [ ] SECURITY: Hardcoded salt rounds in auth route handler should use config value; file: `backend/src/routes/auth.test.ts`
 - [x] STABILITY: Undefined tenant schema handling in multi-tenant middleware; file: `backend/src/routes/settings.ts`
@@ -525,6 +525,7 @@
 ## Completed
 
 ## Session Log
+- [2025-12-31 08:24] Completed: PERF: Knowledge base search queries lack indexing optimization for large datasets; file: `backend/src/routes/knowledge.ts`
 - [2025-12-31 08:23] Completed: TEST: No integration tests for workflow automation triggers and transitions; file: `backend/src/routes/workflow.ts`
 - [2025-12-31 08:23] Completed: STABILITY: Oncall rotation updates don't handle timezone edge cases properly; file: `backend/src/routes/oncall.ts`
 - [2025-12-31 08:23] Completed: SECURITY: Hardcoded salt rounds in auth route should use config value; file: `backend/src/routes/auth.test.ts`

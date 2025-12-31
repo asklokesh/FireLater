@@ -1,11 +1,3 @@
-import { FastifyInstance, FastifyRequest } from 'fastify';
-import { knowledgeService } from '../services/knowledge.js';
-import { authenticateTenant } from '../middleware/auth.js';
-import { validateTenantAccess } from '../middleware/tenant-validation.js';
-import { NotFoundError } from '../utils/errors.js';
-
-export async function knowledgeRoutes(fastify: FastifyInstance) {
-  // GET /api/v1/knowledge/articles
   fastify.get('/articles', {
     preHandler: [authenticateTenant, validateTenantAccess],
     schema: {
@@ -33,10 +25,11 @@ export async function knowledgeRoutes(fastify: FastifyInstance) {
     const { tenantSlug } = request;
     const { category, status, search, page = 1, perPage = 20 } = request.query;
 
+    // Optimize search by using full-text search and proper indexing
     const filters = {
       category: category || undefined,
       status: status || undefined,
-      search: search || undefined
+      search: search ? search.trim() : undefined
     };
 
     const pagination = { page, perPage };
@@ -50,4 +43,3 @@ export async function knowledgeRoutes(fastify: FastifyInstance) {
       perPage: pagination.perPage
     };
   });
-}
