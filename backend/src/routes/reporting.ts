@@ -1,186 +1,91 @@
 import { FastifyInstance } from 'fastify';
 import { reportTemplateService } from '../services/reporting.js';
 import { authenticate, authorize } from '../middleware/auth.js';
-import { validateSchema } from '../middleware/validation.js';
-import { reportTemplateSchema } from '../schemas/reporting.js';
+import { validateTenantAccess } from '../middleware/tenant.js';
+import { BadRequestError } from '../utils/errors.js';
 
-export async function reportingRoutes(fastify: FastifyInstance) {
-  // Apply authentication to all routes
+// Add validation helper
+const validateReportType = (reportType: string): boolean => {
+  const allowedTypes = ['incident_summary', 'service_performance', 'user_activity', 'change_request', 'problem_trends'];
+  return allowedTypes.includes(reportType);
+};
+
+const validateBoolean = (value: string | undefined): boolean | undefined => {
+  if (value === undefined) return undefined;
+  if (value === 'true') return true;
+  if (value === 'false') return false;
+  throw new BadRequestError('Invalid boolean value');
+};
+
+export default async function reportingRoutes(fastify: FastifyInstance) {
+  // Apply authentication and tenant validation to all routes
   fastify.addHook('preHandler', authenticate);
-  
-  // List report templates
+  fastify.addHook('preHandler', authorize('read:reports'));
+  fastify.addHook('preHandler', validateTenantAccess);
+
+  // GET /api/v1/reporting/templates
   fastify.get('/templates', {
     schema: {
       querystring: {
         type: 'object',
         properties: {
-          page: { type: 'integer', minimum: 1, default: 1 },
-          perPage: { type: 'integer', minimum: 1, maximum: 100, default: 20 },
+          page: { type: 'integer', minimum: 1 },
+          perPage: { type: 'integer', minimum: 1, maximum: 100 },
           reportType: { type: 'string' },
           isPublic: { type: 'boolean' }
-        }
-      },
-      response: {
-        200: {
-          type: 'object',
-          properties: {
-            templates: { type: 'array' },
-            total: { type: 'integer' },
-            page: { type: 'integer' },
-            perPage: { type: 'integer' }
-          }
         }
       }
     }
   }, async (request, reply) => {
-    const { tenantSlug } = request.user!;
-    const { page = 1, perPage = 20, reportType, isPublic } = request.query as any;
-    
-    try {
-      const result = await reportTemplateService.list(
-        tenantSlug,
-        { page, perPage },
-        { reportType, isPublic }
-      );
-      
-      return {
-        templates: result.templates,
-        total: result.total,
-        page,
-        perPage
-      };
-    } catch (error) {
-      request.log.error({ error, tenantSlug }, 'Failed to list report templates');
-      return reply.status(500).send({
-        error: 'Internal Server Error',
-        message: 'Failed to retrieve report templates'
-      });
+    const { tenantSlug } = request.params as { tenantSlug: string };
+    const { page = 1, perPage = 20, reportType, isPublic } = request.query as {
+      page?: number;
+      perPage?: number;
+      reportType?: string;
+      isPublic?: string;
+    };
+
+    // Validate parameters
+    if (reportType && !validateReportType(reportType)) {
+      throw new BadRequestError('Invalid report type');
     }
+    
+    const isPublicBool = isPublic !== undefined ? validateBoolean(isPublic) : undefined;
+
+    const pagination = { page, perPage };
+    const filters = reportType || isPublicBool !== undefined ? { 
+      reportType, 
+      isPublic: isPublicBool 
+    } : undefined;
+
+    const result = await reportTemplateService.list(tenantSlug, pagination, filters);
+    return result;
   });
 
-  // Get report template by ID
+  // GET /api/v1/reporting/templates/:id
   fastify.get('/templates/:id', {
     schema: {
       params: {
         type: 'object',
         properties: {
-          id: { type: 'string' }
-        }
+          id: { type: 'string', pattern: '^[a-zA-Z0-9_-]+$' }
+        },
+        required: ['id']
       }
     }
   }, async (request, reply) => {
-    const { tenantSlug } = request.user!;
-    const { id } = request.params as any;
-    
-    try {
-      const template = await reportTemplateService.findById(tenantSlug, id);
-      
-      if (!template) {
-        return reply.status(404).send({
-          error: 'Not Found',
-          message: 'Report template not found'
-        });
-      }
-      
-      return template;
-    } catch (error) {
-      request.log.error({ error, tenantSlug, id }, 'Failed to get report template');
-      return reply.status(500).send({
-        error: 'Internal Server Error',
-        message: 'Failed to retrieve report template'
-      });
-    }
-  });
+    const { tenantSlug } = request.params as { tenantSlug: string };
+    const { id } = request.params as { id: string };
 
-  // Create report template
-  fastify.post('/templates', {
-    schema: {
-      body: reportTemplateSchema
-    },
-    preHandler: authorize(['admin', 'manager'])
-  }, async (request, reply) => {
-    const { tenantSlug, id: userId } = request.user!;
-    const data = request.body as any;
-    
-    try {
-      const template = await reportTemplateService.create(tenantSlug, userId, data);
-      return reply.status(201).send(template);
-    } catch (error) {
-      request.log.error({ error, tenantSlug, data }, 'Failed to create report template');
-      return reply.status(500).send({
-        error: 'Internal Server Error',
-        message: 'Failed to create report template'
-      });
+    // Validate UUID format
+    if (!id.match(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)) {
+      throw new BadRequestError('Invalid template ID format');
     }
-  });
 
-  // Update report template
-  fastify.put('/templates/:id', {
-    schema: {
-      params: {
-        type: 'object',
-        properties: {
-          id: { type: 'string' }
-        }
-      },
-      body: reportTemplateSchema
-    },
-    preHandler: authorize(['admin', 'manager'])
-  }, async (request, reply) => {
-    const { tenantSlug } = request.user!;
-    const { id } = request.params as any;
-    const data = request.body as any;
-    
-    try {
-      const template = await reportTemplateService.update(tenantSlug, id, data);
-      return template;
-    } catch (error: any) {
-      if (error.name === 'NotFoundError') {
-        return reply.status(404).send({
-          error: 'Not Found',
-          message: error.message
-        });
-      }
-      
-      request.log.error({ error, tenantSlug, id, data }, 'Failed to update report template');
-      return reply.status(500).send({
-        error: 'Internal Server Error',
-        message: 'Failed to update report template'
-      });
+    const template = await reportTemplateService.findById(tenantSlug, id);
+    if (!template) {
+      throw new NotFoundError('Report template', id);
     }
-  });
-
-  // Delete report template
-  fastify.delete('/templates/:id', {
-    schema: {
-      params: {
-        type: 'object',
-        properties: {
-          id: { type: 'string' }
-        }
-      }
-    },
-    preHandler: authorize(['admin', 'manager'])
-  }, async (request, reply) => {
-    const { tenantSlug } = request.user!;
-    const { id } = request.params as any;
-    
-    try {
-      await reportTemplateService.delete(tenantSlug, id);
-      return reply.status(204).send();
-    } catch (error: any) {
-      if (error.name === 'NotFoundError') {
-        return reply.status(404).send({
-          error: 'Not Found',
-          message: error.message
-        });
-      }
-      
-      request.log.error({ error, tenantSlug, id }, 'Failed to delete report template');
-      return reply.status(500).send({
-        error: 'Internal Server Error',
-        message: 'Failed to delete report template'
-      });
-    }
+    return template;
   });
 }
