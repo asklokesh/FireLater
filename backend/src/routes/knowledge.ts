@@ -56,7 +56,12 @@
     },
     preHandler: [fastify.authenticate]
   }, async (request, reply) => {
-    const { q, page = 1, perPage = 20, sort, order, type, visibility, categoryId } = request.query as {
+    // Add input sanitization
+    const sanitizeInput = (input: string): string => {
+      return input.replace(/[^a-zA-Z0-9:_\-\. ]/g, '').trim();
+    };
+
+    let { q, page = 1, perPage = 20, sort, order, type, visibility, categoryId } = request.query as {
       q?: string;
       page?: number;
       perPage?: number;
@@ -66,6 +71,11 @@
       visibility?: ArticleVisibility;
       categoryId?: string;
     };
+
+    // Sanitize inputs
+    if (q) q = sanitizeInput(q);
+    if (sort) sort = sanitizeInput(sort);
+    if (categoryId) categoryId = sanitizeInput(categoryId);
 
     const pagination: PaginationParams = { page, perPage, sort, order };
     const filters = { type, visibility, categoryId };

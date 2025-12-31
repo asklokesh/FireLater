@@ -5,6 +5,11 @@ import { validatePagination } from '../middleware/validation.js';
 import { BadRequestError } from '../utils/errors.js';
 import { createHash } from 'crypto';
 
+// Add input sanitization helper
+const sanitizeInput = (input: string): string => {
+  return input.replace(/[^a-zA-Z0-9:_\-\. ]/g, '').trim();
+};
+
 // Add date validation helper
 const validateDateRange = (fromDate?: string, toDate?: string): void => {
   if (fromDate && isNaN(Date.parse(fromDate))) {
@@ -56,13 +61,22 @@ export async function reportingRoutes(fastify: FastifyInstance) {
       groupBy?: string;
     } }>, reply) => {
       const { tenantSlug } = request.user!;
-      const { reportType, fromDate, toDate, groupBy } = request.query;
+      let { reportType, fromDate, toDate, groupBy } = request.query;
+
+      // Sanitize inputs
+      if (reportType) reportType = sanitizeInput(reportType);
+      if (groupBy) groupBy = sanitizeInput(groupBy);
 
       // Validate date parameters
       validateDateRange(fromDate, toDate);
 
       // Generate cache key
-      const cacheKey = generateAnalyticsCacheKey(tenantSlug, request.query);
+      const cacheKey = generateAnalyticsCacheKey(tenantSlug, {
+        reportType,
+        fromDate,
+        toDate,
+        groupBy
+      });
       
       // Try to get from cache first
       const cachedData = await fastify.redis.get(cacheKey);

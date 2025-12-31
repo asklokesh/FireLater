@@ -4,7 +4,7 @@
 - [x] REFACTOR: Duplicate validation logic found across `backend/src/routes/oncall.ts` and `backend/src/routes/workflow.ts` that should be centralized
 - [x] TEST: Auth route lacks comprehensive test coverage for edge cases in CIDR validation - file `backend/src/routes/auth.test.ts`
 - [x] PERF: No caching strategy implemented for frequently accessed data in `backend/src/routes/assets.ts` and `backend/src/routes/integrations.ts`
-- [ ] BUG: Missing input sanitization for tenant-specific routes across multiple files including `backend/src/routes/reporting.ts` and `backend/src/routes/knowledge.ts`
+- [x] BUG: Missing input sanitization for tenant-specific routes across multiple files including `backend/src/routes/reporting.ts` and `backend/src/routes/knowledge.ts`
 - [ ] SECURITY: Incomplete CIDR validation logic in `backend/src/routes/auth.test.ts` - the error handling block is empty and needs proper response/logging
 - [x] STABILITY: BullMQ job retry configuration missing in `backend/src/routes/notifications.ts`; transient failures may cause permanent job loss
 - [x] TEST: Auth route lacks unit tests for `validateCIDR` integration and error states in `backend/src/routes/auth.test.ts`
@@ -115,6 +115,7 @@
 ## Completed
 
 ## Session Log
+- [2025-12-31 03:54] Completed: BUG: Missing input sanitization for tenant-specific routes across multiple files including `backend/src/routes/reporting.ts` and `backend/src/routes/knowledge.ts`
 - [2025-12-31 03:53] Completed: PERF: No caching strategy implemented for frequently accessed data in `backend/src/routes/assets.ts` and `backend/src/routes/integrations.ts`
 - [2025-12-31 03:53] Completed: TEST: Auth route lacks comprehensive test coverage for edge cases in CIDR validation - file `backend/src/routes/auth.test.ts`
 - [2025-12-31 03:53] Completed: REFACTOR: Duplicate validation logic found across `backend/src/routes/oncall.ts` and `backend/src/routes/workflow.ts` that should be centralized
