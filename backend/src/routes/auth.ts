@@ -1,5 +1,11 @@
       } catch (error) {
-        // Sanitize the CIDR before logging to prevent exposure of sensitive values
-        const sanitizedCidr = trimmedCidr.replace(/\$\{?[A-Za-z_][A-Za-z0-9_]*\}?/g, '***');
+        // Properly escape the CIDR value for safe logging
+        const sanitizedCidr = trimmedCidr
+          .replace(/\\/g, '\\\\')
+          .replace(/\n/g, '\\n')
+          .replace(/\r/g, '\\r')
+          .replace(/\t/g, '\\t')
+          .replace(/\f/g, '\\f')
+          .replace(/"/g, '\\"');
         console.warn(`Invalid CIDR format: ${sanitizedCidr}`);
       }

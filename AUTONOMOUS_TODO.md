@@ -5,7 +5,7 @@
 - [x] TEST: `backend/src/routes/workflow.ts` lacks unit tests for approval chain logic, particularly edge cases with circular dependencies
 - [x] PERF: `backend/src/routes/assets.ts` makes sequential database calls for health scoring instead of batched queries, causing N+1 performance issues
 - [x] BUG: Missing input validation in `backend/src/routes/reporting.ts` for date range parameters could cause SQL errors or excessive resource usage
-- [ ] SECURITY: CIDR sanitization regex in `backend/src/routes/auth.test.ts` may not fully prevent log injection; replace with explicit allowlist or proper escaping
+- [x] SECURITY: CIDR sanitization regex in `backend/src/routes/auth.test.ts` may not fully prevent log injection; replace with explicit allowlist or proper escaping
 - [x] REFACTOR: Duplicate CIDR parsing logic across multiple route files (`reporting.ts`, `knowledge.ts`, etc.) should be centralized into a shared utility module for maintainability.
 - [x] TEST: No unit tests exist for the CIDR validation logic in `backend/src/routes/auth.test.ts` to verify correct handling of edge cases like invalid formats, empty strings, or malformed input.
 - [x] PERF: Trusted proxy CIDR parsing in `backend/src/routes/auth.test.ts` occurs synchronously at module load time and can delay server startup if many CIDRs are provided.
@@ -80,6 +80,7 @@
 ## Completed
 
 ## Session Log
+- [2025-12-31 03:12] Completed: SECURITY: CIDR sanitization regex in `backend/src/routes/auth.test.ts` may not fully prevent log injection; replace with explicit allowlist or proper escaping
 - [2025-12-31 03:12] Completed: BUG: Missing input validation in `backend/src/routes/reporting.ts` for date range parameters could cause SQL errors or excessive resource usage
 - [2025-12-31 03:12] Completed: PERF: `backend/src/routes/assets.ts` makes sequential database calls for health scoring instead of batched queries, causing N+1 performance issues
 - [2025-12-31 03:11] Completed: TEST: `backend/src/routes/workflow.ts` lacks unit tests for approval chain logic, particularly edge cases with circular dependencies
