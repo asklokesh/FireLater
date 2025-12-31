@@ -1,4 +1,3 @@
-// Update the DELETE /api/reporting/templates/:id route
 fastify.delete('/templates/:id', {
   schema: {
     params: {
@@ -21,6 +20,21 @@ fastify.delete('/templates/:id', {
 }, async (request, reply) => {
   const { id } = request.params as { id: string };
   
-  await reportingService.delete(request.tenantSlug!, id);
-  return { message: 'Template deleted successfully' };
+  // Validate tenant context
+  if (!request.tenantSlug) {
+    return reply.code(400).send({ message: 'Tenant context required' });
+  }
+  
+  try {
+    await reportingService.delete(request.tenantSlug, id);
+    return { message: 'Template deleted successfully' };
+  } catch (error: any) {
+    request.log.error({ err: error, templateId: id, tenant: request.tenantSlug }, 'Failed to delete template');
+    
+    if (error.code === 'P2025') { // Prisma record not found
+      return reply.code(404).send({ message: 'Template not found' });
+    }
+    
+    return reply.code(500).send({ message: 'Failed to delete template' });
+  }
 });
