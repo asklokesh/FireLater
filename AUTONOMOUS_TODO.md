@@ -3,7 +3,7 @@
 ## Priority Queue
 - [x] STABILITY: BullMQ job processors missing proper error boundaries and retry configurations (backend/src/routes/notifications.ts, backend/src/routes/workflow.ts)
 - [x] TEST: Auth route lacks comprehensive test coverage for edge cases in CIDR validation and error scenarios (backend/src/routes/auth.test.ts)
-- [ ] PERF: No database connection pooling configured for PostgreSQL leading to connection exhaustion under load (backend/src/routes/oncall.ts, backend/src/routes/assets.ts)
+- [x] PERF: No database connection pooling configured for PostgreSQL leading to connection exhaustion under load (backend/src/routes/oncall.ts, backend/src/routes/assets.ts)
 - [ ] BUG: Missing input sanitization and validation across multiple routes (reporting, knowledge, integrations) leading to potential injection vulnerabilities
 - [ ] SECURITY: IP range validation in auth route has logic inside catch block, should be moved outside try-catch for proper error handling (backend/src/routes/auth.test.ts)
 - [x] STABILITY: Oncall schedule rotation logic doesn't handle timezone edge cases; implement proper TZ conversion in `backend/src/routes/oncall.ts`
@@ -145,6 +145,7 @@
 ## Completed
 
 ## Session Log
+- [2025-12-31 04:10] Completed: PERF: No database connection pooling configured for PostgreSQL leading to connection exhaustion under load (backend/src/routes/oncall.ts, backend/src/routes/assets.ts)
 - [2025-12-31 04:09] Completed: TEST: Auth route lacks comprehensive test coverage for edge cases in CIDR validation and error scenarios (backend/src/routes/auth.test.ts)
 - [2025-12-31 04:09] Completed: STABILITY: BullMQ job processors missing proper error boundaries and retry configurations (backend/src/routes/notifications.ts, backend/src/routes/workflow.ts)
 - [2025-12-31 04:08] Completed: SECURITY: Auth route CIDR validation occurs within catch block, potentially bypassing validation; should be moved outside try/catch in `backend/src/routes/auth.test.ts`
