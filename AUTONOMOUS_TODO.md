@@ -5,7 +5,7 @@
 - [x] TEST: Auth routes have no unit tests for rate limiting or failed login scenarios. Critical security features are untested in `/backend/src/routes/auth.test.ts`. Add tests for rate limit responses and validation error cases.
 - [x] PERF: Missing database indexing strategy for multi-tenant queries. With schema-per-tenant approach, critical routes like `/requests`, `/assets`, and `/oncall` need composite indexes on tenant_id. Add migration scripts for tenant-aware indexes.
 - [x] BUG: Registration route missing validation for name fields after comment. The registration handler validates email/password but truncates names without checking minimum length. Add proper validation for firstName/lastName/companyName in `/backend/src/routes/auth.test.ts`.
-- [ ] SECURITY: Redundant input validation in auth routes - schema validation already covers email/password format but manual regex checks duplicate this logic. Remove manual validation in `/backend/src/routes/auth.test.ts` since Fastify schema handles it.
+- [x] SECURITY: Redundant input validation in auth routes - schema validation already covers email/password format but manual regex checks duplicate this logic. Remove manual validation in `/backend/src/routes/auth.test.ts` since Fastify schema handles it.
 - [x] REFACTOR: Duplicate error handling logic with `getSafeErrorMessage()` in auth routes. Centralize error handling using Fastify's `setErrorHandler()` hook in `backend/src/routes/auth.test.ts` and other route files.
 - [x] STABILITY: Missing input validation and rate limiting on public routes (`/login`, `/register`) can lead to abuse and denial of service. Implement Fastify plugins for rate limiting and schema validation.
 - [x] PERF: Multi-tenant schema-per-tenant approach in PostgreSQL may cause connection pooling issues under load. Consider implementing a shared-schema multi-tenancy strategy with row-level security.
@@ -200,6 +200,7 @@
 ## Completed
 
 ## Session Log
+- [2025-12-31 05:06] Completed: SECURITY: Redundant input validation in auth routes - schema validation already covers email/password format but manual regex checks duplicate this logic. Remove manual validation in `/backend/src/routes/auth.test.ts` since Fastify schema handles it.
 - [2025-12-31 05:06] Completed: BUG: Registration route missing validation for name fields after comment. The registration handler validates email/password but truncates names without checking minimum length. Add proper validation for firstName/lastName/companyName in `/backend/src/routes/auth.test.ts`.
 - [2025-12-31 05:05] Completed: PERF: Missing database indexing strategy for multi-tenant queries. With schema-per-tenant approach, critical routes like `/requests`, `/assets`, and `/oncall` need composite indexes on tenant_id. Add migration scripts for tenant-aware indexes.
 - [2025-12-31 05:05] Completed: TEST: Auth routes have no unit tests for rate limiting or failed login scenarios. Critical security features are untested in `/backend/src/routes/auth.test.ts`. Add tests for rate limit responses and validation error cases.
