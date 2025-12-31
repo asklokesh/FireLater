@@ -4,7 +4,7 @@
 - [x] STABILITY: Oncall route doesn't handle timezone conversion errors when processing schedule rotations across DST boundaries in backend/src/routes/oncall.ts
 - [x] TEST: Workflow route missing unit tests for approval chain validation logic in backend/src/routes/workflow.ts
 - [x] PERF: Knowledge base route performs N+1 queries when fetching article categories without proper JOIN optimization in backend/src/routes/knowledge.ts
-- [ ] BUG: Reporting route lacks proper tenant isolation in multi-tenant schema setup, potentially allowing cross-tenant data access in backend/src/routes/reporting.ts
+- [x] BUG: Reporting route lacks proper tenant isolation in multi-tenant schema setup, potentially allowing cross-tenant data access in backend/src/routes/reporting.ts
 - [ ] SECURITY: Auth route uses direct error.message instead of getSafeErrorMessage utility, exposing internal errors to clients in backend/src/routes/auth.test.ts
 - [x] STABILITY: Background job processing logic in `backend/src/routes/notifications.ts` lacks proper error handling and retry mechanisms for failed notifications
 - [x] TEST: Auth routes missing comprehensive test coverage for edge cases and error scenarios in `backend/src/routes/auth.test.ts` - only happy path testing present
@@ -170,6 +170,7 @@
 ## Completed
 
 ## Session Log
+- [2025-12-31 04:23] Completed: BUG: Reporting route lacks proper tenant isolation in multi-tenant schema setup, potentially allowing cross-tenant data access in backend/src/routes/reporting.ts
 - [2025-12-31 04:22] Completed: PERF: Knowledge base route performs N+1 queries when fetching article categories without proper JOIN optimization in backend/src/routes/knowledge.ts
 - [2025-12-31 04:22] Completed: TEST: Workflow route missing unit tests for approval chain validation logic in backend/src/routes/workflow.ts
 - [2025-12-31 04:22] Completed: STABILITY: Oncall route doesn't handle timezone conversion errors when processing schedule rotations across DST boundaries in backend/src/routes/oncall.ts
