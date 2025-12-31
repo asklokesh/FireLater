@@ -1,11 +1,16 @@
 # FireLater Autonomous Development
 
 ## Priority Queue
+- [x] STABILITY: Error handling is inconsistent across integration routes; file: `backend/src/routes/integrations.ts`
+- [ ] TEST: Auth routes lack comprehensive test coverage for edge cases; file: `backend/src/routes/auth.test.ts`
+- [ ] PERF: Inefficient database queries without proper indexing in knowledge base routes; file: `backend/src/routes/knowledge.ts`
+- [ ] BUG: Missing input validation for critical parameters in reporting routes; file: `backend/src/routes/reporting.ts`
+- [ ] SECURITY: Hardcoded salt rounds in auth route handler should use config value; file: `backend/src/routes/auth.test.ts`
 - [x] STABILITY: `backend/src/routes/oncall.ts` lacks proper error handling for calendar sync failures
 - [x] TEST: No integration tests for webhook handling in `backend/src/routes/integrations.ts`
 - [x] PERF: `backend/src/routes/assets.ts` makes sequential database calls for health scoring instead of batch queries
 - [x] BUG: Missing input validation in `backend/src/routes/reporting.ts` for date range parameters could cause SQL injection
-- [ ] SECURITY: Hardcoded salt rounds in `backend/src/routes/auth.test.ts` should use config instead of hardcoded value
+- [x] SECURITY: Hardcoded salt rounds in `backend/src/routes/auth.test.ts` should use config instead of hardcoded value
 - [x] REFACTOR: Duplicate tenant schema validation logic across multiple route files
 - [x] STABILITY: BullMQ job retry configuration missing for background tasks; file: backend/src/routes/notifications.ts
 - [x] TEST: No unit tests for critical workflow logic; file: backend/src/routes/workflow.ts
@@ -240,6 +245,8 @@
 ## Completed
 
 ## Session Log
+- [2025-12-31 05:22] Completed: STABILITY: Error handling is inconsistent across integration routes; file: `backend/src/routes/integrations.ts`
+- [2025-12-31 05:21] Completed: SECURITY: Hardcoded salt rounds in `backend/src/routes/auth.test.ts` should use config instead of hardcoded value
 - [2025-12-31 05:21] Completed: BUG: Missing input validation in `backend/src/routes/reporting.ts` for date range parameters could cause SQL injection
 - [2025-12-31 05:21] Completed: PERF: `backend/src/routes/assets.ts` makes sequential database calls for health scoring instead of batch queries
 - [2025-12-31 05:20] Completed: TEST: No integration tests for webhook handling in `backend/src/routes/integrations.ts`
