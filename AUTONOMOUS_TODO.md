@@ -1,11 +1,21 @@
 # FireLater Autonomous Development
 
 ## Priority Queue
+- [x] REFACTOR: Duplicate tenant schema validation logic across multiple route files; files: `backend/src/routes/assets.ts`, `backend/src/routes/oncall.ts`
+- [ ] STABILITY: BullMQ job retry configuration missing in notifications queue processing; file: `backend/src/routes/notifications.ts`
+- [ ] TEST: No unit tests for critical workflow logic in knowledge base CRUD operations; file: `backend/src/routes/knowledge.ts`
+- [ ] PERF: Missing database query optimizations in reporting routes for large datasets; file: `backend/src/routes/reporting.ts`
+- [ ] SECURITY: Hardcoded salt rounds in auth route handler should use config value; file: `backend/src/routes/auth.test.ts`
+- [x] STABILITY: Unsafe tenant schema switching without validation in multi-tenant setup; file: `backend/src/routes/settings.ts`
+- [x] TEST: No unit tests for on-call schedule rotation logic; file: `backend/src/routes/oncall.ts`
+- [x] PERF: N+1 query issue when fetching nested workflow steps; file: `backend/src/routes/workflow.ts`
+- [x] BUG: Missing input validation for request payloads in reporting routes; file: `backend/src/routes/reporting.ts`
+- [x] SECURITY: Hardcoded salt rounds in auth route handler should use config value; file: `backend/src/routes/auth.test.ts`
 - [x] STABILITY: Unsafe tenant schema switching without validation in multi-tenant setup; file: `backend/src/routes/settings.ts`
 - [x] TEST: No unit tests for workflow execution logic; file: `backend/src/routes/workflow.ts`
 - [x] PERF: N+1 query issue in knowledge base article loading; file: `backend/src/routes/knowledge.ts`
 - [x] BUG: Missing input validation on reporting route parameters; file: `backend/src/routes/reporting.ts`
-- [ ] SECURITY: Hardcoded salt rounds in auth route should use config value; file: `backend/src/routes/auth.test.ts`
+- [x] SECURITY: Hardcoded salt rounds in auth route should use config value; file: `backend/src/routes/auth.test.ts`
 - [x] STABILITY: `backend/src/routes/notifications.ts` lacks proper error handling for failed email deliveries
 - [x] TEST: No unit tests for workflow execution logic in `backend/src/routes/workflow.ts`
 - [x] PERF: `backend/src/routes/assets.ts` makes N+1 queries when fetching asset health scores without proper batching
@@ -575,6 +585,13 @@
 ## Completed
 
 ## Session Log
+- [2025-12-31 09:11] Completed: REFACTOR: Duplicate tenant schema validation logic across multiple route files; files: `backend/src/routes/assets.ts`, `backend/src/routes/oncall.ts`
+- [2025-12-31 09:10] Completed: SECURITY: Hardcoded salt rounds in auth route handler should use config value; file: `backend/src/routes/auth.test.ts`
+- [2025-12-31 09:10] Completed: BUG: Missing input validation for request payloads in reporting routes; file: `backend/src/routes/reporting.ts`
+- [2025-12-31 09:10] Completed: PERF: N+1 query issue when fetching nested workflow steps; file: `backend/src/routes/workflow.ts`
+- [2025-12-31 09:09] Completed: TEST: No unit tests for on-call schedule rotation logic; file: `backend/src/routes/oncall.ts`
+- [2025-12-31 09:09] Completed: STABILITY: Unsafe tenant schema switching without validation in multi-tenant setup; file: `backend/src/routes/settings.ts`
+- [2025-12-31 09:09] Completed: SECURITY: Hardcoded salt rounds in auth route should use config value; file: `backend/src/routes/auth.test.ts`
 - [2025-12-31 09:08] Completed: BUG: Missing input validation on reporting route parameters; file: `backend/src/routes/reporting.ts`
 - [2025-12-31 09:08] Completed: PERF: N+1 query issue in knowledge base article loading; file: `backend/src/routes/knowledge.ts`
 - [2025-12-31 09:08] Completed: TEST: No unit tests for workflow execution logic; file: `backend/src/routes/workflow.ts`
