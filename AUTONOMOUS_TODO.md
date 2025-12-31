@@ -3,8 +3,8 @@
 ## Priority Queue
 - [x] STABILITY: Redis connection handling in `backend/src/routes/notifications.ts` lacks proper retry logic and could cause notification delivery failures during transient outages
 - [x] TEST: No unit tests exist for critical workflow validation logic in `backend/src/routes/workflow.ts` leaving change management approvals untested
-- [ ] PERF: `backend/src/routes/assets.ts` performs N+1 queries when fetching application health scores instead of using batched database operations
-- [ ] BUG: Missing input sanitization in `backend/src/routes/reporting.ts` for user-supplied date ranges could lead to SQL injection in analytics queries
+- [x] PERF: `backend/src/routes/assets.ts` performs N+1 queries when fetching application health scores instead of using batched database operations
+- [x] BUG: Missing input sanitization in `backend/src/routes/reporting.ts` for user-supplied date ranges could lead to SQL injection in analytics queries
 - [ ] SECURITY: CIDR validation logic in `backend/src/routes/auth.test.ts` appears to have unreachable error handling due to improper try-catch structure around `validateCIDR` call
 - [x] STABILITY: No input sanitization for `trimmedCidr` variable in `backend/src/routes/auth.test.ts` before passing to `ipaddr.parseCIDR()`, risking injection attacks
 - [x] REFACTOR: Duplicate try-catch blocks in `backend/src/routes/auth.test.ts` for CIDR validation should be consolidated into a single validation function
@@ -95,6 +95,8 @@
 ## Completed
 
 ## Session Log
+- [2025-12-31 03:21] Completed: BUG: Missing input sanitization in `backend/src/routes/reporting.ts` for user-supplied date ranges could lead to SQL injection in analytics queries
+- [2025-12-31 03:20] Completed: PERF: `backend/src/routes/assets.ts` performs N+1 queries when fetching application health scores instead of using batched database operations
 - [2025-12-31 03:20] Completed: TEST: No unit tests exist for critical workflow validation logic in `backend/src/routes/workflow.ts` leaving change management approvals untested
 - [2025-12-31 03:20] Completed: STABILITY: Redis connection handling in `backend/src/routes/notifications.ts` lacks proper retry logic and could cause notification delivery failures during transient outages
 - [2025-12-31 03:16] Completed: SECURITY: IP CIDR validation in `backend/src/routes/auth.test.ts` only warns on invalid CIDR instead of rejecting the request, potentially allowing unauthorized access
