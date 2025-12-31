@@ -27,31 +27,34 @@
         }
       });
 
-    // Clone query for count before adding pagination
-    const totalQuery = query.clone();
-    
-    // Apply pagination to main query
+    // Use a single query with window function for count to avoid second query
     query = query
       .orderBy('ka.created_at', 'desc')
       .limit(perPage)
-      .offset(offset);
+      .offset(offset)
+      .select([
+        'ka.id',
+        'ka.title',
+        'ka.content',
+        'ka.status',
+        'ka.category',
+        'ka.created_at',
+        'ka.updated_at',
+        'kc.name as category_name',
+        'kc.description as category_description'
+      ])
+      .select(this.db.raw('COUNT(*) OVER() as total_count'));
 
-    // Execute count query
-    const [totalResult] = await totalQuery.count('ka.id as count');
-    const total = parseInt(totalResult.count as string, 10);
+    // Execute main query
+    const articles = await query;
 
-    // Select only necessary fields to improve performance
-    const articles = await query.select([
-      'ka.id',
-      'ka.title',
-      'ka.content',
-      'ka.status',
-      'ka.category',
-      'ka.created_at',
-      'ka.updated_at',
-      'kc.name as category_name',
-      'kc.description as category_description'
-    ]);
+    // Extract total from first row if exists
+    const total = articles.length > 0 ? parseInt(articles[0].total_count, 10) : 0;
+
+    // Remove total_count from each article
+    articles.forEach((article: any) => {
+      delete article.total_count;
+    });
 
     // Fetch related assets for all articles in a single query
     if (articles.length > 0) {
