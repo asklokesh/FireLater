@@ -3,7 +3,7 @@
 ## Priority Queue
 - [x] STABILITY: Notifications route doesn't handle Redis connection failures gracefully; implement retry logic and circuit breaker pattern in `backend/src/routes/notifications.ts`
 - [x] TEST: Workflow route lacks unit tests for approval chain logic; add test coverage for sequential and parallel approvals in `backend/src/routes/workflow.ts`
-- [ ] PERF: Knowledge base search endpoint performs full-table scans; implement database indexing and pagination in `backend/src/routes/knowledge.ts`
+- [x] PERF: Knowledge base search endpoint performs full-table scans; implement database indexing and pagination in `backend/src/routes/knowledge.ts`
 - [ ] BUG: Reporting route has unhandled promise rejection in export functionality; add try/catch around async operations in `backend/src/routes/reporting.ts`
 - [ ] SECURITY: Auth route uses inline CIDR validation instead of centralized middleware; move `validateCIDR` call to proper middleware layer in `backend/src/routes/auth.test.ts`
 - [x] STABILITY: Redis connection handling in `backend/src/routes/notifications.ts` lacks proper retry logic and could cause notification delivery failures during transient outages
@@ -100,6 +100,7 @@
 ## Completed
 
 ## Session Log
+- [2025-12-31 03:22] Completed: PERF: Knowledge base search endpoint performs full-table scans; implement database indexing and pagination in `backend/src/routes/knowledge.ts`
 - [2025-12-31 03:22] Completed: TEST: Workflow route lacks unit tests for approval chain logic; add test coverage for sequential and parallel approvals in `backend/src/routes/workflow.ts`
 - [2025-12-31 03:21] Completed: STABILITY: Notifications route doesn't handle Redis connection failures gracefully; implement retry logic and circuit breaker pattern in `backend/src/routes/notifications.ts`
 - [2025-12-31 03:21] Completed: SECURITY: CIDR validation logic in `backend/src/routes/auth.test.ts` appears to have unreachable error handling due to improper try-catch structure around `validateCIDR` call
