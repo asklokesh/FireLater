@@ -4,8 +4,8 @@
 - [x] STABILITY: `notifications.ts` uses synchronous Redis calls without timeout handling; wrap in try-catch and add retry logic.
 - [x] TEST: `workflow.ts` lacks unit tests for edge cases in approval chain logic; add comprehensive test coverage.
 - [x] PERF: `knowledge.ts` makes N+1 queries when fetching articles; optimize with batch loading or JOINs.
-- [ ] BUG: In `reporting.ts`, database queries lack tenant isolation, risking data leakage in multi-tenant setup.
-- [ ] SECURITY: Centralized error handling in `auth.test.ts` obscures specific error details; implement granular error responses for debugging while maintaining security.
+- [x] BUG: In `reporting.ts`, database queries lack tenant isolation, risking data leakage in multi-tenant setup.
+- [x] SECURITY: Centralized error handling in `auth.test.ts` obscures specific error details; implement granular error responses for debugging while maintaining security.
 - [x] STABILITY: Redis connection not properly handled during BullMQ job processing - `backend/src/routes/notifications.ts`
 - [x] TEST: No integration tests for on-call rotation scheduling logic - `backend/src/routes/oncall.ts`
 - [x] PERF: N+1 query issue in asset inventory loading without proper joins - `backend/src/routes/assets.ts`
@@ -155,6 +155,8 @@
 ## Completed
 
 ## Session Log
+- [2025-12-31 04:14] Completed: SECURITY: Centralized error handling in `auth.test.ts` obscures specific error details; implement granular error responses for debugging while maintaining security.
+- [2025-12-31 04:14] Completed: BUG: In `reporting.ts`, database queries lack tenant isolation, risking data leakage in multi-tenant setup.
 - [2025-12-31 04:14] Completed: PERF: `knowledge.ts` makes N+1 queries when fetching articles; optimize with batch loading or JOINs.
 - [2025-12-31 04:13] Completed: TEST: `workflow.ts` lacks unit tests for edge cases in approval chain logic; add comprehensive test coverage.
 - [2025-12-31 04:13] Completed: STABILITY: `notifications.ts` uses synchronous Redis calls without timeout handling; wrap in try-catch and add retry logic.
