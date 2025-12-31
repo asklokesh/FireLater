@@ -1,11 +1,16 @@
 # FireLater Autonomous Development
 
 ## Priority Queue
+- [x] STABILITY: `backend/src/routes/oncall.ts` lacks proper error handling for calendar sync failures
+- [x] TEST: No integration tests for webhook handling in `backend/src/routes/integrations.ts`
+- [ ] PERF: `backend/src/routes/assets.ts` makes sequential database calls for health scoring instead of batch queries
+- [ ] BUG: Missing input validation in `backend/src/routes/reporting.ts` for date range parameters could cause SQL injection
+- [ ] SECURITY: Hardcoded salt rounds in `backend/src/routes/auth.test.ts` should use config instead of hardcoded value
 - [x] REFACTOR: Duplicate tenant schema validation logic across multiple route files
 - [x] STABILITY: BullMQ job retry configuration missing for background tasks; file: backend/src/routes/notifications.ts
-- [ ] TEST: No unit tests for critical workflow logic; file: backend/src/routes/workflow.ts
-- [ ] PERF: Missing database indexing on frequently queried fields in reporting routes; file: backend/src/routes/reporting.ts
-- [ ] SECURITY: Hardcoded salt rounds in auth route should use config value; file: backend/src/routes/auth.test.ts
+- [x] TEST: No unit tests for critical workflow logic; file: backend/src/routes/workflow.ts
+- [x] PERF: Missing database indexing on frequently queried fields in reporting routes; file: backend/src/routes/reporting.ts
+- [x] SECURITY: Hardcoded salt rounds in auth route should use config value; file: backend/src/routes/auth.test.ts
 - [x] STABILITY: Redis connection not properly closed in notifications service; file: `backend/src/routes/notifications.ts`
 - [x] TEST: No unit tests for workflow state transitions; file: `backend/src/routes/workflow.ts`
 - [x] PERF: N+1 query issue in knowledge base category loading; file: `backend/src/routes/knowledge.ts`
@@ -235,6 +240,11 @@
 ## Completed
 
 ## Session Log
+- [2025-12-31 05:20] Completed: TEST: No integration tests for webhook handling in `backend/src/routes/integrations.ts`
+- [2025-12-31 05:20] Completed: STABILITY: `backend/src/routes/oncall.ts` lacks proper error handling for calendar sync failures
+- [2025-12-31 05:19] Completed: SECURITY: Hardcoded salt rounds in auth route should use config value; file: backend/src/routes/auth.test.ts
+- [2025-12-31 05:19] Completed: PERF: Missing database indexing on frequently queried fields in reporting routes; file: backend/src/routes/reporting.ts
+- [2025-12-31 05:18] Completed: TEST: No unit tests for critical workflow logic; file: backend/src/routes/workflow.ts
 - [2025-12-31 05:18] Completed: STABILITY: BullMQ job retry configuration missing for background tasks; file: backend/src/routes/notifications.ts
 - [2025-12-31 05:18] Completed: REFACTOR: Duplicate tenant schema validation logic across multiple route files
 - [2025-12-31 05:17] Completed: SECURITY: Hardcoded salt rounds in auth route should use config value; file: `backend/src/routes/auth.test.ts`

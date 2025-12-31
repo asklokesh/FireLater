@@ -1,62 +1,36 @@
-// Remove manual sanitization in route handlers
-fastify.get('/webhooks', {
-  schema: webhooksQuerySchema,
-  config: {
-    rateLimit: {
-      max: 20,
-      timeWindow: '1 minute'
+// Add webhook handling route with proper validation and error handling
+fastify.post('/webhooks/:provider', {
+  schema: {
+    tags: ['Integrations'],
+    params: {
+      type: 'object',
+      properties: {
+        provider: { type: 'string' }
+      },
+      required: ['provider']
+    },
+    body: {
+      type: 'object',
+      additionalProperties: true
     }
   }
 }, async (request, reply) => {
+  const { provider } = request.params as { provider: string };
+  const payload = request.body as Record<string, any>;
   const tenant = (request as any).tenant;
-  // Remove manual sanitization - now handled by global hook
-  const query = request.query as Record<string, any>;
-  
-  // Generate cache key
-  const cacheKey = generateIntegrationsCacheKey(tenant.slug, 'webhooks', query);
-  
-  // Try to get from cache first
-  const cachedData = await fastify.redis.get(cacheKey);
-  if (cachedData) {
-    reply.header('X-Cache', 'HIT');
-    return { data: JSON.parse(cachedData) };
-  }
   
   try {
-    // Implement retry logic for external API calls
-    let webhooks;
-    let lastError;
-    
-    for (let attempt = 1; attempt <= 3; attempt++) {
-      try {
-        webhooks = await Promise.race([
-          webhooksService.list(tenant.slug, query),
-          new Promise((_, reject) => 
-            setTimeout(() => reject(new Error('Webhooks fetch timeout')), 30000)
-          )
-        ]);
-        lastError = null;
-        break;
-      } catch (error) {
-        lastError = error;
-        if (attempt < 3) {
-          // Exponential backoff: 1s, 2s, 4s
-          await new Promise(resolve => setTimeout(resolve, Math.pow(2, attempt) * 1000));
-        }
-      }
+    // Validate provider
+    if (!['github', 'slack', 'pagerduty', 'datadog'].includes(provider)) {
+      return reply.code(400).send({ error: 'Unsupported webhook provider' });
     }
     
-    if (lastError) {
-      throw lastError;
-    }
+    // Process webhook
+    await webhooksService.process(tenant.slug, provider, payload);
     
-    // Cache the result for 5 minutes
-    await fastify.redis.setex(cacheKey, 300, JSON.stringify(webhooks));
-    reply.header('X-Cache', 'MISS');
-    
-    return { data: webhooks };
+    return reply.code(200).send({ message: 'Webhook processed successfully' });
   } catch (error) {
-    fastify.log.error({ error }, 'Failed to fetch webhooks');
-    return reply.code(500).send({ error: 'Failed to fetch webhooks' });
+    fastify.log.error({ error }, 'Webhook processing failed');
+    return reply.code(500).send({ error: 'Failed to process webhook' });
   }
 });
