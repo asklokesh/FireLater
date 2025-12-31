@@ -1,11 +1,16 @@
 # FireLater Autonomous Development
 
 ## Priority Queue
+- [x] REFACTOR: Hardcoded tenant schema logic scattered across multiple route files instead of centralized tenant resolution; affects `backend/src/routes/oncall.ts` and `backend/src/routes/integrations.ts`
+- [ ] TEST: Auth route tests missing coverage for rate limiting and edge cases like duplicate registration; see `backend/src/routes/auth.test.ts`
+- [ ] PERF: Missing database query indexing strategy for multi-tenant schema-per-tenant pattern; evident in `backend/src/routes/requests.ts` and `backend/src/routes/assets.ts`
+- [ ] BUG: Manual input sanitization in register route instead of relying solely on schema validation; redundant code in `backend/src/routes/reporting.ts` and others
+- [ ] SECURITY: Password hashing with bcrypt uses fixed salt rounds (12); should be configurable via environment variables in `backend/src/routes/auth.test.ts`
 - [x] REFACTOR: Inline sanitization logic in registration handler should be extracted to shared validation middleware for consistency across routes in `backend/src/routes/reporting.ts`
 - [x] TEST: Auth route lacks comprehensive test coverage for rate limiting, validation, and error states in `backend/src/routes/auth.test.ts`
-- [ ] PERF: Missing database query indexing strategy for multi-tenant schema-per-tenant design could cause performance degradation as tenant count grows in `backend/src/routes/requests.ts`
-- [ ] BUG: Manual input sanitization in `/register` route duplicates global hook functionality and may cause inconsistent data handling in `backend/src/routes/reporting.ts`
-- [ ] SECURITY: Password hashing with bcrypt should use a minimum of 12 rounds but is hardcoded without environment configuration in `backend/src/routes/auth.test.ts`
+- [x] PERF: Missing database query indexing strategy for multi-tenant schema-per-tenant design could cause performance degradation as tenant count grows in `backend/src/routes/requests.ts`
+- [x] BUG: Manual input sanitization in `/register` route duplicates global hook functionality and may cause inconsistent data handling in `backend/src/routes/reporting.ts`
+- [x] SECURITY: Password hashing with bcrypt should use a minimum of 12 rounds but is hardcoded without environment configuration in `backend/src/routes/auth.test.ts`
 - [x] REFACTOR: Duplicated tenant context extraction logic across route handlers (`backend/src/routes/assets.ts`, `backend/src/routes/integrations.ts`) should be centralized into a shared utility or plugin
 - [x] TEST: No unit tests for critical workflows such as change request approval in `backend/src/routes/workflow.ts` - add coverage for success/failure paths
 - [x] PERF: Missing database query indexing for common filters (e.g., status, assignee) in `backend/src/routes/requests.ts` and `backend/src/routes/oncall.ts` leading to slow lookups
@@ -215,6 +220,10 @@
 ## Completed
 
 ## Session Log
+- [2025-12-31 05:13] Completed: REFACTOR: Hardcoded tenant schema logic scattered across multiple route files instead of centralized tenant resolution; affects `backend/src/routes/oncall.ts` and `backend/src/routes/integrations.ts`
+- [2025-12-31 05:12] Completed: SECURITY: Password hashing with bcrypt should use a minimum of 12 rounds but is hardcoded without environment configuration in `backend/src/routes/auth.test.ts`
+- [2025-12-31 05:12] Completed: BUG: Manual input sanitization in `/register` route duplicates global hook functionality and may cause inconsistent data handling in `backend/src/routes/reporting.ts`
+- [2025-12-31 05:12] Completed: PERF: Missing database query indexing strategy for multi-tenant schema-per-tenant design could cause performance degradation as tenant count grows in `backend/src/routes/requests.ts`
 - [2025-12-31 05:11] Completed: TEST: Auth route lacks comprehensive test coverage for rate limiting, validation, and error states in `backend/src/routes/auth.test.ts`
 - [2025-12-31 05:11] Completed: REFACTOR: Inline sanitization logic in registration handler should be extracted to shared validation middleware for consistency across routes in `backend/src/routes/reporting.ts`
 - [2025-12-31 05:10] Completed: SECURITY: Passwords should never be logged or stored in plain text; ensure bcrypt hashing is applied before storage in `backend/src/routes/auth.test.ts` and registration logic
