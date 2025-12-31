@@ -5,7 +5,7 @@
 - [x] TEST: No integration tests covering multi-tenant schema isolation in `backend/src/routes/assets.ts`
 - [x] PERF: Knowledge base search queries in `backend/src/routes/knowledge.ts` perform full table scans without proper indexing on text fields
 - [x] BUG: Missing input sanitization on user-provided search parameters in `backend/src/routes/reporting.ts` leading to potential injection vulnerabilities
-- [ ] SECURITY: TRUSTED_PROXY_CIDIRS parsing lacks input validation and error handling for malformed CIDR ranges in `backend/src/routes/auth.test.ts`
+- [x] SECURITY: TRUSTED_PROXY_CIDIRS parsing lacks input validation and error handling for malformed CIDR ranges in `backend/src/routes/auth.test.ts`
 - [x] REFACTOR: The `isTrustedProxy` function in `backend/src/routes/auth.test.ts` should be moved to a shared utilities module since it's not specific to auth and is likely used across multiple routes.
 - [x] TEST: The auth route in `backend/src/routes/auth.test.ts` lacks test coverage for IPv6 CIDR validation and edge cases like invalid IP formats, malformed CIDRs, and IPv4-mapped IPv6 addresses.
 - [x] PERF: The `isTrustedProxy` function in `backend/src/routes/auth.test.ts` recreates `Address4`/`Address6` objects for every CIDR check in the loop instead of pre-parsing them, causing unnecessary CPU overhead on every request.
@@ -65,6 +65,7 @@
 ## Completed
 
 ## Session Log
+- [2025-12-31 03:06] Completed: SECURITY: TRUSTED_PROXY_CIDIRS parsing lacks input validation and error handling for malformed CIDR ranges in `backend/src/routes/auth.test.ts`
 - [2025-12-31 03:06] Completed: BUG: Missing input sanitization on user-provided search parameters in `backend/src/routes/reporting.ts` leading to potential injection vulnerabilities
 - [2025-12-31 03:05] Completed: PERF: Knowledge base search queries in `backend/src/routes/knowledge.ts` perform full table scans without proper indexing on text fields
 - [2025-12-31 03:05] Completed: TEST: No integration tests covering multi-tenant schema isolation in `backend/src/routes/assets.ts`
