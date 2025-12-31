@@ -80,7 +80,8 @@
     const pagination: PaginationParams = { page, perPage, sort, order };
     const filters = { type, visibility, categoryId };
 
-    const { articles, total } = await knowledgeService.searchArticles(
+    // Batch fetch articles with related data to avoid N+1 queries
+    const { articles, total } = await knowledgeService.searchArticlesWithRelations(
       request.user.tenant,
       q || '',
       pagination,
