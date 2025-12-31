@@ -1,11 +1,16 @@
 # FireLater Autonomous Development
 
 ## Priority Queue
+- [x] REFACTOR: Duplicate CIDR parsing logic across multiple route files (`reporting.ts`, `knowledge.ts`, etc.) should be centralized into a shared utility module for maintainability.
+- [ ] TEST: No unit tests exist for the CIDR validation logic in `backend/src/routes/auth.test.ts` to verify correct handling of edge cases like invalid formats, empty strings, or malformed input.
+- [ ] PERF: Trusted proxy CIDR parsing in `backend/src/routes/auth.test.ts` occurs synchronously at module load time and can delay server startup if many CIDRs are provided.
+- [ ] BUG: In `backend/src/routes/auth.test.ts`, the IPv6 check using `includes(':')` may incorrectly classify IPv4-mapped IPv6 addresses; should use `Address6.isValid()` first.
+- [ ] SECURITY: Environment variables are logged or exposed in warnings during CIDR parsing in `backend/src/routes/auth.test.ts` without sanitization, potentially leaking sensitive configuration.
 - [x] STABILITY: Multi-tenant schema-per-tenant approach requires stricter tenant isolation checks to prevent cross-tenant data access in all route handlers
-- [ ] TEST: Authentication route lacks unit tests for CIDR validation logic and IP address parsing functionality in `backend/src/routes/auth.test.ts`
-- [ ] PERF: No Redis connection pooling configured; each route creates new connections leading to resource exhaustion under load across all route files
-- [ ] BUG: Missing validation for required environment variables may cause runtime crashes during initialization in both frontend and backend `.env.example` files
-- [ ] SECURITY: TRUSTED_PROXY_CIDIRS parsing lacks input sanitization and error handling for malformed CIDR strings in `backend/src/routes/auth.test.ts`
+- [x] TEST: Authentication route lacks unit tests for CIDR validation logic and IP address parsing functionality in `backend/src/routes/auth.test.ts`
+- [x] PERF: No Redis connection pooling configured; each route creates new connections leading to resource exhaustion under load across all route files
+- [x] BUG: Missing validation for required environment variables may cause runtime crashes during initialization in both frontend and backend `.env.example` files
+- [x] SECURITY: TRUSTED_PROXY_CIDIRS parsing lacks input sanitization and error handling for malformed CIDR strings in `backend/src/routes/auth.test.ts`
 - [x] STABILITY: BullMQ job retry logic missing exponential backoff configuration in `backend/src/routes/notifications.ts` background processing
 - [x] TEST: No integration tests covering multi-tenant schema isolation in `backend/src/routes/assets.ts`
 - [x] PERF: Knowledge base search queries in `backend/src/routes/knowledge.ts` perform full table scans without proper indexing on text fields
@@ -70,6 +75,11 @@
 ## Completed
 
 ## Session Log
+- [2025-12-31 03:09] Completed: REFACTOR: Duplicate CIDR parsing logic across multiple route files (`reporting.ts`, `knowledge.ts`, etc.) should be centralized into a shared utility module for maintainability.
+- [2025-12-31 03:07] Completed: SECURITY: TRUSTED_PROXY_CIDIRS parsing lacks input sanitization and error handling for malformed CIDR strings in `backend/src/routes/auth.test.ts`
+- [2025-12-31 03:07] Completed: BUG: Missing validation for required environment variables may cause runtime crashes during initialization in both frontend and backend `.env.example` files
+- [2025-12-31 03:07] Completed: PERF: No Redis connection pooling configured; each route creates new connections leading to resource exhaustion under load across all route files
+- [2025-12-31 03:07] Completed: TEST: Authentication route lacks unit tests for CIDR validation logic and IP address parsing functionality in `backend/src/routes/auth.test.ts`
 - [2025-12-31 03:06] Completed: STABILITY: Multi-tenant schema-per-tenant approach requires stricter tenant isolation checks to prevent cross-tenant data access in all route handlers
 - [2025-12-31 03:06] Completed: SECURITY: TRUSTED_PROXY_CIDIRS parsing lacks input validation and error handling for malformed CIDR ranges in `backend/src/routes/auth.test.ts`
 - [2025-12-31 03:06] Completed: BUG: Missing input sanitization on user-provided search parameters in `backend/src/routes/reporting.ts` leading to potential injection vulnerabilities
