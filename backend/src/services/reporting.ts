@@ -1,5 +1,3 @@
-import { databaseService } from './database.js';
-
 class ReportTemplateService {
   async list(
     tenantSlug: string,
