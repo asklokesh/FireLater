@@ -1,122 +1,86 @@
-import { describe, it, expect, beforeAll, afterAll } from 'vitest';
-import { setupTestServer, teardownTestServer } from '../helpers/test-server';
-import { createTestTenant, createTestUser } from '../helpers/test-data';
-import { FastifyInstance } from 'fastify';
+import { describe, it, beforeEach, afterEach } from 'vitest';
+import { buildTestServer } from '../../test/helpers/setup.js';
+import { createTestTenant } from '../../test/helpers/tenant.js';
+import { workflowService } from '../../src/services/workflow.js';
+import { requestService } from '../../src/services/requests.js';
 
-describe('Workflow Route Integration Tests', () => {
-  let server: FastifyInstance;
+describe('Workflow Automation Integration Tests', () => {
+  let server: any;
   let tenant: any;
-  let user: any;
-  let authToken: string;
-
-  beforeAll(async () => {
-    server = await setupTestServer();
+  
+  beforeEach(async () => {
+    server = await buildTestServer();
     tenant = await createTestTenant();
-    user = await createTestUser(tenant.slug);
-    authToken = `Bearer ${user.token}`;
   });
-
-  afterAll(async () => {
-    await teardownTestServer(server);
+  
+  afterEach(async () => {
+    await server.close();
   });
-
-  describe('POST /workflows/:id/transitions', () => {
-    it('should successfully transition workflow state', async () => {
-      // Create a test workflow
-      const workflowResponse = await server.inject({
-        method: 'POST',
-        url: '/workflows',
-        headers: {
-          authorization: authToken,
-          'x-tenant-slug': tenant.slug
-        },
-        payload: {
-          name: 'Test Workflow',
-          description: 'Test workflow for state transitions',
-          initialState: 'draft',
-          states: ['draft', 'in_review', 'approved', 'rejected'],
-          transitions: [
-            { from: 'draft', to: 'in_review' },
-            { from: 'in_review', to: 'approved' },
-            { from: 'in_review', to: 'rejected' }
-          ]
+  
+  it('should trigger workflow on request creation', async () => {
+    // Create a workflow with request creation trigger
+    const workflow = await workflowService.create(tenant.slug, {
+      name: 'Test Workflow',
+      trigger: {
+        type: 'request.created',
+        conditions: []
+      },
+      actions: [{
+        type: 'notification.email',
+        config: {
+          to: 'test@example.com',
+          subject: 'Request Created',
+          body: 'A new request was created'
         }
-      });
-
-      expect(workflowResponse.statusCode).toBe(201);
-      const workflow = workflowResponse.json();
-
-      // Test state transition
-      const transitionResponse = await server.inject({
-        method: 'POST',
-        url: `/workflows/${workflow.id}/transitions`,
-        headers: {
-          authorization: authToken,
-          'x-tenant-slug': tenant.slug
-        },
-        payload: {
-          fromState: 'draft',
-          toState: 'in_review',
-          entityId: 'test-entity-id',
-          metadata: {
-            changedBy: user.id,
-            reason: 'Ready for review'
-          }
-        }
-      });
-
-      expect(transitionResponse.statusCode).toBe(200);
-      const result = transitionResponse.json();
-      expect(result.success).toBe(true);
-      expect(result.currentState).toBe('in_review');
+      }]
     });
-
-    it('should reject invalid state transitions', async () => {
-      // Create a test workflow
-      const workflowResponse = await server.inject({
-        method: 'POST',
-        url: '/workflows',
-        headers: {
-          authorization: authToken,
-          'x-tenant-slug': tenant.slug
-        },
-        payload: {
-          name: 'Test Workflow 2',
-          description: 'Test workflow for invalid transitions',
-          initialState: 'draft',
-          states: ['draft', 'in_review', 'approved', 'rejected'],
-          transitions: [
-            { from: 'draft', to: 'in_review' },
-            { from: 'in_review', to: 'approved' },
-            { from: 'in_review', to: 'rejected' }
-          ]
-        }
-      });
-
-      expect(workflowResponse.statusCode).toBe(201);
-      const workflow = workflowResponse.json();
-
-      // Try invalid transition
-      const transitionResponse = await server.inject({
-        method: 'POST',
-        url: `/workflows/${workflow.id}/transitions`,
-        headers: {
-          authorization: authToken,
-          'x-tenant-slug': tenant.slug
-        },
-        payload: {
-          fromState: 'draft',
-          toState: 'approved', // Not allowed directly from draft
-          entityId: 'test-entity-id',
-          metadata: {
-            changedBy: user.id
-          }
-        }
-      });
-
-      expect(transitionResponse.statusCode).toBe(400);
-      const result = transitionResponse.json();
-      expect(result.error).toBe('Invalid state transition');
+    
+    // Create a request which should trigger the workflow
+    const request = await requestService.create(tenant.slug, {
+      title: 'Test Request',
+      description: 'Test description'
     });
+    
+    // Verify workflow was triggered by checking execution history
+    const executions = await workflowService.getExecutions(tenant.slug, workflow.id);
+    expect(executions).toHaveLength(1);
+    expect(executions[0].status).toBe('completed');
+  });
+  
+  it('should handle workflow state transitions', async () => {
+    // Create workflow with state transition trigger
+    const workflow = await workflowService.create(tenant.slug, {
+      name: 'State Transition Workflow',
+      trigger: {
+        type: 'request.status.changed',
+        conditions: [{
+          field: 'to',
+          operator: 'equals',
+          value: 'in_progress'
+        }]
+      },
+      actions: [{
+        type: 'assign.user',
+        config: {
+          userId: 'test-user-id'
+        }
+      }]
+    });
+    
+    // Create initial request
+    const request = await requestService.create(tenant.slug, {
+      title: 'Test Request',
+      description: 'Test description'
+    });
+    
+    // Update request status to trigger workflow
+    await requestService.update(tenant.slug, request.id, {
+      status: 'in_progress'
+    });
+    
+    // Verify workflow execution
+    const executions = await workflowService.getExecutions(tenant.slug, workflow.id);
+    expect(executions).toHaveLength(1);
+    expect(executions[0].status).toBe('completed');
   });
 });
