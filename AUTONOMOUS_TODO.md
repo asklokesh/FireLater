@@ -3,7 +3,7 @@
 ## Priority Queue
 - [x] REFACTOR: The `isTrustedProxy` function in `backend/src/routes/auth.test.ts` should be moved to a shared utilities module since it's not specific to auth and is likely used across multiple routes.
 - [x] TEST: The auth route in `backend/src/routes/auth.test.ts` lacks test coverage for IPv6 CIDR validation and edge cases like invalid IP formats, malformed CIDRs, and IPv4-mapped IPv6 addresses.
-- [ ] PERF: The `isTrustedProxy` function in `backend/src/routes/auth.test.ts` recreates `Address4`/`Address6` objects for every CIDR check in the loop instead of pre-parsing them, causing unnecessary CPU overhead on every request.
+- [x] PERF: The `isTrustedProxy` function in `backend/src/routes/auth.test.ts` recreates `Address4`/`Address6` objects for every CIDR check in the loop instead of pre-parsing them, causing unnecessary CPU overhead on every request.
 - [ ] BUG: No error handling for when `TRUSTED_PROXY_CIDIRS` is undefined or empty in `backend/src/routes/auth.test.ts`, which would cause all proxy checks to fail and potentially break authentication flows.
 - [ ] SECURITY: The `isTrustedProxy` function in `backend/src/routes/auth.test.ts` has flawed CIDR validation logic that could allow IP spoofing; it incorrectly falls back to exact string matching when parsing fails, and doesn't properly handle IPv4-mapped IPv6 addresses.
 - [x] STABILITY: In `backend/src/routes/oncall.ts`, the on-call rotation scheduler does not handle timezone transitions properly during daylight saving time changes, risking incorrect assignment schedules.
@@ -60,6 +60,7 @@
 ## Completed
 
 ## Session Log
+- [2025-12-31 03:03] Completed: PERF: The `isTrustedProxy` function in `backend/src/routes/auth.test.ts` recreates `Address4`/`Address6` objects for every CIDR check in the loop instead of pre-parsing them, causing unnecessary CPU overhead on every request.
 - [2025-12-31 03:03] Completed: TEST: The auth route in `backend/src/routes/auth.test.ts` lacks test coverage for IPv6 CIDR validation and edge cases like invalid IP formats, malformed CIDRs, and IPv4-mapped IPv6 addresses.
 - [2025-12-31 03:03] Completed: REFACTOR: The `isTrustedProxy` function in `backend/src/routes/auth.test.ts` should be moved to a shared utilities module since it's not specific to auth and is likely used across multiple routes.
 - [2025-12-31 02:58] Completed: SECURITY: The `isTrustedProxy` function in `backend/src/routes/auth.test.ts` has a logic flaw where it falls back to exact IP matching inside the catch block, which could lead to bypassing intended CIDR restrictions. It should reject invalid CIDRs entirely instead of defaulting to exact match.
