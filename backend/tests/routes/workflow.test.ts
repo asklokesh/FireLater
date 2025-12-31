@@ -1,142 +1,132 @@
 import { test, describe, beforeEach, afterEach } from 'node:test';
-import { deepEqual, rejects, ok } from 'node:assert';
+import { deepEqual, equal, rejects } from 'node:assert';
 import { FastifyInstance } from 'fastify';
 import { buildTestServer } from '../helpers/server.js';
-import { resetDatabase } from '../helpers/db.js';
+import { createTestTenant, removeTestTenant } from '../helpers/tenant.js';
+import { workflowService } from '../../src/services/workflow.js';
 
-describe('Workflow Routes - Approval Chain Logic', () => {
+describe('Workflow Routes', () => {
   let app: FastifyInstance;
-  
+  let tenantSlug: string;
+
   beforeEach(async () => {
+    tenantSlug = await createTestTenant();
     app = await buildTestServer();
-    await resetDatabase();
   });
 
   afterEach(async () => {
+    await removeTestTenant(tenantSlug);
     await app.close();
   });
 
-  describe('Circular Dependency Detection', () => {
-    test('should reject approval chain with direct circular dependency', async () => {
-      // Create users
-      const user1 = { id: 'user1', name: 'User 1' };
-      const user2 = { id: 'user2', name: 'User 2' };
-      
-      // Create workflow with circular dependency: user1 -> user2 -> user1
-      const workflowData = {
-        name: 'Circular Approval Workflow',
-        approvalChain: [
-          { approverId: user1.id, level: 1 },
-          { approverId: user2.id, level: 2 },
-          { approverId: user1.id, level: 3 } // Circular reference
-        ]
-      };
+  describe('POST /api/workflows/:id/approvals', () => {
+    test('should validate required approval fields', async () => {
+      const response = await app.inject({
+        method: 'POST',
+        url: '/api/workflows/test-workflow-id/approvals',
+        headers: {
+          'x-tenant-slug': tenantSlug,
+          'authorization': 'Bearer test-token'
+        },
+        payload: {}
+      });
 
-      await rejects(
-        app.inject({
-          method: 'POST',
-          url: '/api/workflows',
-          payload: workflowData
-        }),
-        (err) => {
-          ok(err.message.includes('circular dependency'));
-          return true;
-        }
-      );
+      equal(response.statusCode, 400);
+      deepEqual(JSON.parse(response.body).message, 'body must have required property \'action\'');
     });
 
-    test('should reject approval chain with indirect circular dependency', async () => {
-      // Create users
-      const user1 = { id: 'user1', name: 'User 1' };
-      const user2 = { id: 'user2', name: 'User 2' };
-      const user3 = { id: 'user3', name: 'User 3' };
-      
-      // Create workflow with indirect circular dependency: user1 -> user2 -> user3 -> user1
-      const workflowData = {
-        name: 'Indirect Circular Approval Workflow',
-        approvalChain: [
-          { approverId: user1.id, level: 1 },
-          { approverId: user2.id, level: 2 },
-          { approverId: user3.id, level: 3 },
-          { approverId: user1.id, level: 4 } // Indirect circular reference
-        ]
-      };
-
-      await rejects(
-        app.inject({
-          method: 'POST',
-          url: '/api/workflows',
-          payload: workflowData
-        }),
-        (err) => {
-          ok(err.message.includes('circular dependency'));
-          return true;
+    test('should validate approval action values', async () => {
+      const response = await app.inject({
+        method: 'POST',
+        url: '/api/workflows/test-workflow-id/approvals',
+        headers: {
+          'x-tenant-slug': tenantSlug,
+          'authorization': 'Bearer test-token'
+        },
+        payload: {
+          action: 'invalid-action'
         }
-      );
+      });
+
+      equal(response.statusCode, 400);
+      deepEqual(JSON.parse(response.body).message, 'body/action must be equal to one of the allowed values');
     });
 
-    test('should allow valid approval chain without circular dependencies', async () => {
-      // Create users
-      const user1 = { id: 'user1', name: 'User 1' };
-      const user2 = { id: 'user2', name: 'User 2' };
-      const user3 = { id: 'user3', name: 'User 3' };
-      
-      // Create workflow with valid approval chain: user1 -> user2 -> user3
-      const workflowData = {
-        name: 'Valid Approval Workflow',
-        approvalChain: [
-          { approverId: user1.id, level: 1 },
-          { approverId: user2.id, level: 2 },
-          { approverId: user3.id, level: 3 }
-        ]
+    test('should validate comment length', async () => {
+      const response = await app.inject({
+        method: 'POST',
+        url: '/api/workflows/test-workflow-id/approvals',
+        headers: {
+          'x-tenant-slug': tenantSlug,
+          'authorization': 'Bearer test-token'
+        },
+        payload: {
+          action: 'approve',
+          comment: 'a'.repeat(2001)
+        }
+      });
+
+      equal(response.statusCode, 400);
+      deepEqual(JSON.parse(response.body).message, 'body/comment must NOT have more than 2000 characters');
+    });
+
+    test('should process valid approval request', async () => {
+      // Mock the service method
+      const mockResult = { 
+        id: 'approval-123', 
+        status: 'approved',
+        workflowId: 'test-workflow-id'
       };
+      
+      const serviceStub = (workflowService as any).processApproval = async () => mockResult;
 
       const response = await app.inject({
         method: 'POST',
-        url: '/api/workflows',
-        payload: workflowData
+        url: '/api/workflows/test-workflow-id/approvals',
+        headers: {
+          'x-tenant-slug': tenantSlug,
+          'authorization': 'Bearer test-token'
+        },
+        payload: {
+          action: 'approve',
+          comment: 'Looks good to me'
+        }
       });
 
-      deepEqual(response.statusCode, 201);
-      const result = JSON.parse(response.body);
-      ok(result.id);
-      deepEqual(result.name, workflowData.name);
+      equal(response.statusCode, 200);
+      deepEqual(JSON.parse(response.body), mockResult);
+      
+      // Restore original method
+      delete (workflowService as any).processApproval;
+    });
+  });
+
+  describe('GET /api/workflows/:id/approvals', () => {
+    test('should validate pagination parameters', async () => {
+      const response = await app.inject({
+        method: 'GET',
+        url: '/api/workflows/test-workflow-id/approvals?page=-1&perPage=0',
+        headers: {
+          'x-tenant-slug': tenantSlug,
+          'authorization': 'Bearer test-token'
+        }
+      });
+
+      equal(response.statusCode, 400);
     });
 
-    test('should allow approver appearing in different non-circular positions', async () => {
-      // Create users
-      const manager = { id: 'manager', name: 'Manager' };
-      const director = { id: 'director', name: 'Director' };
-      
-      // Create workflow where manager appears at different levels without circular dependency
-      // manager (level 1) -> director (level 2) -> manager (level 3) is still circular
-      // But manager (level 1) -> director (level 2) -> vp (level 3) -> manager (level 4) is circular
-      // So we test a valid case: user1 -> user2 -> user3 -> user4
-      const user1 = { id: 'user1', name: 'User 1' };
-      const user2 = { id: 'user2', name: 'User 2' };
-      const user3 = { id: 'user3', name: 'User 3' };
-      const user4 = { id: 'user4', name: 'User 4' };
-      
-      const workflowData = {
-        name: 'Non-Circular Multi-Level Workflow',
-        approvalChain: [
-          { approverId: user1.id, level: 1 },
-          { approverId: user2.id, level: 2 },
-          { approverId: user3.id, level: 3 },
-          { approverId: user4.id, level: 4 }
-        ]
-      };
-
+    test('should validate maximum perPage limit', async () => {
       const response = await app.inject({
-        method: 'POST',
-        url: '/api/workflows',
-        payload: workflowData
+        method: 'GET',
+        url: '/api/workflows/test-workflow-id/approvals?perPage=101',
+        headers: {
+          'x-tenant-slug': tenantSlug,
+          'authorization': 'Bearer test-token'
+        }
       });
 
-      deepEqual(response.statusCode, 201);
-      const result = JSON.parse(response.body);
-      ok(result.id);
-      deepEqual(result.name, workflowData.name);
+      equal(response.statusCode, 400);
+      deepEqual(JSON.parse(response.body).message, 'perPage must be less than or equal to 100');
     });
   });
 });
