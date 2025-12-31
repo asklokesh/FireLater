@@ -1,23 +1,19 @@
-// Add input sanitization utility at the top of the file
-const sanitizeInput = (input: string): string => {
-  return input.replace(/[<>{}[\]|\\^`]/g, '').trim();
-};
-
 fastify.get('/search', {
   schema: {
     tags: ['knowledge'],
     querystring: {
       type: 'object',
       properties: {
-        q: { type: 'string' },
-        page: { type: 'integer', minimum: 1, default: 1 },
+        q: { type: 'string', maxLength: 255 },
+        page: { type: 'integer', minimum: 1, maximum: 1000, default: 1 },
         perPage: { type: 'integer', minimum: 1, maximum: 100, default: 20 },
-        sort: { type: 'string' },
+        sort: { type: 'string', maxLength: 50 },
         order: { type: 'string', enum: ['asc', 'desc'] },
         type: { type: 'string', enum: ['how_to', 'troubleshooting', 'faq', 'reference', 'policy', 'known_error'] },
         visibility: { type: 'string', enum: ['public', 'internal', 'restricted'] },
-        categoryId: { type: 'string' }
-      }
+        categoryId: { type: 'string', pattern: '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$' }
+      },
+      additionalProperties: false
     },
     response: {
       200: {
@@ -104,14 +100,19 @@ fastify.get('/search', {
     }
   }
 
-  const pagination: PaginationParams = { page, perPage, sort, order };
+  const pagination: PaginationParams = { 
+    page: Math.max(1, Math.min(1000, page)), 
+    perPage: Math.min(100, Math.max(1, perPage)),
+    sort,
+    order
+  };
   const filters = { type, visibility, categoryId };
 
   // Generate cache key for knowledge search
   const cacheKeyParams = {
     q,
-    page,
-    perPage,
+    page: pagination.page,
+    perPage: pagination.perPage,
     sort,
     order,
     type,

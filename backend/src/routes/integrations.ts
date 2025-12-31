@@ -1,10 +1,20 @@
-// Add input sanitization utility
-const sanitizeInput = (input: string): string => {
-  return input.replace(/[<>{}[\]|\\^`]/g, '').trim();
+// Add input validation schema
+const webhooksQuerySchema = {
+  querystring: {
+    type: 'object',
+    properties: {
+      page: { type: 'integer', minimum: 1, maximum: 1000, default: 1 },
+      perPage: { type: 'integer', minimum: 1, maximum: 100, default: 20 },
+      status: { type: 'string', enum: ['active', 'inactive', 'error'] },
+      provider: { type: 'string', maxLength: 50 }
+    },
+    additionalProperties: false
+  }
 };
 
 // List webhooks with caching and input sanitization
 fastify.get('/webhooks', {
+  schema: webhooksQuerySchema,
   config: {
     rateLimit: {
       max: 20,
@@ -19,8 +29,29 @@ fastify.get('/webhooks', {
   const sanitizedQuery: Record<string, any> = {};
   for (const [key, value] of Object.entries(query)) {
     if (typeof value === 'string') {
-      sanitizedQuery[key] = sanitizeInput(value);
-    } else if (typeof value === 'number' || typeof value === 'boolean') {
+      // Apply length limits and sanitization
+      const sanitizedValue = sanitizeInput(value);
+      if (key === 'provider') {
+        sanitizedQuery[key] = sanitizedValue.substring(0, 50);
+      } else if (key === 'status') {
+        // Already validated by schema, but double-check
+        const validStatuses = ['active', 'inactive', 'error'];
+        if (validStatuses.includes(sanitizedValue)) {
+          sanitizedQuery[key] = sanitizedValue;
+        }
+      } else {
+        sanitizedQuery[key] = sanitizedValue;
+      }
+    } else if (typeof value === 'number') {
+      // Apply bounds to numeric values
+      if (key === 'page') {
+        sanitizedQuery[key] = Math.max(1, Math.min(1000, value));
+      } else if (key === 'perPage') {
+        sanitizedQuery[key] = Math.min(100, Math.max(1, value));
+      } else {
+        sanitizedQuery[key] = value;
+      }
+    } else if (typeof value === 'boolean') {
       sanitizedQuery[key] = value;
     }
     // Ignore other types to prevent injection
