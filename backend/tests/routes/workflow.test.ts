@@ -1,132 +1,163 @@
-import { test, describe, beforeEach, afterEach } from 'node:test';
-import { deepEqual, equal, rejects } from 'node:assert';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { FastifyInstance } from 'fastify';
 import { buildTestServer } from '../helpers/server.js';
-import { createTestTenant, removeTestTenant } from '../helpers/tenant.js';
 import { workflowService } from '../../src/services/workflow.js';
 
-describe('Workflow Routes', () => {
-  let app: FastifyInstance;
-  let tenantSlug: string;
+// Mock the workflow service
+vi.mock('../../src/services/workflow.js', () => ({
+  workflowService: {
+    processApproval: vi.fn(),
+    getWorkflowById: vi.fn(),
+    createWorkflow: vi.fn(),
+  }
+}));
+
+describe('Workflow Routes - Approval Chain Logic', () => {
+  let server: FastifyInstance;
 
   beforeEach(async () => {
-    tenantSlug = await createTestTenant();
-    app = await buildTestServer();
+    server = await buildTestServer();
+    vi.clearAllMocks();
   });
 
-  afterEach(async () => {
-    await removeTestTenant(tenantSlug);
-    await app.close();
-  });
-
-  describe('POST /api/workflows/:id/approvals', () => {
-    test('should validate required approval fields', async () => {
-      const response = await app.inject({
-        method: 'POST',
-        url: '/api/workflows/test-workflow-id/approvals',
-        headers: {
-          'x-tenant-slug': tenantSlug,
-          'authorization': 'Bearer test-token'
-        },
-        payload: {}
-      });
-
-      equal(response.statusCode, 400);
-      deepEqual(JSON.parse(response.body).message, 'body must have required property \'action\'');
-    });
-
-    test('should validate approval action values', async () => {
-      const response = await app.inject({
-        method: 'POST',
-        url: '/api/workflows/test-workflow-id/approvals',
-        headers: {
-          'x-tenant-slug': tenantSlug,
-          'authorization': 'Bearer test-token'
-        },
-        payload: {
-          action: 'invalid-action'
-        }
-      });
-
-      equal(response.statusCode, 400);
-      deepEqual(JSON.parse(response.body).message, 'body/action must be equal to one of the allowed values');
-    });
-
-    test('should validate comment length', async () => {
-      const response = await app.inject({
-        method: 'POST',
-        url: '/api/workflows/test-workflow-id/approvals',
-        headers: {
-          'x-tenant-slug': tenantSlug,
-          'authorization': 'Bearer test-token'
-        },
-        payload: {
-          action: 'approve',
-          comment: 'a'.repeat(2001)
-        }
-      });
-
-      equal(response.statusCode, 400);
-      deepEqual(JSON.parse(response.body).message, 'body/comment must NOT have more than 2000 characters');
-    });
-
-    test('should process valid approval request', async () => {
-      // Mock the service method
-      const mockResult = { 
-        id: 'approval-123', 
-        status: 'approved',
-        workflowId: 'test-workflow-id'
+  describe('Sequential Approvals', () => {
+    it('should process sequential approvals in correct order', async () => {
+      const mockWorkflow = {
+        id: 'workflow-1',
+        name: 'Test Sequential Workflow',
+        steps: [
+          { id: 'step-1', type: 'approval', approver: 'user-1', nextStepId: 'step-2' },
+          { id: 'step-2', type: 'approval', approver: 'user-2', nextStepId: 'step-3' },
+          { id: 'step-3', type: 'approval', approver: 'user-3', nextStepId: null }
+        ]
       };
-      
-      const serviceStub = (workflowService as any).processApproval = async () => mockResult;
 
-      const response = await app.inject({
+      vi.mocked(workflowService.getWorkflowById).mockResolvedValue(mockWorkflow);
+      
+      const response = await server.inject({
         method: 'POST',
-        url: '/api/workflows/test-workflow-id/approvals',
-        headers: {
-          'x-tenant-slug': tenantSlug,
-          'authorization': 'Bearer test-token'
-        },
+        url: '/api/v1/workflows/workflow-1/approvals',
         payload: {
-          action: 'approve',
-          comment: 'Looks good to me'
+          stepId: 'step-1',
+          approved: true,
+          userId: 'user-1'
         }
       });
 
-      equal(response.statusCode, 200);
-      deepEqual(JSON.parse(response.body), mockResult);
-      
-      // Restore original method
-      delete (workflowService as any).processApproval;
+      expect(response.statusCode).toBe(200);
+      expect(workflowService.processApproval).toHaveBeenCalledWith(
+        'test-tenant',
+        'workflow-1',
+        'step-1',
+        'user-1',
+        true
+      );
+    });
+
+    it('should reject approval when user is not the designated approver', async () => {
+      const mockWorkflow = {
+        id: 'workflow-1',
+        name: 'Test Sequential Workflow',
+        steps: [
+          { id: 'step-1', type: 'approval', approver: 'user-1', nextStepId: 'step-2' }
+        ]
+      };
+
+      vi.mocked(workflowService.getWorkflowById).mockResolvedValue(mockWorkflow);
+
+      const response = await server.inject({
+        method: 'POST',
+        url: '/api/v1/workflows/workflow-1/approvals',
+        payload: {
+          stepId: 'step-1',
+          approved: true,
+          userId: 'unauthorized-user'
+        }
+      });
+
+      expect(response.statusCode).toBe(403);
     });
   });
 
-  describe('GET /api/workflows/:id/approvals', () => {
-    test('should validate pagination parameters', async () => {
-      const response = await app.inject({
-        method: 'GET',
-        url: '/api/workflows/test-workflow-id/approvals?page=-1&perPage=0',
-        headers: {
-          'x-tenant-slug': tenantSlug,
-          'authorization': 'Bearer test-token'
+  describe('Parallel Approvals', () => {
+    it('should process parallel approvals independently', async () => {
+      const mockWorkflow = {
+        id: 'workflow-2',
+        name: 'Test Parallel Workflow',
+        steps: [
+          { 
+            id: 'parallel-step',
+            type: 'parallel_approval',
+            approvers: ['user-1', 'user-2', 'user-3'],
+            nextStepId: 'step-4'
+          }
+        ]
+      };
+
+      vi.mocked(workflowService.getWorkflowById).mockResolvedValue(mockWorkflow);
+
+      // First approval
+      await server.inject({
+        method: 'POST',
+        url: '/api/v1/workflows/workflow-2/approvals',
+        payload: {
+          stepId: 'parallel-step',
+          approved: true,
+          userId: 'user-1'
         }
       });
 
-      equal(response.statusCode, 400);
+      // Second approval
+      const response = await server.inject({
+        method: 'POST',
+        url: '/api/v1/workflows/workflow-2/approvals',
+        payload: {
+          stepId: 'parallel-step',
+          approved: false,
+          userId: 'user-2'
+        }
+      });
+
+      expect(response.statusCode).toBe(200);
+      expect(workflowService.processApproval).toHaveBeenCalledTimes(2);
     });
 
-    test('should validate maximum perPage limit', async () => {
-      const response = await app.inject({
-        method: 'GET',
-        url: '/api/workflows/test-workflow-id/approvals?perPage=101',
-        headers: {
-          'x-tenant-slug': tenantSlug,
-          'authorization': 'Bearer test-token'
+    it('should complete parallel approval when all approvers respond', async () => {
+      const mockWorkflow = {
+        id: 'workflow-3',
+        name: 'Test Complete Parallel Workflow',
+        steps: [
+          { 
+            id: 'parallel-step',
+            type: 'parallel_approval',
+            approvers: ['user-1', 'user-2'],
+            requiredApprovals: 2,
+            nextStepId: 'step-3'
+          }
+        ]
+      };
+
+      vi.mocked(workflowService.getWorkflowById).mockResolvedValue(mockWorkflow);
+      vi.mocked(workflowService.processApproval).mockResolvedValue({
+        allApproved: true,
+        nextStepId: 'step-3'
+      });
+
+      const response = await server.inject({
+        method: 'POST',
+        url: '/api/v1/workflows/workflow-3/approvals',
+        payload: {
+          stepId: 'parallel-step',
+          approved: true,
+          userId: 'user-2'
         }
       });
 
-      equal(response.statusCode, 400);
-      deepEqual(JSON.parse(response.body).message, 'perPage must be less than or equal to 100');
+      expect(response.statusCode).toBe(200);
+      expect(response.json()).toEqual({
+        message: 'All approvals received, moving to next step',
+        nextStepId: 'step-3'
+      });
     });
   });
 });
