@@ -1,116 +1,121 @@
-fastify.post('/deliver', {
+fastify.post('/send', {
   schema: {
     body: {
       type: 'object',
       properties: {
-        notificationId: { type: 'string', format: 'uuid' },
-        recipient: { type: 'string' },
-        channel: { type: 'string', enum: ['email', 'sms', 'slack', 'webhook'] }
+        to: { type: 'string', format: 'email' },
+        subject: { type: 'string', minLength: 1, maxLength: 255 },
+        body: { type: 'string', minLength: 1 },
+        templateId: { type: 'string', pattern: '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$' }
       },
-      required: ['notificationId', 'recipient', 'channel']
+      required: ['to', 'subject', 'body']
     }
   },
   preHandler: [fastify.authenticate, validate({
     body: {
       type: 'object',
       properties: {
-        notificationId: { type: 'string', format: 'uuid' },
-        recipient: { type: 'string' },
-        channel: { type: 'string', enum: ['email', 'sms', 'slack', 'webhook'] }
+        to: { type: 'string', format: 'email' },
+        subject: { type: 'string', minLength: 1, maxLength: 255 },
+        body: { type: 'string', minLength: 1 },
+        templateId: { type: 'string', pattern: '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$' }
       },
-      required: ['notificationId', 'recipient', 'channel']
+      required: ['to', 'subject', 'body']
     }
   })]
 }, async (request, reply) => {
-  const { notificationId, recipient, channel } = request.body as {
-    notificationId: string;
-    recipient: string;
-    channel: string;
+  const { to, subject, body, templateId } = request.body as { 
+    to: string; 
+    subject: string; 
+    body: string; 
+    templateId?: string;
   };
-  const tenant = request.user.tenant;
-
+  
   try {
-    // Process notification delivery with proper error handling
-    await notificationService.deliver(tenant.slug, notificationId, recipient, channel, {
-      attempts: 3,
-      backoff: {
-        type: 'exponential',
-        delay: 1000
-      }
+    await notificationService.sendEmail({
+      to,
+      subject,
+      body,
+      templateId
     });
-
-    return reply.code(200).send({ 
-      message: 'Notification delivered successfully',
-      notificationId,
-      recipient,
-      channel
-    });
+    
+    return { message: 'Email sent successfully' };
   } catch (error: any) {
-    request.log.error({ 
-      err: error, 
-      notificationId, 
-      recipient, 
-      channel,
-      tenant: tenant.slug 
-    }, 'Notification delivery failed');
-
-    // Handle specific delivery errors
-    if (error.code === 'ECONNREFUSED' || error.code === 'ENOTFOUND') {
-      return reply.code(503).send({ 
-        message: 'External service unavailable', 
-        notificationId,
-        error: 'SERVICE_UNAVAILABLE' 
+    request.log.error({ err: error, to, subject }, 'Failed to send email notification');
+    
+    // Handle specific email delivery errors
+    if (error.code === 'EENVELOPE' || error.code === 'EENVELOPE_ADDRESS') {
+      return reply.code(400).send({ 
+        message: 'Invalid email address', 
+        error: 'INVALID_EMAIL_ADDRESS' 
       });
     }
-
+    
+    if (error.code === 'EMESSAGE' || error.code === 'ESTREAM') {
+      return reply.code(400).send({ 
+        message: 'Invalid email content', 
+        error: 'INVALID_EMAIL_CONTENT' 
+      });
+    }
+    
+    // Handle SMTP connection errors
+    if (error.code === 'ESOCKET' || error.code === 'ECONNECTION') {
+      return reply.code(503).send({ 
+        message: 'Email service unavailable', 
+        error: 'EMAIL_SERVICE_UNAVAILABLE' 
+      });
+    }
+    
+    // Handle authentication errors
+    if (error.code === 'EAUTH') {
+      return reply.code(503).send({ 
+        message: 'Email service authentication failed', 
+        error: 'EMAIL_AUTH_FAILED' 
+      });
+    }
+    
+    // Handle rate limiting
+    if (error.code === 'ETOOMANYREQUESTS') {
+      return reply.code(429).send({ 
+        message: 'Email sending rate limit exceeded', 
+        error: 'RATE_LIMIT_EXCEEDED' 
+      });
+    }
+    
+    // Handle general delivery failures
     if (error.response?.status >= 400 && error.response?.status < 500) {
       return reply.code(400).send({ 
-        message: 'Invalid notification configuration or recipient', 
-        notificationId,
-        error: 'BAD_REQUEST',
+        message: 'Email delivery failed due to client error', 
+        error: 'EMAIL_DELIVERY_FAILED',
         details: error.response.data
       });
     }
-
+    
     if (error.response?.status >= 500) {
       return reply.code(502).send({ 
-        message: 'External service error', 
-        notificationId,
+        message: 'Email service error', 
         error: 'BAD_GATEWAY' 
       });
     }
-
+    
     // Handle timeout errors
     if (error.code === 'ECONNABORTED' || error.name === 'TimeoutError') {
       return reply.code(408).send({ 
-        message: 'Request timeout when delivering notification', 
-        notificationId,
+        message: 'Email delivery timeout', 
         error: 'REQUEST_TIMEOUT' 
       });
     }
-
+    
     // Handle network errors
     if (error.code === 'ENETUNREACH' || error.code === 'EHOSTUNREACH') {
       return reply.code(503).send({ 
-        message: 'Network error when delivering notification', 
-        notificationId,
+        message: 'Network error when connecting to email service', 
         error: 'NETWORK_ERROR' 
       });
     }
-
-    // Handle delivery-specific errors
-    if (error.name === 'DeliveryError') {
-      return reply.code(422).send({ 
-        message: 'Notification delivery failed', 
-        notificationId,
-        error: 'DELIVERY_FAILED',
-        details: error.message
-      });
-    }
-
+    
     return reply.code(500).send({ 
-      message: 'Failed to deliver notification', 
-      notificationId,
+      message: 'Failed to send email notification', 
       error: 'INTERNAL_ERROR' 
     });
   }

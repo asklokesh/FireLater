@@ -1,11 +1,16 @@
 # FireLater Autonomous Development
 
 ## Priority Queue
+- [x] STABILITY: `backend/src/routes/notifications.ts` lacks proper error handling for failed email deliveries
+- [ ] TEST: No integration tests for webhook handling in `backend/src/routes/integrations.ts`
+- [ ] PERF: `backend/src/routes/assets.ts` makes sequential database calls for related resources instead of batch queries
+- [ ] BUG: Missing input validation in `backend/src/routes/reporting.ts` for date range parameters could cause SQL injection
+- [ ] SECURITY: Hardcoded salt rounds in `backend/src/routes/auth.test.ts` should use config instead of hardcoded value
 - [x] STABILITY: Oncall schedule generation lacks timezone handling; file: `backend/src/routes/oncall.ts`
 - [x] TEST: No integration tests for workflow approval chains; file: `backend/src/routes/workflow.ts`
 - [x] PERF: Knowledge base search queries lack indexing optimization; file: `backend/src/routes/knowledge.ts`
 - [x] BUG: Missing input validation on reporting route parameters; file: `backend/src/routes/reporting.ts`
-- [ ] SECURITY: Hardcoded salt rounds in auth route should use config value; file: `backend/src/routes/auth.test.ts`
+- [x] SECURITY: Hardcoded salt rounds in auth route should use config value; file: `backend/src/routes/auth.test.ts`
 - [x] STABILITY: Error handling bypass in notifications route for failed deliveries; file: `backend/src/routes/notifications.ts`
 - [x] TEST: No unit tests for workflow engine logic; file: `backend/src/routes/workflow.ts`
 - [x] PERF: N+1 query issue in knowledge base article retrieval; file: `backend/src/routes/knowledge.ts`
@@ -340,6 +345,8 @@
 ## Completed
 
 ## Session Log
+- [2025-12-31 06:26] Completed: STABILITY: `backend/src/routes/notifications.ts` lacks proper error handling for failed email deliveries
+- [2025-12-31 06:25] Completed: SECURITY: Hardcoded salt rounds in auth route should use config value; file: `backend/src/routes/auth.test.ts`
 - [2025-12-31 06:25] Completed: BUG: Missing input validation on reporting route parameters; file: `backend/src/routes/reporting.ts`
 - [2025-12-31 06:25] Completed: PERF: Knowledge base search queries lack indexing optimization; file: `backend/src/routes/knowledge.ts`
 - [2025-12-31 06:24] Completed: TEST: No integration tests for workflow approval chains; file: `backend/src/routes/workflow.ts`
