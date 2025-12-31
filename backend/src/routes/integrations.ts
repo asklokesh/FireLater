@@ -1,4 +1,3 @@
-// Add webhook handling route with proper validation and error handling
 fastify.post('/webhooks/:provider', {
   schema: {
     tags: ['Integrations'],
@@ -33,8 +32,26 @@ fastify.post('/webhooks/:provider', {
     await webhooksService.process(tenant.slug, provider, payload);
     
     return reply.code(200).send({ message: 'Webhook processed successfully' });
-  } catch (error) {
+  } catch (error: any) {
     fastify.log.error({ error }, 'Webhook processing failed');
+    
+    // Handle specific error types
+    if (error.code === 'EXTERNAL_API_ERROR') {
+      return reply.code(502).send({ 
+        error: 'External service error',
+        code: 'EXTERNAL_API_ERROR',
+        details: error.message
+      });
+    }
+    
+    if (error.code === 'VALIDATION_ERROR') {
+      return reply.code(400).send({ 
+        error: 'Invalid webhook payload',
+        code: 'VALIDATION_ERROR',
+        details: error.message
+      });
+    }
+    
     return reply.code(500).send({ 
       error: 'Failed to process webhook',
       code: 'WEBHOOK_PROCESSING_ERROR'
