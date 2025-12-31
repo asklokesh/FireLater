@@ -1,11 +1,16 @@
 # FireLater Autonomous Development
 
 ## Priority Queue
+- [x] STABILITY: Missing error handling for Redis connection failures in `backend/src/routes/notifications.ts` BullMQ setup
+- [ ] TEST: No integration tests for webhook handling in `backend/src/routes/integrations.ts` despite AWS sync functionality
+- [ ] PERF: N+1 query issue in `backend/src/routes/assets.ts` when fetching asset health scores without proper joins
+- [ ] BUG: Missing input validation in `backend/src/routes/reporting.ts` for date range parameters could cause SQL injection
+- [ ] SECURITY: Hardcoded salt rounds in `backend/src/routes/auth.test.ts` should use config instead of hardcoded value
 - [x] STABILITY: Missing error handling for Redis connection failures in notifications service - backend/src/routes/notifications.ts
 - [x] TEST: No integration tests for workflow approval chains - backend/src/routes/workflow.ts
 - [x] PERF: N+1 query pattern in knowledge base article retrieval - backend/src/routes/knowledge.ts
 - [x] BUG: Missing input validation for critical parameters in reporting routes - backend/src/routes/reporting.ts
-- [ ] SECURITY: Hardcoded salt rounds in auth route should use config value - backend/src/routes/auth.test.ts
+- [x] SECURITY: Hardcoded salt rounds in auth route should use config value - backend/src/routes/auth.test.ts
 - [x] STABILITY: Redis connection not properly closed in notification service; file: `backend/src/routes/notifications.ts`
 - [x] TEST: No tests for workflow approval chain logic; file: `backend/src/routes/workflow.ts`
 - [x] PERF: N+1 query issue in knowledge base article loading; file: `backend/src/routes/knowledge.ts`
@@ -450,6 +455,8 @@
 ## Completed
 
 ## Session Log
+- [2025-12-31 07:56] Completed: STABILITY: Missing error handling for Redis connection failures in `backend/src/routes/notifications.ts` BullMQ setup
+- [2025-12-31 07:55] Completed: SECURITY: Hardcoded salt rounds in auth route should use config value - backend/src/routes/auth.test.ts
 - [2025-12-31 07:55] Completed: BUG: Missing input validation for critical parameters in reporting routes - backend/src/routes/reporting.ts
 - [2025-12-31 07:55] Completed: PERF: N+1 query pattern in knowledge base article retrieval - backend/src/routes/knowledge.ts
 - [2025-12-31 07:54] Completed: TEST: No integration tests for workflow approval chains - backend/src/routes/workflow.ts
