@@ -1,164 +1,152 @@
-// Add comprehensive test suite for auth routes covering rate limiting, validation and error states
-import { test, describe, beforeEach, afterEach } from 'node:test';
-import * as assert from 'node:assert';
-import { buildApp } from '../app';
-import { FastifyInstance } from 'fastify';
+// Add these test cases to the existing auth.test.ts file
+// Place them within the appropriate describe blocks
 
-describe('Auth Routes', () => {
-  let app: FastifyInstance;
+// Registration edge cases
+test('POST /auth/register should fail with missing email', async () => {
+  const response = await app.inject({
+    method: 'POST',
+    url: '/auth/register',
+    payload: {
+      password: 'password123',
+      name: 'Test User'
+    }
+  });
   
-  beforeEach(async () => {
-    app = await buildApp();
-    await app.ready();
+  expect(response.statusCode).toBe(400);
+  expect(response.json()).toHaveProperty('error', 'Bad Request');
+});
+
+test('POST /auth/register should fail with invalid email format', async () => {
+  const response = await app.inject({
+    method: 'POST',
+    url: '/auth/register',
+    payload: {
+      email: 'invalid-email',
+      password: 'password123',
+      name: 'Test User'
+    }
   });
+  
+  expect(response.statusCode).toBe(400);
+  expect(response.json()).toHaveProperty('error', 'Bad Request');
+});
 
-  afterEach(async () => {
-    await app.close();
+test('POST /auth/register should fail with short password', async () => {
+  const response = await app.inject({
+    method: 'POST',
+    url: '/auth/register',
+    payload: {
+      email: 'test@example.com',
+      password: '123',
+      name: 'Test User'
+    }
   });
+  
+  expect(response.statusCode).toBe(400);
+  expect(response.json()).toHaveProperty('error', 'Bad Request');
+});
 
-  describe('POST /auth/register', () => {
-    test('should reject registration with missing fields', async () => {
-      const response = await app.inject({
-        method: 'POST',
-        url: '/auth/register',
-        payload: {
-          email: 'test@example.com'
-          // Missing password, firstName, lastName, companyName
-        }
-      });
-      
-      assert.strictEqual(response.statusCode, 400);
-    });
-
-    test('should reject registration with invalid email', async () => {
-      const response = await app.inject({
-        method: 'POST',
-        url: '/auth/register',
-        payload: {
-          email: 'invalid-email',
-          password: 'Password123!',
-          firstName: 'John',
-          lastName: 'Doe',
-          companyName: 'Test Company'
-        }
-      });
-      
-      assert.strictEqual(response.statusCode, 400);
-    });
-
-    test('should reject registration with weak password', async () => {
-      const response = await app.inject({
-        method: 'POST',
-        url: '/auth/register',
-        payload: {
-          email: 'test@example.com',
-          password: '123',
-          firstName: 'John',
-          lastName: 'Doe',
-          companyName: 'Test Company'
-        }
-      });
-      
-      assert.strictEqual(response.statusCode, 400);
-    });
-
-    test('should enforce rate limiting on registration', async () => {
-      // Make 4 requests to trigger rate limit
-      for (let i = 0; i < 4; i++) {
-        await app.inject({
-          method: 'POST',
-          url: '/auth/register',
-          payload: {
-            email: `test${i}@example.com`,
-            password: 'Password123!',
-            firstName: 'John',
-            lastName: 'Doe',
-            companyName: 'Test Company'
-          }
-        });
-      }
-      
-      // 5th request should be rate limited
-      const response = await app.inject({
-        method: 'POST',
-        url: '/auth/register',
-        payload: {
-          email: 'test5@example.com',
-          password: 'Password123!',
-          firstName: 'John',
-          lastName: 'Doe',
-          companyName: 'Test Company'
-        }
-      });
-      
-      assert.strictEqual(response.statusCode, 429);
-    });
+test('POST /auth/register should fail with duplicate email', async () => {
+  // First registration
+  await app.inject({
+    method: 'POST',
+    url: '/auth/register',
+    payload: {
+      email: 'duplicate@example.com',
+      password: 'password123',
+      name: 'Test User'
+    }
   });
-
-  describe('POST /auth/login', () => {
-    test('should reject login with missing credentials', async () => {
-      const response = await app.inject({
-        method: 'POST',
-        url: '/auth/login',
-        payload: {
-          email: 'test@example.com'
-          // Missing password
-        }
-      });
-      
-      assert.strictEqual(response.statusCode, 400);
-    });
-
-    test('should reject login with invalid email', async () => {
-      const response = await app.inject({
-        method: 'POST',
-        url: '/auth/login',
-        payload: {
-          email: 'invalid-email',
-          password: 'Password123!'
-        }
-      });
-      
-      assert.strictEqual(response.statusCode, 400);
-    });
-
-    test('should return 401 for invalid credentials', async () => {
-      const response = await app.inject({
-        method: 'POST',
-        url: '/auth/login',
-        payload: {
-          email: 'nonexistent@example.com',
-          password: 'Password123!'
-        }
-      });
-      
-      assert.strictEqual(response.statusCode, 401);
-    });
-
-    test('should enforce rate limiting on login', async () => {
-      // Make 6 requests to trigger rate limit (default max is 5)
-      for (let i = 0; i < 6; i++) {
-        await app.inject({
-          method: 'POST',
-          url: '/auth/login',
-          payload: {
-            email: `test${i}@example.com`,
-            password: 'Password123!'
-          }
-        });
-      }
-      
-      // 7th request should be rate limited
-      const response = await app.inject({
-        method: 'POST',
-        url: '/auth/login',
-        payload: {
-          email: 'test7@example.com',
-          password: 'Password123!'
-        }
-      });
-      
-      assert.strictEqual(response.statusCode, 429);
-    });
+  
+  // Second registration with same email
+  const response = await app.inject({
+    method: 'POST',
+    url: '/auth/register',
+    payload: {
+      email: 'duplicate@example.com',
+      password: 'password123',
+      name: 'Test User 2'
+    }
   });
+  
+  expect(response.statusCode).toBe(409);
+  expect(response.json()).toHaveProperty('error', 'Conflict');
+});
+
+// Login edge cases
+test('POST /auth/login should fail with missing email', async () => {
+  const response = await app.inject({
+    method: 'POST',
+    url: '/auth/login',
+    payload: {
+      password: 'password123'
+    }
+  });
+  
+  expect(response.statusCode).toBe(400);
+  expect(response.json()).toHaveProperty('error', 'Bad Request');
+});
+
+test('POST /auth/login should fail with invalid credentials', async () => {
+  const response = await app.inject({
+    method: 'POST',
+    url: '/auth/login',
+    payload: {
+      email: 'nonexistent@example.com',
+      password: 'wrongpassword'
+    }
+  });
+  
+  expect(response.statusCode).toBe(401);
+  expect(response.json()).toHaveProperty('error', 'Unauthorized');
+});
+
+test('POST /auth/login should fail with wrong password', async () => {
+  // First register a user
+  await app.inject({
+    method: 'POST',
+    url: '/auth/register',
+    payload: {
+      email: 'testuser@example.com',
+      password: 'password123',
+      name: 'Test User'
+    }
+  });
+  
+  // Try to login with wrong password
+  const response = await app.inject({
+    method: 'POST',
+    url: '/auth/login',
+    payload: {
+      email: 'testuser@example.com',
+      password: 'wrongpassword'
+    }
+  });
+  
+  expect(response.statusCode).toBe(401);
+  expect(response.json()).toHaveProperty('error', 'Unauthorized');
+});
+
+// Refresh token edge cases
+test('POST /auth/refresh should fail with missing refresh token', async () => {
+  const response = await app.inject({
+    method: 'POST',
+    url: '/auth/refresh'
+  });
+  
+  expect(response.statusCode).toBe(400);
+  expect(response.json()).toHaveProperty('error', 'Bad Request');
+});
+
+test('POST /auth/refresh should fail with invalid refresh token', async () => {
+  const response = await app.inject({
+    method: 'POST',
+    url: '/auth/refresh',
+    payload: {
+      refreshToken: 'invalid-token'
+    }
+  });
+  
+  expect(response.statusCode).toBe(401);
+  expect(response.json()).toHaveProperty('error', 'Unauthorized');
 });

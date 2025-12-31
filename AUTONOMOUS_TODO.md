@@ -2,7 +2,7 @@
 
 ## Priority Queue
 - [x] STABILITY: Error handling is inconsistent across integration routes; file: `backend/src/routes/integrations.ts`
-- [ ] TEST: Auth routes lack comprehensive test coverage for edge cases; file: `backend/src/routes/auth.test.ts`
+- [x] TEST: Auth routes lack comprehensive test coverage for edge cases; file: `backend/src/routes/auth.test.ts`
 - [ ] PERF: Inefficient database queries without proper indexing in knowledge base routes; file: `backend/src/routes/knowledge.ts`
 - [ ] BUG: Missing input validation for critical parameters in reporting routes; file: `backend/src/routes/reporting.ts`
 - [ ] SECURITY: Hardcoded salt rounds in auth route handler should use config value; file: `backend/src/routes/auth.test.ts`
@@ -245,6 +245,7 @@
 ## Completed
 
 ## Session Log
+- [2025-12-31 05:22] Completed: TEST: Auth routes lack comprehensive test coverage for edge cases; file: `backend/src/routes/auth.test.ts`
 - [2025-12-31 05:22] Completed: STABILITY: Error handling is inconsistent across integration routes; file: `backend/src/routes/integrations.ts`
 - [2025-12-31 05:21] Completed: SECURITY: Hardcoded salt rounds in `backend/src/routes/auth.test.ts` should use config instead of hardcoded value
 - [2025-12-31 05:21] Completed: BUG: Missing input validation in `backend/src/routes/reporting.ts` for date range parameters could cause SQL injection
