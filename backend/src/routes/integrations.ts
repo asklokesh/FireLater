@@ -13,16 +13,26 @@ fastify.post('/webhooks/:provider', {
       additionalProperties: true
     }
   },
-  preHandler: [fastify.authenticate]
+  preHandler: [fastify.authenticate, validate({
+    params: {
+      type: 'object',
+      properties: {
+        provider: { 
+          type: 'string',
+          enum: ['github', 'slack', 'pagerduty', 'datadog']
+        }
+      },
+      required: ['provider']
+    },
+    body: {
+      type: 'object',
+      additionalProperties: true
+    }
+  })]
 }, async (request, reply) => {
   const { provider } = request.params as { provider: string };
   const payload = request.body as Record<string, any>;
   const tenant = request.user.tenant;
-  
-  // Validate provider
-  if (!['github', 'slack', 'pagerduty', 'datadog'].includes(provider)) {
-    throw new Error('Unsupported webhook provider');
-  }
   
   // Process webhook with retry configuration
   await webhooksService.process(tenant.slug, provider, payload, {
