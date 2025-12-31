@@ -3,8 +3,8 @@
 ## Priority Queue
 - [x] STABILITY: BullMQ job retry logic missing exponential backoff configuration in `backend/src/routes/notifications.ts` background processing
 - [x] TEST: No integration tests covering multi-tenant schema isolation in `backend/src/routes/assets.ts`
-- [ ] PERF: Knowledge base search queries in `backend/src/routes/knowledge.ts` perform full table scans without proper indexing on text fields
-- [ ] BUG: Missing input sanitization on user-provided search parameters in `backend/src/routes/reporting.ts` leading to potential injection vulnerabilities
+- [x] PERF: Knowledge base search queries in `backend/src/routes/knowledge.ts` perform full table scans without proper indexing on text fields
+- [x] BUG: Missing input sanitization on user-provided search parameters in `backend/src/routes/reporting.ts` leading to potential injection vulnerabilities
 - [ ] SECURITY: TRUSTED_PROXY_CIDIRS parsing lacks input validation and error handling for malformed CIDR ranges in `backend/src/routes/auth.test.ts`
 - [x] REFACTOR: The `isTrustedProxy` function in `backend/src/routes/auth.test.ts` should be moved to a shared utilities module since it's not specific to auth and is likely used across multiple routes.
 - [x] TEST: The auth route in `backend/src/routes/auth.test.ts` lacks test coverage for IPv6 CIDR validation and edge cases like invalid IP formats, malformed CIDRs, and IPv4-mapped IPv6 addresses.
@@ -65,6 +65,8 @@
 ## Completed
 
 ## Session Log
+- [2025-12-31 03:06] Completed: BUG: Missing input sanitization on user-provided search parameters in `backend/src/routes/reporting.ts` leading to potential injection vulnerabilities
+- [2025-12-31 03:05] Completed: PERF: Knowledge base search queries in `backend/src/routes/knowledge.ts` perform full table scans without proper indexing on text fields
 - [2025-12-31 03:05] Completed: TEST: No integration tests covering multi-tenant schema isolation in `backend/src/routes/assets.ts`
 - [2025-12-31 03:05] Completed: STABILITY: BullMQ job retry logic missing exponential backoff configuration in `backend/src/routes/notifications.ts` background processing
 - [2025-12-31 03:04] Completed: SECURITY: The `isTrustedProxy` function in `backend/src/routes/auth.test.ts` has flawed CIDR validation logic that could allow IP spoofing; it incorrectly falls back to exact string matching when parsing fails, and doesn't properly handle IPv4-mapped IPv6 addresses.
