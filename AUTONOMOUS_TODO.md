@@ -3,7 +3,7 @@
 ## Priority Queue
 - [x] STABILITY: Redis connection not properly closed in `backend/src/routes/notifications.ts` - missing cleanup logic causing connection leaks under high load
 - [x] TEST: No integration tests for workflow engine in `backend/src/routes/workflow.ts` - critical business logic lacks test coverage for approval chains and state transitions
-- [ ] PERF: N+1 query pattern in `backend/src/routes/assets.ts` - asset health scoring fetches individual resource data instead of batch querying related resources
+- [x] PERF: N+1 query pattern in `backend/src/routes/assets.ts` - asset health scoring fetches individual resource data instead of batch querying related resources
 - [ ] BUG: Missing error handling in `backend/src/routes/reporting.ts` - database query errors not properly caught or logged, leading to unhandled promise rejections
 - [ ] SECURITY: Insecure CIDR validation logic in `backend/src/routes/auth.test.ts` - validation bypass possible due to unchecked `trimmedCidr` before `validateCIDR()` call
 - [x] REFACTOR: Duplicate validation logic found across `backend/src/routes/oncall.ts` and `backend/src/routes/workflow.ts` that should be centralized
@@ -120,6 +120,7 @@
 ## Completed
 
 ## Session Log
+- [2025-12-31 03:55] Completed: PERF: N+1 query pattern in `backend/src/routes/assets.ts` - asset health scoring fetches individual resource data instead of batch querying related resources
 - [2025-12-31 03:55] Completed: TEST: No integration tests for workflow engine in `backend/src/routes/workflow.ts` - critical business logic lacks test coverage for approval chains and state transitions
 - [2025-12-31 03:55] Completed: STABILITY: Redis connection not properly closed in `backend/src/routes/notifications.ts` - missing cleanup logic causing connection leaks under high load
 - [2025-12-31 03:54] Completed: SECURITY: Incomplete CIDR validation logic in `backend/src/routes/auth.test.ts` - the error handling block is empty and needs proper response/logging
