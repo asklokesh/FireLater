@@ -4,8 +4,8 @@
 - [x] REFACTOR: Duplicated tenant context extraction logic across route handlers (`backend/src/routes/assets.ts`, `backend/src/routes/integrations.ts`) should be centralized into a shared utility or plugin
 - [x] TEST: No unit tests for critical workflows such as change request approval in `backend/src/routes/workflow.ts` - add coverage for success/failure paths
 - [x] PERF: Missing database query indexing for common filters (e.g., status, assignee) in `backend/src/routes/requests.ts` and `backend/src/routes/oncall.ts` leading to slow lookups
-- [ ] BUG: Manual input sanitization is redundant and error-prone after global hook implementation in `backend/src/routes/reporting.ts` and other route files - remove all instances like `sanitizedEmail`, etc.
-- [ ] SECURITY: Passwords should never be logged or stored in plain text; ensure bcrypt hashing is applied before storage in `backend/src/routes/auth.test.ts` and registration logic
+- [x] BUG: Manual input sanitization is redundant and error-prone after global hook implementation in `backend/src/routes/reporting.ts` and other route files - remove all instances like `sanitizedEmail`, etc.
+- [x] SECURITY: Passwords should never be logged or stored in plain text; ensure bcrypt hashing is applied before storage in `backend/src/routes/auth.test.ts` and registration logic
 - [x] REFACTOR: Duplicate input sanitization logic across multiple route files instead of using a centralized utility (`backend/src/routes/auth.test.ts`, `backend/src/routes/knowledge.ts`).
 - [x] TEST: Lack of input validation tests for auth routes; only happy path may be covered (`backend/src/routes/auth.test.ts`).
 - [x] PERF: No database connection pooling configuration shown, which can lead to performance issues under load (`backend/src/routes/reporting.ts`, `backend/src/routes/requests.ts`).
@@ -210,6 +210,8 @@
 ## Completed
 
 ## Session Log
+- [2025-12-31 05:10] Completed: SECURITY: Passwords should never be logged or stored in plain text; ensure bcrypt hashing is applied before storage in `backend/src/routes/auth.test.ts` and registration logic
+- [2025-12-31 05:10] Completed: BUG: Manual input sanitization is redundant and error-prone after global hook implementation in `backend/src/routes/reporting.ts` and other route files - remove all instances like `sanitizedEmail`, etc.
 - [2025-12-31 05:10] Completed: PERF: Missing database query indexing for common filters (e.g., status, assignee) in `backend/src/routes/requests.ts` and `backend/src/routes/oncall.ts` leading to slow lookups
 - [2025-12-31 05:10] Completed: TEST: No unit tests for critical workflows such as change request approval in `backend/src/routes/workflow.ts` - add coverage for success/failure paths
 - [2025-12-31 05:09] Completed: REFACTOR: Duplicated tenant context extraction logic across route handlers (`backend/src/routes/assets.ts`, `backend/src/routes/integrations.ts`) should be centralized into a shared utility or plugin

@@ -1,5 +1,3 @@
-// Remove the local sanitizeInput function since it's now global
-
 // Apply rate limiting and validation to register route
 fastify.post('/register', {
   schema: registerSchema,
@@ -25,5 +23,8 @@ fastify.post('/register', {
   const sanitizedLastName = lastName.substring(0, 50);
   const sanitizedCompanyName = companyName.substring(0, 100);
 
-  // Continue with registration logic...
+  // Hash password before storage
+  const hashedPassword = await bcrypt.hash(sanitizedPassword, 12);
+
+  // Continue with registration logic using hashedPassword...
 });
