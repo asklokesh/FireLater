@@ -5,7 +5,7 @@
 - [x] TEST: No unit tests for `validateCIDR` function in `backend/src/routes/auth.test.ts`; critical for security-related input validation.
 - [x] PERF: `backend/src/routes/assets.ts` performs N+1 queries when fetching asset health scores; should batch or join related data.
 - [x] BUG: Missing input sanitization in `backend/src/routes/reporting.ts` for user-supplied filters could lead to SQL injection or incorrect query results.
-- [ ] SECURITY: Insecure CIDR validation logic in `backend/src/routes/auth.test.ts` lacks proper error handling and may allow invalid IP ranges; validation should throw or return explicit boolean.
+- [x] SECURITY: Insecure CIDR validation logic in `backend/src/routes/auth.test.ts` lacks proper error handling and may allow invalid IP ranges; validation should throw or return explicit boolean.
 - [x] STABILITY: Unhandled promise rejection in `backend/src/routes/integrations.ts` - AWS sync jobs don't properly handle network timeouts which can crash the worker process
 - [x] TEST: Insufficient test coverage in `backend/src/routes/oncall.ts` - on-call scheduling logic lacks edge case testing for timezone transitions and rotation overlaps
 - [x] PERF: N+1 query pattern in `backend/src/routes/assets.ts` - asset health scoring performs individual database queries for each asset instead of batch processing
@@ -130,6 +130,7 @@
 ## Completed
 
 ## Session Log
+- [2025-12-31 04:04] Completed: SECURITY: Insecure CIDR validation logic in `backend/src/routes/auth.test.ts` lacks proper error handling and may allow invalid IP ranges; validation should throw or return explicit boolean.
 - [2025-12-31 04:04] Completed: BUG: Missing input sanitization in `backend/src/routes/reporting.ts` for user-supplied filters could lead to SQL injection or incorrect query results.
 - [2025-12-31 04:04] Completed: PERF: `backend/src/routes/assets.ts` performs N+1 queries when fetching asset health scores; should batch or join related data.
 - [2025-12-31 04:03] Completed: TEST: No unit tests for `validateCIDR` function in `backend/src/routes/auth.test.ts`; critical for security-related input validation.
