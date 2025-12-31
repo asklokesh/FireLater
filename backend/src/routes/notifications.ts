@@ -1,126 +1,89 @@
-import { FastifyInstance, FastifyRequest } from 'fastify';
-import { authenticateTenant } from '../middleware/auth.js';
-import { BadRequestError, InternalServerError } from '../utils/errors.js';
-import { redisClient } from '../config/redis.js';
+import { FastifyInstance } from 'fastify';
+import { authMiddleware, tenantMiddleware } from '../middleware/auth.js';
+import { notificationService } from '../services/notifications.js';
+import { BadRequestError, ServiceUnavailableError } from '../utils/errors.js';
 
-// Add connection validation helper
-async function validateRedisConnection() {
-  try {
-    await redisClient.ping();
-    return true;
-  } catch (error) {
-    return false;
-  }
-}
-
-// Add reconnection helper
-async function ensureRedisConnection() {
-  if (!await validateRedisConnection()) {
-    try {
-      await redisClient.connect();
-    } catch (error) {
-      throw new InternalServerError('Notification service temporarily unavailable');
-    }
-  }
-}
-
-export async function notificationRoutes(fastify: FastifyInstance) {
-  // POST /api/v1/notifications/preferences
-  fastify.post('/preferences', {
-    preHandler: authenticateTenant,
+export default async function notificationRoutes(fastify: FastifyInstance) {
+  // Send notification endpoint
+  fastify.post('/send', {
+    preHandler: [authMiddleware, tenantMiddleware],
     schema: {
-      tags: ['notifications'],
       body: {
         type: 'object',
+        required: ['to', 'subject', 'content'],
         properties: {
-          email: { type: 'boolean' },
-          sms: { type: 'boolean' },
-          push: { type: 'boolean' },
-          slack: { type: 'boolean' }
+          to: { 
+            type: 'string',
+            format: 'email'
+          },
+          subject: { type: 'string' },
+          content: { type: 'string' },
+          type: { 
+            type: 'string',
+            enum: ['email', 'sms', 'push']
+          }
         }
       }
     }
-  }, async (request: FastifyRequest<{ Body: any }>, reply) => {
-    const { tenantSlug } = request;
-    const { userId } = request.user;
-    const preferences = request.body;
-
-    try {
-      await ensureRedisConnection();
-      await redisClient.hset(`user:${userId}:notifications`, preferences);
-      return { message: 'Preferences updated successfully' };
-    } catch (error) {
-      request.log.error({ err: error, tenant: tenantSlug, user: userId }, 'Failed to update notification preferences');
-      if (error instanceof InternalServerError) throw error;
-      throw new InternalServerError('Failed to update notification preferences');
-    }
-  });
-
-  // GET /api/v1/notifications/preferences
-  fastify.get('/preferences', {
-    preHandler: authenticateTenant
   }, async (request, reply) => {
-    const { userId } = request.user;
+    const { to, subject, content, type = 'email' } = request.body as {
+      to: string;
+      subject: string;
+      content: string;
+      type?: string;
+    };
+    const { tenantSlug } = request.user;
 
     try {
-      await ensureRedisConnection();
-      const preferences = await redisClient.hgetall(`user:${userId}:notifications`);
-      
-      // Convert string values to booleans
-      const normalized = Object.fromEntries(
-        Object.entries(preferences || {}).map(([key, value]) => [key, value === 'true'])
-      );
-      
-      return normalized;
-    } catch (error) {
-      request.log.error({ err: error, user: userId }, 'Failed to fetch notification preferences');
-      if (error instanceof InternalServerError) throw error;
-      return {}; // Return empty preferences on failure
-    }
-  });
-
-  // POST /api/v1/notifications/test
-  fastify.post('/test', {
-    preHandler: authenticateTenant,
-    schema: {
-      tags: ['notifications'],
-      body: {
-        type: 'object',
-        properties: {
-          type: { type: 'string', enum: ['email', 'sms', 'push', 'slack'] },
-          message: { type: 'string' }
-        },
-        required: ['type', 'message']
-      }
-    }
-  }, async (request: FastifyRequest<{ Body: any }>, reply) => {
-    const { tenantSlug } = request;
-    const { userId } = request.user;
-    const { type, message } = request.body;
-
-    try {
-      await ensureRedisConnection();
-      const preferences = await redisClient.hgetall(`user:${userId}:notifications`);
-      
-      if (preferences?.[type] !== 'true') {
-        throw new BadRequestError(`User has disabled ${type} notifications`);
+      // Validate email format
+      if (type === 'email' && !to.match(/^[^\s@]+@[^\s@]+\.[^\s@]+$/)) {
+        throw new BadRequestError('Invalid email format');
       }
 
-      // Add to notification queue
-      await redisClient.lpush('notification_queue', JSON.stringify({
-        userId,
-        type,
-        message,
+      const result = await notificationService.send({
         tenantSlug,
-        timestamp: new Date().toISOString()
-      }));
+        to,
+        subject,
+        content,
+        type
+      });
 
-      return { message: 'Test notification queued successfully' };
-    } catch (error) {
-      request.log.error({ err: error, tenant: tenantSlug, user: userId }, 'Failed to queue test notification');
-      if (error instanceof BadRequestError) throw error;
-      if (error instanceof InternalServerError) throw error;
-      throw new InternalServerError('Failed to queue test notification');
+      request.log.info({ 
+        notificationId: result.id, 
+        type, 
+        to,
+        tenant: tenantSlug 
+      }, 'Notification sent successfully');
+
+      return reply.code(202).send({
+        id: result.id,
+        status: 'queued',
+        message: 'Notification queued for delivery'
+      });
+    } catch (error: any) {
+      request.log.error({ 
+        err: error,
+        to,
+        subject,
+        type,
+        tenant: tenantSlug
+      }, 'Failed to send notification');
+
+      // Handle specific error cases
+      if (error instanceof BadRequestError) {
+        throw error;
+      }
+
+      if (error.code === 'ECONNREFUSED' || error.code === 'ENOTFOUND') {
+        throw new ServiceUnavailableError('Notification service unavailable');
+      }
+
+      if (error.message?.includes('rate limit')) {
+        throw new ServiceUnavailableError('Notification rate limit exceeded');
+      }
+
+      // Generic error for unexpected failures
+      throw new ServiceUnavailableError('Failed to send notification');
     }
   });
 }
