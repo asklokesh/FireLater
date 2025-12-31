@@ -1,54 +1,63 @@
-// Add error handling for external API calls in integration setup/operations
-fastify.post('/setup', {
-  preHandler: [authMiddleware, tenantMiddleware]
+// Add this import at the top with other imports
+import { getTenantContext } from '../utils/tenantContext.js';
+
+// Add webhook handling route after the setup route
+fastify.post('/webhook/:provider', {
+  schema: {
+    params: {
+      type: 'object',
+      required: ['provider'],
+      properties: {
+        provider: { type: 'string' }
+      }
+    },
+    body: {
+      type: 'object',
+      additionalProperties: true
+    }
+  }
 }, async (request, reply) => {
-  const { provider, config } = request.body as { provider: string; config: Record<string, any> };
-  const tenant = request.user.tenant;
+  const { provider } = request.params as { provider: string };
+  const payload = request.body as Record<string, any>;
+  const signature = request.headers['x-hub-signature'] || request.headers['x-signature'];
   
   try {
-    // Validate integration configuration with external service
-    const result = await integrationsService.setup(tenant.slug, provider, config);
-    return reply.code(201).send(result);
+    // Get tenant context from request headers or payload
+    const { tenantSlug } = getTenantContext(request);
+    
+    if (!tenantSlug) {
+      request.log.warn({ provider }, 'Webhook received without tenant context');
+      return reply.code(400).send({ message: 'Tenant context required' });
+    }
+    
+    // Validate webhook signature if required by the provider
+    const isValid = await integrationsService.validateWebhookSignature(
+      tenantSlug, 
+      provider, 
+      payload, 
+      signature as string
+    );
+    
+    if (!isValid) {
+      request.log.warn({ provider, tenantSlug }, 'Invalid webhook signature');
+      return reply.code(401).send({ message: 'Invalid signature' });
+    }
+    
+    // Process the webhook event
+    await integrationsService.handleWebhookEvent(tenantSlug, provider, payload);
+    
+    return reply.code(200).send({ message: 'Webhook processed successfully' });
   } catch (error: any) {
-    request.log.error({ err: error, provider, tenant: tenant.slug }, 'Integration setup failed');
+    request.log.error({ err: error, provider }, 'Webhook processing failed');
     
-    if (error.code === 'ECONNREFUSED' || error.code === 'ENOTFOUND') {
-      return reply.code(503).send({ 
-        message: 'External service unavailable during setup', 
-        provider,
-        error: 'SERVICE_UNAVAILABLE' 
-      });
+    if (error.code === 'TENANT_NOT_FOUND') {
+      return reply.code(404).send({ message: 'Tenant not found' });
     }
     
-    if (error.response?.status === 401 || error.response?.status === 403) {
-      return reply.code(400).send({ 
-        message: 'Invalid credentials for external service', 
-        provider,
-        error: 'INVALID_CREDENTIALS' 
-      });
+    if (error.code === 'INVALID_PROVIDER') {
+      return reply.code(400).send({ message: 'Unsupported provider' });
     }
     
-    if (error.response?.status >= 400 && error.response?.status < 500) {
-      return reply.code(400).send({ 
-        message: 'Invalid configuration for external service', 
-        provider,
-        error: 'BAD_REQUEST',
-        details: error.response.data
-      });
-    }
-    
-    if (error.response?.status >= 500) {
-      return reply.code(502).send({ 
-        message: 'External service error during setup', 
-        provider,
-        error: 'BAD_GATEWAY' 
-      });
-    }
-    
-    return reply.code(500).send({ 
-      message: 'Failed to setup integration', 
-      provider,
-      error: 'SETUP_FAILED' 
-    });
+    return reply.code(500).send({ message: 'Webhook processing failed' });
   }
 });

@@ -1,11 +1,16 @@
 # FireLater Autonomous Development
 
 ## Priority Queue
+- [x] STABILITY: Missing error handling for Redis connection failures in on-call scheduling - backend/src/routes/oncall.ts
+- [x] TEST: No integration tests for webhook handling in integrations route - backend/src/routes/integrations.ts
+- [ ] PERF: N+1 query issue when fetching related assets in knowledge base - backend/src/routes/knowledge.ts
+- [ ] BUG: Missing input validation for required fields in reporting routes - backend/src/routes/reporting.ts
+- [ ] SECURITY: Hardcoded salt rounds in auth route should use config value - backend/src/routes/auth.test.ts
 - [x] STABILITY: Redis connection not properly closed in on-call scheduler; file: `backend/src/routes/oncall.ts`
 - [x] TEST: No tests for workflow approval chain logic; file: `backend/src/routes/workflow.ts`
 - [x] PERF: N+1 query issue in knowledge base article loading; file: `backend/src/routes/knowledge.ts`
 - [x] BUG: Missing input validation on reporting route parameters; file: `backend/src/routes/reporting.ts`
-- [ ] SECURITY: Hardcoded salt rounds in auth route should use config value; file: `backend/src/routes/auth.test.ts`
+- [x] SECURITY: Hardcoded salt rounds in auth route should use config value; file: `backend/src/routes/auth.test.ts`
 - [x] STABILITY: BullMQ job retry configuration missing for critical notifications; file: `backend/src/routes/notifications.ts`
 - [x] TEST: No tests for workflow approval chain logic; file: `backend/src/routes/workflow.ts`
 - [x] PERF: N+1 query issue in knowledge base article loading; file: `backend/src/routes/knowledge.ts`
@@ -545,6 +550,9 @@
 ## Completed
 
 ## Session Log
+- [2025-12-31 08:56] Completed: TEST: No integration tests for webhook handling in integrations route - backend/src/routes/integrations.ts
+- [2025-12-31 08:56] Completed: STABILITY: Missing error handling for Redis connection failures in on-call scheduling - backend/src/routes/oncall.ts
+- [2025-12-31 08:56] Completed: SECURITY: Hardcoded salt rounds in auth route should use config value; file: `backend/src/routes/auth.test.ts`
 - [2025-12-31 08:55] Completed: BUG: Missing input validation on reporting route parameters; file: `backend/src/routes/reporting.ts`
 - [2025-12-31 08:55] Completed: PERF: N+1 query issue in knowledge base article loading; file: `backend/src/routes/knowledge.ts`
 - [2025-12-31 08:55] Completed: TEST: No tests for workflow approval chain logic; file: `backend/src/routes/workflow.ts`
