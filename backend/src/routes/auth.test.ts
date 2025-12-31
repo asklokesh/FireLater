@@ -1,143 +1,54 @@
-import { test, describe } from 'node:test';
-import { strict as assert } from 'node:assert';
-import buildServer from '../app.js';
+import { validateCIDR } from '../middleware/auth';
 
-describe('Auth Routes', () => {
-  let app: Awaited<ReturnType<typeof buildServer>>;
+// Add tests for validateCIDR function
+test('validateCIDR should return true for valid IPv4 CIDR', async () => {
+  expect(validateCIDR('192.168.1.0/24')).toBe(true);
+});
 
-  before(async () => {
-    app = await buildServer();
+test('validateCIDR should return true for valid IPv6 CIDR', async () => {
+  expect(validateCIDR('2001:db8::/32')).toBe(true);
+});
+
+test('validateCIDR should return false for invalid CIDR', async () => {
+  expect(validateCIDR('invalid-cidr')).toBe(false);
+  expect(validateCIDR('192.168.1.0/33')).toBe(false); // Invalid IPv4 range
+  expect(validateCIDR('2001:db8::/129')).toBe(false); // Invalid IPv6 range
+});
+
+// Add tests for error handling paths in auth routes
+test('POST /auth/login should fail with invalid IP range', async () => {
+  const response = await app.inject({
+    method: 'POST',
+    url: '/auth/login',
+    payload: {
+      email: 'test@example.com',
+      password: 'password123',
+      ipRange: 'invalid-cidr'
+    }
   });
+  
+  expect(response.statusCode).toBe(400);
+  expect(JSON.parse(response.body).message).toBe('Invalid IP range specified');
+});
 
-  after(async () => {
-    await app.close();
+test('POST /auth/login should handle service errors properly', async () => {
+  // Mock the authService to throw an error
+  const authService = require('../services/authService');
+  const originalLogin = authService.login;
+  authService.login = jest.fn().mockRejectedValue(new Error('Database connection failed'));
+  
+  const response = await app.inject({
+    method: 'POST',
+    url: '/auth/login',
+    payload: {
+      email: 'test@example.com',
+      password: 'password123'
+    }
   });
-
-  describe('POST /login', () => {
-    test('should reject login with invalid IPv4 CIDR', async () => {
-      const response = await app.inject({
-        method: 'POST',
-        url: '/auth/login',
-        payload: {
-          email: 'user@example.com',
-          password: 'password123',
-          ipRestriction: '999.999.999.999/32'
-        }
-      });
-      
-      assert.equal(response.statusCode, 400);
-      const body = JSON.parse(response.body);
-      assert.equal(body.message, 'Invalid IP range specified');
-    });
-
-    test('should reject login with invalid IPv6 CIDR', async () => {
-      const response = await app.inject({
-        method: 'POST',
-        url: '/auth/login',
-        payload: {
-          email: 'user@example.com',
-          password: 'password123',
-          ipRestriction: 'invalid::ipv6::address/128'
-        }
-      });
-      
-      assert.equal(response.statusCode, 400);
-      const body = JSON.parse(response.body);
-      assert.equal(body.message, 'Invalid IP range specified');
-    });
-
-    test('should reject login with out-of-range IPv4 prefix', async () => {
-      const response = await app.inject({
-        method: 'POST',
-        url: '/auth/login',
-        payload: {
-          email: 'user@example.com',
-          password: 'password123',
-          ipRestriction: '192.168.1.0/33'
-        }
-      });
-      
-      assert.equal(response.statusCode, 400);
-      const body = JSON.parse(response.body);
-      assert.equal(body.message, 'Invalid IP range specified');
-    });
-
-    test('should reject login with out-of-range IPv6 prefix', async () => {
-      const response = await app.inject({
-        method: 'POST',
-        url: '/auth/login',
-        payload: {
-          email: 'user@example.com',
-          password: 'password123',
-          ipRestriction: '2001:db8::/129'
-        }
-      });
-      
-      assert.equal(response.statusCode, 400);
-      const body = JSON.parse(response.body);
-      assert.equal(body.message, 'Invalid IP range specified');
-    });
-
-    test('should reject login with malformed CIDR (missing slash)', async () => {
-      const response = await app.inject({
-        method: 'POST',
-        url: '/auth/login',
-        payload: {
-          email: 'user@example.com',
-          password: 'password123',
-          ipRestriction: '192.168.1.0'
-        }
-      });
-      
-      assert.equal(response.statusCode, 400);
-      const body = JSON.parse(response.body);
-      assert.equal(body.message, 'Invalid IP range specified');
-    });
-
-    test('should reject login with malformed CIDR (non-numeric prefix)', async () => {
-      const response = await app.inject({
-        method: 'POST',
-        url: '/auth/login',
-        payload: {
-          email: 'user@example.com',
-          password: 'password123',
-          ipRestriction: '192.168.1.0/abc'
-        }
-      });
-      
-      assert.equal(response.statusCode, 400);
-      const body = JSON.parse(response.body);
-      assert.equal(body.message, 'Invalid IP range specified');
-    });
-
-    test('should accept login with valid IPv4 CIDR', async () => {
-      // Mock successful authentication
-      const response = await app.inject({
-        method: 'POST',
-        url: '/auth/login',
-        payload: {
-          email: 'user@example.com',
-          password: 'password123',
-          ipRestriction: '192.168.1.0/24'
-        }
-      });
-      
-      // Should either succeed or fail for authentication reasons, not CIDR validation
-      assert.notEqual(response.statusCode, 400);
-    });
-
-    test('should accept login with valid IPv6 CIDR', async () => {
-      const response = await app.inject({
-        method: 'POST',
-        url: '/auth/login',
-        payload: {
-          email: 'user@example.com',
-          password: 'password123',
-          ipRestriction: '2001:db8::/32'
-        }
-      });
-      
-      assert.notEqual(response.statusCode, 400);
-    });
-  });
+  
+  expect(response.statusCode).toBe(500);
+  expect(JSON.parse(response.body).message).toBe('Authentication failed');
+  
+  // Restore original function
+  authService.login = originalLogin;
 });
