@@ -1,11 +1,16 @@
 # FireLater Autonomous Development
 
 ## Priority Queue
+- [x] REFACTOR: The `isTrustedProxy` function in `backend/src/routes/auth.test.ts` should be moved to a shared utilities module since it's not specific to auth and is likely used across multiple routes.
+- [ ] TEST: The auth route in `backend/src/routes/auth.test.ts` lacks test coverage for IPv6 CIDR validation and edge cases like invalid IP formats, malformed CIDRs, and IPv4-mapped IPv6 addresses.
+- [ ] PERF: The `isTrustedProxy` function in `backend/src/routes/auth.test.ts` recreates `Address4`/`Address6` objects for every CIDR check in the loop instead of pre-parsing them, causing unnecessary CPU overhead on every request.
+- [ ] BUG: No error handling for when `TRUSTED_PROXY_CIDIRS` is undefined or empty in `backend/src/routes/auth.test.ts`, which would cause all proxy checks to fail and potentially break authentication flows.
+- [ ] SECURITY: The `isTrustedProxy` function in `backend/src/routes/auth.test.ts` has flawed CIDR validation logic that could allow IP spoofing; it incorrectly falls back to exact string matching when parsing fails, and doesn't properly handle IPv4-mapped IPv6 addresses.
 - [x] STABILITY: In `backend/src/routes/oncall.ts`, the on-call rotation scheduler does not handle timezone transitions properly during daylight saving time changes, risking incorrect assignment schedules.
 - [x] TEST: Missing unit tests for critical authentication flows in `backend/src/routes/auth.test.ts`. Specifically, there are no tests covering multi-tenant schema isolation or JWT token refresh mechanisms.
 - [x] PERF: The service catalog feature in `backend/src/routes/workflow.ts` uses synchronous drag-and-drop operations without debouncing, which can cause performance degradation when handling large numbers of catalog items concurrently.
-- [ ] BUG: In `backend/src/routes/reporting.ts`, there's no input validation or sanitization on user-provided filters before querying the database, potentially leading to SQL injection or denial-of-service via malformed queries.
-- [ ] SECURITY: The `isTrustedProxy` function in `backend/src/routes/auth.test.ts` has a logic flaw where it falls back to exact IP matching inside the catch block, which could lead to bypassing intended CIDR restrictions. It should reject invalid CIDRs entirely instead of defaulting to exact match.
+- [x] BUG: In `backend/src/routes/reporting.ts`, there's no input validation or sanitization on user-provided filters before querying the database, potentially leading to SQL injection or denial-of-service via malformed queries.
+- [x] SECURITY: The `isTrustedProxy` function in `backend/src/routes/auth.test.ts` has a logic flaw where it falls back to exact IP matching inside the catch block, which could lead to bypassing intended CIDR restrictions. It should reject invalid CIDRs entirely instead of defaulting to exact match.
 - [x] STABILITY: `backend/src/routes/notifications.ts` doesn't implement proper retry logic or dead-letter queue handling for failed notification deliveries, risking message loss in BullMQ integration.
 - [x] TEST: `backend/src/routes/workflow.ts` lacks unit tests for approval workflow logic and error states, with only basic route coverage present in `auth.test.ts`.
 - [x] PERF: `backend/src/routes/assets.ts` makes sequential database calls for related asset data instead of using JOINs or batch queries, causing N+1 query problem during asset listing operations.
@@ -55,6 +60,9 @@
 ## Completed
 
 ## Session Log
+- [2025-12-31 03:03] Completed: REFACTOR: The `isTrustedProxy` function in `backend/src/routes/auth.test.ts` should be moved to a shared utilities module since it's not specific to auth and is likely used across multiple routes.
+- [2025-12-31 02:58] Completed: SECURITY: The `isTrustedProxy` function in `backend/src/routes/auth.test.ts` has a logic flaw where it falls back to exact IP matching inside the catch block, which could lead to bypassing intended CIDR restrictions. It should reject invalid CIDRs entirely instead of defaulting to exact match.
+- [2025-12-31 02:57] Completed: BUG: In `backend/src/routes/reporting.ts`, there's no input validation or sanitization on user-provided filters before querying the database, potentially leading to SQL injection or denial-of-service via malformed queries.
 - [2025-12-31 02:57] Completed: PERF: The service catalog feature in `backend/src/routes/workflow.ts` uses synchronous drag-and-drop operations without debouncing, which can cause performance degradation when handling large numbers of catalog items concurrently.
 - [2025-12-31 02:57] Completed: TEST: Missing unit tests for critical authentication flows in `backend/src/routes/auth.test.ts`. Specifically, there are no tests covering multi-tenant schema isolation or JWT token refresh mechanisms.
 - [2025-12-31 02:56] Completed: STABILITY: In `backend/src/routes/oncall.ts`, the on-call rotation scheduler does not handle timezone transitions properly during daylight saving time changes, risking incorrect assignment schedules.
