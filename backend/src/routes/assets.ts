@@ -1,93 +1,81 @@
-  async list(
-    tenantSlug: string,
-    pagination: PaginationParams,
-    filters?: AssetFilters
-  ): Promise<{ assets: unknown[]; total: number }> {
-    const schema = tenantService.getSchemaName(tenantSlug);
-    const offset = getOffset(pagination);
+async function listAssets(
+  request: FastifyRequest<{ Querystring: AssetListQuery }>,
+  reply: FastifyReply
+) {
+  const { tenantSlug } = request.params as { tenantSlug: string };
+  const {
+    page = 1,
+    perPage = 50,
+    search,
+    status,
+    categoryId,
+    ownerId,
+    location,
+    sortBy = 'name',
+    sortOrder = 'asc'
+  } = request.query;
 
-    let whereClause = 'WHERE 1=1';
-    const params: unknown[] = [];
-    let paramIndex = 1;
+  const schema = tenantService.getSchemaName(tenantSlug);
+  const offset = (page - 1) * perPage;
 
-    // Apply filters
-    if (filters?.status) {
-      whereClause += ` AND status = $${paramIndex++}`;
-      params.push(filters.status);
-    }
-    if (filters?.categoryId) {
-      whereClause += ` AND category_id = $${paramIndex++}`;
-      params.push(filters.categoryId);
-    }
-    if (filters?.assignedToUserId) {
-      whereClause += ` AND assigned_to_user_id = $${paramIndex++}`;
-      params.push(filters.assignedToUserId);
-    }
-    if (filters?.locationId) {
-      whereClause += ` AND location_id = $${paramIndex++}`;
-      params.push(filters.locationId);
-    }
-    if (filters?.search) {
-      whereClause += ` AND (name ILIKE $${paramIndex} OR asset_tag ILIKE $${paramIndex} OR serial_number ILIKE $${paramIndex})`;
-      params.push(`%${filters.search}%`);
-    }
+  let whereClause = 'WHERE 1=1';
+  const values: unknown[] = [];
+  let paramIndex = 1;
 
-    // Get total count
-    const countResult = await pool.query(
-      `SELECT COUNT(*) FROM ${schema}.assets ${whereClause}`,
-      params
-    );
-    const total = parseInt(countResult.rows[0].count, 10);
-
-    // Get assets with related data
-    params.push(pagination.perPage, offset);
-    const result = await pool.query(
-      `SELECT a.*,
-              cat.name as category_name,
-              loc.name as location_name,
-              assigned.name as assigned_to_name,
-              assigned.email as assigned_to_email,
-              managed.name as managed_by_name,
-              managed.email as managed_by_email
-       FROM ${schema}.assets a
-       LEFT JOIN ${schema}.asset_categories cat ON a.category_id = cat.id
-       LEFT JOIN ${schema}.locations loc ON a.location_id = loc.id
-       LEFT JOIN ${schema}.users assigned ON a.assigned_to_user_id = assigned.id
-       LEFT JOIN ${schema}.users managed ON a.managed_by_user_id = managed.id
-       ${whereClause}
-       ORDER BY a.created_at DESC
-       LIMIT $${paramIndex++} OFFSET $${paramIndex}`,
-      params
-    );
-
-    const assets = result.rows;
-
-    // Batch fetch all related resources for health scoring
-    const assetIds = assets.map((asset: any) => asset.id);
-    let resources: any[] = [];
-    if (assetIds.length > 0) {
-      const resourceResult = await pool.query(
-        `SELECT * FROM ${schema}.resources WHERE asset_id = ANY($1)`,
-        [assetIds]
-      );
-      resources = resourceResult.rows;
-    }
-
-    // Map resources to assets
-    const resourcesByAssetId = resources.reduce((acc: any, resource: any) => {
-      if (!acc[resource.asset_id]) {
-        acc[resource.asset_id] = [];
-      }
-      acc[resource.asset_id].push(resource);
-      return acc;
-    }, {});
-
-    // Calculate health scores using batched resources
-    const assetsWithHealth = assets.map((asset: any) => ({
-      ...asset,
-      health_score: this.calculateHealthScore(resourcesByAssetId[asset.id] || []),
-      resources: resourcesByAssetId[asset.id] || []
-    }));
-
-    return { assets: assetsWithHealth, total };
+  if (search) {
+    whereClause += ` AND (a.name ILIKE $${paramIndex++} OR a.serial_number ILIKE $${paramIndex++})`;
+    values.push(`%${search}%`, `%${search}%`);
   }
+  if (status) {
+    whereClause += ` AND a.status = $${paramIndex++}`;
+    values.push(status);
+  }
+  if (categoryId) {
+    whereClause += ` AND a.category_id = $${paramIndex++}`;
+    values.push(categoryId);
+  }
+  if (ownerId) {
+    whereClause += ` AND a.owner_id = $${paramIndex++}`;
+    values.push(ownerId);
+  }
+  if (location) {
+    whereClause += ` AND a.location ILIKE $${paramIndex++}`;
+    values.push(`%${location}%`);
+  }
+
+  const countResult = await pool.query(
+    `SELECT COUNT(*) FROM ${schema}.assets a ${whereClause}`,
+    values
+  );
+  const total = parseInt(countResult.rows[0].count, 10);
+
+  // Add index suggestion in comments for DBA
+  // CREATE INDEX idx_assets_tenant_category_status ON assets(tenant_id, category_id, status);
+  // CREATE INDEX idx_assets_owner_id ON assets(owner_id);
+  // CREATE INDEX idx_assets_name_serial ON assets(name, serial_number);
+
+  values.push(perPage, offset);
+  const result = await pool.query(
+    `SELECT a.*,
+            c.name as category_name,
+            u.name as owner_name,
+            u.email as owner_email
+     FROM ${schema}.assets a
+     LEFT JOIN ${schema}.asset_categories c ON a.category_id = c.id
+     LEFT JOIN ${schema}.users u ON a.owner_id = u.id
+     ${whereClause}
+     ORDER BY a.${sortBy} ${sortOrder}
+     LIMIT $${paramIndex++} OFFSET $${paramIndex}`,
+    values
+  );
+
+  return {
+    assets: result.rows,
+    pagination: {
+      page,
+      perPage,
+      total,
+      totalPages: Math.ceil(total / perPage)
+    }
+  };
+}
