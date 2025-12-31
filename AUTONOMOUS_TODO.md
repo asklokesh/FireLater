@@ -1,11 +1,16 @@
 # FireLater Autonomous Development
 
 ## Priority Queue
+- [x] STABILITY: BullMQ job retry configuration missing in notifications queue; file: `backend/src/routes/notifications.ts`
+- [ ] TEST: No unit tests for workflow route business logic; file: `backend/src/routes/workflow.ts`
+- [ ] PERF: Inefficient database queries in knowledge base search without pagination; file: `backend/src/routes/knowledge.ts`
+- [ ] BUG: Missing input validation for critical parameters in reporting routes; file: `backend/src/routes/reporting.ts`
+- [ ] SECURITY: Hardcoded salt rounds in auth route handler should use config value; file: `backend/src/routes/auth.test.ts`
 - [x] STABILITY: Oncall schedule generation missing error handling for invalid dates; file: `backend/src/routes/oncall.ts`
 - [x] TEST: No unit tests for workflow execution logic; file: `backend/src/routes/workflow.ts`
 - [x] PERF: Knowledge base search queries lack indexing strategy; file: `backend/src/routes/knowledge.ts`
 - [x] BUG: Missing input validation in reporting routes may cause SQL injection; file: `backend/src/routes/reporting.ts`
-- [ ] SECURITY: Hardcoded salt rounds in auth route should use config value; file: `backend/src/routes/auth.test.ts`
+- [x] SECURITY: Hardcoded salt rounds in auth route should use config value; file: `backend/src/routes/auth.test.ts`
 - [x] STABILITY: Redis connection error handling missing in `backend/src/routes/notifications.ts` could crash the service
 - [x] TEST: No unit tests for workflow execution logic in `backend/src/routes/workflow.ts`
 - [x] PERF: N+1 query issue in `backend/src/routes/assets.ts` when fetching asset health scores without proper JOIN optimization
@@ -285,6 +290,8 @@
 ## Completed
 
 ## Session Log
+- [2025-12-31 06:06] Completed: STABILITY: BullMQ job retry configuration missing in notifications queue; file: `backend/src/routes/notifications.ts`
+- [2025-12-31 06:06] Completed: SECURITY: Hardcoded salt rounds in auth route should use config value; file: `backend/src/routes/auth.test.ts`
 - [2025-12-31 06:05] Completed: BUG: Missing input validation in reporting routes may cause SQL injection; file: `backend/src/routes/reporting.ts`
 - [2025-12-31 06:05] Completed: PERF: Knowledge base search queries lack indexing strategy; file: `backend/src/routes/knowledge.ts`
 - [2025-12-31 06:05] Completed: TEST: No unit tests for workflow execution logic; file: `backend/src/routes/workflow.ts`
