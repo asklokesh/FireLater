@@ -5,7 +5,7 @@
 - [x] TEST: Auth route tests missing coverage for rate limiting and edge cases like duplicate registration; see `backend/src/routes/auth.test.ts`
 - [x] PERF: Missing database query indexing strategy for multi-tenant schema-per-tenant pattern; evident in `backend/src/routes/requests.ts` and `backend/src/routes/assets.ts`
 - [x] BUG: Manual input sanitization in register route instead of relying solely on schema validation; redundant code in `backend/src/routes/reporting.ts` and others
-- [ ] SECURITY: Password hashing with bcrypt uses fixed salt rounds (12); should be configurable via environment variables in `backend/src/routes/auth.test.ts`
+- [x] SECURITY: Password hashing with bcrypt uses fixed salt rounds (12); should be configurable via environment variables in `backend/src/routes/auth.test.ts`
 - [x] REFACTOR: Inline sanitization logic in registration handler should be extracted to shared validation middleware for consistency across routes in `backend/src/routes/reporting.ts`
 - [x] TEST: Auth route lacks comprehensive test coverage for rate limiting, validation, and error states in `backend/src/routes/auth.test.ts`
 - [x] PERF: Missing database query indexing strategy for multi-tenant schema-per-tenant design could cause performance degradation as tenant count grows in `backend/src/routes/requests.ts`
@@ -220,6 +220,7 @@
 ## Completed
 
 ## Session Log
+- [2025-12-31 05:14] Completed: SECURITY: Password hashing with bcrypt uses fixed salt rounds (12); should be configurable via environment variables in `backend/src/routes/auth.test.ts`
 - [2025-12-31 05:14] Completed: BUG: Manual input sanitization in register route instead of relying solely on schema validation; redundant code in `backend/src/routes/reporting.ts` and others
 - [2025-12-31 05:13] Completed: PERF: Missing database query indexing strategy for multi-tenant schema-per-tenant pattern; evident in `backend/src/routes/requests.ts` and `backend/src/routes/assets.ts`
 - [2025-12-31 05:13] Completed: TEST: Auth route tests missing coverage for rate limiting and edge cases like duplicate registration; see `backend/src/routes/auth.test.ts`
