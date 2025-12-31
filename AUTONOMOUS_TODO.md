@@ -1,11 +1,16 @@
 # FireLater Autonomous Development
 
 ## Priority Queue
+- [x] STABILITY: Oncall schedule rotation logic doesn't handle DST transitions; file: `backend/src/routes/oncall.ts`
+- [x] TEST: No integration tests for workflow approval chains; file: `backend/src/routes/workflow.ts`
+- [ ] PERF: Knowledge base search queries lack indexing optimization; file: `backend/src/routes/knowledge.ts`
+- [ ] BUG: Missing input validation on reporting route parameters; file: `backend/src/routes/reporting.ts`
+- [ ] SECURITY: Hardcoded salt rounds in auth route should use config value; file: `backend/src/routes/auth.test.ts`
 - [x] REFACTOR: Duplicate tenant validation logic across multiple routes instead of centralized middleware; files: `backend/src/routes/assets.ts`, `backend/src/routes/oncall.ts`
 - [x] STABILITY: Error handling bypass in notifications route for external provider failures; file: `backend/src/routes/notifications.ts`
 - [x] TEST: No unit tests for workflow route business logic; file: `backend/src/routes/workflow.ts`
 - [x] PERF: Missing database indexing on frequently queried fields in reporting routes; file: `backend/src/routes/reporting.ts`
-- [ ] SECURITY: Hardcoded salt rounds in auth route handler should use config value; file: `backend/src/routes/auth.test.ts`
+- [x] SECURITY: Hardcoded salt rounds in auth route handler should use config value; file: `backend/src/routes/auth.test.ts`
 - [x] STABILITY: `backend/src/routes/notifications.ts` lacks proper error handling for failed email deliveries
 - [x] TEST: No unit tests for workflow approval logic in `backend/src/routes/workflow.ts`
 - [x] PERF: `backend/src/routes/assets.ts` makes N+1 database queries when fetching asset health scores
@@ -410,6 +415,9 @@
 ## Completed
 
 ## Session Log
+- [2025-12-31 07:18] Completed: TEST: No integration tests for workflow approval chains; file: `backend/src/routes/workflow.ts`
+- [2025-12-31 07:17] Completed: STABILITY: Oncall schedule rotation logic doesn't handle DST transitions; file: `backend/src/routes/oncall.ts`
+- [2025-12-31 07:17] Completed: SECURITY: Hardcoded salt rounds in auth route handler should use config value; file: `backend/src/routes/auth.test.ts`
 - [2025-12-31 07:16] Completed: PERF: Missing database indexing on frequently queried fields in reporting routes; file: `backend/src/routes/reporting.ts`
 - [2025-12-31 07:16] Completed: TEST: No unit tests for workflow route business logic; file: `backend/src/routes/workflow.ts`
 - [2025-12-31 07:16] Completed: STABILITY: Error handling bypass in notifications route for external provider failures; file: `backend/src/routes/notifications.ts`
