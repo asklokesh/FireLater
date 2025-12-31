@@ -5,7 +5,7 @@
 - [x] TEST: No unit tests exist for the CIDR validation logic in `backend/src/routes/auth.test.ts` to verify correct handling of edge cases like invalid formats, empty strings, or malformed input.
 - [x] PERF: Trusted proxy CIDR parsing in `backend/src/routes/auth.test.ts` occurs synchronously at module load time and can delay server startup if many CIDRs are provided.
 - [x] BUG: In `backend/src/routes/auth.test.ts`, the IPv6 check using `includes(':')` may incorrectly classify IPv4-mapped IPv6 addresses; should use `Address6.isValid()` first.
-- [ ] SECURITY: Environment variables are logged or exposed in warnings during CIDR parsing in `backend/src/routes/auth.test.ts` without sanitization, potentially leaking sensitive configuration.
+- [x] SECURITY: Environment variables are logged or exposed in warnings during CIDR parsing in `backend/src/routes/auth.test.ts` without sanitization, potentially leaking sensitive configuration.
 - [x] STABILITY: Multi-tenant schema-per-tenant approach requires stricter tenant isolation checks to prevent cross-tenant data access in all route handlers
 - [x] TEST: Authentication route lacks unit tests for CIDR validation logic and IP address parsing functionality in `backend/src/routes/auth.test.ts`
 - [x] PERF: No Redis connection pooling configured; each route creates new connections leading to resource exhaustion under load across all route files
@@ -75,6 +75,7 @@
 ## Completed
 
 ## Session Log
+- [2025-12-31 03:10] Completed: SECURITY: Environment variables are logged or exposed in warnings during CIDR parsing in `backend/src/routes/auth.test.ts` without sanitization, potentially leaking sensitive configuration.
 - [2025-12-31 03:10] Completed: BUG: In `backend/src/routes/auth.test.ts`, the IPv6 check using `includes(':')` may incorrectly classify IPv4-mapped IPv6 addresses; should use `Address6.isValid()` first.
 - [2025-12-31 03:10] Completed: PERF: Trusted proxy CIDR parsing in `backend/src/routes/auth.test.ts` occurs synchronously at module load time and can delay server startup if many CIDRs are provided.
 - [2025-12-31 03:10] Completed: TEST: No unit tests exist for the CIDR validation logic in `backend/src/routes/auth.test.ts` to verify correct handling of edge cases like invalid formats, empty strings, or malformed input.
