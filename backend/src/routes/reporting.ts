@@ -20,11 +20,6 @@ fastify.delete('/templates/:id', {
   })
 }, async (request, reply) => {
   const { id } = request.params as { id: string };
-  // Validate ID format
-  const idResult = uuidSchema.safeParse(id);
-  if (!idResult.success) {
-    throw fastify.httpErrors.badRequest(`Invalid template ID: ${idResult.error.errors[0].message}`);
-  }
   
   await reportingService.delete(request.tenantSlug!, id);
   return { message: 'Template deleted successfully' };
