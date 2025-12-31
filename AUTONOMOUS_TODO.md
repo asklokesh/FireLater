@@ -4,7 +4,7 @@
 - [x] STABILITY: `backend/src/routes/notifications.ts` doesn't implement proper retry logic for failed webhook deliveries
 - [x] TEST: `backend/src/routes/workflow.ts` lacks unit tests for approval workflow logic
 - [x] PERF: `backend/src/routes/assets.ts` makes sequential database calls for related resources instead of using JOINs
-- [ ] BUG: Missing input validation in `backend/src/routes/reporting.ts` for date range parameters could cause SQL injection
+- [x] BUG: Missing input validation in `backend/src/routes/reporting.ts` for date range parameters could cause SQL injection
 - [ ] SECURITY: Hardcoded salt rounds in `backend/src/routes/auth.test.ts` should use config instead of hardcoded value
 - [x] STABILITY: Oncall rotation updates don't handle timezone transitions properly; file: backend/src/routes/oncall.ts
 - [x] TEST: No integration tests for workflow approval chains; file: backend/src/routes/workflow.ts
@@ -310,6 +310,7 @@
 ## Completed
 
 ## Session Log
+- [2025-12-31 06:14] Completed: BUG: Missing input validation in `backend/src/routes/reporting.ts` for date range parameters could cause SQL injection
 - [2025-12-31 06:14] Completed: PERF: `backend/src/routes/assets.ts` makes sequential database calls for related resources instead of using JOINs
 - [2025-12-31 06:14] Completed: TEST: `backend/src/routes/workflow.ts` lacks unit tests for approval workflow logic
 - [2025-12-31 06:13] Completed: STABILITY: `backend/src/routes/notifications.ts` doesn't implement proper retry logic for failed webhook deliveries
