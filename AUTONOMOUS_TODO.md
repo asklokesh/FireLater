@@ -1,11 +1,16 @@
 # FireLater Autonomous Development
 
 ## Priority Queue
+- [x] STABILITY: Unsafe tenant schema switching without validation in multi-tenant setup; file: `backend/src/routes/settings.ts`
+- [ ] TEST: No unit tests for workflow execution logic; file: `backend/src/routes/workflow.ts`
+- [ ] PERF: N+1 query issue in knowledge base article loading; file: `backend/src/routes/knowledge.ts`
+- [ ] BUG: Missing input validation on reporting route parameters; file: `backend/src/routes/reporting.ts`
+- [ ] SECURITY: Hardcoded salt rounds in auth route should use config value; file: `backend/src/routes/auth.test.ts`
 - [x] STABILITY: `backend/src/routes/notifications.ts` lacks proper error handling for failed email deliveries
 - [x] TEST: No unit tests for workflow execution logic in `backend/src/routes/workflow.ts`
 - [x] PERF: `backend/src/routes/assets.ts` makes N+1 queries when fetching asset health scores without proper batching
 - [x] BUG: Missing input validation in `backend/src/routes/reporting.ts` for date range parameters could cause SQL injection
-- [ ] SECURITY: Hardcoded salt rounds in `backend/src/routes/auth.test.ts` should use config value instead of hardcoded `10`
+- [x] SECURITY: Hardcoded salt rounds in `backend/src/routes/auth.test.ts` should use config value instead of hardcoded `10`
 - [x] STABILITY: `backend/src/routes/oncall.ts` lacks proper error handling for calendar sync failures
 - [x] TEST: No integration tests for webhook handling in `backend/src/routes/integrations.ts`
 - [x] PERF: `backend/src/routes/assets.ts` makes sequential database calls instead of batch queries for bulk operations
@@ -570,6 +575,8 @@
 ## Completed
 
 ## Session Log
+- [2025-12-31 09:07] Completed: STABILITY: Unsafe tenant schema switching without validation in multi-tenant setup; file: `backend/src/routes/settings.ts`
+- [2025-12-31 09:07] Completed: SECURITY: Hardcoded salt rounds in `backend/src/routes/auth.test.ts` should use config value instead of hardcoded `10`
 - [2025-12-31 09:07] Completed: BUG: Missing input validation in `backend/src/routes/reporting.ts` for date range parameters could cause SQL injection
 - [2025-12-31 09:06] Completed: PERF: `backend/src/routes/assets.ts` makes N+1 queries when fetching asset health scores without proper batching
 - [2025-12-31 09:06] Completed: TEST: No unit tests for workflow execution logic in `backend/src/routes/workflow.ts`
