@@ -29,4 +29,5 @@
       ) ka ON ka.article_id = a.id
       WHERE a.tenant_id = (SELECT id FROM tenants WHERE slug = $2)
         AND a.search_vector @@ plainto_tsquery('english', $1)
+        AND ts_rank_cd(a.search_vector, plainto_tsquery('english', $1)) > 0.1
     `;
