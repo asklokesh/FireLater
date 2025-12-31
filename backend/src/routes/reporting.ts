@@ -56,6 +56,18 @@ fastify.post('/generate', {
     throw new BadRequestError('startDate must be before endDate');
   }
   
+  // Additional validation: Check if dates are not in the future
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  
+  if (startDate && new Date(startDate) > today) {
+    throw new BadRequestError('startDate cannot be in the future');
+  }
+  
+  if (endDate && new Date(endDate) > today) {
+    throw new BadRequestError('endDate cannot be in the future');
+  }
+  
   // Validate filters structure
   if (filters) {
     const validFilterTypes = ['string', 'number', 'boolean'];
