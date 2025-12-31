@@ -1,40 +1,62 @@
-// Add this test file at the end of the route definitions
-// Tests for workflow state transitions should validate:
-// 1. Valid state transitions (draft -> submitted -> in_progress -> resolved -> closed)
-// 2. Invalid state transitions (draft -> closed without intermediate states)
-// 3. Permission checks for state transitions
-// 4. Proper audit logging of state changes
-// 5. Workflow validation and error handling
+// Add test file for workflow routes
+// Path: backend/tests/routes/workflow.test.ts
 
-// Example test structure to add in the workflow route file:
-// test('should transition workflow from draft to submitted', async (t) => {
-//   const response = await app.inject({
-//     method: 'POST',
-//     url: '/workflows/transition',
-//     headers: {
-//       authorization: `Bearer ${validToken}`
-//     },
-//     payload: {
-//       workflowId: 'valid-uuid',
-//       fromState: 'draft',
-//       toState: 'submitted'
-//     }
-//   });
-//   t.equal(response.statusCode, 200);
-// });
+import { test } from 'tap';
+import { build } from '../../tests/helpers/app.js';
+import { workflowService } from '../../src/services/workflow.js';
 
-// test('should reject invalid state transition', async (t) => {
-//   const response = await app.inject({
-//     method: 'POST',
-//     url: '/workflows/transition',
-//     headers: {
-//       authorization: `Bearer ${validToken}`
-//     },
-//     payload: {
-//       workflowId: 'valid-uuid',
-//       fromState: 'draft',
-//       toState: 'closed'
-//     }
-//   });
-//   t.equal(response.statusCode, 400);
-// });
+test('workflow state transitions', async (t) => {
+  const app = await build(t);
+
+  t.test('should execute workflow transition successfully', async (t) => {
+    const response = await app.inject({
+      method: 'POST',
+      url: '/api/workflows/execute',
+      headers: {
+        authorization: 'Bearer valid-token'
+      },
+      payload: {
+        workflowId: '123e4567-e89b-12d3-a456-426614174000',
+        action: 'approve',
+        userId: '123e4567-e89b-12d3-a456-426614174001'
+      }
+    });
+
+    t.equal(response.statusCode, 200);
+    const payload = JSON.parse(response.payload);
+    t.equal(payload.status, 'success');
+  });
+
+  t.test('should reject invalid workflow transitions', async (t) => {
+    const response = await app.inject({
+      method: 'POST',
+      url: '/api/workflows/execute',
+      headers: {
+        authorization: 'Bearer valid-token'
+      },
+      payload: {
+        workflowId: '123e4567-e89b-12d3-a456-426614174000',
+        action: 'invalid_action',
+        userId: '123e4567-e89b-12d3-a456-426614174001'
+      }
+    });
+
+    t.equal(response.statusCode, 400);
+  });
+
+  t.test('should validate required fields', async (t) => {
+    const response = await app.inject({
+      method: 'POST',
+      url: '/api/workflows/execute',
+      headers: {
+        authorization: 'Bearer valid-token'
+      },
+      payload: {
+        workflowId: '123e4567-e89b-12d3-a456-426614174000'
+        // missing required action field
+      }
+    });
+
+    t.equal(response.statusCode, 400);
+  });
+});
