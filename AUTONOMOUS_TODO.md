@@ -1,11 +1,16 @@
 # FireLater Autonomous Development
 
 ## Priority Queue
+- [x] STABILITY: Undefined tenant schema handling in multi-tenant middleware; file: `backend/src/routes/settings.ts`
+- [x] TEST: No tests for workflow state transitions; file: `backend/src/routes/workflow.ts`
+- [x] PERF: N+1 query issue in knowledge base category loading; file: `backend/src/routes/knowledge.ts`
+- [ ] BUG: Missing input validation on reporting route parameters; file: `backend/src/routes/reporting.ts`
+- [ ] SECURITY: Hardcoded salt rounds in auth route should use config value; file: `backend/src/routes/auth.test.ts`
 - [x] REFACTOR: Duplicate code for tenant context initialization across routes; files: `backend/src/routes/oncall.ts`, `backend/src/routes/requests.ts`
 - [x] STABILITY: Error handling missing for external API calls in integrations; file: `backend/src/routes/integrations.ts`
 - [x] TEST: No unit tests for critical workflow logic; file: `backend/src/routes/workflow.ts`
-- [ ] PERF: Missing database indexing on frequently queried fields in reporting routes; file: `backend/src/routes/reporting.ts`
-- [ ] SECURITY: Hardcoded salt rounds in auth route should use config value; file: `backend/src/routes/auth.test.ts`
+- [x] PERF: Missing database indexing on frequently queried fields in reporting routes; file: `backend/src/routes/reporting.ts`
+- [x] SECURITY: Hardcoded salt rounds in auth route should use config value; file: `backend/src/routes/auth.test.ts`
 - [x] STABILITY: `backend/src/routes/oncall.ts` lacks proper error handling for calendar sync failures
 - [x] TEST: No integration tests for webhook handling in `backend/src/routes/integrations.ts`
 - [x] PERF: `backend/src/routes/assets.ts` makes sequential database calls for related data instead of using JOINs
@@ -515,6 +520,11 @@
 ## Completed
 
 ## Session Log
+- [2025-12-31 08:22] Completed: PERF: N+1 query issue in knowledge base category loading; file: `backend/src/routes/knowledge.ts`
+- [2025-12-31 08:22] Completed: TEST: No tests for workflow state transitions; file: `backend/src/routes/workflow.ts`
+- [2025-12-31 08:21] Completed: STABILITY: Undefined tenant schema handling in multi-tenant middleware; file: `backend/src/routes/settings.ts`
+- [2025-12-31 08:21] Completed: SECURITY: Hardcoded salt rounds in auth route should use config value; file: `backend/src/routes/auth.test.ts`
+- [2025-12-31 08:20] Completed: PERF: Missing database indexing on frequently queried fields in reporting routes; file: `backend/src/routes/reporting.ts`
 - [2025-12-31 08:20] Completed: TEST: No unit tests for critical workflow logic; file: `backend/src/routes/workflow.ts`
 - [2025-12-31 08:20] Completed: STABILITY: Error handling missing for external API calls in integrations; file: `backend/src/routes/integrations.ts`
 - [2025-12-31 08:19] Completed: REFACTOR: Duplicate code for tenant context initialization across routes; files: `backend/src/routes/oncall.ts`, `backend/src/routes/requests.ts`
