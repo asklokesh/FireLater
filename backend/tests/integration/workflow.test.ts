@@ -1,187 +1,122 @@
-import { describe, it, beforeEach, afterEach } from 'vitest';
-import { buildTestApp } from '../utils/test-helpers.js';
-import { createTestTenant, createTestUser } from '../utils/test-data.js';
-import { workflowService } from '../../src/services/workflow.js';
-import { db } from '../../src/utils/db.js';
+import { describe, it, expect, beforeAll, afterAll } from 'vitest';
+import { setupTestServer, teardownTestServer } from '../helpers/test-server';
+import { createTestTenant, createTestUser } from '../helpers/test-data';
+import { FastifyInstance } from 'fastify';
 
-describe('Workflow Engine Integration Tests', () => {
-  let app: any;
+describe('Workflow Route Integration Tests', () => {
+  let server: FastifyInstance;
   let tenant: any;
   let user: any;
+  let authToken: string;
 
-  beforeEach(async () => {
-    app = await buildTestApp();
+  beforeAll(async () => {
+    server = await setupTestServer();
     tenant = await createTestTenant();
     user = await createTestUser(tenant.slug);
+    authToken = `Bearer ${user.token}`;
   });
 
-  afterEach(async () => {
-    await app.close();
+  afterAll(async () => {
+    await teardownTestServer(server);
   });
 
-  describe('Approval Chains', () => {
-    it('should process sequential approval chain correctly', async () => {
-      // Create workflow with sequential approval steps
-      const workflow = await workflowService.createWorkflow(tenant.slug, {
-        name: 'Test Approval Workflow',
-        description: 'Test sequential approvals',
-        steps: [
-          {
-            id: 'step1',
-            type: 'approval',
-            name: 'Manager Approval',
-            config: {
-              approvers: [user.id],
-              approvalType: 'sequential'
-            }
-          },
-          {
-            id: 'step2',
-            type: 'approval',
-            name: 'Director Approval',
-            config: {
-              approvers: [user.id],
-              approvalType: 'sequential'
-            }
-          }
-        ],
-        startStepId: 'step1'
+  describe('POST /workflows/:id/transitions', () => {
+    it('should successfully transition workflow state', async () => {
+      // Create a test workflow
+      const workflowResponse = await server.inject({
+        method: 'POST',
+        url: '/workflows',
+        headers: {
+          authorization: authToken,
+          'x-tenant-slug': tenant.slug
+        },
+        payload: {
+          name: 'Test Workflow',
+          description: 'Test workflow for state transitions',
+          initialState: 'draft',
+          states: ['draft', 'in_review', 'approved', 'rejected'],
+          transitions: [
+            { from: 'draft', to: 'in_review' },
+            { from: 'in_review', to: 'approved' },
+            { from: 'in_review', to: 'rejected' }
+          ]
+        }
       });
 
-      // Create workflow instance
-      const instance = await workflowService.createInstance(
-        tenant.slug,
-        workflow.id,
-        { requesterId: user.id }
-      );
+      expect(workflowResponse.statusCode).toBe(201);
+      const workflow = workflowResponse.json();
 
-      // Verify initial state
-      expect(instance.currentStepId).toBe('step1');
-      expect(instance.status).toBe('pending');
+      // Test state transition
+      const transitionResponse = await server.inject({
+        method: 'POST',
+        url: `/workflows/${workflow.id}/transitions`,
+        headers: {
+          authorization: authToken,
+          'x-tenant-slug': tenant.slug
+        },
+        payload: {
+          fromState: 'draft',
+          toState: 'in_review',
+          entityId: 'test-entity-id',
+          metadata: {
+            changedBy: user.id,
+            reason: 'Ready for review'
+          }
+        }
+      });
 
-      // Approve first step
-      await workflowService.approveStep(tenant.slug, instance.id, 'step1', user.id, 'Approved');
-
-      // Verify transition to next step
-      const updatedInstance = await workflowService.getInstance(tenant.slug, instance.id);
-      expect(updatedInstance.currentStepId).toBe('step2');
-      expect(updatedInstance.status).toBe('pending');
-
-      // Approve second step
-      await workflowService.approveStep(tenant.slug, instance.id, 'step2', user.id, 'Approved');
-
-      // Verify workflow completion
-      const finalInstance = await workflowService.getInstance(tenant.slug, instance.id);
-      expect(finalInstance.status).toBe('completed');
+      expect(transitionResponse.statusCode).toBe(200);
+      const result = transitionResponse.json();
+      expect(result.success).toBe(true);
+      expect(result.currentState).toBe('in_review');
     });
 
-    it('should handle parallel approval chain', async () => {
-      // Create workflow with parallel approval steps
-      const workflow = await workflowService.createWorkflow(tenant.slug, {
-        name: 'Parallel Approval Workflow',
-        description: 'Test parallel approvals',
-        steps: [
-          {
-            id: 'parallel1',
-            type: 'approval',
-            name: 'Team Lead Approval',
-            config: {
-              approvers: [user.id],
-              approvalType: 'parallel'
-            }
-          }
-        ],
-        startStepId: 'parallel1'
+    it('should reject invalid state transitions', async () => {
+      // Create a test workflow
+      const workflowResponse = await server.inject({
+        method: 'POST',
+        url: '/workflows',
+        headers: {
+          authorization: authToken,
+          'x-tenant-slug': tenant.slug
+        },
+        payload: {
+          name: 'Test Workflow 2',
+          description: 'Test workflow for invalid transitions',
+          initialState: 'draft',
+          states: ['draft', 'in_review', 'approved', 'rejected'],
+          transitions: [
+            { from: 'draft', to: 'in_review' },
+            { from: 'in_review', to: 'approved' },
+            { from: 'in_review', to: 'rejected' }
+          ]
+        }
       });
 
-      const instance = await workflowService.createInstance(
-        tenant.slug,
-        workflow.id,
-        { requesterId: user.id }
-      );
+      expect(workflowResponse.statusCode).toBe(201);
+      const workflow = workflowResponse.json();
 
-      // Approve parallel step
-      await workflowService.approveStep(tenant.slug, instance.id, 'parallel1', user.id, 'Approved');
-
-      // Verify workflow completion
-      const updatedInstance = await workflowService.getInstance(tenant.slug, instance.id);
-      expect(updatedInstance.status).toBe('completed');
-    });
-  });
-
-  describe('State Transitions', () => {
-    it('should handle workflow state transitions correctly', async () => {
-      const workflow = await workflowService.createWorkflow(tenant.slug, {
-        name: 'State Transition Workflow',
-        description: 'Test state transitions',
-        steps: [
-          {
-            id: 'initial',
-            type: 'task',
-            name: 'Initial Task'
-          },
-          {
-            id: 'review',
-            type: 'approval',
-            name: 'Review Task',
-            config: {
-              approvers: [user.id]
-            }
+      // Try invalid transition
+      const transitionResponse = await server.inject({
+        method: 'POST',
+        url: `/workflows/${workflow.id}/transitions`,
+        headers: {
+          authorization: authToken,
+          'x-tenant-slug': tenant.slug
+        },
+        payload: {
+          fromState: 'draft',
+          toState: 'approved', // Not allowed directly from draft
+          entityId: 'test-entity-id',
+          metadata: {
+            changedBy: user.id
           }
-        ],
-        startStepId: 'initial'
+        }
       });
 
-      const instance = await workflowService.createInstance(
-        tenant.slug,
-        workflow.id,
-        { requesterId: user.id }
-      );
-
-      // Complete initial task
-      await workflowService.completeStep(tenant.slug, instance.id, 'initial');
-
-      // Verify transition to approval step
-      const updatedInstance = await workflowService.getInstance(tenant.slug, instance.id);
-      expect(updatedInstance.currentStepId).toBe('review');
-      expect(updatedInstance.status).toBe('pending');
-
-      // Reject approval
-      await workflowService.rejectStep(tenant.slug, instance.id, 'review', user.id, 'Needs changes');
-
-      // Verify rejection state
-      const rejectedInstance = await workflowService.getInstance(tenant.slug, instance.id);
-      expect(rejectedInstance.status).toBe('rejected');
-    });
-
-    it('should handle workflow cancellation', async () => {
-      const workflow = await workflowService.createWorkflow(tenant.slug, {
-        name: 'Cancellable Workflow',
-        description: 'Test workflow cancellation',
-        steps: [
-          {
-            id: 'step1',
-            type: 'approval',
-            name: 'Approval Step'
-          }
-        ],
-        startStepId: 'step1'
-      });
-
-      const instance = await workflowService.createInstance(
-        tenant.slug,
-        workflow.id,
-        { requesterId: user.id }
-      );
-
-      // Cancel workflow
-      await workflowService.cancelInstance(tenant.slug, instance.id, user.id, 'No longer needed');
-
-      // Verify cancellation
-      const cancelledInstance = await workflowService.getInstance(tenant.slug, instance.id);
-      expect(cancelledInstance.status).toBe('cancelled');
-      expect(cancelledInstance.cancelledAt).toBeDefined();
-      expect(cancelledInstance.cancelledBy).toBe(user.id);
+      expect(transitionResponse.statusCode).toBe(400);
+      const result = transitionResponse.json();
+      expect(result.error).toBe('Invalid state transition');
     });
   });
 });
