@@ -1,16 +1,11 @@
-export const getSafeErrorMessage = (error: any, isProduction: boolean = process.env.NODE_ENV === 'production'): string => {
-  // Log the full error details internally
-  console.error('Error occurred:', error);
-  
-  // In production, return a generic error message
-  if (isProduction) {
-    return 'An unexpected error occurred. Please try again later.';
-  }
-  
-  // In development, return the actual error message
+export const getSafeErrorMessage = (error: unknown): string => {
   if (error instanceof Error) {
-    return error.message;
+    // For validation or user-facing errors, return the message
+    if (error.name === 'ValidationError' || error.name === 'AuthenticationError') {
+      return error.message;
+    }
+    // For other errors, return a generic message to avoid leaking internals
+    return 'An unexpected error occurred';
   }
-  
-  return 'An unexpected error occurred.';
+  return 'An unexpected error occurred';
 };
