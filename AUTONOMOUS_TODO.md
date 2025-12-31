@@ -1,11 +1,16 @@
 # FireLater Autonomous Development
 
 ## Priority Queue
+- [x] STABILITY: `backend/src/routes/notifications.ts` lacks proper error handling for failed email deliveries
+- [ ] TEST: No integration tests for webhook handling in `backend/src/routes/integrations.ts`
+- [ ] PERF: `backend/src/routes/assets.ts` makes N+1 database queries when fetching asset health scores
+- [ ] BUG: Missing input validation in `backend/src/routes/reporting.ts` for date range parameters could cause SQL injection
+- [ ] SECURITY: Hardcoded salt rounds in `backend/src/routes/auth.test.ts` should use config instead of hardcoded value
 - [x] STABILITY: Missing error handling for Redis connection failures in notification service initialization in `backend/src/routes/notifications.ts`
 - [x] TEST: No integration tests for workflow approval chains in `backend/src/routes/workflow.ts` leaving critical business logic untested
 - [x] PERF: N+1 query issue in on-call schedule retrieval without proper JOIN optimization in `backend/src/routes/oncall.ts`
 - [x] BUG: Missing input validation for required fields in service catalog builder endpoints in `backend/src/routes/requests.ts` allowing invalid data submission
-- [ ] SECURITY: Hardcoded salt rounds in auth route should use config value from `backend/src/config/index.ts` instead of hardcoded `10` in `backend/src/routes/auth.test.ts`
+- [x] SECURITY: Hardcoded salt rounds in auth route should use config value from `backend/src/config/index.ts` instead of hardcoded `10` in `backend/src/routes/auth.test.ts`
 - [x] STABILITY: `backend/src/routes/notifications.ts` doesn't implement proper retry logic for failed webhook deliveries
 - [x] TEST: `backend/src/routes/workflow.ts` lacks unit tests for approval workflow logic
 - [x] PERF: `backend/src/routes/assets.ts` makes sequential database calls for related resources instead of using JOINs
@@ -315,6 +320,8 @@
 ## Completed
 
 ## Session Log
+- [2025-12-31 06:17] Completed: STABILITY: `backend/src/routes/notifications.ts` lacks proper error handling for failed email deliveries
+- [2025-12-31 06:16] Completed: SECURITY: Hardcoded salt rounds in auth route should use config value from `backend/src/config/index.ts` instead of hardcoded `10` in `backend/src/routes/auth.test.ts`
 - [2025-12-31 06:16] Completed: BUG: Missing input validation for required fields in service catalog builder endpoints in `backend/src/routes/requests.ts` allowing invalid data submission
 - [2025-12-31 06:16] Completed: PERF: N+1 query issue in on-call schedule retrieval without proper JOIN optimization in `backend/src/routes/oncall.ts`
 - [2025-12-31 06:16] Completed: TEST: No integration tests for workflow approval chains in `backend/src/routes/workflow.ts` leaving critical business logic untested

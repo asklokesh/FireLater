@@ -1,30 +1,63 @@
-import { FastifyInstance } from 'fastify';
-import { notificationService } from '../services/notifications.js';
-import { authenticate, authorize } from '../middleware/auth.js';
-import { validate } from '../middleware/validation.js';
-import { z } from 'zod';
-
-// Add Redis connection error handling during service initialization
-export async function notificationRoutes(fastify: FastifyInstance) {
-  try {
-    // Test Redis connection during initialization
-    await notificationService.testRedisConnection();
-  } catch (error: any) {
-    fastify.log.error({ err: error }, 'Failed to connect to Redis for notification service');
-    throw new Error('Notification service unavailable: Redis connection failed');
-  }
-
-  // Apply authentication and authorization middleware
-  fastify.addHook('preHandler', authenticate);
-  fastify.addHook('preHandler', authorize(['read:notifications']));
-
-  // Add Redis error handling middleware
-  fastify.addHook('preHandler', async (request, reply) => {
-    try {
-      // Verify Redis connection is still active before processing requests
-      await notificationService.testRedisConnection();
-    } catch (error: any) {
-      request.log.error({ err: error }, 'Redis connection failed during request processing');
-      throw fastify.httpErrors.serviceUnavailable('Notification service temporarily unavailable');
+fastify.post('/send', {
+  schema: {
+    body: {
+      type: 'object',
+      properties: {
+        to: { type: 'string', format: 'email' },
+        subject: { type: 'string' },
+        body: { type: 'string' },
+        templateId: { type: 'string' }
+      },
+      required: ['to', 'subject', 'body']
     }
-  });
+  },
+  preHandler: [fastify.authenticate, validate]
+}, async (request, reply) => {
+  const { to, subject, body, templateId } = request.body as {
+    to: string;
+    subject: string;
+    body: string;
+    templateId?: string;
+  };
+
+  try {
+    const result = await notificationService.sendEmail({
+      to,
+      subject,
+      body,
+      templateId,
+      tenantSlug: request.tenantSlug!
+    });
+
+    if (!result.success) {
+      request.log.warn({
+        to,
+        subject,
+        error: result.error,
+        tenant: request.tenantSlug
+      }, 'Email delivery failed');
+
+      return reply.code(500).send({
+        message: 'Failed to send notification',
+        error: result.error
+      });
+    }
+
+    return reply.code(200).send({
+      message: 'Notification sent successfully',
+      id: result.id
+    });
+  } catch (error: any) {
+    request.log.error({
+      err: error,
+      to,
+      subject,
+      tenant: request.tenantSlug
+    }, 'Unexpected error sending notification');
+
+    return reply.code(500).send({
+      message: 'Failed to send notification',
+      error: error.message || 'Internal server error'
+    });
+  }
+});
