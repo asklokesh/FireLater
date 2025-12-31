@@ -3,7 +3,7 @@
 ## Priority Queue
 - [x] STABILITY: `backend/src/routes/notifications.ts` doesn't implement proper retry logic for failed notification deliveries
 - [x] TEST: `backend/src/routes/workflow.ts` lacks unit tests for approval workflow edge cases
-- [ ] PERF: `backend/src/routes/assets.ts` makes sequential database calls instead of batch queries for bulk operations
+- [x] PERF: `backend/src/routes/assets.ts` makes sequential database calls instead of batch queries for bulk operations
 - [ ] BUG: Missing input validation in `backend/src/routes/reporting.ts` for date range parameters could cause SQL injection
 - [ ] SECURITY: Hardcoded salt rounds in `backend/src/routes/auth.test.ts` should use config instead of hardcoded value
 - [x] TEST: No unit tests for on-call scheduling logic or rotation validation; file: `backend/src/routes/oncall.ts`
@@ -425,6 +425,7 @@
 ## Completed
 
 ## Session Log
+- [2025-12-31 07:22] Completed: PERF: `backend/src/routes/assets.ts` makes sequential database calls instead of batch queries for bulk operations
 - [2025-12-31 07:21] Completed: TEST: `backend/src/routes/workflow.ts` lacks unit tests for approval workflow edge cases
 - [2025-12-31 07:21] Completed: STABILITY: `backend/src/routes/notifications.ts` doesn't implement proper retry logic for failed notification deliveries
 - [2025-12-31 07:20] Completed: SECURITY: Hardcoded salt rounds in auth route handler should use config value; file: `backend/src/routes/auth.test.ts`
