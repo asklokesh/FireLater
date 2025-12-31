@@ -34,14 +34,19 @@ fastify.post('/webhooks/:provider', {
   const payload = request.body as Record<string, any>;
   const tenant = request.user.tenant;
   
-  // Process webhook with retry configuration
-  await webhooksService.process(tenant.slug, provider, payload, {
-    attempts: 3,
-    backoff: {
-      type: 'exponential',
-      delay: 1000
-    }
-  });
-  
-  return reply.code(200).send({ message: 'Webhook processed successfully' });
+  try {
+    // Process webhook with retry configuration
+    await webhooksService.process(tenant.slug, provider, payload, {
+      attempts: 3,
+      backoff: {
+        type: 'exponential',
+        delay: 1000
+      }
+    });
+    
+    return reply.code(200).send({ message: 'Webhook processed successfully' });
+  } catch (error) {
+    request.log.error({ err: error, provider, tenant: tenant.slug }, 'Webhook processing failed');
+    return reply.code(500).send({ message: 'Failed to process webhook' });
+  }
 });
