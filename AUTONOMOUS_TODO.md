@@ -1,11 +1,16 @@
 # FireLater Autonomous Development
 
 ## Priority Queue
+- [x] STABILITY: Oncall schedule generation lacks timezone handling; file: `backend/src/routes/oncall.ts`
+- [x] TEST: No integration tests for workflow approval chains; file: `backend/src/routes/workflow.ts`
+- [ ] PERF: Knowledge base search queries lack pagination and indexing; file: `backend/src/routes/knowledge.ts`
+- [ ] BUG: Missing input validation on reporting route parameters; file: `backend/src/routes/reporting.ts`
+- [ ] SECURITY: Hardcoded salt rounds in auth route should use config value; file: `backend/src/routes/auth.test.ts`
 - [x] STABILITY: Oncall rotation updates lack transaction handling risking data inconsistency; file: `backend/src/routes/oncall.ts`
 - [x] TEST: No integration tests for workflow route state transitions; file: `backend/src/routes/workflow.ts`
 - [x] PERF: Knowledge base search queries not using database indexes leading to slow responses; file: `backend/src/routes/knowledge.ts`
-- [ ] BUG: Missing input validation on reporting route parameters causing potential injection; file: `backend/src/routes/reporting.ts`
-- [ ] SECURITY: Hardcoded salt rounds in auth route handler should use config value; file: `backend/src/routes/auth.test.ts`
+- [x] BUG: Missing input validation on reporting route parameters causing potential injection; file: `backend/src/routes/reporting.ts`
+- [x] SECURITY: Hardcoded salt rounds in auth route handler should use config value; file: `backend/src/routes/auth.test.ts`
 - [x] TEST: Auth routes missing unit tests for password reset functionality; file: `backend/src/routes/auth.test.ts`
 - [x] STABILITY: No error handling for failed Redis connections in notifications service; file: `backend/src/routes/notifications.ts`
 - [x] PERF: Inefficient database queries in knowledge base search without pagination; file: `backend/src/routes/knowledge.ts`
@@ -610,6 +615,10 @@
 ## Completed
 
 ## Session Log
+- [2025-12-31 09:22] Completed: TEST: No integration tests for workflow approval chains; file: `backend/src/routes/workflow.ts`
+- [2025-12-31 09:22] Completed: STABILITY: Oncall schedule generation lacks timezone handling; file: `backend/src/routes/oncall.ts`
+- [2025-12-31 09:21] Completed: SECURITY: Hardcoded salt rounds in auth route handler should use config value; file: `backend/src/routes/auth.test.ts`
+- [2025-12-31 09:21] Completed: BUG: Missing input validation on reporting route parameters causing potential injection; file: `backend/src/routes/reporting.ts`
 - [2025-12-31 09:20] Completed: PERF: Knowledge base search queries not using database indexes leading to slow responses; file: `backend/src/routes/knowledge.ts`
 - [2025-12-31 09:20] Completed: TEST: No integration tests for workflow route state transitions; file: `backend/src/routes/workflow.ts`
 - [2025-12-31 09:20] Completed: STABILITY: Oncall rotation updates lack transaction handling risking data inconsistency; file: `backend/src/routes/oncall.ts`

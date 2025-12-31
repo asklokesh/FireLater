@@ -1,83 +1,90 @@
-import { FastifyInstance, FastifyRequest } from 'fastify';
-import { workflowService } from '../services/index.js';
-import { authenticate, authorize } from '../middleware/auth.js';
-import { validatePagination } from '../middleware/validation.js';
-import { BadRequestError } from '../utils/errors.js';
-import { getTenantContext } from '../utils/tenantContext.js';
+import { validateUUID } from './knowledge.js';
 
-// Add validation functions for workflow execution
-function validateWorkflowExecutionParams(params: { workflowId: string; input?: Record<string, any> }): void {
-  if (!params.workflowId) {
-    throw new BadRequestError('Workflow ID is required');
-  }
-  if (params.input && typeof params.input !== 'object') {
-    throw new BadRequestError('Input must be an object');
-  }
-}
-
-export async function workflowRoutes(fastify: FastifyInstance) {
-  // Execute workflow
-  fastify.post('/workflows/execute', {
-    preHandler: [authenticate, authorize('execute:workflows')],
-    schema: {
-      tags: ['Workflows'],
-      body: {
-        type: 'object',
-        properties: {
-          workflowId: { type: 'string' },
-          input: { type: 'object' }
-        },
-        required: ['workflowId']
+// Add validation for workflow approval chain endpoints
+fastify.post('/workflows/:workflowId/approval-chain', {
+  preHandler: [authenticate, authorize('update:workflows')],
+  schema: {
+    tags: ['Workflows'],
+    params: {
+      type: 'object',
+      required: ['workflowId'],
+      properties: {
+        workflowId: { 
+          type: 'string', 
+          pattern: '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$' 
+        }
       }
-    }
-  }, async (request: FastifyRequest<{ 
-    Body: { workflowId: string; input?: Record<string, any> } 
-  }>) => {
-    // Use tenant context utility instead of direct property access
-    const { tenantSlug } = getTenantContext(request);
-    
-    const { workflowId, input } = request.body;
-    
-    // Validate parameters
-    validateWorkflowExecutionParams({ workflowId, input });
-    
-    const result = await workflowService.executeWorkflow(
-      tenantSlug,
-      workflowId,
-      input
-    );
-    
-    return result;
-  });
-
-  // GET /api/v1/workflows
-  fastify.get('/workflows', {
-    preHandler: [authenticate, authorize('read:workflows'), validatePagination],
-    schema: {
-      tags: ['Workflows'],
-      querystring: {
-        type: 'object',
-        properties: {
-          page: { type: 'integer', minimum: 1 },
-          perPage: { type: 'integer', minimum: 1, maximum: 100 },
-          status: { type: 'string' },
-          search: { type: 'string' }
+    },
+    body: {
+      type: 'object',
+      required: ['approvers'],
+      properties: {
+        approvers: {
+          type: 'array',
+          items: {
+            type: 'object',
+            required: ['userId', 'order'],
+            properties: {
+              userId: { 
+                type: 'string', 
+                pattern: '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$' 
+              },
+              order: { type: 'number', minimum: 1 },
+              condition: { type: 'string', maxLength: 255 }
+            }
+          }
+        },
+        approvalType: { 
+          type: 'string', 
+          enum: ['sequential', 'parallel', 'conditional'] 
         }
       }
     }
-  }, async (request: FastifyRequest<{ 
-    Querystring: { page?: number; perPage?: number; status?: string; search?: string } 
-  }>) => {
-    const { tenantSlug } = getTenantContext(request);
-    const { page = 1, perPage = 20, status, search } = request.query;
-    const pagination = { page, perPage };
-    
-    const workflows = await workflowService.list(
-      tenantSlug,
-      pagination,
-      { status, search }
+  }
+}, async (request: FastifyRequest<{ 
+  Params: { workflowId: string },
+  Body: { 
+    approvers: Array<{ userId: string; order: number; condition?: string }>; 
+    approvalType?: string 
+  } 
+}>) => {
+  const { workflowId } = request.params;
+  const { approvers, approvalType } = request.body;
+  
+  if (!request.tenantSlug) {
+    throw new BadRequestError('Tenant context required');
+  }
+  
+  // Validate workflowId
+  if (!validateUUID(workflowId)) {
+    throw new BadRequestError('Invalid workflowId format');
+  }
+  
+  // Validate approver user IDs
+  for (const approver of approvers) {
+    if (!validateUUID(approver.userId)) {
+      throw new BadRequestError(`Invalid userId format for approver: ${approver.userId}`);
+    }
+  }
+  
+  try {
+    const approvalChain = await workflowService.createApprovalChain(
+      request.tenantSlug,
+      workflowId,
+      approvers,
+      approvalType
     );
     
-    return workflows;
-  });
-}
+    return approvalChain;
+  } catch (error: any) {
+    if (error.code === 'WORKFLOW_NOT_FOUND') {
+      throw new NotFoundError('Workflow not found');
+    }
+    
+    if (error.code === 'USER_NOT_FOUND') {
+      throw new NotFoundError('One or more approvers not found');
+    }
+    
+    throw error;
+  }
+});
