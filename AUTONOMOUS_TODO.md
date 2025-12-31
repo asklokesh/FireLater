@@ -5,7 +5,7 @@
 - [x] TEST: No integration tests for on-call rotation logic in `backend/src/routes/oncall.ts`; critical scheduling bugs could go undetected during deployment
 - [x] PERF: N+1 query problem in `backend/src/routes/reporting.ts` when fetching asset health scores causes severe performance degradation with >1000 assets
 - [x] BUG: Missing input validation for service catalog builder in `backend/src/routes/requests.ts` allows malformed workflow configurations that crash the drag-and-drop interface
-- [ ] SECURITY: Insecure CIDR sanitization in `backend/src/routes/auth.test.ts` uses string escaping instead of proper validation; replace with `ipaddr.js` or similar library for robust IP range validation
+- [x] SECURITY: Insecure CIDR sanitization in `backend/src/routes/auth.test.ts` uses string escaping instead of proper validation; replace with `ipaddr.js` or similar library for robust IP range validation
 - [x] STABILITY: `backend/src/routes/notifications.ts` doesn't implement proper retry logic or dead-letter queue for failed webhook deliveries
 - [x] TEST: `backend/src/routes/workflow.ts` lacks unit tests for approval chain logic, particularly edge cases with circular dependencies
 - [x] PERF: `backend/src/routes/assets.ts` makes sequential database calls for health scoring instead of batched queries, causing N+1 performance issues
@@ -85,6 +85,7 @@
 ## Completed
 
 ## Session Log
+- [2025-12-31 03:14] Completed: SECURITY: Insecure CIDR sanitization in `backend/src/routes/auth.test.ts` uses string escaping instead of proper validation; replace with `ipaddr.js` or similar library for robust IP range validation
 - [2025-12-31 03:14] Completed: BUG: Missing input validation for service catalog builder in `backend/src/routes/requests.ts` allows malformed workflow configurations that crash the drag-and-drop interface
 - [2025-12-31 03:13] Completed: PERF: N+1 query problem in `backend/src/routes/reporting.ts` when fetching asset health scores causes severe performance degradation with >1000 assets
 - [2025-12-31 03:13] Completed: TEST: No integration tests for on-call rotation logic in `backend/src/routes/oncall.ts`; critical scheduling bugs could go undetected during deployment

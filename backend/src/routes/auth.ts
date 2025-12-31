@@ -1,11 +1,10 @@
+import ipaddr from 'ipaddr.js';
+
       } catch (error) {
-        // Properly escape the CIDR value for safe logging
-        const sanitizedCidr = trimmedCidr
-          .replace(/\\/g, '\\\\')
-          .replace(/\n/g, '\\n')
-          .replace(/\r/g, '\\r')
-          .replace(/\t/g, '\\t')
-          .replace(/\f/g, '\\f')
-          .replace(/"/g, '\\"');
-        console.warn(`Invalid CIDR format: ${sanitizedCidr}`);
+        // Validate CIDR using ipaddr.js for proper IP range validation
+        try {
+          ipaddr.parseCIDR(trimmedCidr);
+        } catch (cidrError) {
+          console.warn(`Invalid CIDR format: ${trimmedCidr}`);
+        }
       }
