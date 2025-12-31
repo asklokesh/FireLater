@@ -1,11 +1,16 @@
 # FireLater Autonomous Development
 
 ## Priority Queue
+- [x] REFACTOR: Duplicate tenant validation logic across multiple routes instead of centralized middleware; files: `backend/src/routes/assets.ts`, `backend/src/routes/oncall.ts`
+- [ ] STABILITY: Error handling bypass in notifications route for external provider failures; file: `backend/src/routes/notifications.ts`
+- [ ] TEST: No unit tests for workflow route business logic; file: `backend/src/routes/workflow.ts`
+- [ ] PERF: Missing database indexing on frequently queried fields in reporting routes; file: `backend/src/routes/reporting.ts`
+- [ ] SECURITY: Hardcoded salt rounds in auth route handler should use config value; file: `backend/src/routes/auth.test.ts`
 - [x] STABILITY: `backend/src/routes/notifications.ts` lacks proper error handling for failed email deliveries
 - [x] TEST: No unit tests for workflow approval logic in `backend/src/routes/workflow.ts`
 - [x] PERF: `backend/src/routes/assets.ts` makes N+1 database queries when fetching asset health scores
 - [x] BUG: Missing input validation in `backend/src/routes/reporting.ts` for date range parameters could cause SQL injection
-- [ ] SECURITY: Hardcoded salt rounds in `backend/src/routes/auth.test.ts` should use config instead of hardcoded value
+- [x] SECURITY: Hardcoded salt rounds in `backend/src/routes/auth.test.ts` should use config instead of hardcoded value
 - [x] REFACTOR: Duplicate tenant schema access logic across multiple routes (oncall, assets, integrations); consider centralizing; files: `backend/src/routes/oncall.ts`, `backend/src/routes/assets.ts`, `backend/src/routes/integrations.ts`
 - [x] STABILITY: Error handling bypass in notifications route for failed delivery attempts; file: `backend/src/routes/notifications.ts`
 - [x] TEST: No unit tests for workflow validation logic; file: `backend/src/routes/workflow.ts`
@@ -405,6 +410,8 @@
 ## Completed
 
 ## Session Log
+- [2025-12-31 07:15] Completed: REFACTOR: Duplicate tenant validation logic across multiple routes instead of centralized middleware; files: `backend/src/routes/assets.ts`, `backend/src/routes/oncall.ts`
+- [2025-12-31 07:15] Completed: SECURITY: Hardcoded salt rounds in `backend/src/routes/auth.test.ts` should use config instead of hardcoded value
 - [2025-12-31 07:15] Completed: BUG: Missing input validation in `backend/src/routes/reporting.ts` for date range parameters could cause SQL injection
 - [2025-12-31 07:14] Completed: PERF: `backend/src/routes/assets.ts` makes N+1 database queries when fetching asset health scores
 - [2025-12-31 07:14] Completed: TEST: No unit tests for workflow approval logic in `backend/src/routes/workflow.ts`
