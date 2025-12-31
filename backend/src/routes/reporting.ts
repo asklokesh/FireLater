@@ -1,4 +1,3 @@
-// Add validation for report generation routes
 fastify.post('/generate/:reportType', {
   schema: {
     tags: ['Reporting'],
@@ -19,7 +18,8 @@ fastify.post('/generate/:reportType', {
         startDate: { type: 'string', format: 'date-time' },
         endDate: { type: 'string', format: 'date-time' },
         filters: { type: 'object' }
-      }
+      },
+      required: ['startDate', 'endDate']
     }
   },
   preHandler: [fastify.authenticate, validate({
