@@ -3,7 +3,7 @@
 ## Priority Queue
 - [x] REFACTOR: Input sanitization applied inconsistently across routes. Some routes (like `/knowledge`, `/workflow`) bypass sanitization while others use it. Standardize sanitization through Fastify hooks or middleware.
 - [x] TEST: Auth routes have no unit tests for rate limiting or failed login scenarios. Critical security features are untested in `/backend/src/routes/auth.test.ts`. Add tests for rate limit responses and validation error cases.
-- [ ] PERF: Missing database indexing strategy for multi-tenant queries. With schema-per-tenant approach, critical routes like `/requests`, `/assets`, and `/oncall` need composite indexes on tenant_id. Add migration scripts for tenant-aware indexes.
+- [x] PERF: Missing database indexing strategy for multi-tenant queries. With schema-per-tenant approach, critical routes like `/requests`, `/assets`, and `/oncall` need composite indexes on tenant_id. Add migration scripts for tenant-aware indexes.
 - [ ] BUG: Registration route missing validation for name fields after comment. The registration handler validates email/password but truncates names without checking minimum length. Add proper validation for firstName/lastName/companyName in `/backend/src/routes/auth.test.ts`.
 - [ ] SECURITY: Redundant input validation in auth routes - schema validation already covers email/password format but manual regex checks duplicate this logic. Remove manual validation in `/backend/src/routes/auth.test.ts` since Fastify schema handles it.
 - [x] REFACTOR: Duplicate error handling logic with `getSafeErrorMessage()` in auth routes. Centralize error handling using Fastify's `setErrorHandler()` hook in `backend/src/routes/auth.test.ts` and other route files.
@@ -200,6 +200,7 @@
 ## Completed
 
 ## Session Log
+- [2025-12-31 05:05] Completed: PERF: Missing database indexing strategy for multi-tenant queries. With schema-per-tenant approach, critical routes like `/requests`, `/assets`, and `/oncall` need composite indexes on tenant_id. Add migration scripts for tenant-aware indexes.
 - [2025-12-31 05:05] Completed: TEST: Auth routes have no unit tests for rate limiting or failed login scenarios. Critical security features are untested in `/backend/src/routes/auth.test.ts`. Add tests for rate limit responses and validation error cases.
 - [2025-12-31 05:04] Completed: REFACTOR: Input sanitization applied inconsistently across routes. Some routes (like `/knowledge`, `/workflow`) bypass sanitization while others use it. Standardize sanitization through Fastify hooks or middleware.
 - [2025-12-31 04:58] Completed: SECURITY: Error messages in `/login` and `/register` routes may expose sensitive information. Use generic messages for invalid credentials and avoid revealing user existence. File: `backend/src/routes/auth.test.ts`
