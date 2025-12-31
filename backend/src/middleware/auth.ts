@@ -20,7 +20,7 @@ export const validateCIDR = (cidr: string): boolean => {
       return true;
     }
   } catch (error) {
-    console.warn(`Invalid CIDR format: ${cidr}`, error);
+    // Changed from console.warn to proper validation failure
     return false;
   }
 };
