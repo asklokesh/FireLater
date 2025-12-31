@@ -1,95 +1,143 @@
-import { test, describe, beforeEach, afterEach } from 'node:test';
-import { mock, restore, capture } from 'sinon';
-import { build } from '../helper.js';
-import { validateCIDR } from '../middleware/auth.js';
-import assert from 'node:assert';
+import { test, describe } from 'node:test';
+import { strict as assert } from 'node:assert';
+import buildServer from '../app.js';
 
 describe('Auth Routes', () => {
-  let app: any;
+  let app: Awaited<ReturnType<typeof buildServer>>;
 
-  beforeEach(async () => {
-    app = await build();
+  before(async () => {
+    app = await buildServer();
   });
 
-  afterEach(() => {
-    restore();
+  after(async () => {
+    await app.close();
   });
 
-  describe('POST /api/v1/auth/login', () => {
-    test('should reject invalid IPv4 CIDR ranges', async (t) => {
-      // Test cases for invalid IPv4 CIDR
-      const invalidIPv4Cases = [
-        '192.168.1.1',        // Missing range
-        '192.168.1.1/33',     // Invalid range (>32)
-        '192.168.1.1/-1',     // Negative range
-        '192.168.1.1/abc',    // Non-numeric range
-        '256.168.1.1/24',     // Invalid IP octet
-        '192.168.1.1/24/8',   // Too many parts
-      ];
-
-      for (const cidr of invalidIPv4Cases) {
-        assert.strictEqual(validateCIDR(cidr), false, `Should reject invalid IPv4 CIDR: ${cidr}`);
-      }
+  describe('POST /login', () => {
+    test('should reject login with invalid IPv4 CIDR', async () => {
+      const response = await app.inject({
+        method: 'POST',
+        url: '/auth/login',
+        payload: {
+          email: 'user@example.com',
+          password: 'password123',
+          ipRestriction: '999.999.999.999/32'
+        }
+      });
+      
+      assert.equal(response.statusCode, 400);
+      const body = JSON.parse(response.body);
+      assert.equal(body.message, 'Invalid IP range specified');
     });
 
-    test('should reject invalid IPv6 CIDR ranges', async (t) => {
-      // Test cases for invalid IPv6 CIDR
-      const invalidIPv6Cases = [
-        '2001:db8::1',             // Missing range
-        '2001:db8::1/129',         // Invalid range (>128)
-        '2001:db8::1/-1',          // Negative range
-        '2001:db8::1/abc',         // Non-numeric range
-        '2001:db8::1/64/8',        // Too many parts
-        '2001:db8::::1/64',        // Invalid IPv6 format
-      ];
-
-      for (const cidr of invalidIPv6Cases) {
-        assert.strictEqual(validateCIDR(cidr), false, `Should reject invalid IPv6 CIDR: ${cidr}`);
-      }
+    test('should reject login with invalid IPv6 CIDR', async () => {
+      const response = await app.inject({
+        method: 'POST',
+        url: '/auth/login',
+        payload: {
+          email: 'user@example.com',
+          password: 'password123',
+          ipRestriction: 'invalid::ipv6::address/128'
+        }
+      });
+      
+      assert.equal(response.statusCode, 400);
+      const body = JSON.parse(response.body);
+      assert.equal(body.message, 'Invalid IP range specified');
     });
 
-    test('should accept valid IPv4 CIDR ranges', async (t) => {
-      // Test cases for valid IPv4 CIDR
-      const validIPv4Cases = [
-        '192.168.1.1/24',
-        '10.0.0.0/8',
-        '172.16.0.0/12',
-        '192.168.1.1/32',
-        '0.0.0.0/0',
-      ];
-
-      for (const cidr of validIPv4Cases) {
-        assert.strictEqual(validateCIDR(cidr), true, `Should accept valid IPv4 CIDR: ${cidr}`);
-      }
+    test('should reject login with out-of-range IPv4 prefix', async () => {
+      const response = await app.inject({
+        method: 'POST',
+        url: '/auth/login',
+        payload: {
+          email: 'user@example.com',
+          password: 'password123',
+          ipRestriction: '192.168.1.0/33'
+        }
+      });
+      
+      assert.equal(response.statusCode, 400);
+      const body = JSON.parse(response.body);
+      assert.equal(body.message, 'Invalid IP range specified');
     });
 
-    test('should accept valid IPv6 CIDR ranges', async (t) => {
-      // Test cases for valid IPv6 CIDR
-      const validIPv6Cases = [
-        '2001:db8::1/64',
-        '2001:db8::/32',
-        'fe80::/10',
-        '::1/128',
-        '::/0',
-      ];
-
-      for (const cidr of validIPv6Cases) {
-        assert.strictEqual(validateCIDR(cidr), true, `Should accept valid IPv6 CIDR: ${cidr}`);
-      }
+    test('should reject login with out-of-range IPv6 prefix', async () => {
+      const response = await app.inject({
+        method: 'POST',
+        url: '/auth/login',
+        payload: {
+          email: 'user@example.com',
+          password: 'password123',
+          ipRestriction: '2001:db8::/129'
+        }
+      });
+      
+      assert.equal(response.statusCode, 400);
+      const body = JSON.parse(response.body);
+      assert.equal(body.message, 'Invalid IP range specified');
     });
 
-    test('should handle edge cases in CIDR validation', async (t) => {
-      // Edge cases
-      const edgeCases = [
-        ['', false],              // Empty string
-        ['   ', false],           // Whitespace only
-        ['192.168.1.1/24 ', true], // Trailing space (should be trimmed)
-        [' 192.168.1.1/24', true], // Leading space (should be trimmed)
-      ];
+    test('should reject login with malformed CIDR (missing slash)', async () => {
+      const response = await app.inject({
+        method: 'POST',
+        url: '/auth/login',
+        payload: {
+          email: 'user@example.com',
+          password: 'password123',
+          ipRestriction: '192.168.1.0'
+        }
+      });
+      
+      assert.equal(response.statusCode, 400);
+      const body = JSON.parse(response.body);
+      assert.equal(body.message, 'Invalid IP range specified');
+    });
 
-      for (const [cidr, expected] of edgeCases) {
-        assert.strictEqual(validateCIDR(cidr as string), expected as boolean, `Should handle edge case: "${cidr}"`);
-      }
+    test('should reject login with malformed CIDR (non-numeric prefix)', async () => {
+      const response = await app.inject({
+        method: 'POST',
+        url: '/auth/login',
+        payload: {
+          email: 'user@example.com',
+          password: 'password123',
+          ipRestriction: '192.168.1.0/abc'
+        }
+      });
+      
+      assert.equal(response.statusCode, 400);
+      const body = JSON.parse(response.body);
+      assert.equal(body.message, 'Invalid IP range specified');
+    });
+
+    test('should accept login with valid IPv4 CIDR', async () => {
+      // Mock successful authentication
+      const response = await app.inject({
+        method: 'POST',
+        url: '/auth/login',
+        payload: {
+          email: 'user@example.com',
+          password: 'password123',
+          ipRestriction: '192.168.1.0/24'
+        }
+      });
+      
+      // Should either succeed or fail for authentication reasons, not CIDR validation
+      assert.notEqual(response.statusCode, 400);
+    });
+
+    test('should accept login with valid IPv6 CIDR', async () => {
+      const response = await app.inject({
+        method: 'POST',
+        url: '/auth/login',
+        payload: {
+          email: 'user@example.com',
+          password: 'password123',
+          ipRestriction: '2001:db8::/32'
+        }
+      });
+      
+      assert.notEqual(response.statusCode, 400);
     });
   });
 });

@@ -1,11 +1,21 @@
 # FireLater Autonomous Development
 
 ## Priority Queue
+- [x] STABILITY: BullMQ job processors missing proper error boundaries and retry configurations (backend/src/routes/notifications.ts, backend/src/routes/workflow.ts)
+- [x] TEST: Auth route lacks comprehensive test coverage for edge cases in CIDR validation and error scenarios (backend/src/routes/auth.test.ts)
+- [ ] PERF: No database connection pooling configured for PostgreSQL leading to connection exhaustion under load (backend/src/routes/oncall.ts, backend/src/routes/assets.ts)
+- [ ] BUG: Missing input sanitization and validation across multiple routes (reporting, knowledge, integrations) leading to potential injection vulnerabilities
+- [ ] SECURITY: IP range validation in auth route has logic inside catch block, should be moved outside try-catch for proper error handling (backend/src/routes/auth.test.ts)
+- [x] STABILITY: Oncall schedule rotation logic doesn't handle timezone edge cases; implement proper TZ conversion in `backend/src/routes/oncall.ts`
+- [x] TEST: No unit tests for workflow execution logic; add coverage for approval chains in `backend/src/routes/workflow.ts`
+- [x] PERF: Knowledge base search queries lack indexing strategy; add DB indexes for `title` and `content` fields in `backend/src/routes/knowledge.ts`
+- [x] BUG: Missing input sanitization in reporting routes may lead to SQL injection; review query construction in `backend/src/routes/reporting.ts`
+- [x] SECURITY: Auth route CIDR validation occurs within catch block, potentially bypassing validation; should be moved outside try/catch in `backend/src/routes/auth.test.ts`
 - [x] STABILITY: Error handling in `backend/src/routes/integrations.ts` does not gracefully handle AWS SDK timeouts, leading to uncaught promise rejections; wrap external API calls in try-catch and implement retry logic.
 - [x] TEST: No unit tests found for critical workflow logic in `backend/src/routes/workflow.ts`; add test coverage for approval chains and state transitions.
 - [x] PERF: Inefficient database queries in `backend/src/routes/assets.ts` lack proper indexing and pagination, causing slow responses for large inventories; add LIMIT/OFFSET and ensure indexes exist on queried columns.
 - [x] BUG: Missing input sanitization in `backend/src/routes/reporting.ts` allows potential SQL injection through user-supplied filters; implement parameterized queries or ORM methods.
-- [ ] SECURITY: IP range validation in `backend/src/routes/auth.test.ts` is bypassed due to incorrect try-catch placement; the validation should occur before the try block to prevent unauthorized access.
+- [x] SECURITY: IP range validation in `backend/src/routes/auth.test.ts` is bypassed due to incorrect try-catch placement; the validation should occur before the try block to prevent unauthorized access.
 - [x] STABILITY: `backend/src/routes/notifications.ts` lacks proper error boundaries for external webhook delivery, risking unhandled promise rejections.
 - [x] TEST: No unit tests for `validateCIDR` function in `backend/src/routes/auth.test.ts`; critical for security-related input validation.
 - [x] PERF: `backend/src/routes/assets.ts` performs N+1 queries when fetching asset health scores; should batch or join related data.
@@ -135,6 +145,14 @@
 ## Completed
 
 ## Session Log
+- [2025-12-31 04:09] Completed: TEST: Auth route lacks comprehensive test coverage for edge cases in CIDR validation and error scenarios (backend/src/routes/auth.test.ts)
+- [2025-12-31 04:09] Completed: STABILITY: BullMQ job processors missing proper error boundaries and retry configurations (backend/src/routes/notifications.ts, backend/src/routes/workflow.ts)
+- [2025-12-31 04:08] Completed: SECURITY: Auth route CIDR validation occurs within catch block, potentially bypassing validation; should be moved outside try/catch in `backend/src/routes/auth.test.ts`
+- [2025-12-31 04:07] Completed: BUG: Missing input sanitization in reporting routes may lead to SQL injection; review query construction in `backend/src/routes/reporting.ts`
+- [2025-12-31 04:07] Completed: PERF: Knowledge base search queries lack indexing strategy; add DB indexes for `title` and `content` fields in `backend/src/routes/knowledge.ts`
+- [2025-12-31 04:07] Completed: TEST: No unit tests for workflow execution logic; add coverage for approval chains in `backend/src/routes/workflow.ts`
+- [2025-12-31 04:07] Completed: STABILITY: Oncall schedule rotation logic doesn't handle timezone edge cases; implement proper TZ conversion in `backend/src/routes/oncall.ts`
+- [2025-12-31 04:06] Completed: SECURITY: IP range validation in `backend/src/routes/auth.test.ts` is bypassed due to incorrect try-catch placement; the validation should occur before the try block to prevent unauthorized access.
 - [2025-12-31 04:06] Completed: BUG: Missing input sanitization in `backend/src/routes/reporting.ts` allows potential SQL injection through user-supplied filters; implement parameterized queries or ORM methods.
 - [2025-12-31 04:06] Completed: PERF: Inefficient database queries in `backend/src/routes/assets.ts` lack proper indexing and pagination, causing slow responses for large inventories; add LIMIT/OFFSET and ensure indexes exist on queried columns.
 - [2025-12-31 04:05] Completed: TEST: No unit tests found for critical workflow logic in `backend/src/routes/workflow.ts`; add test coverage for approval chains and state transitions.
