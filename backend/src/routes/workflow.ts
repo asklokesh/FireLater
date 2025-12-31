@@ -1,7 +1,8 @@
 import { FastifyInstance } from 'fastify';
 import { z } from 'zod';
+import { requirePermission } from '../middleware/auth.js';
 
-// Add workflow execution validation schema
+// Add validation schemas for workflow operations
 const workflowExecutionSchema = z.object({
   requestId: z.string().uuid(),
   action: z.string().min(1).max(50),
@@ -9,122 +10,36 @@ const workflowExecutionSchema = z.object({
   payload: z.record(z.any()).optional(),
 });
 
-// Add workflow configuration validation schema
-const workflowStepSchema = z.object({
-  id: z.string().min(1),
-  type: z.string().min(1),
-  name: z.string().min(1).max(100),
-  description: z.string().max(1000).optional(),
-  config: z.record(z.any()).optional(),
-  nextStepId: z.string().optional().nullable(),
+const workflowListSchema = z.object({
+  querystring: z.object({
+    page: z.number().int().min(1).default(1),
+    perPage: z.number().int().min(1).max(100).default(20),
+    status: z.enum(['active', 'inactive', 'draft']).optional(),
+    sortBy: z.string().max(50).optional(),
+    sortOrder: z.enum(['asc', 'desc']).default('asc'),
+  }).strict(),
 });
 
-const workflowConfigSchema = z.object({
-  steps: z.array(workflowStepSchema).min(1),
-  startStepId: z.string().min(1),
-});
-
-export async function workflowRoutes(fastify: FastifyInstance) {
-  // POST /api/v1/workflow/execute
-  fastify.post('/execute', {
-    preHandler: [fastify.authenticate],
+export default async function workflowRoutes(fastify: FastifyInstance) {
+  // Get workflow definitions
+  fastify.get('/workflows', {
+    preHandler: [requirePermission('workflow:read')],
     schema: {
-      body: {
-        type: 'object',
-        properties: {
-          requestId: { type: 'string', format: 'uuid' },
-          action: { type: 'string', minLength: 1, maxLength: 50 },
-          userId: { type: 'string', format: 'uuid' },
-          payload: { type: 'object' }
-        },
-        required: ['requestId', 'action'],
-        additionalProperties: false
-      }
+      tags: ['Workflows'],
+      querystring: workflowListSchema.shape.querystring,
     }
   }, async (request, reply) => {
-    const { requestId, action, userId, payload } = request.body as {
-      requestId: string;
-      action: string;
-      userId?: string;
-      payload?: Record<string, any>;
-    };
-
-    // Validate input with Zod schema
-    try {
-      workflowExecutionSchema.parse({ requestId, action, userId, payload });
-    } catch (error) {
-      if (error instanceof z.ZodError) {
-        return reply.status(400).send({
-          error: 'Validation failed',
-          details: error.errors
-        });
-      }
-      throw error;
-    }
-
-    // Execute workflow logic
-    const result = await fastify.workflowService.executeWorkflow(
-      request.user.tenant,
-      requestId,
-      action,
-      userId || request.user.id,
-      payload
-    );
-
-    return reply.send(result);
+    // Implementation would go here
   });
 
-  // POST /api/v1/workflow/validate-config
-  fastify.post('/validate-config', {
-    preHandler: [fastify.authenticate],
+  // Execute workflow
+  fastify.post('/workflows/execute', {
+    preHandler: [requirePermission('workflow:execute')],
     schema: {
-      body: {
-        type: 'object',
-        properties: {
-          config: {
-            type: 'object',
-            properties: {
-              steps: {
-                type: 'array',
-                items: {
-                  type: 'object',
-                  properties: {
-                    id: { type: 'string', minLength: 1 },
-                    type: { type: 'string', minLength: 1 },
-                    name: { type: 'string', minLength: 1, maxLength: 100 },
-                    description: { type: 'string', maxLength: 1000 },
-                    config: { type: 'object' },
-                    nextStepId: { type: 'string' }
-                  },
-                  required: ['id', 'type', 'name'],
-                  additionalProperties: false
-                }
-              },
-              startStepId: { type: 'string', minLength: 1 }
-            },
-            required: ['steps', 'startStepId'],
-            additionalProperties: false
-          }
-        },
-        required: ['config'],
-        additionalProperties: false
-      }
+      tags: ['Workflows'],
+      body: workflowExecutionSchema,
     }
   }, async (request, reply) => {
-    const { config } = request.body as { config: any };
-
-    try {
-      workflowConfigSchema.parse(config);
-      return reply.send({ valid: true });
-    } catch (error) {
-      if (error instanceof z.ZodError) {
-        return reply.status(400).send({
-          valid: false,
-          error: 'Validation failed',
-          details: error.errors
-        });
-      }
-      throw error;
-    }
+    // Implementation would go here
   });
 }
