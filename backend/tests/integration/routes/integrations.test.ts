@@ -1,93 +1,169 @@
-import { test, describe, beforeEach, afterEach } from 'node:test';
-import { deepEqual, equal, rejects } from 'node:assert';
-import { buildApp } from '../../helpers/app.js';
-import { createTestTenant, removeTestTenant } from '../../helpers/tenant.js';
-import { mockWebhookPayload } from '../../fixtures/webhooks.js';
-import nock from 'nock';
+import { describe, it, beforeEach, afterEach, expect, vi } from 'vitest';
+import { FastifyInstance } from 'fastify';
+import { buildTestServer } from '../../helpers/server.js';
+import { webhooksService } from '../../../src/services/webhooks.js';
 
-describe('Integrations Routes', () => {
-  let app: any;
-  let tenant: any;
+vi.mock('../../../src/services/webhooks.js', () => ({
+  webhooksService: {
+    process: vi.fn()
+  }
+}));
+
+describe('Integration Routes - Webhooks', () => {
+  let server: FastifyInstance;
   
   beforeEach(async () => {
-    app = await buildApp();
-    tenant = await createTestTenant();
+    server = await buildTestServer();
+    vi.resetAllMocks();
   });
   
   afterEach(async () => {
-    await removeTestTenant(tenant.slug);
-    nock.cleanAll();
+    await server.close();
   });
   
-  describe('POST /webhooks/:provider', () => {
-    test('should process valid webhook from AWS provider', async () => {
-      const payload = mockWebhookPayload('aws', {
-        event: 'ec2.instance.state-change',
-        data: {
-          instanceId: 'i-1234567890abcdef0',
-          state: 'running'
+  describe('POST /api/v1/integrations/webhooks/:provider', () => {
+    it('should process valid webhook successfully', async () => {
+      const provider = 'github';
+      const payload = { action: 'opened', issue: { id: 123 } };
+      
+      vi.mocked(webhooksService.process).mockResolvedValueOnce(undefined);
+      
+      const response = await server.inject({
+        method: 'POST',
+        url: `/api/v1/integrations/webhooks/${provider}`,
+        headers: {
+          'x-tenant-slug': 'test-tenant',
+          'authorization': 'Bearer test-token'
+        },
+        payload
+      });
+      
+      expect(response.statusCode).toBe(200);
+      expect(response.json()).toEqual({ message: 'Webhook processed successfully' });
+      expect(webhooksService.process).toHaveBeenCalledWith(
+        'test-tenant',
+        provider,
+        payload,
+        {
+          attempts: 3,
+          backoff: {
+            type: 'exponential',
+            delay: 1000
+          }
         }
-      });
-      
-      const response = await app.inject({
-        method: 'POST',
-        url: '/api/integrations/webhooks/aws',
-        headers: {
-          authorization: `Bearer ${tenant.apiKey}`
-        },
-        payload
-      });
-      
-      equal(response.statusCode, 200);
-      deepEqual(response.json(), { message: 'Webhook processed successfully' });
+      );
     });
     
-    test('should handle retryable network errors with exponential backoff', async () => {
-      // Mock external service failure
-      nock('https://api.aws.com')
-        .post('/webhook')
-        .reply(503);
-        
-      const payload = mockWebhookPayload('aws', {
-        event: 's3.bucket.created',
-        data: { bucketName: 'test-bucket' }
-      });
+    it('should handle sync job errors', async () => {
+      const provider = 'jira';
+      const payload = { webhookEvent: 'jira:issue_created' };
+      const error = new Error('Sync failed');
+      (error as any).name = 'SyncJobError';
+      (error as any).jobId = 'job-123';
       
-      const response = await app.inject({
+      vi.mocked(webhooksService.process).mockRejectedValueOnce(error);
+      
+      const response = await server.inject({
         method: 'POST',
-        url: '/api/integrations/webhooks/aws',
+        url: `/api/v1/integrations/webhooks/${provider}`,
         headers: {
-          authorization: `Bearer ${tenant.apiKey}`
+          'x-tenant-slug': 'test-tenant',
+          'authorization': 'Bearer test-token'
         },
         payload
       });
       
-      equal(response.statusCode, 502);
-      deepEqual(response.json().error, 'BAD_GATEWAY');
+      expect(response.statusCode).toBe(500);
+      expect(response.json()).toEqual({
+        message: 'Integration sync job failed',
+        provider,
+        jobId: 'job-123',
+        error: 'SYNC_JOB_FAILED'
+      });
     });
     
-    test('should handle DNS resolution failures', async () => {
-      const payload = mockWebhookPayload('aws', {
-        event: 'lambda.function.created',
-        data: { functionName: 'test-function' }
-      });
+    it('should handle network connectivity errors', async () => {
+      const provider = 'slack';
+      const payload = { type: 'event_callback' };
+      const error = new Error('Connection refused');
+      (error as any).code = 'ECONNREFUSED';
       
-      // Simulate DNS failure by mocking the service to return ENOTFOUND
-      const scope = nock('https://invalid-domain-12345.com')
-        .post('/webhook')
-        .replyWithError({ code: 'ENOTFOUND' });
+      vi.mocked(webhooksService.process).mockRejectedValueOnce(error);
       
-      const response = await app.inject({
+      const response = await server.inject({
         method: 'POST',
-        url: '/api/integrations/webhooks/aws',
+        url: `/api/v1/integrations/webhooks/${provider}`,
         headers: {
-          authorization: `Bearer ${tenant.apiKey}`
+          'x-tenant-slug': 'test-tenant',
+          'authorization': 'Bearer test-token'
         },
         payload
       });
       
-      equal(response.statusCode, 503);
-      deepEqual(response.json().error, 'DNS_ERROR');
+      expect(response.statusCode).toBe(503);
+      expect(response.json()).toEqual({
+        message: 'External service unavailable',
+        provider,
+        error: 'SERVICE_UNAVAILABLE'
+      });
+    });
+    
+    it('should handle client errors (4xx)', async () => {
+      const provider = 'pagerduty';
+      const payload = { event: { id: 'evt1' } };
+      const error = new Error('Bad request');
+      (error as any).response = {
+        status: 400,
+        data: { message: 'Invalid payload' }
+      };
+      
+      vi.mocked(webhooksService.process).mockRejectedValueOnce(error);
+      
+      const response = await server.inject({
+        method: 'POST',
+        url: `/api/v1/integrations/webhooks/${provider}`,
+        headers: {
+          'x-tenant-slug': 'test-tenant',
+          'authorization': 'Bearer test-token'
+        },
+        payload
+      });
+      
+      expect(response.statusCode).toBe(400);
+      expect(response.json()).toEqual({
+        message: 'Invalid webhook payload or configuration',
+        provider,
+        error: 'BAD_REQUEST',
+        details: { message: 'Invalid payload' }
+      });
+    });
+    
+    it('should handle server errors (5xx)', async () => {
+      const provider = 'datadog';
+      const payload = { alert: { id: 'alert1' } };
+      const error = new Error('Internal server error');
+      (error as any).response = {
+        status: 500
+      };
+      
+      vi.mocked(webhooksService.process).mockRejectedValueOnce(error);
+      
+      const response = await server.inject({
+        method: 'POST',
+        url: `/api/v1/integrations/webhooks/${provider}`,
+        headers: {
+          'x-tenant-slug': 'test-tenant',
+          'authorization': 'Bearer test-token'
+        },
+        payload
+      });
+      
+      expect(response.statusCode).toBe(502);
+      expect(response.json()).toEqual({
+        message: 'External service error',
+        provider,
+        error: 'BAD_GATEWAY'
+      });
     });
   });
 });
