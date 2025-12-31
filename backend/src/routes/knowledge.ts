@@ -1,9 +1,3 @@
-// Improve the sanitizeInput function to handle more cases
-const sanitizeInput = (input: string): string => {
-  // Remove potentially dangerous characters while preserving common text
-  return input.replace(/[<>{}[\]|\\^`]/g, '').trim();
-};
-
 fastify.get('/search', {
   schema: {
     tags: ['knowledge'],

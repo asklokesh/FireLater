@@ -3,7 +3,7 @@
 ## Priority Queue
 - [x] STABILITY: `notifications.ts` uses synchronous Redis calls without timeout handling; wrap in try-catch and add retry logic.
 - [x] TEST: `workflow.ts` lacks unit tests for edge cases in approval chain logic; add comprehensive test coverage.
-- [ ] PERF: `knowledge.ts` makes N+1 queries when fetching articles; optimize with batch loading or JOINs.
+- [x] PERF: `knowledge.ts` makes N+1 queries when fetching articles; optimize with batch loading or JOINs.
 - [ ] BUG: In `reporting.ts`, database queries lack tenant isolation, risking data leakage in multi-tenant setup.
 - [ ] SECURITY: Centralized error handling in `auth.test.ts` obscures specific error details; implement granular error responses for debugging while maintaining security.
 - [x] STABILITY: Redis connection not properly handled during BullMQ job processing - `backend/src/routes/notifications.ts`
@@ -155,6 +155,7 @@
 ## Completed
 
 ## Session Log
+- [2025-12-31 04:14] Completed: PERF: `knowledge.ts` makes N+1 queries when fetching articles; optimize with batch loading or JOINs.
 - [2025-12-31 04:13] Completed: TEST: `workflow.ts` lacks unit tests for edge cases in approval chain logic; add comprehensive test coverage.
 - [2025-12-31 04:13] Completed: STABILITY: `notifications.ts` uses synchronous Redis calls without timeout handling; wrap in try-catch and add retry logic.
 - [2025-12-31 04:12] Completed: SECURITY: Insecure error handling in auth route exposes internal errors; should sanitize before throwing - `backend/src/routes/auth.test.ts`
