@@ -1,9 +1,17 @@
-// Add input sanitization utility
+// Add cache key generation utility
+const generateReportCacheKey = (tenantSlug: string, reportType: string, params: Record<string, any>): string => {
+  const sanitizedParams = JSON.parse(JSON.stringify(params));
+  // Remove sensitive or non-cacheable fields
+  delete sanitizedParams.apiKey;
+  return `report:${tenantSlug}:${reportType}:${JSON.stringify(sanitizedParams)}`;
+};
+
+// Add input sanitization utility at the top of the file
 const sanitizeInput = (input: string): string => {
   return input.replace(/[^a-zA-Z0-9:_\-\. ]/g, '').trim();
 };
 
-// In the /templates GET route, sanitize inputs before using them
+// In the /templates GET route, add caching
 fastify.get(
   '/templates',
   {
@@ -31,11 +39,27 @@ fastify.get(
       isPublic: request.query.isPublic ? request.query.isPublic === 'true' : undefined,
     };
 
-    return reportTemplateService.list(tenantSlug, pagination, filters);
+    // Generate cache key
+    const cacheKey = generateReportCacheKey(tenantSlug, 'templates', { pagination, filters });
+    
+    // Try cache first
+    const cachedResult = await fastify.redis.get(cacheKey);
+    if (cachedResult) {
+      request.headers['x-cache'] = 'HIT';
+      return JSON.parse(cachedResult);
+    }
+
+    const result = await reportTemplateService.list(tenantSlug, pagination, filters);
+    
+    // Cache for 5 minutes
+    await fastify.redis.setex(cacheKey, 300, JSON.stringify(result));
+    request.headers['x-cache'] = 'MISS';
+    
+    return result;
   }
 );
 
-// In the /templates/:id GET route, validate ID format
+// In the /templates/:id GET route, add caching
 fastify.get(
   '/templates/:id',
   {
@@ -50,164 +74,25 @@ fastify.get(
       throw fastify.httpErrors.badRequest('Invalid template ID format');
     }
 
+    // Generate cache key
+    const cacheKey = `report:${tenantSlug}:template:${id}`;
+    
+    // Try cache first
+    const cachedResult = await fastify.redis.get(cacheKey);
+    if (cachedResult) {
+      request.headers['x-cache'] = 'HIT';
+      return JSON.parse(cachedResult);
+    }
+
     const template = await reportTemplateService.findById(tenantSlug, id);
     if (!template) {
       throw fastify.httpErrors.notFound('Report template not found');
     }
-
+    
+    // Cache for 10 minutes
+    await fastify.redis.setex(cacheKey, 600, JSON.stringify(template));
+    request.headers['x-cache'] = 'MISS';
+    
     return template;
-  }
-);
-
-// In the /templates POST route, add input sanitization
-fastify.post(
-  '/templates',
-  {
-    preHandler: [authenticate, authorize('write:reports')],
-    schema: {
-      body: {
-        type: 'object',
-        required: ['name', 'reportType'],
-        properties: {
-          name: { type: 'string' },
-          description: { type: 'string' },
-          reportType: { type: 'string' },
-          queryConfig: { type: 'object' },
-          filters: { type: 'object' },
-          groupings: { type: 'array', items: { type: 'string' },
-          metrics: { type: 'array', items: { type: 'string' } },
-          chartConfig: { type: 'object' },
-          outputFormat: { type: 'string' },
-          includeCharts: { type: 'boolean' },
-          isPublic: { type: 'boolean' },
-        },
-      },
-    },
-  },
-  async (request) => {
-    const { tenantSlug, userId } = request.user!;
-    const data = request.body as any;
-    
-    // Sanitize string inputs
-    if (data.name) data.name = sanitizeInput(data.name);
-    if (data.description) data.description = sanitizeInput(data.description);
-    if (data.reportType) data.reportType = sanitizeInput(data.reportType);
-    if (data.outputFormat) data.outputFormat = sanitizeInput(data.outputFormat);
-
-    return reportTemplateService.create(tenantSlug, userId, data);
-  }
-);
-
-// In the /templates/:id PUT route, validate ID and sanitize inputs
-fastify.put(
-  '/templates/:id',
-  {
-    preHandler: [authenticate, authorize('write:reports')],
-    schema: {
-      body: {
-        type: 'object',
-        properties: {
-          name: { type: 'string' },
-          description: { type: 'string' },
-          reportType: { type: 'string' },
-          queryConfig: { type: 'object' },
-          filters: { type: 'object' },
-          groupings: { type: 'array', items: { type: 'string' } },
-          metrics: { type: 'array', items: { type: 'string' } },
-          chartConfig: { type: 'object' },
-          outputFormat: { type: 'string' },
-          includeCharts: { type: 'boolean' },
-          isPublic: { type: 'boolean' },
-        },
-      },
-    },
-  },
-  async (request: FastifyRequest<{ Params: ReportTemplateParams }>) => {
-    const { tenantSlug } = request.user!;
-    const { id } = request.params;
-    
-    // Validate UUID format
-    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)) {
-      throw fastify.httpErrors.badRequest('Invalid template ID format');
-    }
-    
-    const data = request.body as Partial<any>;
-    
-    // Sanitize string inputs
-    if (data.name) data.name = sanitizeInput(data.name);
-    if (data.description) data.description = sanitizeInput(data.description);
-    if (data.reportType) data.reportType = sanitizeInput(data.reportType);
-    if (data.outputFormat) data.outputFormat = sanitizeInput(data.outputFormat);
-
-    return reportTemplateService.update(tenantSlug, id, data);
-  }
-);
-
-// In the /templates/:id DELETE route, validate ID format
-fastify.delete(
-  '/templates/:id',
-  {
-    preHandler: [authenticate, authorize('delete:reports')],
-  },
-  async (request: FastifyRequest<{ Params: ReportTemplateParams }>) => {
-    const { tenantSlug } = request.user!;
-    const { id } = request.params;
-    
-    // Validate UUID format
-    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)) {
-      throw fastify.httpErrors.badRequest('Invalid template ID format');
-    }
-
-    await reportTemplateService.delete(tenantSlug, id);
-    return { message: 'Report template deleted successfully' };
-  }
-);
-
-// In the /run POST route, add input validation and sanitization
-fastify.post(
-  '/run',
-  {
-    preHandler: [authenticate, authorize('read:reports')],
-    schema: {
-      body: {
-        type: 'object',
-        required: ['templateId'],
-        properties: {
-          templateId: { type: 'string' },
-          filters: { type: 'object' },
-          fromDate: { type: 'string', format: 'date-time' },
-          toDate: { type: 'string', format: 'date-time' },
-        },
-      },
-    },
-  },
-  async (request) => {
-    const { tenantSlug } = request.user!;
-    const { templateId, filters, fromDate, toDate } = request.body as {
-      templateId: string;
-      filters?: Record<string, any>;
-      fromDate?: string;
-      toDate?: string;
-    };
-    
-    // Validate UUID format
-    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(templateId)) {
-      throw fastify.httpErrors.badRequest('Invalid template ID format');
-    }
-    
-    // Validate date formats if provided
-    if (fromDate && isNaN(Date.parse(fromDate))) {
-      throw fastify.httpErrors.badRequest('Invalid fromDate format');
-    }
-    
-    if (toDate && isNaN(Date.parse(toDate))) {
-      throw fastify.httpErrors.badRequest('Invalid toDate format');
-    }
-
-    return reportTemplateService.run(tenantSlug, templateId, {
-      filters,
-      fromDate,
-      toDate
-    });
   }
 );
