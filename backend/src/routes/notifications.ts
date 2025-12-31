@@ -1,57 +1,30 @@
-fastify.post('/webhooks/:provider', {
-  schema: {
-    tags: ['Notifications'],
-    params: {
-      type: 'object',
-      properties: {
-        provider: { type: 'string' }
-      },
-      required: ['provider']
-    },
-    body: {
-      type: 'object',
-      additionalProperties: true
-    }
-  },
-  preHandler: [fastify.authenticate, validate({
-    params: {
-      type: 'object',
-      properties: {
-        provider: { 
-          type: 'string',
-          enum: ['slack', 'teams', 'webhook', 'email']
-        }
-      },
-      required: ['provider']
-    },
-    body: {
-      type: 'object',
-      additionalProperties: true
-    }
-  })]
-}, async (request, reply) => {
-  const { provider } = request.params as { provider: string };
-  const payload = request.body as Record<string, any>;
-  const tenant = request.user.tenant;
-  
+import { FastifyInstance } from 'fastify';
+import { notificationService } from '../services/notifications.js';
+import { authenticate, authorize } from '../middleware/auth.js';
+import { validate } from '../middleware/validation.js';
+import { z } from 'zod';
+
+// Add Redis connection error handling during service initialization
+export async function notificationRoutes(fastify: FastifyInstance) {
   try {
-    // Process webhook with retry configuration
-    await notificationService.processWebhook(tenant.slug, provider, payload, {
-      attempts: 5,
-      backoff: {
-        type: 'exponential',
-        delay: 2000
-      },
-      timeout: 30000
-    });
-    
-    return reply.code(200).send({ message: 'Webhook queued for delivery' });
+    // Test Redis connection during initialization
+    await notificationService.testRedisConnection();
   } catch (error: any) {
-    request.log.error({ err: error, provider, tenant: tenant.slug }, 'Webhook queuing failed');
-    return reply.code(500).send({ 
-      message: 'Failed to queue webhook for delivery', 
-      provider,
-      error: 'INTERNAL_ERROR' 
-    });
+    fastify.log.error({ err: error }, 'Failed to connect to Redis for notification service');
+    throw new Error('Notification service unavailable: Redis connection failed');
   }
-});
+
+  // Apply authentication and authorization middleware
+  fastify.addHook('preHandler', authenticate);
+  fastify.addHook('preHandler', authorize(['read:notifications']));
+
+  // Add Redis error handling middleware
+  fastify.addHook('preHandler', async (request, reply) => {
+    try {
+      // Verify Redis connection is still active before processing requests
+      await notificationService.testRedisConnection();
+    } catch (error: any) {
+      request.log.error({ err: error }, 'Redis connection failed during request processing');
+      throw fastify.httpErrors.serviceUnavailable('Notification service temporarily unavailable');
+    }
+  });
