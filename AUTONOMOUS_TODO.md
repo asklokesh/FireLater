@@ -2,8 +2,8 @@
 
 ## Priority Queue
 - [x] STABILITY: Notifications route doesn't handle Redis connection failures gracefully, could cause service crashes in backend/src/routes/notifications.ts
-- [ ] TEST: Workflow route missing unit tests for approval chain logic and edge cases in backend/src/routes/workflow.ts
-- [ ] PERF: Knowledge base route lacks caching for frequently accessed articles, causing repeated database queries in backend/src/routes/knowledge.ts
+- [x] TEST: Workflow route missing unit tests for approval chain logic and edge cases in backend/src/routes/workflow.ts
+- [x] PERF: Knowledge base route lacks caching for frequently accessed articles, causing repeated database queries in backend/src/routes/knowledge.ts
 - [ ] BUG: Reporting route missing tenant isolation in multi-tenant schema setup, queries may leak data across tenants in backend/src/routes/reporting.ts
 - [ ] SECURITY: Auth route uses direct error.message instead of getSafeErrorMessage utility, exposing internal errors to clients in backend/src/routes/auth.test.ts
 - [x] STABILITY: Background job processing in `backend/src/routes/notifications.ts` lacks proper error handling and retry mechanisms for failed notifications
@@ -180,6 +180,8 @@
 ## Completed
 
 ## Session Log
+- [2025-12-31 04:52] Completed: PERF: Knowledge base route lacks caching for frequently accessed articles, causing repeated database queries in backend/src/routes/knowledge.ts
+- [2025-12-31 04:51] Completed: TEST: Workflow route missing unit tests for approval chain logic and edge cases in backend/src/routes/workflow.ts
 - [2025-12-31 04:51] Completed: STABILITY: Notifications route doesn't handle Redis connection failures gracefully, could cause service crashes in backend/src/routes/notifications.ts
 - [2025-12-31 04:25] Completed: SECURITY: Auth route handlers use direct `error.message` instead of `getSafeErrorMessage()` utility, exposing internal error details to clients in `backend/src/routes/auth.test.ts`
 - [2025-12-31 04:25] Completed: BUG: Missing input validation and sanitization across route handlers in `backend/src/routes/reporting.ts` and `backend/src/routes/knowledge.ts` - directly uses user input in database queries
