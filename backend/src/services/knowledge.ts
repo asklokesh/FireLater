@@ -22,7 +22,7 @@ export class KnowledgeService {
           `SELECT a.*,
                   u.name as author_name, u.email as author_email,
                   r.name as reviewer_name,
-                  c.name as category_name,
+                  c.id as category_id, c.name as category_name, c.description as category_description,
                   p.problem_number as related_problem_number,
                   i.issue_number as related_issue_number
            FROM kb_articles a
