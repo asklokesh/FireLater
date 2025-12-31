@@ -1,131 +1,164 @@
-import { test } from 'tap';
-import { build } from '../../src/app.js';
-import { createTestTenant, createTestUser, createTestRequest } from '../helpers/test-data.js';
-import { workflowService } from '../../src/services/workflow.js';
+import { test, beforeEach, afterEach } from 'node:test';
+import { FastifyInstance } from 'fastify';
+import { buildApp } from '../../src/app.js';
+import { createTestTenant, createTestUser, TestContext } from '../helpers/test-helpers.js';
 
-test('workflow approval routes', async (t) => {
-  const app = await build();
-  const tenant = await createTestTenant();
-  const user = await createTestUser(tenant.id, ['change:approve']);
-  const token = app.jwt.sign({ 
-    userId: user.id, 
-    tenantId: tenant.id,
-    permissions: user.permissions 
+let app: FastifyInstance;
+let testContext: TestContext;
+
+beforeEach(async () => {
+  app = buildApp();
+  await app.ready();
+  testContext = await createTestTenant();
+});
+
+afterEach(async () => {
+  await testContext.cleanup();
+  await app.close();
+});
+
+test('should create a new workflow', async (t) => {
+  const user = await createTestUser(testContext.tenant.slug, ['workflow:create']);
+  const token = app.jwt.sign({
+    userId: user.id,
+    tenantSlug: testContext.tenant.slug
   });
 
-  t.afterEach(async () => {
-    // Cleanup test data
-    await app.pg.query('DELETE FROM workflow_approvals WHERE tenant_id = $1', [tenant.id]);
-    await app.pg.query('DELETE FROM change_requests WHERE tenant_id = $1', [tenant.id]);
+  const workflowData = {
+    name: 'Test Workflow',
+    description: 'A test workflow',
+    triggerType: 'manual',
+    steps: [
+      {
+        name: 'Step 1',
+        type: 'approval',
+        config: {
+          approvers: [user.id]
+        }
+      }
+    ]
+  };
+
+  const response = await app.inject({
+    method: 'POST',
+    url: '/api/workflows',
+    headers: {
+      authorization: `Bearer ${token}`
+    },
+    payload: workflowData
   });
 
-  t.test('POST /workflow/approvals/:id/approve - approve workflow step', async (t) => {
-    // Create test request with approval workflow
-    const request = await createTestRequest(tenant.id, user.id, {
-      type: 'change',
-      title: 'Test Change Request',
-      workflow: {
-        steps: [
-          { type: 'approval', approvers: [user.id], requiredApprovals: 1 }
-        ]
-      }
-    });
+  t.assert.strictEqual(response.statusCode, 201);
+  const result = JSON.parse(response.body);
+  t.assert.ok(result.id);
+  t.assert.strictEqual(result.name, workflowData.name);
+});
 
-    const approval = await workflowService.getPendingApprovals(request.id);
-    const response = await app.inject({
-      method: 'POST',
-      url: `/workflow/approvals/${approval[0].id}/approve`,
-      headers: { authorization: `Bearer ${token}` },
-      payload: { 
-        comment: 'Approved for testing' 
-      }
-    });
-
-    t.equal(response.statusCode, 200);
-    const result = JSON.parse(response.payload);
-    t.equal(result.status, 'approved');
-    t.equal(result.comment, 'Approved for testing');
+test('should execute a workflow', async (t) => {
+  const user = await createTestUser(testContext.tenant.slug, ['workflow:execute']);
+  const token = app.jwt.sign({
+    userId: user.id,
+    tenantSlug: testContext.tenant.slug
   });
 
-  t.test('POST /workflow/approvals/:id/reject - reject workflow step', async (t) => {
-    const request = await createTestRequest(tenant.id, user.id, {
-      type: 'change',
-      title: 'Test Change Request',
-      workflow: {
-        steps: [
-          { type: 'approval', approvers: [user.id], requiredApprovals: 1 }
-        ]
-      }
-    });
-
-    const approval = await workflowService.getPendingApprovals(request.id);
-    const response = await app.inject({
-      method: 'POST',
-      url: `/workflow/approvals/${approval[0].id}/reject`,
-      headers: { authorization: `Bearer ${token}` },
-      payload: { 
-        comment: 'Needs more information' 
-      }
-    });
-
-    t.equal(response.statusCode, 200);
-    const result = JSON.parse(response.payload);
-    t.equal(result.status, 'rejected');
-    t.equal(result.comment, 'Needs more information');
+  // First create a workflow
+  const workflowResponse = await app.inject({
+    method: 'POST',
+    url: '/api/workflows',
+    headers: {
+      authorization: `Bearer ${token}`
+    },
+    payload: {
+      name: 'Execution Test Workflow',
+      triggerType: 'manual',
+      steps: [
+        {
+          name: 'Test Step',
+          type: 'notification',
+          config: {
+            message: 'Test notification'
+          }
+        }
+      ]
+    }
   });
 
-  t.test('GET /workflow/approvals/pending - list pending approvals', async (t) => {
-    // Create request with pending approval
-    await createTestRequest(tenant.id, user.id, {
-      type: 'change',
-      title: 'Test Change Request',
-      workflow: {
-        steps: [
-          { type: 'approval', approvers: [user.id], requiredApprovals: 1 }
-        ]
+  const workflow = JSON.parse(workflowResponse.body);
+
+  // Then execute it
+  const executionResponse = await app.inject({
+    method: 'POST',
+    url: `/api/workflows/${workflow.id}/execute`,
+    headers: {
+      authorization: `Bearer ${token}`
+    },
+    payload: {
+      triggerData: {
+        test: 'data'
       }
-    });
-
-    const response = await app.inject({
-      method: 'GET',
-      url: '/workflow/approvals/pending',
-      headers: { authorization: `Bearer ${token}` },
-      query: { page: '1', perPage: '10' }
-    });
-
-    t.equal(response.statusCode, 200);
-    const result = JSON.parse(response.payload);
-    t.equal(result.items.length, 1);
-    t.equal(result.items[0].status, 'pending');
-    t.equal(result.items[0].request.title, 'Test Change Request');
+    }
   });
 
-  t.test('POST /workflow/approvals/:id/approve - unauthorized user', async (t) => {
-    const otherUser = await createTestUser(tenant.id, []);
-    const otherToken = app.jwt.sign({ 
-      userId: otherUser.id, 
-      tenantId: tenant.id,
-      permissions: otherUser.permissions 
-    });
+  t.assert.strictEqual(executionResponse.statusCode, 200);
+  const result = JSON.parse(executionResponse.body);
+  t.assert.ok(result.executionId);
+});
 
-    const request = await createTestRequest(tenant.id, user.id, {
-      type: 'change',
-      title: 'Test Change Request',
-      workflow: {
-        steps: [
-          { type: 'approval', approvers: [user.id], requiredApprovals: 1 }
-        ]
-      }
-    });
-
-    const approval = await workflowService.getPendingApprovals(request.id);
-    const response = await app.inject({
-      method: 'POST',
-      url: `/workflow/approvals/${approval[0].id}/approve`,
-      headers: { authorization: `Bearer ${otherToken}` },
-      payload: { comment: 'Should be rejected' }
-    });
-
-    t.equal(response.statusCode, 403);
+test('should get workflow status', async (t) => {
+  const user = await createTestUser(testContext.tenant.slug, ['workflow:read']);
+  const token = app.jwt.sign({
+    userId: user.id,
+    tenantSlug: testContext.tenant.slug
   });
+
+  // Create and execute a workflow
+  const workflowResponse = await app.inject({
+    method: 'POST',
+    url: '/api/workflows',
+    headers: {
+      authorization: `Bearer ${token}`
+    },
+    payload: {
+      name: 'Status Test Workflow',
+      triggerType: 'manual',
+      steps: [
+        {
+          name: 'Status Step',
+          type: 'task',
+          config: {
+            assignee: user.id
+          }
+        }
+      ]
+    }
+  });
+
+  const workflow = JSON.parse(workflowResponse.body);
+
+  const executionResponse = await app.inject({
+    method: 'POST',
+    url: `/api/workflows/${workflow.id}/execute`,
+    headers: {
+      authorization: `Bearer ${token}`
+    },
+    payload: {
+      triggerData: {}
+    }
+  });
+
+  const execution = JSON.parse(executionResponse.body);
+
+  // Get status
+  const statusResponse = await app.inject({
+    method: 'GET',
+    url: `/api/workflows/${workflow.id}/executions/${execution.executionId}`,
+    headers: {
+      authorization: `Bearer ${token}`
+    }
+  });
+
+  t.assert.strictEqual(statusResponse.statusCode, 200);
+  const result = JSON.parse(statusResponse.body);
+  t.assert.strictEqual(result.id, execution.executionId);
+  t.assert.strictEqual(result.workflowId, workflow.id);
 });
