@@ -45,8 +45,39 @@ fastify.post('/webhooks/:provider', {
     });
     
     return reply.code(200).send({ message: 'Webhook processed successfully' });
-  } catch (error) {
+  } catch (error: any) {
     request.log.error({ err: error, provider, tenant: tenant.slug }, 'Webhook processing failed');
-    return reply.code(500).send({ message: 'Failed to process webhook' });
+    
+    // Handle specific error cases
+    if (error.code === 'ECONNREFUSED' || error.code === 'ENOTFOUND') {
+      return reply.code(503).send({ 
+        message: 'External service unavailable', 
+        provider,
+        error: 'SERVICE_UNAVAILABLE' 
+      });
+    }
+    
+    if (error.response?.status >= 400 && error.response?.status < 500) {
+      return reply.code(400).send({ 
+        message: 'Invalid webhook payload or configuration', 
+        provider,
+        error: 'BAD_REQUEST',
+        details: error.response.data
+      });
+    }
+    
+    if (error.response?.status >= 500) {
+      return reply.code(502).send({ 
+        message: 'External service error', 
+        provider,
+        error: 'BAD_GATEWAY' 
+      });
+    }
+    
+    return reply.code(500).send({ 
+      message: 'Failed to process webhook', 
+      provider,
+      error: 'INTERNAL_ERROR' 
+    });
   }
 });
