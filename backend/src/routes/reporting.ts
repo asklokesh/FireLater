@@ -1,12 +1,24 @@
-// Remove the local sanitizeInput function since it's now global
-
 export default async function reportingRoutes(fastify: FastifyInstance) {
-  // Remove manual sanitization in route handlers
+  // Add schema validation for query parameters
+  const reportingQuerySchema = {
+    tags: ['reporting'],
+    querystring: {
+      type: 'object',
+      properties: {
+        page: { type: 'integer', minimum: 1, maximum: 1000, default: 1 },
+        perPage: { type: 'integer', minimum: 1, maximum: 100, default: 20 },
+        reportType: { type: 'string', maxLength: 50 },
+        isPublic: { type: 'string', enum: ['true', 'false'] }
+      },
+      additionalProperties: false
+    }
+  };
+
   fastify.get(
     '/templates',
     {
       preHandler: [authenticate, authorize('read:reports'), validateTenantAccess],
-      schema: queryParamsSchema,
+      schema: reportingQuerySchema,
       config: {
         rateLimit: {
           max: 30,
@@ -18,14 +30,11 @@ export default async function reportingRoutes(fastify: FastifyInstance) {
       const { tenantSlug } = request.params as { tenantSlug: string };
       const { page, perPage, reportType, isPublic } = request.query as ReportingQueryParams;
       
-      // Remove manual sanitization - now handled by global hook
-      const pagination = {
-        page: Math.max(1, Math.min(1000, parseInt(String(page), 10) || 1)),
-        perPage: Math.min(100, Math.max(1, parseInt(String(perPage), 10) || 20))
-      };
+      // Remove manual sanitization - now handled by schema validation
+      const pagination = { page, perPage };
       
       const filters = {
-        reportType: reportType ? reportType.substring(0, 50) : undefined,
+        reportType,
         isPublic: isPublic !== undefined ? isPublic === 'true' : undefined
       };
 
