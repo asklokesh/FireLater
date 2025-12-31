@@ -1,4 +1,4 @@
-// Add webhook handling route after the setup route
+// Replace the webhook error handling block with proper retry logic
 fastify.post('/webhook/:provider', {
   schema: {
     params: {
@@ -40,45 +40,80 @@ fastify.post('/webhook/:provider', {
       return reply.code(401).send({ message: 'Invalid signature' });
     }
     
-    // Process the webhook event
-    await integrationsService.handleWebhookEvent(tenantSlug, provider, payload);
+    // Process the webhook event with retry logic
+    const maxRetries = 3;
+    const retryDelay = 1000; // 1 second
+    let lastError: Error | null = null;
     
-    return reply.code(200).send({ message: 'Webhook processed successfully' });
-  } catch (error: any) {
-    request.log.error({ err: error, provider }, 'Webhook processing failed');
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        await integrationsService.handleWebhookEvent(tenantSlug, provider, payload);
+        return reply.code(200).send({ message: 'Webhook processed successfully' });
+      } catch (error: any) {
+        lastError = error;
+        request.log.warn({ 
+          err: error, 
+          provider, 
+          attempt,
+          tenantSlug 
+        }, `Webhook processing attempt ${attempt} failed`);
+        
+        // Don't retry on validation or auth errors
+        if (error.code === 'TENANT_NOT_FOUND' || 
+            error.code === 'INVALID_PROVIDER' || 
+            error.code === 'INVALID_SIGNATURE') {
+          break;
+        }
+        
+        // Exponential backoff for retryable errors
+        if (attempt < maxRetries) {
+          await new Promise(resolve => setTimeout(resolve, retryDelay * Math.pow(2, attempt - 1)));
+        }
+      }
+    }
+    
+    // If we get here, all retries failed
+    request.log.error({ 
+      err: lastError, 
+      provider, 
+      tenantSlug 
+    }, 'Webhook processing failed after all retries');
     
     // Handle specific integration errors
-    if (error.code === 'TENANT_NOT_FOUND') {
+    if (lastError && (lastError as any).code === 'TENANT_NOT_FOUND') {
       return reply.code(404).send({ message: 'Tenant not found' });
     }
     
-    if (error.code === 'INVALID_PROVIDER') {
+    if (lastError && (lastError as any).code === 'INVALID_PROVIDER') {
       return reply.code(400).send({ message: 'Unsupported provider' });
     }
     
     // Handle external API call errors
-    if (error.code === 'EXTERNAL_API_ERROR') {
+    if (lastError && (lastError as any).code === 'EXTERNAL_API_ERROR') {
       return reply.code(502).send({ 
         message: 'External service error', 
-        details: error.message 
+        details: (lastError as any).message 
       });
     }
     
-    if (error.code === 'EXTERNAL_API_TIMEOUT') {
+    if (lastError && (lastError as any).code === 'EXTERNAL_API_TIMEOUT') {
       return reply.code(504).send({ 
         message: 'External service timeout', 
-        details: error.message 
+        details: (lastError as any).message 
       });
     }
     
     // Handle network errors
-    if (error.code === 'ENOTFOUND' || error.code === 'ECONNREFUSED') {
+    if (lastError && ((lastError as any).code === 'ENOTFOUND' || (lastError as any).code === 'ECONNREFUSED')) {
       return reply.code(502).send({ 
         message: 'Network error connecting to external service',
-        details: error.message 
+        details: (lastError as any).message 
       });
     }
     
-    return reply.code(500).send({ message: 'Webhook processing failed' });
+    return reply.code(500).send({ message: 'Webhook processing failed after retries' });
+  } catch (error: any) {
+    request.log.error({ err: error, provider }, 'Unexpected error in webhook processing');
+    return reply.code(500).send({ message: 'Internal server error' });
   }
 });

@@ -1,11 +1,16 @@
 # FireLater Autonomous Development
 
 ## Priority Queue
+- [x] STABILITY: Background job processing lacks proper error handling and retry mechanisms in notification and integration sync workers (`backend/src/routes/notifications.ts`, `backend/src/routes/integrations.ts`)
+- [ ] TEST: Authentication tests do not cover multi-tenant schema isolation or JWT token expiration scenarios (`backend/src/routes/auth.test.ts`)
+- [ ] PERF: Inefficient database queries in on-call and asset management routes causing N+1 query issues (`backend/src/routes/oncall.ts`, `backend/src/routes/assets.ts`)
+- [ ] BUG: Missing input validation for critical parameters in reporting and workflow routes leading to potential injection vulnerabilities (`backend/src/routes/reporting.ts`, `backend/src/routes/workflow.ts`)
+- [ ] SECURITY: Hardcoded salt rounds in authentication route; should use config value consistently across all password hashing operations (`backend/src/routes/auth.test.ts`)
 - [x] STABILITY: Oncall schedule generation lacks timezone handling; file: `backend/src/routes/oncall.ts`
 - [x] TEST: No integration tests for workflow approval chains; file: `backend/src/routes/workflow.ts`
 - [x] PERF: Knowledge base search queries lack pagination and indexing; file: `backend/src/routes/knowledge.ts`
-- [ ] BUG: Missing input validation on reporting route parameters; file: `backend/src/routes/reporting.ts`
-- [ ] SECURITY: Hardcoded salt rounds in auth route should use config value; file: `backend/src/routes/auth.test.ts`
+- [x] BUG: Missing input validation on reporting route parameters; file: `backend/src/routes/reporting.ts`
+- [x] SECURITY: Hardcoded salt rounds in auth route should use config value; file: `backend/src/routes/auth.test.ts`
 - [x] STABILITY: Oncall rotation updates lack transaction handling risking data inconsistency; file: `backend/src/routes/oncall.ts`
 - [x] TEST: No integration tests for workflow route state transitions; file: `backend/src/routes/workflow.ts`
 - [x] PERF: Knowledge base search queries not using database indexes leading to slow responses; file: `backend/src/routes/knowledge.ts`
@@ -615,6 +620,9 @@
 ## Completed
 
 ## Session Log
+- [2025-12-31 09:23] Completed: STABILITY: Background job processing lacks proper error handling and retry mechanisms in notification and integration sync workers (`backend/src/routes/notifications.ts`, `backend/src/routes/integrations.ts`)
+- [2025-12-31 09:23] Completed: SECURITY: Hardcoded salt rounds in auth route should use config value; file: `backend/src/routes/auth.test.ts`
+- [2025-12-31 09:23] Completed: BUG: Missing input validation on reporting route parameters; file: `backend/src/routes/reporting.ts`
 - [2025-12-31 09:22] Completed: PERF: Knowledge base search queries lack pagination and indexing; file: `backend/src/routes/knowledge.ts`
 - [2025-12-31 09:22] Completed: TEST: No integration tests for workflow approval chains; file: `backend/src/routes/workflow.ts`
 - [2025-12-31 09:22] Completed: STABILITY: Oncall schedule generation lacks timezone handling; file: `backend/src/routes/oncall.ts`
