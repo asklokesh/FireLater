@@ -1,5 +1,3 @@
-import { databaseService } from './database.js';
-
   async searchArticles(
     tenantSlug: string,
     query: string,
@@ -8,13 +6,22 @@ import { databaseService } from './database.js';
   ): Promise<{ articles: unknown[]; total: number }> {
     const offset = getOffset(pagination);
     
-    // Use PostgreSQL full-text search
+    // Use PostgreSQL full-text search with asset aggregation
     let searchQuery = `
       SELECT a.*,
              u.name as author_name, u.email as author_email,
              r.name as reviewer_name,
              c.id as category_id, c.name as category_name,
-             ts_rank_cd(a.search_vector, plainto_tsquery('english', $1)) as rank
+             ts_rank_cd(a.search_vector, plainto_tsquery('english', $1)) as rank,
+             COALESCE(
+               (SELECT json_agg(row_to_json(asset)) 
+                FROM (
+                  SELECT id, name, type, url 
+                  FROM kb_assets 
+                  WHERE article_id = a.id AND tenant_id = a.tenant_id
+                ) asset
+               ), '[]'::json
+             ) as assets
       FROM kb_articles a
       LEFT JOIN users u ON a.author_id = u.id AND u.tenant_id = a.tenant_id
       LEFT JOIN users r ON a.reviewer_id = r.id AND r.tenant_id = a.tenant_id

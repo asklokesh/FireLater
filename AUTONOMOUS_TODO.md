@@ -3,7 +3,7 @@
 ## Priority Queue
 - [x] STABILITY: BullMQ job retry configuration missing for critical background tasks; file: `backend/src/routes/notifications.ts`
 - [x] TEST: No unit tests for workflow execution logic or error states; file: `backend/src/routes/workflow.ts`
-- [ ] PERF: N+1 query issue when fetching related assets in knowledge base entries; file: `backend/src/routes/knowledge.ts`
+- [x] PERF: N+1 query issue when fetching related assets in knowledge base entries; file: `backend/src/routes/knowledge.ts`
 - [ ] BUG: Missing input validation for critical parameters in reporting routes; file: `backend/src/routes/reporting.ts`
 - [ ] SECURITY: Hardcoded salt rounds in auth route handler should use config value; file: `backend/src/routes/auth.test.ts`
 - [x] STABILITY: Oncall schedule generation does not handle timezone edge cases for recurring rotations; file: `backend/src/routes/oncall.ts`
@@ -270,6 +270,7 @@
 ## Completed
 
 ## Session Log
+- [2025-12-31 05:56] Completed: PERF: N+1 query issue when fetching related assets in knowledge base entries; file: `backend/src/routes/knowledge.ts`
 - [2025-12-31 05:55] Completed: TEST: No unit tests for workflow execution logic or error states; file: `backend/src/routes/workflow.ts`
 - [2025-12-31 05:55] Completed: STABILITY: BullMQ job retry configuration missing for critical background tasks; file: `backend/src/routes/notifications.ts`
 - [2025-12-31 05:54] Completed: SECURITY: Hardcoded salt rounds in auth route handler should use config value; file: `backend/src/routes/auth.test.ts`
