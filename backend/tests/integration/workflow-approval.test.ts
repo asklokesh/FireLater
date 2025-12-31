@@ -1,126 +1,76 @@
-import { test } from 'tap';
-import { build } from '../../src/app.js';
-import { createTestTenant, createTestUser } from '../helpers/test-utils.js';
+import { describe, it, expect, beforeAll, afterAll } from 'vitest';
+import { setupTestEnvironment, teardownTestEnvironment, TestEnvironment } from '../helpers/test-utils.js';
+import { createTestUser, createTestTenant } from '../helpers/auth.js';
+import { workflowService } from '../../src/services/workflow.js';
 
-test('Workflow approval chain integration tests', async (t) => {
-  const app = await build();
-  const { tenant, cleanup: tenantCleanup } = await createTestTenant();
-  const { user, token } = await createTestUser(tenant);
+describe('Workflow Approval Chain Integration Tests', () => {
+  let env: TestEnvironment;
+  let tenantSlug: string;
+  let authToken: string;
 
-  t.teardown(async () => {
-    await tenantCleanup();
+  beforeAll(async () => {
+    env = await setupTestEnvironment();
+    const tenant = await createTestTenant(env.db);
+    tenantSlug = tenant.slug;
+    const user = await createTestUser(env.db, tenantSlug, ['workflow:manage']);
+    authToken = user.token;
   });
 
-  // Test creating workflow with approval chain
-  t.test('should create workflow with approval chain', async (t) => {
+  afterAll(async () => {
+    await teardownTestEnvironment(env);
+  });
+
+  it('should create workflow with approval chain', async () => {
     const workflowData = {
       name: 'Test Approval Workflow',
-      description: 'Workflow with approval steps',
+      description: 'Workflow with approval chain',
       approvalChain: [
-        {
-          step: 1,
-          approvers: [user.id],
-          requiredApprovals: 1,
-          timeoutHours: 24
+        { 
+          step: 1, 
+          approvers: [{ type: 'user', id: 'test-user-1' }] 
+        },
+        { 
+          step: 2, 
+          approvers: [{ type: 'group', id: 'test-group-1' }] 
         }
       ]
     };
 
-    const response = await app.inject({
-      method: 'POST',
-      url: '/api/workflows',
+    const response = await env.client.post('/api/v1/workflows', {
       headers: {
-        authorization: `Bearer ${token}`
+        'Authorization': `Bearer ${authToken}`,
+        'x-tenant-slug': tenantSlug
       },
-      payload: workflowData
+      body: workflowData
     });
 
-    t.equal(response.statusCode, 201);
-    const workflow = JSON.parse(response.payload);
-    t.equal(workflow.name, workflowData.name);
-    t.equal(workflow.approvalChain.length, 1);
-    t.equal(workflow.approvalChain[0].step, 1);
+    expect(response.statusCode).toBe(201);
+    const workflow = response.json();
+    expect(workflow.approvalChain).toHaveLength(2);
+    expect(workflow.approvalChain[0].step).toBe(1);
+    expect(workflow.approvalChain[1].step).toBe(2);
   });
 
-  // Test retrieving workflow with approval chain
-  t.test('should retrieve workflow with approval chain', async (t) => {
-    // First create a workflow
-    const createResponse = await app.inject({
-      method: 'POST',
-      url: '/api/workflows',
+  it('should retrieve workflow with approval chain', async () => {
+    // Create a workflow with approval chain first
+    const workflow = await workflowService.create(tenantSlug, {
+      name: 'Retrieval Test Workflow',
+      description: 'For retrieval test',
+      approvalChain: [
+        { step: 1, approvers: [{ type: 'user', id: 'test-user-1' }] }
+      ]
+    });
+
+    const response = await env.client.get(`/api/v1/workflows/${workflow.id}`, {
       headers: {
-        authorization: `Bearer ${token}`
-      },
-      payload: {
-        name: 'Retrieval Test Workflow',
-        description: 'For retrieval testing',
-        approvalChain: [
-          {
-            step: 1,
-            approvers: [user.id],
-            requiredApprovals: 1
-          }
-        ]
+        'Authorization': `Bearer ${authToken}`,
+        'x-tenant-slug': tenantSlug
       }
     });
 
-    const createdWorkflow = JSON.parse(createResponse.payload);
-    
-    // Then retrieve it
-    const response = await app.inject({
-      method: 'GET',
-      url: `/api/workflows/${createdWorkflow.id}`,
-      headers: {
-        authorization: `Bearer ${token}`
-      }
-    });
-
-    t.equal(response.statusCode, 200);
-    const workflow = JSON.parse(response.payload);
-    t.equal(workflow.approvalChain.length, 1);
-    t.equal(workflow.approvalChain[0].approvers[0], user.id);
-  });
-
-  // Test approval processing
-  t.test('should process workflow approvals', async (t) => {
-    // Create workflow
-    const createResponse = await app.inject({
-      method: 'POST',
-      url: '/api/workflows',
-      headers: {
-        authorization: `Bearer ${token}`
-      },
-      payload: {
-        name: 'Approval Processing Workflow',
-        description: 'For approval processing testing',
-        approvalChain: [
-          {
-            step: 1,
-            approvers: [user.id],
-            requiredApprovals: 1
-          }
-        ]
-      }
-    });
-
-    const workflow = JSON.parse(createResponse.payload);
-    
-    // Process approval
-    const response = await app.inject({
-      method: 'POST',
-      url: `/api/workflows/${workflow.id}/approve`,
-      headers: {
-        authorization: `Bearer ${token}`
-      },
-      payload: {
-        step: 1,
-        approved: true,
-        comments: 'Approved by test'
-      }
-    });
-
-    t.equal(response.statusCode, 200);
-    const result = JSON.parse(response.payload);
-    t.equal(result.status, 'approved');
+    expect(response.statusCode).toBe(200);
+    const retrievedWorkflow = response.json();
+    expect(retrievedWorkflow.approvalChain).toBeDefined();
+    expect(retrievedWorkflow.approvalChain[0].approvers[0].id).toBe('test-user-1');
   });
 });

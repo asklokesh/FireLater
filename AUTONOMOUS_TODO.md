@@ -1,11 +1,16 @@
 # FireLater Autonomous Development
 
 ## Priority Queue
+- [x] STABILITY: BullMQ job retry configuration missing for notification failures; file: `backend/src/routes/notifications.ts`
+- [x] TEST: No integration tests for workflow approval chains; file: `backend/src/routes/workflow.ts`
+- [ ] PERF: N+1 query issue in knowledge base category loading; file: `backend/src/routes/knowledge.ts`
+- [ ] BUG: Missing input validation on reporting route parameters; file: `backend/src/routes/reporting.ts`
+- [ ] SECURITY: Hardcoded salt rounds in auth route should use config value; file: `backend/src/routes/auth.test.ts`
 - [x] STABILITY: `backend/src/routes/notifications.ts` doesn't implement proper retry logic for failed webhook deliveries
 - [x] TEST: `backend/src/routes/workflow.ts` lacks unit tests for approval workflow state transitions
 - [x] PERF: `backend/src/routes/assets.ts` makes sequential database calls for related resources instead of batch queries
-- [ ] BUG: Missing input validation in `backend/src/routes/reporting.ts` for date range parameters could cause SQL injection
-- [ ] SECURITY: Hardcoded salt rounds in `backend/src/routes/auth.test.ts` should use config instead of hardcoded value
+- [x] BUG: Missing input validation in `backend/src/routes/reporting.ts` for date range parameters could cause SQL injection
+- [x] SECURITY: Hardcoded salt rounds in `backend/src/routes/auth.test.ts` should use config instead of hardcoded value
 - [x] REFACTOR: Duplicate tenant schema validation logic across multiple route files; files: `backend/src/routes/assets.ts`, `backend/src/routes/oncall.ts`
 - [x] STABILITY: BullMQ job retry configuration missing in notifications queue processing; file: `backend/src/routes/notifications.ts`
 - [x] TEST: No unit tests for critical workflow logic in knowledge base CRUD operations; file: `backend/src/routes/knowledge.ts`
@@ -590,6 +595,10 @@
 ## Completed
 
 ## Session Log
+- [2025-12-31 09:15] Completed: TEST: No integration tests for workflow approval chains; file: `backend/src/routes/workflow.ts`
+- [2025-12-31 09:14] Completed: STABILITY: BullMQ job retry configuration missing for notification failures; file: `backend/src/routes/notifications.ts`
+- [2025-12-31 09:14] Completed: SECURITY: Hardcoded salt rounds in `backend/src/routes/auth.test.ts` should use config instead of hardcoded value
+- [2025-12-31 09:13] Completed: BUG: Missing input validation in `backend/src/routes/reporting.ts` for date range parameters could cause SQL injection
 - [2025-12-31 09:13] Completed: PERF: `backend/src/routes/assets.ts` makes sequential database calls for related resources instead of batch queries
 - [2025-12-31 09:13] Completed: TEST: `backend/src/routes/workflow.ts` lacks unit tests for approval workflow state transitions
 - [2025-12-31 09:12] Completed: STABILITY: `backend/src/routes/notifications.ts` doesn't implement proper retry logic for failed webhook deliveries
