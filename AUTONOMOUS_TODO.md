@@ -4,7 +4,7 @@
 - [x] STABILITY: Error handling in `backend/src/routes/integrations.ts` does not gracefully handle AWS SDK timeouts, leading to uncaught promise rejections; wrap external API calls in try-catch and implement retry logic.
 - [x] TEST: No unit tests found for critical workflow logic in `backend/src/routes/workflow.ts`; add test coverage for approval chains and state transitions.
 - [x] PERF: Inefficient database queries in `backend/src/routes/assets.ts` lack proper indexing and pagination, causing slow responses for large inventories; add LIMIT/OFFSET and ensure indexes exist on queried columns.
-- [ ] BUG: Missing input sanitization in `backend/src/routes/reporting.ts` allows potential SQL injection through user-supplied filters; implement parameterized queries or ORM methods.
+- [x] BUG: Missing input sanitization in `backend/src/routes/reporting.ts` allows potential SQL injection through user-supplied filters; implement parameterized queries or ORM methods.
 - [ ] SECURITY: IP range validation in `backend/src/routes/auth.test.ts` is bypassed due to incorrect try-catch placement; the validation should occur before the try block to prevent unauthorized access.
 - [x] STABILITY: `backend/src/routes/notifications.ts` lacks proper error boundaries for external webhook delivery, risking unhandled promise rejections.
 - [x] TEST: No unit tests for `validateCIDR` function in `backend/src/routes/auth.test.ts`; critical for security-related input validation.
@@ -135,6 +135,7 @@
 ## Completed
 
 ## Session Log
+- [2025-12-31 04:06] Completed: BUG: Missing input sanitization in `backend/src/routes/reporting.ts` allows potential SQL injection through user-supplied filters; implement parameterized queries or ORM methods.
 - [2025-12-31 04:06] Completed: PERF: Inefficient database queries in `backend/src/routes/assets.ts` lack proper indexing and pagination, causing slow responses for large inventories; add LIMIT/OFFSET and ensure indexes exist on queried columns.
 - [2025-12-31 04:05] Completed: TEST: No unit tests found for critical workflow logic in `backend/src/routes/workflow.ts`; add test coverage for approval chains and state transitions.
 - [2025-12-31 04:05] Completed: STABILITY: Error handling in `backend/src/routes/integrations.ts` does not gracefully handle AWS SDK timeouts, leading to uncaught promise rejections; wrap external API calls in try-catch and implement retry logic.
