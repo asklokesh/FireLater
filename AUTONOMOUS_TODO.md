@@ -1,11 +1,16 @@
 # FireLater Autonomous Development
 
 ## Priority Queue
+- [x] STABILITY: `backend/src/routes/notifications.ts` lacks proper error handling for failed email deliveries
+- [ ] TEST: No integration tests for webhook handling in `backend/src/routes/integrations.ts`
+- [ ] PERF: `backend/src/routes/assets.ts` makes sequential database calls for related data instead of using JOINs
+- [ ] BUG: Missing input validation in `backend/src/routes/reporting.ts` for date range parameters could cause SQL injection
+- [ ] SECURITY: Hardcoded salt rounds in `backend/src/routes/auth.test.ts` should use config instead of hardcoded value
 - [x] STABILITY: Redis connection not properly closed in notification service; file: `backend/src/routes/notifications.ts`
-- [ ] TEST: No integration tests for workflow approval chains; file: `backend/src/routes/workflow.ts`
-- [ ] PERF: N+1 query issue in knowledge base article loading; file: `backend/src/routes/knowledge.ts`
-- [ ] BUG: Missing input validation on reporting route parameters; file: `backend/src/routes/reporting.ts`
-- [ ] SECURITY: Hardcoded salt rounds in auth route should use config value; file: `backend/src/routes/auth.test.ts`
+- [x] TEST: No integration tests for workflow approval chains; file: `backend/src/routes/workflow.ts`
+- [x] PERF: N+1 query issue in knowledge base article loading; file: `backend/src/routes/knowledge.ts`
+- [x] BUG: Missing input validation on reporting route parameters; file: `backend/src/routes/reporting.ts`
+- [x] SECURITY: Hardcoded salt rounds in auth route should use config value; file: `backend/src/routes/auth.test.ts`
 - [x] STABILITY: Redis connection not properly closed in notification service shutdown - backend/src/routes/notifications.ts
 - [x] TEST: No integration tests for workflow approval chains - backend/src/routes/workflow.ts
 - [x] PERF: N+1 query pattern detected in knowledge base category loading - backend/src/routes/knowledge.ts
@@ -470,6 +475,11 @@
 ## Completed
 
 ## Session Log
+- [2025-12-31 08:05] Completed: STABILITY: `backend/src/routes/notifications.ts` lacks proper error handling for failed email deliveries
+- [2025-12-31 08:02] Completed: SECURITY: Hardcoded salt rounds in auth route should use config value; file: `backend/src/routes/auth.test.ts`
+- [2025-12-31 08:02] Completed: BUG: Missing input validation on reporting route parameters; file: `backend/src/routes/reporting.ts`
+- [2025-12-31 08:01] Completed: PERF: N+1 query issue in knowledge base article loading; file: `backend/src/routes/knowledge.ts`
+- [2025-12-31 08:01] Completed: TEST: No integration tests for workflow approval chains; file: `backend/src/routes/workflow.ts`
 - [2025-12-31 08:01] Completed: STABILITY: Redis connection not properly closed in notification service; file: `backend/src/routes/notifications.ts`
 - [2025-12-31 08:00] Completed: SECURITY: Hardcoded salt rounds in auth route should use config value - backend/src/routes/auth.test.ts
 - [2025-12-31 08:00] Completed: BUG: Missing input validation for critical parameters in reporting routes - backend/src/routes/reporting.ts
