@@ -1,11 +1,16 @@
 # FireLater Autonomous Development
 
 ## Priority Queue
+- [x] STABILITY: Oncall rotation updates don't handle timezone edge cases properly; file: `backend/src/routes/oncall.ts`
+- [x] TEST: No integration tests for workflow automation triggers and transitions; file: `backend/src/routes/workflow.ts`
+- [ ] PERF: Knowledge base search queries lack indexing optimization for large datasets; file: `backend/src/routes/knowledge.ts`
+- [ ] BUG: Missing input validation on reporting route parameters causing potential crashes; file: `backend/src/routes/reporting.ts`
+- [ ] SECURITY: Hardcoded salt rounds in auth route handler should use config value; file: `backend/src/routes/auth.test.ts`
 - [x] STABILITY: Undefined tenant schema handling in multi-tenant middleware; file: `backend/src/routes/settings.ts`
 - [x] TEST: No tests for workflow state transitions; file: `backend/src/routes/workflow.ts`
 - [x] PERF: N+1 query issue in knowledge base category loading; file: `backend/src/routes/knowledge.ts`
 - [x] BUG: Missing input validation on reporting route parameters; file: `backend/src/routes/reporting.ts`
-- [ ] SECURITY: Hardcoded salt rounds in auth route should use config value; file: `backend/src/routes/auth.test.ts`
+- [x] SECURITY: Hardcoded salt rounds in auth route should use config value; file: `backend/src/routes/auth.test.ts`
 - [x] REFACTOR: Duplicate code for tenant context initialization across routes; files: `backend/src/routes/oncall.ts`, `backend/src/routes/requests.ts`
 - [x] STABILITY: Error handling missing for external API calls in integrations; file: `backend/src/routes/integrations.ts`
 - [x] TEST: No unit tests for critical workflow logic; file: `backend/src/routes/workflow.ts`
@@ -520,6 +525,9 @@
 ## Completed
 
 ## Session Log
+- [2025-12-31 08:23] Completed: TEST: No integration tests for workflow automation triggers and transitions; file: `backend/src/routes/workflow.ts`
+- [2025-12-31 08:23] Completed: STABILITY: Oncall rotation updates don't handle timezone edge cases properly; file: `backend/src/routes/oncall.ts`
+- [2025-12-31 08:23] Completed: SECURITY: Hardcoded salt rounds in auth route should use config value; file: `backend/src/routes/auth.test.ts`
 - [2025-12-31 08:22] Completed: BUG: Missing input validation on reporting route parameters; file: `backend/src/routes/reporting.ts`
 - [2025-12-31 08:22] Completed: PERF: N+1 query issue in knowledge base category loading; file: `backend/src/routes/knowledge.ts`
 - [2025-12-31 08:22] Completed: TEST: No tests for workflow state transitions; file: `backend/src/routes/workflow.ts`
