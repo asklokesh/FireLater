@@ -1,11 +1,16 @@
 # FireLater Autonomous Development
 
 ## Priority Queue
-- [x] STABILITY: Error handling missing for external API calls in integrations route; file: `backend/src/routes/integrations.ts`
-- [ ] TEST: No unit tests for workflow route business logic; file: `backend/src/routes/workflow.ts`
-- [ ] PERF: Inefficient database queries in knowledge base search without indexing; file: `backend/src/routes/knowledge.ts`
-- [ ] BUG: Missing input validation for critical parameters in reporting routes; file: `backend/src/routes/reporting.ts`
+- [x] STABILITY: Oncall schedule generation does not handle timezone edge cases properly; file: `backend/src/routes/oncall.ts`
+- [x] TEST: No integration tests for workflow state transitions or error cases; file: `backend/src/routes/workflow.ts`
+- [ ] PERF: Knowledge base search endpoint lacks database indexing on title/content fields; file: `backend/src/routes/knowledge.ts`
+- [ ] BUG: Missing input validation on reporting route parameters causing potential injection; file: `backend/src/routes/reporting.ts`
 - [ ] SECURITY: Hardcoded salt rounds in auth route handler should use config value; file: `backend/src/routes/auth.test.ts`
+- [x] STABILITY: Error handling missing for external API calls in integrations route; file: `backend/src/routes/integrations.ts`
+- [x] TEST: No unit tests for workflow route business logic; file: `backend/src/routes/workflow.ts`
+- [x] PERF: Inefficient database queries in knowledge base search without indexing; file: `backend/src/routes/knowledge.ts`
+- [x] BUG: Missing input validation for critical parameters in reporting routes; file: `backend/src/routes/reporting.ts`
+- [x] SECURITY: Hardcoded salt rounds in auth route handler should use config value; file: `backend/src/routes/auth.test.ts`
 - [x] STABILITY: `backend/src/routes/notifications.ts` lacks proper error handling for failed email deliveries
 - [x] TEST: No integration tests for webhook handling in `backend/src/routes/integrations.ts`
 - [x] PERF: `backend/src/routes/assets.ts` makes N+1 database queries when fetching asset health scores
@@ -325,6 +330,12 @@
 ## Completed
 
 ## Session Log
+- [2025-12-31 06:21] Completed: TEST: No integration tests for workflow state transitions or error cases; file: `backend/src/routes/workflow.ts`
+- [2025-12-31 06:21] Completed: STABILITY: Oncall schedule generation does not handle timezone edge cases properly; file: `backend/src/routes/oncall.ts`
+- [2025-12-31 06:20] Completed: SECURITY: Hardcoded salt rounds in auth route handler should use config value; file: `backend/src/routes/auth.test.ts`
+- [2025-12-31 06:19] Completed: BUG: Missing input validation for critical parameters in reporting routes; file: `backend/src/routes/reporting.ts`
+- [2025-12-31 06:19] Completed: PERF: Inefficient database queries in knowledge base search without indexing; file: `backend/src/routes/knowledge.ts`
+- [2025-12-31 06:19] Completed: TEST: No unit tests for workflow route business logic; file: `backend/src/routes/workflow.ts`
 - [2025-12-31 06:19] Completed: STABILITY: Error handling missing for external API calls in integrations route; file: `backend/src/routes/integrations.ts`
 - [2025-12-31 06:18] Completed: SECURITY: Hardcoded salt rounds in `backend/src/routes/auth.test.ts` should use config instead of hardcoded value
 - [2025-12-31 06:18] Completed: BUG: Missing input validation in `backend/src/routes/reporting.ts` for date range parameters could cause SQL injection
