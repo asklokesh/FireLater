@@ -1,4 +1,4 @@
-// Add this export for testing purposes at the top of the file
+// Add error handling for sync job failures in the webhook handler
 export const webhookHandlers = {
   handleWebhook: async (request: FastifyRequest, reply: FastifyReply) => {
     const { provider } = request.params as { provider: string };
@@ -17,6 +17,23 @@ export const webhookHandlers = {
       return reply.code(200).send({ message: 'Webhook processed successfully' });
     } catch (error: any) {
       request.log.error({ err: error, provider, tenant: tenant.slug }, 'Webhook processing failed');
+      
+      // Add specific error handling for sync job failures
+      if (error.name === 'SyncJobError') {
+        request.log.error({
+          err: error,
+          provider,
+          tenant: tenant.slug,
+          jobId: error.jobId
+        }, 'Integration sync job failed');
+        
+        return reply.code(500).send({ 
+          message: 'Integration sync job failed', 
+          provider,
+          jobId: error.jobId,
+          error: 'SYNC_JOB_FAILED' 
+        });
+      }
       
       if (error.code === 'ECONNREFUSED' || error.code === 'ENOTFOUND') {
         return reply.code(503).send({ 
@@ -92,37 +109,3 @@ export const webhookHandlers = {
     }
   }
 };
-
-// Update the route registration to use the exported handler
-fastify.post('/webhooks/:provider', {
-  schema: {
-    tags: ['Integrations'],
-    params: {
-      type: 'object',
-      properties: {
-        provider: { type: 'string' }
-      },
-      required: ['provider']
-    },
-    body: {
-      type: 'object',
-      additionalProperties: true
-    }
-  },
-  preHandler: [fastify.authenticate, validate({
-    params: {
-      type: 'object',
-      properties: {
-        provider: { 
-          type: 'string',
-          enum: ['github', 'slack', 'pagerduty', 'datadog']
-        }
-      },
-      required: ['provider']
-    },
-    body: {
-      type: 'object',
-      additionalProperties: true
-    }
-  })]
-}, webhookHandlers.handleWebhook);
