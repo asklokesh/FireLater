@@ -4,7 +4,7 @@
 - [x] STABILITY: BullMQ job retry configuration missing in `backend/src/routes/notifications.ts`; transient failures may cause permanent job loss
 - [x] TEST: Auth route lacks unit tests for `validateCIDR` integration and error states in `backend/src/routes/auth.test.ts`
 - [x] PERF: No rate limiting or caching implemented for reporting endpoints in `backend/src/routes/reporting.ts`; high-cardinality queries may degrade performance under load
-- [ ] BUG: Missing input sanitization for `trimmedCidr` before passing to `validateCIDR` in `backend/src/routes/auth.test.ts`; may cause unexpected behavior or crashes
+- [x] BUG: Missing input sanitization for `trimmedCidr` before passing to `validateCIDR` in `backend/src/routes/auth.test.ts`; may cause unexpected behavior or crashes
 - [ ] SECURITY: `validateCIDR` error handling bypasses validation logic in `backend/src/routes/auth.test.ts`; the catch block should throw or return an error response instead of silently continuing
 - [x] REFACTOR: Duplicated middleware logic across route files (`integrations.ts`, `notifications.ts`) for tenant context extraction; consolidate into shared utility module.
 - [x] TEST: Incomplete test coverage for critical workflows in `workflow.ts` and `oncall.ts`; add unit tests for edge cases like rotation handoffs and approval chain failures.
@@ -110,6 +110,7 @@
 ## Completed
 
 ## Session Log
+- [2025-12-31 03:52] Completed: BUG: Missing input sanitization for `trimmedCidr` before passing to `validateCIDR` in `backend/src/routes/auth.test.ts`; may cause unexpected behavior or crashes
 - [2025-12-31 03:52] Completed: PERF: No rate limiting or caching implemented for reporting endpoints in `backend/src/routes/reporting.ts`; high-cardinality queries may degrade performance under load
 - [2025-12-31 03:51] Completed: TEST: Auth route lacks unit tests for `validateCIDR` integration and error states in `backend/src/routes/auth.test.ts`
 - [2025-12-31 03:51] Completed: STABILITY: BullMQ job retry configuration missing in `backend/src/routes/notifications.ts`; transient failures may cause permanent job loss
