@@ -1,6 +1,3 @@
-// Add this import at the top with other imports
-import { getTenantContext } from '../utils/tenantContext.js';
-
 // Add webhook handling route after the setup route
 fastify.post('/webhook/:provider', {
   schema: {
@@ -50,12 +47,36 @@ fastify.post('/webhook/:provider', {
   } catch (error: any) {
     request.log.error({ err: error, provider }, 'Webhook processing failed');
     
+    // Handle specific integration errors
     if (error.code === 'TENANT_NOT_FOUND') {
       return reply.code(404).send({ message: 'Tenant not found' });
     }
     
     if (error.code === 'INVALID_PROVIDER') {
       return reply.code(400).send({ message: 'Unsupported provider' });
+    }
+    
+    // Handle external API call errors
+    if (error.code === 'EXTERNAL_API_ERROR') {
+      return reply.code(502).send({ 
+        message: 'External service error', 
+        details: error.message 
+      });
+    }
+    
+    if (error.code === 'EXTERNAL_API_TIMEOUT') {
+      return reply.code(504).send({ 
+        message: 'External service timeout', 
+        details: error.message 
+      });
+    }
+    
+    // Handle network errors
+    if (error.code === 'ENOTFOUND' || error.code === 'ECONNREFUSED') {
+      return reply.code(502).send({ 
+        message: 'Network error connecting to external service',
+        details: error.message 
+      });
     }
     
     return reply.code(500).send({ message: 'Webhook processing failed' });
