@@ -1,11 +1,16 @@
 # FireLater Autonomous Development
 
 ## Priority Queue
+- [x] STABILITY: Redis connection not properly closed in `backend/src/routes/notifications.ts` - missing cleanup logic causing connection leaks under high load
+- [ ] TEST: No integration tests for workflow engine in `backend/src/routes/workflow.ts` - critical business logic lacks test coverage for approval chains and state transitions
+- [ ] PERF: N+1 query pattern in `backend/src/routes/assets.ts` - asset health scoring fetches individual resource data instead of batch querying related resources
+- [ ] BUG: Missing error handling in `backend/src/routes/reporting.ts` - database query errors not properly caught or logged, leading to unhandled promise rejections
+- [ ] SECURITY: Insecure CIDR validation logic in `backend/src/routes/auth.test.ts` - validation bypass possible due to unchecked `trimmedCidr` before `validateCIDR()` call
 - [x] REFACTOR: Duplicate validation logic found across `backend/src/routes/oncall.ts` and `backend/src/routes/workflow.ts` that should be centralized
 - [x] TEST: Auth route lacks comprehensive test coverage for edge cases in CIDR validation - file `backend/src/routes/auth.test.ts`
 - [x] PERF: No caching strategy implemented for frequently accessed data in `backend/src/routes/assets.ts` and `backend/src/routes/integrations.ts`
 - [x] BUG: Missing input sanitization for tenant-specific routes across multiple files including `backend/src/routes/reporting.ts` and `backend/src/routes/knowledge.ts`
-- [ ] SECURITY: Incomplete CIDR validation logic in `backend/src/routes/auth.test.ts` - the error handling block is empty and needs proper response/logging
+- [x] SECURITY: Incomplete CIDR validation logic in `backend/src/routes/auth.test.ts` - the error handling block is empty and needs proper response/logging
 - [x] STABILITY: BullMQ job retry configuration missing in `backend/src/routes/notifications.ts`; transient failures may cause permanent job loss
 - [x] TEST: Auth route lacks unit tests for `validateCIDR` integration and error states in `backend/src/routes/auth.test.ts`
 - [x] PERF: No rate limiting or caching implemented for reporting endpoints in `backend/src/routes/reporting.ts`; high-cardinality queries may degrade performance under load
@@ -115,6 +120,8 @@
 ## Completed
 
 ## Session Log
+- [2025-12-31 03:55] Completed: STABILITY: Redis connection not properly closed in `backend/src/routes/notifications.ts` - missing cleanup logic causing connection leaks under high load
+- [2025-12-31 03:54] Completed: SECURITY: Incomplete CIDR validation logic in `backend/src/routes/auth.test.ts` - the error handling block is empty and needs proper response/logging
 - [2025-12-31 03:54] Completed: BUG: Missing input sanitization for tenant-specific routes across multiple files including `backend/src/routes/reporting.ts` and `backend/src/routes/knowledge.ts`
 - [2025-12-31 03:53] Completed: PERF: No caching strategy implemented for frequently accessed data in `backend/src/routes/assets.ts` and `backend/src/routes/integrations.ts`
 - [2025-12-31 03:53] Completed: TEST: Auth route lacks comprehensive test coverage for edge cases in CIDR validation - file `backend/src/routes/auth.test.ts`
