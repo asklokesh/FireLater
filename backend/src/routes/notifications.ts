@@ -1,20 +1,14 @@
-import { Queue, Worker } from 'bullmq';
-import { redisConnection } from '../config/redis.js';
+import { FastifyInstance } from 'fastify';
+import { notificationService } from '../services/notifications.js';
+import { authenticateTenant } from '../middleware/auth.js';
 
-// Add error handling for Redis connection
-let notificationQueue: Queue | null = null;
-let notificationWorker: Worker | null = null;
-
-try {
-  notificationQueue = new Queue('notifications', { connection: redisConnection });
-  notificationWorker = new Worker('notifications', async (job) => {
-    // Worker implementation
-  }, { connection: redisConnection });
-  
-  // Handle Redis connection errors
-  redisConnection.on('error', (err) => {
-    console.error('Redis connection error in notifications:', err);
+export async function notificationRoutes(fastify: FastifyInstance) {
+  // Register cleanup handler for graceful shutdown
+  fastify.addHook('onClose', async (instance) => {
+    if (notificationService.redisClient) {
+      await notificationService.redisClient.quit();
+    }
   });
-} catch (error) {
-  console.error('Failed to initialize BullMQ for notifications:', error);
+
+  // ... existing route definitions
 }
