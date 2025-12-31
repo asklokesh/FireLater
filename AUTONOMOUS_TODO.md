@@ -4,7 +4,7 @@
 - [x] STABILITY: Oncall schedule rotation logic doesn't handle DST transitions; file: `backend/src/routes/oncall.ts`
 - [x] TEST: No integration tests for workflow approval chains; file: `backend/src/routes/workflow.ts`
 - [x] PERF: Knowledge base search queries lack indexing optimization; file: `backend/src/routes/knowledge.ts`
-- [ ] BUG: Missing input validation on reporting route parameters; file: `backend/src/routes/reporting.ts`
+- [x] BUG: Missing input validation on reporting route parameters; file: `backend/src/routes/reporting.ts`
 - [ ] SECURITY: Hardcoded salt rounds in auth route should use config value; file: `backend/src/routes/auth.test.ts`
 - [x] REFACTOR: Duplicate tenant validation logic across multiple routes instead of centralized middleware; files: `backend/src/routes/assets.ts`, `backend/src/routes/oncall.ts`
 - [x] STABILITY: Error handling bypass in notifications route for external provider failures; file: `backend/src/routes/notifications.ts`
@@ -415,6 +415,7 @@
 ## Completed
 
 ## Session Log
+- [2025-12-31 07:18] Completed: BUG: Missing input validation on reporting route parameters; file: `backend/src/routes/reporting.ts`
 - [2025-12-31 07:18] Completed: PERF: Knowledge base search queries lack indexing optimization; file: `backend/src/routes/knowledge.ts`
 - [2025-12-31 07:18] Completed: TEST: No integration tests for workflow approval chains; file: `backend/src/routes/workflow.ts`
 - [2025-12-31 07:17] Completed: STABILITY: Oncall schedule rotation logic doesn't handle DST transitions; file: `backend/src/routes/oncall.ts`
