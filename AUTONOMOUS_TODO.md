@@ -1,11 +1,16 @@
 # FireLater Autonomous Development
 
 ## Priority Queue
+- [x] STABILITY: `backend/src/routes/notifications.ts` doesn't handle Redis connection failures gracefully, could crash process
+- [ ] TEST: `backend/src/routes/workflow.ts` lacks unit tests for approval chain logic and edge cases
+- [ ] PERF: `backend/src/routes/knowledge.ts` makes N+1 queries when fetching article metadata without proper JOINs
+- [ ] BUG: Missing input validation in `backend/src/routes/reporting.ts` for date range parameters could cause SQL injection
+- [ ] SECURITY: Hardcoded salt rounds in `backend/src/routes/auth.test.ts` should use config instead of hardcoded value
 - [x] STABILITY: `backend/src/routes/notifications.ts` doesn't implement proper retry logic for failed webhook deliveries
 - [x] TEST: `backend/src/routes/workflow.ts` lacks unit tests for approval workflow edge cases
 - [x] PERF: `backend/src/routes/assets.ts` makes N+1 queries when fetching asset health scores instead of using JOINs
-- [ ] BUG: Missing input validation in `backend/src/routes/reporting.ts` for date range parameters could cause SQL injection
-- [ ] SECURITY: Hardcoded salt rounds in `backend/src/routes/auth.test.ts` should use config instead of hardcoded value
+- [x] BUG: Missing input validation in `backend/src/routes/reporting.ts` for date range parameters could cause SQL injection
+- [x] SECURITY: Hardcoded salt rounds in `backend/src/routes/auth.test.ts` should use config instead of hardcoded value
 - [x] STABILITY: Oncall schedule rotation logic doesn't handle timezone edge cases properly (`backend/src/routes/oncall.ts`)
 - [x] TEST: No integration tests for workflow automation triggers and state transitions (`backend/src/routes/workflow.ts`)
 - [x] PERF: Knowledge base search queries not using database indexes causing slow response times (`backend/src/routes/knowledge.ts`)
@@ -495,6 +500,9 @@
 ## Completed
 
 ## Session Log
+- [2025-12-31 08:14] Completed: STABILITY: `backend/src/routes/notifications.ts` doesn't handle Redis connection failures gracefully, could crash process
+- [2025-12-31 08:13] Completed: SECURITY: Hardcoded salt rounds in `backend/src/routes/auth.test.ts` should use config instead of hardcoded value
+- [2025-12-31 08:13] Completed: BUG: Missing input validation in `backend/src/routes/reporting.ts` for date range parameters could cause SQL injection
 - [2025-12-31 08:13] Completed: PERF: `backend/src/routes/assets.ts` makes N+1 queries when fetching asset health scores instead of using JOINs
 - [2025-12-31 08:13] Completed: TEST: `backend/src/routes/workflow.ts` lacks unit tests for approval workflow edge cases
 - [2025-12-31 08:12] Completed: STABILITY: `backend/src/routes/notifications.ts` doesn't implement proper retry logic for failed webhook deliveries
