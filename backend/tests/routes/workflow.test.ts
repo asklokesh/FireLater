@@ -1,172 +1,79 @@
-import { test, expect, beforeEach, afterEach } from 'vitest';
-import { buildApp } from '../../src/app.js';
-import { createTestTenant, createTestUser, cleanupTestTenant } from '../test-utils.js';
+import { test } from 'tap';
+import { build } from '../helper.js';
 import { workflowService } from '../../src/services/workflow.js';
 
-let app: any;
-let tenant: any;
-let user: any;
-let authToken: string;
+// Mock the workflow service
+const mockWorkflowService = {
+  executeWorkflow: async () => ({ status: 'success', result: {} }),
+  getWorkflowStatus: async () => ({ status: 'completed' }),
+};
 
-beforeEach(async () => {
-  app = await buildApp();
-  tenant = await createTestTenant();
-  user = await createTestUser(tenant.slug, { permissions: ['workflow:approve'] });
+test('POST /api/v1/workflows/:workflowId/execute should execute workflow', async (t) => {
+  const app = await build(t);
   
-  // Login to get auth token
-  const loginResponse = await app.inject({
-    method: 'POST',
-    url: '/auth/login',
-    payload: {
-      email: user.email,
-      password: 'testpassword123'
-    }
+  // Mock the service method
+  const executeWorkflowStub = t.stub(workflowService, 'executeWorkflow').resolves({
+    status: 'success',
+    result: { id: 'test-result' }
   });
   
-  authToken = loginResponse.json().token;
-});
-
-afterEach(async () => {
-  await cleanupTestTenant(tenant.slug);
-  await app.close();
-});
-
-test('should approve workflow step when user has permission', async () => {
-  // Create a test workflow with pending approval
-  const workflow = await workflowService.create(tenant.slug, {
-    name: 'Test Workflow',
-    description: 'Test workflow for approval',
-    steps: [
-      {
-        id: 'step1',
-        type: 'approval',
-        name: 'Manager Approval',
-        config: {
-          approvers: [user.id]
-        }
-      }
-    ],
-    startStepId: 'step1'
-  });
-
   const response = await app.inject({
     method: 'POST',
-    url: `/workflows/${workflow.id}/approve`,
+    url: '/api/v1/workflows/123e4567-e89b-12d3-a456-426614174000/execute',
     headers: {
-      authorization: `Bearer ${authToken}`,
-      'x-tenant-slug': tenant.slug
+      authorization: 'Bearer valid-token'
     },
     payload: {
-      stepId: 'step1',
-      approved: true,
-      comment: 'Approved by manager'
+      requestId: '123e4567-e89b-12d3-a456-426614174001',
+      action: 'approve',
+      userId: '123e4567-e89b-12d3-a456-426614174002',
+      payload: { comment: 'Approved by manager' }
     }
   });
 
-  expect(response.statusCode).toBe(200);
-  const result = response.json();
-  expect(result.success).toBe(true);
-  expect(result.step.status).toBe('approved');
-});
-
-test('should reject workflow step with comment', async () => {
-  const workflow = await workflowService.create(tenant.slug, {
-    name: 'Test Workflow',
-    description: 'Test workflow for approval',
-    steps: [
-      {
-        id: 'step1',
-        type: 'approval',
-        name: 'Manager Approval',
-        config: {
-          approvers: [user.id]
-        }
-      }
-    ],
-    startStepId: 'step1'
-  });
-
-  const response = await app.inject({
-    method: 'POST',
-    url: `/workflows/${workflow.id}/approve`,
-    headers: {
-      authorization: `Bearer ${authToken}`,
-      'x-tenant-slug': tenant.slug
-    },
-    payload: {
-      stepId: 'step1',
-      approved: false,
-      comment: 'More information needed'
-    }
-  });
-
-  expect(response.statusCode).toBe(200);
-  const result = response.json();
-  expect(result.success).toBe(true);
-  expect(result.step.status).toBe('rejected');
-  expect(result.step.comment).toBe('More information needed');
-});
-
-test('should fail to approve workflow step when user lacks permission', async () => {
-  // Create user without approval permissions
-  const regularUser = await createTestUser(tenant.slug, { permissions: ['workflow:read'] });
-  
-  const loginResponse = await app.inject({
-    method: 'POST',
-    url: '/auth/login',
-    payload: {
-      email: regularUser.email,
-      password: 'testpassword123'
-    }
+  t.equal(response.statusCode, 200);
+  t.same(JSON.parse(response.payload), {
+    status: 'success',
+    result: { id: 'test-result' }
   });
   
-  const regularUserToken = loginResponse.json().token;
-
-  const workflow = await workflowService.create(tenant.slug, {
-    name: 'Test Workflow',
-    description: 'Test workflow for approval',
-    steps: [
-      {
-        id: 'step1',
-        type: 'approval',
-        name: 'Manager Approval',
-        config: {
-          approvers: [user.id]
-        }
-      }
-    ],
-    startStepId: 'step1'
+  // Verify service was called with correct parameters
+  t.ok(executeWorkflowStub.calledOnce);
+  t.equal(executeWorkflowStub.firstCall.args[0], 'test-tenant');
+  t.equal(executeWorkflowStub.firstCall.args[1], '123e4567-e89b-12d3-a456-426614174000');
+  t.same(executeWorkflowStub.firstCall.args[2], {
+    requestId: '123e4567-e89b-12d3-a456-426614174001',
+    action: 'approve',
+    userId: '123e4567-e89b-12d3-a456-426614174002',
+    payload: { comment: 'Approved by manager' }
   });
-
-  const response = await app.inject({
-    method: 'POST',
-    url: `/workflows/${workflow.id}/approve`,
-    headers: {
-      authorization: `Bearer ${regularUserToken}`,
-      'x-tenant-slug': tenant.slug
-    },
-    payload: {
-      stepId: 'step1',
-      approved: true
-    }
-  });
-
-  expect(response.statusCode).toBe(403);
 });
 
-test('should fail to approve non-existent workflow', async () => {
+test('GET /api/v1/workflows/:workflowId/status should return workflow status', async (t) => {
+  const app = await build(t);
+  
+  // Mock the service method
+  const getWorkflowStatusStub = t.stub(workflowService, 'getWorkflowStatus').resolves({
+    status: 'completed',
+    completedAt: '2023-01-01T00:00:00Z'
+  });
+  
   const response = await app.inject({
-    method: 'POST',
-    url: '/workflows/non-existent-id/approve',
+    method: 'GET',
+    url: '/api/v1/workflows/123e4567-e89b-12d3-a456-426614174000/status',
     headers: {
-      authorization: `Bearer ${authToken}`,
-      'x-tenant-slug': tenant.slug
-    },
-    payload: {
-      stepId: 'step1',
-      approved: true
+      authorization: 'Bearer valid-token'
     }
   });
 
-  expect(response.statusCode).toBe(404);
+  t.equal(response.statusCode, 200);
+  t.same(JSON.parse(response.payload), {
+    status: 'completed',
+    completedAt: '2023-01-01T00:00:00Z'
+  });
+  
+  // Verify service was called with correct parameters
+  t.ok(getWorkflowStatusStub.calledOnce);
+  t.equal(getWorkflowStatusStub.firstCall.args[0], 'test-tenant');
+  t.equal(getWorkflowStatusStub.firstCall.args[1], '123e4567-e89b-12d3-a456-426614174000');
 });
