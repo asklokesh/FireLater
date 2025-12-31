@@ -4,7 +4,7 @@
 - [x] STABILITY: `backend/src/routes/notifications.ts` lacks proper error handling for failed email deliveries which could crash the worker process
 - [x] TEST: No integration tests for webhook handling in `backend/src/routes/integrations.ts`
 - [x] PERF: `backend/src/routes/assets.ts` makes N+1 queries when fetching asset health scores without proper batching
-- [ ] BUG: Missing input validation in `backend/src/routes/reporting.ts` for date range parameters could cause SQL injection
+- [x] BUG: Missing input validation in `backend/src/routes/reporting.ts` for date range parameters could cause SQL injection
 - [ ] SECURITY: Hardcoded salt rounds in `backend/src/routes/auth.test.ts` should use config instead of hardcoded value
 - [x] REFACTOR: Duplicate database connection logic should be centralized from `backend/src/routes/knowledge.ts` and `backend/src/routes/requests.ts`
 - [x] BUG: Error handling missing in async route handlers across `backend/src/routes/oncall.ts` and `backend/src/routes/notifications.ts`
@@ -260,6 +260,7 @@
 ## Completed
 
 ## Session Log
+- [2025-12-31 05:52] Completed: BUG: Missing input validation in `backend/src/routes/reporting.ts` for date range parameters could cause SQL injection
 - [2025-12-31 05:52] Completed: PERF: `backend/src/routes/assets.ts` makes N+1 queries when fetching asset health scores without proper batching
 - [2025-12-31 05:52] Completed: TEST: No integration tests for webhook handling in `backend/src/routes/integrations.ts`
 - [2025-12-31 05:52] Completed: STABILITY: `backend/src/routes/notifications.ts` lacks proper error handling for failed email deliveries which could crash the worker process
