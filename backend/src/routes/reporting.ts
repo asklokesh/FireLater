@@ -1,26 +1,31 @@
-fastify.delete('/templates/:id', {
+fastify.get('/reports', {
   schema: {
-    params: {
+    tags: ['Reporting'],
+    querystring: {
       type: 'object',
       properties: {
-        id: { type: 'string', pattern: '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$' }
+        type: { type: 'string', maxLength: 50 },
+        startDate: { type: 'string', format: 'date-time' },
+        endDate: { type: 'string', format: 'date-time' },
+        tenantId: { type: 'string', pattern: '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$' },
+        page: { type: 'integer', minimum: 1, maximum: 1000, default: 1 },
+        perPage: { type: 'integer', minimum: 1, maximum: 100, default: 20 }
       },
-      required: ['id']
+      additionalProperties: false
     }
   },
   preHandler: [fastify.authenticate, validate({
-    params: {
+    querystring: {
       type: 'object',
       properties: {
-        id: { type: 'string', pattern: '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$' }
+        type: { type: 'string', maxLength: 50 },
+        startDate: { type: 'string', format: 'date-time' },
+        endDate: { type: 'string', format: 'date-time' },
+        tenantId: { type: 'string', pattern: '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$' },
+        page: { type: 'integer', minimum: 1, maximum: 1000, default: 1 },
+        perPage: { type: 'integer', minimum: 1, maximum: 100, default: 20 }
       },
-      required: ['id']
+      additionalProperties: false
     }
   })]
 }, async (request, reply) => {
-  const { id } = request.params as { id: string };
-  
-  // Validate tenant context with proper validation
-  if (!request.tenantSlug) {
-    return reply.code(400).send({ message: 'Tenant context required' });
-  }

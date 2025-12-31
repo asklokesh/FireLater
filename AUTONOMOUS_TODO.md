@@ -4,7 +4,7 @@
 - [x] STABILITY: Workflow engine error handling doesn't gracefully recover from PostgreSQL connection drops; found in `backend/src/routes/workflow.ts`
 - [x] TEST: No integration tests covering on-call schedule conflict detection logic; found in `backend/src/routes/oncall.ts`
 - [x] PERF: Knowledge base search queries lack database indexing strategy and may cause slow lookups; found in `backend/src/routes/knowledge.ts`
-- [ ] BUG: Missing input validation on reporting API endpoints allows potential injection attacks; found in `backend/src/routes/reporting.ts`
+- [x] BUG: Missing input validation on reporting API endpoints allows potential injection attacks; found in `backend/src/routes/reporting.ts`
 - [ ] SECURITY: Hardcoded salt rounds in authentication logic should use environment-configurable values; found in `backend/src/routes/auth.test.ts` and `backend/src/config/index.ts`
 - [x] STABILITY: Oncall rotation updates don't handle timezone transitions properly; file: `backend/src/routes/oncall.ts`
 - [x] TEST: No integration tests for workflow approval chains; file: `backend/src/routes/workflow.ts`
@@ -385,6 +385,7 @@
 ## Completed
 
 ## Session Log
+- [2025-12-31 07:07] Completed: BUG: Missing input validation on reporting API endpoints allows potential injection attacks; found in `backend/src/routes/reporting.ts`
 - [2025-12-31 07:07] Completed: PERF: Knowledge base search queries lack database indexing strategy and may cause slow lookups; found in `backend/src/routes/knowledge.ts`
 - [2025-12-31 07:07] Completed: TEST: No integration tests covering on-call schedule conflict detection logic; found in `backend/src/routes/oncall.ts`
 - [2025-12-31 07:06] Completed: STABILITY: Workflow engine error handling doesn't gracefully recover from PostgreSQL connection drops; found in `backend/src/routes/workflow.ts`
