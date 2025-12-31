@@ -5,12 +5,31 @@ fastify.post('/generate', {
       type: 'object',
       required: ['reportType'],
       properties: {
-        reportType: { type: 'string' },
+        reportType: { 
+          type: 'string',
+          enum: ['incident-summary', 'service-availability', 'change-history', 'oncall-coverage'] 
+        },
         startDate: { type: 'string', format: 'date' },
         endDate: { type: 'string', format: 'date' },
         filters: {
           type: 'object',
-          additionalProperties: true
+          additionalProperties: {
+            anyOf: [
+              { type: 'string' },
+              { type: 'number' },
+              { type: 'boolean' },
+              {
+                type: 'array',
+                items: {
+                  anyOf: [
+                    { type: 'string' },
+                    { type: 'number' },
+                    { type: 'boolean' }
+                  ]
+                }
+              }
+            ]
+          }
         }
       }
     }
@@ -36,12 +55,20 @@ fastify.post('/generate', {
   if (startDate && endDate && new Date(startDate) > new Date(endDate)) {
     throw new BadRequestError('startDate must be before endDate');
   }
+  
+  // Validate filters structure
+  if (filters) {
+    const validFilterTypes = ['string', 'number', 'boolean'];
+    for (const [key, value] of Object.entries(filters)) {
+      if (Array.isArray(value)) {
+        if (value.some(item => !validFilterTypes.includes(typeof item))) {
+          throw new BadRequestError(`Invalid filter value type in array for key: ${key}`);
+        }
+      } else if (!validFilterTypes.includes(typeof value)) {
+        throw new BadRequestError(`Invalid filter value type for key: ${key}`);
+      }
+    }
+  }
 
   // ... rest of the handler
 });
-
-// Add helper function for date validation
-function isValidDate(dateString: string): boolean {
-  const date = new Date(dateString);
-  return date instanceof Date && !isNaN(date.getTime());
-}
