@@ -1,11 +1,16 @@
 # FireLater Autonomous Development
 
 ## Priority Queue
+- [x] STABILITY: Oncall route doesn't handle timezone conversion errors when processing schedule rotations across DST boundaries in backend/src/routes/oncall.ts
+- [x] TEST: Workflow route missing unit tests for approval chain validation logic in backend/src/routes/workflow.ts
+- [ ] PERF: Knowledge base route performs N+1 queries when fetching article categories without proper JOIN optimization in backend/src/routes/knowledge.ts
+- [ ] BUG: Reporting route lacks proper tenant isolation in multi-tenant schema setup, potentially allowing cross-tenant data access in backend/src/routes/reporting.ts
+- [ ] SECURITY: Auth route uses direct error.message instead of getSafeErrorMessage utility, exposing internal errors to clients in backend/src/routes/auth.test.ts
 - [x] STABILITY: Background job processing logic in `backend/src/routes/notifications.ts` lacks proper error handling and retry mechanisms for failed notifications
 - [x] TEST: Auth routes missing comprehensive test coverage for edge cases and error scenarios in `backend/src/routes/auth.test.ts` - only happy path testing present
 - [x] PERF: No caching strategy implemented for expensive reporting queries in `backend/src/routes/reporting.ts` despite Redis being available in the stack
-- [ ] BUG: Missing input validation and sanitization across route handlers in `backend/src/routes/reporting.ts` and `backend/src/routes/knowledge.ts` - direct database queries without parameter binding risk SQL injection
-- [ ] SECURITY: Auth route handlers use direct `error.message` instead of `getSafeErrorMessage()` utility, exposing internal error details to clients in `backend/src/routes/auth.test.ts`
+- [x] BUG: Missing input validation and sanitization across route handlers in `backend/src/routes/reporting.ts` and `backend/src/routes/knowledge.ts` - direct database queries without parameter binding risk SQL injection
+- [x] SECURITY: Auth route handlers use direct `error.message` instead of `getSafeErrorMessage()` utility, exposing internal error details to clients in `backend/src/routes/auth.test.ts`
 - [x] STABILITY: BullMQ job processors missing retry logic and dead-letter queue configuration; background tasks may be lost during transient failures (backend/src/routes/notifications.ts)
 - [x] TEST: Auth route lacks unit tests for `validateCIDR` function and error handling paths; only happy path appears covered (backend/src/routes/auth.test.ts)
 - [x] PERF: No caching strategy implemented for knowledge base or asset inventory queries; high-frequency reads will impact DB performance (backend/src/routes/knowledge.ts, backend/src/routes/assets.ts)
@@ -165,6 +170,10 @@
 ## Completed
 
 ## Session Log
+- [2025-12-31 04:22] Completed: TEST: Workflow route missing unit tests for approval chain validation logic in backend/src/routes/workflow.ts
+- [2025-12-31 04:22] Completed: STABILITY: Oncall route doesn't handle timezone conversion errors when processing schedule rotations across DST boundaries in backend/src/routes/oncall.ts
+- [2025-12-31 04:21] Completed: SECURITY: Auth route handlers use direct `error.message` instead of `getSafeErrorMessage()` utility, exposing internal error details to clients in `backend/src/routes/auth.test.ts`
+- [2025-12-31 04:21] Completed: BUG: Missing input validation and sanitization across route handlers in `backend/src/routes/reporting.ts` and `backend/src/routes/knowledge.ts` - direct database queries without parameter binding risk SQL injection
 - [2025-12-31 04:21] Completed: PERF: No caching strategy implemented for expensive reporting queries in `backend/src/routes/reporting.ts` despite Redis being available in the stack
 - [2025-12-31 04:20] Completed: TEST: Auth routes missing comprehensive test coverage for edge cases and error scenarios in `backend/src/routes/auth.test.ts` - only happy path testing present
 - [2025-12-31 04:20] Completed: STABILITY: Background job processing logic in `backend/src/routes/notifications.ts` lacks proper error handling and retry mechanisms for failed notifications
