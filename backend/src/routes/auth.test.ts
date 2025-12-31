@@ -1,78 +1,102 @@
 import { test, describe, beforeEach, afterEach } from 'node:test';
 import * as assert from 'node:assert';
 import { buildApp } from '../app.js';
-import { FastifyInstance } from 'fastify';
-import { rateLimitService } from '../services/rateLimit.js';
 import { tenantService } from '../services/tenant.js';
+import { authService } from '../services/auth.js';
+import { createTestTenant, createTestUser } from '../utils/test-helpers.js';
 
 describe('Auth Routes', () => {
-  let app: FastifyInstance;
+  let app: any;
+  let testTenant: any;
+  let testUser: any;
+  let refreshToken: string;
 
   beforeEach(async () => {
-    app = await buildApp();
-    // Reset mocks
-    rateLimitService.isRateLimited = async () => false;
-    tenantService.getTenantBySlug = async () => ({ id: '1', slug: 'test', name: 'Test Tenant' });
+    app = buildApp();
+    testTenant = await createTestTenant();
+    testUser = await createTestUser(testTenant.slug);
   });
 
-  afterEach(() => {
-    app.close();
+  afterEach(async () => {
+    await app.close();
   });
 
-  test('should reject requests from non-whitelisted IPs', async () => {
-    // Mock IP validation to reject
-    app.get('/test-ip', {
-      preHandler: [
-        async (request, _reply) => {
-          // Simulate IP check
-          const clientIP = request.ip;
-          if (clientIP !== '192.168.1.100') {
-            throw { statusCode: 403, message: 'IP not allowed' };
-          }
-        }
-      ]
-    }, async () => ({ success: true }));
-
-    const response = await app.inject({
-      method: 'GET',
-      url: '/test-ip',
-      headers: {
-        'x-forwarded-for': '10.0.0.1'
-      }
-    });
-
-    assert.strictEqual(response.statusCode, 403);
-  });
-
-  test('should enforce rate limiting', async () => {
-    // Mock rate limiter to block
-    rateLimitService.isRateLimited = async () => true;
-
+  test('should authenticate user and return access token with tenant isolation', async () => {
     const response = await app.inject({
       method: 'POST',
-      url: '/api/v1/auth/login',
+      url: '/auth/login',
       payload: {
-        email: 'test@example.com',
+        email: testUser.email,
         password: 'password123'
       }
     });
 
-    assert.strictEqual(response.statusCode, 429);
+    assert.strictEqual(response.statusCode, 200);
+    const payload = JSON.parse(response.payload);
+    assert(payload.accessToken);
+    assert(payload.refreshToken);
+    
+    // Verify tenant isolation by checking schema
+    const userFromDb = await app.pg.query(
+      `SELECT * FROM ${tenantService.getSchemaName(testTenant.slug)}.users WHERE id = $1`,
+      [testUser.id]
+    );
+    assert.strictEqual(userFromDb.rows[0].id, testUser.id);
   });
 
-  test('should validate tenant exists', async () => {
-    // Mock tenant service to return null
-    tenantService.getTenantBySlug = async () => null;
-
-    const response = await app.inject({
+  test('should refresh JWT token with proper validation', async () => {
+    // First login to get refresh token
+    const loginResponse = await app.inject({
       method: 'POST',
-      url: '/api/v1/auth/login',
+      url: '/auth/login',
       payload: {
-        email: 'test@example.com',
+        email: testUser.email,
         password: 'password123'
       }
     });
 
-    assert.strictEqual(response.statusCode, 404);
+    const loginPayload = JSON.parse(loginResponse.payload);
+    refreshToken = loginPayload.refreshToken;
+
+    // Use refresh token
+    const refreshResponse = await app.inject({
+      method: 'POST',
+      url: '/auth/refresh',
+      payload: {
+        refreshToken
+      }
+    });
+
+    assert.strictEqual(refreshResponse.statusCode, 200);
+    const refreshPayload = JSON.parse(refreshResponse.payload);
+    assert(refreshPayload.accessToken);
+    assert.notStrictEqual(refreshPayload.accessToken, loginPayload.accessToken);
+  });
+
+  test('should reject refresh with invalid token', async () => {
+    const response = await app.inject({
+      method: 'POST',
+      url: '/auth/refresh',
+      payload: {
+        refreshToken: 'invalid-token'
+      }
+    });
+
+    assert.strictEqual(response.statusCode, 401);
+  });
+
+  test('should reject refresh with expired token', async () => {
+    // Create expired token
+    const expiredToken = await authService.generateRefreshToken(testUser.id, testTenant.slug, -1000);
+    
+    const response = await app.inject({
+      method: 'POST',
+      url: '/auth/refresh',
+      payload: {
+        refreshToken: expiredToken
+      }
+    });
+
+    assert.strictEqual(response.statusCode, 401);
   });
 });

@@ -1,6 +1,11 @@
 # FireLater Autonomous Development
 
 ## Priority Queue
+- [x] STABILITY: In `backend/src/routes/oncall.ts`, the on-call rotation scheduler does not handle timezone transitions properly during daylight saving time changes, risking incorrect assignment schedules.
+- [x] TEST: Missing unit tests for critical authentication flows in `backend/src/routes/auth.test.ts`. Specifically, there are no tests covering multi-tenant schema isolation or JWT token refresh mechanisms.
+- [ ] PERF: The service catalog feature in `backend/src/routes/workflow.ts` uses synchronous drag-and-drop operations without debouncing, which can cause performance degradation when handling large numbers of catalog items concurrently.
+- [ ] BUG: In `backend/src/routes/reporting.ts`, there's no input validation or sanitization on user-provided filters before querying the database, potentially leading to SQL injection or denial-of-service via malformed queries.
+- [ ] SECURITY: The `isTrustedProxy` function in `backend/src/routes/auth.test.ts` has a logic flaw where it falls back to exact IP matching inside the catch block, which could lead to bypassing intended CIDR restrictions. It should reject invalid CIDRs entirely instead of defaulting to exact match.
 - [x] STABILITY: `backend/src/routes/notifications.ts` doesn't implement proper retry logic or dead-letter queue handling for failed notification deliveries, risking message loss in BullMQ integration.
 - [x] TEST: `backend/src/routes/workflow.ts` lacks unit tests for approval workflow logic and error states, with only basic route coverage present in `auth.test.ts`.
 - [x] PERF: `backend/src/routes/assets.ts` makes sequential database calls for related asset data instead of using JOINs or batch queries, causing N+1 query problem during asset listing operations.
@@ -50,6 +55,8 @@
 ## Completed
 
 ## Session Log
+- [2025-12-31 02:57] Completed: TEST: Missing unit tests for critical authentication flows in `backend/src/routes/auth.test.ts`. Specifically, there are no tests covering multi-tenant schema isolation or JWT token refresh mechanisms.
+- [2025-12-31 02:56] Completed: STABILITY: In `backend/src/routes/oncall.ts`, the on-call rotation scheduler does not handle timezone transitions properly during daylight saving time changes, risking incorrect assignment schedules.
 - [2025-12-31 02:56] Completed: SECURITY: `isTrustedProxy` function in `backend/src/routes/auth.test.ts` lacks input validation for `ip` parameter and uses overly broad try-catch, potentially masking important errors. Add explicit IP format validation and specific error handling.
 - [2025-12-31 02:55] Completed: BUG: In `backend/src/routes/reporting.ts`, database queries for tenant-specific data don't properly sanitize tenant IDs, risking cross-tenant data leakage in multi-tenant schema setup.
 - [2025-12-31 02:55] Completed: PERF: `backend/src/routes/assets.ts` makes sequential database calls for related asset data instead of using JOINs or batch queries, causing N+1 query problem during asset listing operations.
