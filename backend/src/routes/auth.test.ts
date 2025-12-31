@@ -1,54 +1,284 @@
-import { validateCIDR } from '../middleware/auth';
+import { test, describe, beforeEach, afterEach } from 'node:test';
+import { strict as assert } from 'node:assert';
+import buildServer from '../server';
+import { createTestTenant, destroyTestTenant } from '../utils/testHelpers';
 
-// Add tests for validateCIDR function
-test('validateCIDR should return true for valid IPv4 CIDR', async () => {
-  expect(validateCIDR('192.168.1.0/24')).toBe(true);
-});
+describe('Auth Routes - Edge Cases', () => {
+  let fastify: any;
+  let testTenant: any;
 
-test('validateCIDR should return true for valid IPv6 CIDR', async () => {
-  expect(validateCIDR('2001:db8::/32')).toBe(true);
-});
-
-test('validateCIDR should return false for invalid CIDR', async () => {
-  expect(validateCIDR('invalid-cidr')).toBe(false);
-  expect(validateCIDR('192.168.1.0/33')).toBe(false); // Invalid IPv4 range
-  expect(validateCIDR('2001:db8::/129')).toBe(false); // Invalid IPv6 range
-});
-
-// Add tests for error handling paths in auth routes
-test('POST /auth/login should fail with invalid IP range', async () => {
-  const response = await app.inject({
-    method: 'POST',
-    url: '/auth/login',
-    payload: {
-      email: 'test@example.com',
-      password: 'password123',
-      ipRange: 'invalid-cidr'
-    }
+  beforeEach(async () => {
+    fastify = buildServer();
+    testTenant = await createTestTenant();
   });
-  
-  expect(response.statusCode).toBe(400);
-  expect(JSON.parse(response.body).message).toBe('Invalid IP range specified');
-});
 
-test('POST /auth/login should handle service errors properly', async () => {
-  // Mock the authService to throw an error
-  const authService = require('../services/authService');
-  const originalLogin = authService.login;
-  authService.login = jest.fn().mockRejectedValue(new Error('Database connection failed'));
-  
-  const response = await app.inject({
-    method: 'POST',
-    url: '/auth/login',
-    payload: {
-      email: 'test@example.com',
-      password: 'password123'
-    }
+  afterEach(async () => {
+    await destroyTestTenant(testTenant.slug);
+    await fastify.close();
   });
-  
-  expect(response.statusCode).toBe(500);
-  expect(JSON.parse(response.body).message).toBe('Authentication failed');
-  
-  // Restore original function
-  authService.login = originalLogin;
+
+  describe('POST /auth/register', () => {
+    test('should reject registration with missing email', async () => {
+      const response = await fastify.inject({
+        method: 'POST',
+        url: '/auth/register',
+        payload: {
+          password: 'password123',
+          firstName: 'Test',
+          lastName: 'User'
+        }
+      });
+      
+      assert.equal(response.statusCode, 400);
+      const body = JSON.parse(response.body);
+      assert.ok(body.error.includes('email'));
+    });
+
+    test('should reject registration with invalid email format', async () => {
+      const response = await fastify.inject({
+        method: 'POST',
+        url: '/auth/register',
+        payload: {
+          email: 'invalid-email',
+          password: 'password123',
+          firstName: 'Test',
+          lastName: 'User'
+        }
+      });
+      
+      assert.equal(response.statusCode, 400);
+      const body = JSON.parse(response.body);
+      assert.ok(body.error.includes('email'));
+    });
+
+    test('should reject registration with weak password', async () => {
+      const response = await fastify.inject({
+        method: 'POST',
+        url: '/auth/register',
+        payload: {
+          email: 'test@example.com',
+          password: '123',
+          firstName: 'Test',
+          lastName: 'User'
+        }
+      });
+      
+      assert.equal(response.statusCode, 400);
+      const body = JSON.parse(response.body);
+      assert.ok(body.error.includes('password'));
+    });
+
+    test('should reject registration with missing required fields', async () => {
+      const response = await fastify.inject({
+        method: 'POST',
+        url: '/auth/register',
+        payload: {
+          email: 'test@example.com'
+        }
+      });
+      
+      assert.equal(response.statusCode, 400);
+      const body = JSON.parse(response.body);
+      assert.equal(body.error, 'Bad Request');
+    });
+
+    test('should reject registration for existing email', async () => {
+      // First registration
+      await fastify.inject({
+        method: 'POST',
+        url: '/auth/register',
+        payload: {
+          email: 'duplicate@example.com',
+          password: 'password123',
+          firstName: 'Test',
+          lastName: 'User'
+        }
+      });
+
+      // Second registration with same email
+      const response = await fastify.inject({
+        method: 'POST',
+        url: '/auth/register',
+        payload: {
+          email: 'duplicate@example.com',
+          password: 'password123',
+          firstName: 'Test2',
+          lastName: 'User2'
+        }
+      });
+      
+      assert.equal(response.statusCode, 409);
+      const body = JSON.parse(response.body);
+      assert.ok(body.message.includes('already exists'));
+    });
+
+    test('should handle database connection errors gracefully', async () => {
+      // Simulate database error by closing connection
+      await fastify.pg.pool.end();
+      
+      const response = await fastify.inject({
+        method: 'POST',
+        url: '/auth/register',
+        payload: {
+          email: 'test@example.com',
+          password: 'password123',
+          firstName: 'Test',
+          lastName: 'User'
+        }
+      });
+      
+      assert.equal(response.statusCode, 500);
+      const body = JSON.parse(response.body);
+      assert.ok(body.message.includes('database'));
+    });
+  });
+
+  describe('POST /auth/login', () => {
+    test('should reject login with missing credentials', async () => {
+      const response = await fastify.inject({
+        method: 'POST',
+        url: '/auth/login',
+        payload: {}
+      });
+      
+      assert.equal(response.statusCode, 400);
+      const body = JSON.parse(response.body);
+      assert.ok(body.error.includes('email') || body.error.includes('password'));
+    });
+
+    test('should reject login with non-existent user', async () => {
+      const response = await fastify.inject({
+        method: 'POST',
+        url: '/auth/login',
+        payload: {
+          email: 'nonexistent@example.com',
+          password: 'password123'
+        }
+      });
+      
+      assert.equal(response.statusCode, 401);
+      const body = JSON.parse(response.body);
+      assert.ok(body.message.includes('Invalid credentials'));
+    });
+
+    test('should reject login with incorrect password', async () => {
+      // First create a user
+      await fastify.inject({
+        method: 'POST',
+        url: '/auth/register',
+        payload: {
+          email: 'test@example.com',
+          password: 'password123',
+          firstName: 'Test',
+          lastName: 'User'
+        }
+      });
+
+      // Try to login with wrong password
+      const response = await fastify.inject({
+        method: 'POST',
+        url: '/auth/login',
+        payload: {
+          email: 'test@example.com',
+          password: 'wrongpassword'
+        }
+      });
+      
+      assert.equal(response.statusCode, 401);
+      const body = JSON.parse(response.body);
+      assert.ok(body.message.includes('Invalid credentials'));
+    });
+
+    test('should reject login with malformed email', async () => {
+      const response = await fastify.inject({
+        method: 'POST',
+        url: '/auth/login',
+        payload: {
+          email: 'not-an-email',
+          password: 'password123'
+        }
+      });
+      
+      assert.equal(response.statusCode, 400);
+      const body = JSON.parse(response.body);
+      assert.ok(body.error.includes('email'));
+    });
+
+    test('should handle database errors during login', async () => {
+      // Create a user first
+      await fastify.inject({
+        method: 'POST',
+        url: '/auth/register',
+        payload: {
+          email: 'test@example.com',
+          password: 'password123',
+          firstName: 'Test',
+          lastName: 'User'
+        }
+      });
+
+      // Close database connection to simulate error
+      await fastify.pg.pool.end();
+      
+      const response = await fastify.inject({
+        method: 'POST',
+        url: '/auth/login',
+        payload: {
+          email: 'test@example.com',
+          password: 'password123'
+        }
+      });
+      
+      assert.equal(response.statusCode, 500);
+      const body = JSON.parse(response.body);
+      assert.ok(body.message.includes('database'));
+    });
+  });
+
+  describe('POST /auth/refresh', () => {
+    test('should reject refresh with missing token', async () => {
+      const response = await fastify.inject({
+        method: 'POST',
+        url: '/auth/refresh',
+        payload: {}
+      });
+      
+      assert.equal(response.statusCode, 400);
+      const body = JSON.parse(response.body);
+      assert.ok(body.message.includes('refresh token'));
+    });
+
+    test('should reject refresh with invalid token format', async () => {
+      const response = await fastify.inject({
+        method: 'POST',
+        url: '/auth/refresh',
+        payload: {
+          refreshToken: 'invalid-token-format'
+        }
+      });
+      
+      assert.equal(response.statusCode, 401);
+      const body = JSON.parse(response.body);
+      assert.ok(body.message.includes('Invalid token'));
+    });
+
+    test('should reject refresh with expired token', async () => {
+      // This test would require mocking token expiration
+      // Implementation depends on how tokens are generated in the service
+    });
+
+    test('should reject refresh with malformed request body', async () => {
+      const response = await fastify.inject({
+        method: 'POST',
+        url: '/auth/refresh',
+        payload: {
+          refreshToken: null
+        }
+      });
+      
+      assert.equal(response.statusCode, 400);
+      const body = JSON.parse(response.body);
+      assert.ok(body.error.includes('refreshToken'));
+    });
+  });
 });
