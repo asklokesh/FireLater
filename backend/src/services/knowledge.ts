@@ -22,10 +22,8 @@
           qb.andWhere('ka.status', filters.status);
         }
         if (filters.search) {
-          qb.andWhereRaw(
-            "to_tsvector('english', ka.title || ' ' || ka.content) @@ plainto_tsquery('english', ?)",
-            [filters.search]
-          );
+          // Use a more efficient full-text search with pre-indexed column
+          qb.andWhereRaw("ka.search_vector @@ plainto_tsquery('english', ?)", [filters.search]);
         }
       });
 
