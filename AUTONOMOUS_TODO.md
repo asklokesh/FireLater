@@ -1,11 +1,16 @@
 # FireLater Autonomous Development
 
 ## Priority Queue
+- [x] REFACTOR: Duplicated middleware logic across route files (`integrations.ts`, `notifications.ts`) for tenant context extraction; consolidate into shared utility module.
+- [ ] TEST: Incomplete test coverage for critical workflows in `workflow.ts` and `oncall.ts`; add unit tests for edge cases like rotation handoffs and approval chain failures.
+- [ ] PERF: Redundant database queries detected in `knowledge.ts` and `assets.ts` when fetching related entities; optimize with JOINs or batch loading to reduce N+1 query patterns.
+- [ ] BUG: Missing input sanitization in `reporting.ts` API endpoints could lead to SQL injection or XSS vulnerabilities; implement proper validation and escaping for user-provided parameters.
+- [ ] SECURITY: Centralized CIDR validation in `auth.test.ts` may bypass invalid input checks due to misplaced error handling logic; review and fix conditional flow in `validateCIDR` usage.
 - [x] STABILITY: Notifications route doesn't handle Redis connection failures gracefully; implement retry logic and circuit breaker pattern in `backend/src/routes/notifications.ts`
 - [x] TEST: Workflow route lacks unit tests for approval chain logic; add test coverage for sequential and parallel approvals in `backend/src/routes/workflow.ts`
 - [x] PERF: Knowledge base search endpoint performs full-table scans; implement database indexing and pagination in `backend/src/routes/knowledge.ts`
-- [ ] BUG: Reporting route has unhandled promise rejection in export functionality; add try/catch around async operations in `backend/src/routes/reporting.ts`
-- [ ] SECURITY: Auth route uses inline CIDR validation instead of centralized middleware; move `validateCIDR` call to proper middleware layer in `backend/src/routes/auth.test.ts`
+- [x] BUG: Reporting route has unhandled promise rejection in export functionality; add try/catch around async operations in `backend/src/routes/reporting.ts`
+- [x] SECURITY: Auth route uses inline CIDR validation instead of centralized middleware; move `validateCIDR` call to proper middleware layer in `backend/src/routes/auth.test.ts`
 - [x] STABILITY: Redis connection handling in `backend/src/routes/notifications.ts` lacks proper retry logic and could cause notification delivery failures during transient outages
 - [x] TEST: No unit tests exist for critical workflow validation logic in `backend/src/routes/workflow.ts` leaving change management approvals untested
 - [x] PERF: `backend/src/routes/assets.ts` performs N+1 queries when fetching application health scores instead of using batched database operations
@@ -100,6 +105,9 @@
 ## Completed
 
 ## Session Log
+- [2025-12-31 03:23] Completed: REFACTOR: Duplicated middleware logic across route files (`integrations.ts`, `notifications.ts`) for tenant context extraction; consolidate into shared utility module.
+- [2025-12-31 03:23] Completed: SECURITY: Auth route uses inline CIDR validation instead of centralized middleware; move `validateCIDR` call to proper middleware layer in `backend/src/routes/auth.test.ts`
+- [2025-12-31 03:22] Completed: BUG: Reporting route has unhandled promise rejection in export functionality; add try/catch around async operations in `backend/src/routes/reporting.ts`
 - [2025-12-31 03:22] Completed: PERF: Knowledge base search endpoint performs full-table scans; implement database indexing and pagination in `backend/src/routes/knowledge.ts`
 - [2025-12-31 03:22] Completed: TEST: Workflow route lacks unit tests for approval chain logic; add test coverage for sequential and parallel approvals in `backend/src/routes/workflow.ts`
 - [2025-12-31 03:21] Completed: STABILITY: Notifications route doesn't handle Redis connection failures gracefully; implement retry logic and circuit breaker pattern in `backend/src/routes/notifications.ts`
