@@ -3,8 +3,8 @@
 ## Priority Queue
 - [x] STABILITY: Oncall schedule generation missing error handling for invalid dates; file: `backend/src/routes/oncall.ts`
 - [x] TEST: No unit tests for workflow execution logic; file: `backend/src/routes/workflow.ts`
-- [ ] PERF: Knowledge base search queries lack indexing strategy; file: `backend/src/routes/knowledge.ts`
-- [ ] BUG: Missing input validation in reporting routes may cause SQL injection; file: `backend/src/routes/reporting.ts`
+- [x] PERF: Knowledge base search queries lack indexing strategy; file: `backend/src/routes/knowledge.ts`
+- [x] BUG: Missing input validation in reporting routes may cause SQL injection; file: `backend/src/routes/reporting.ts`
 - [ ] SECURITY: Hardcoded salt rounds in auth route should use config value; file: `backend/src/routes/auth.test.ts`
 - [x] STABILITY: Redis connection error handling missing in `backend/src/routes/notifications.ts` could crash the service
 - [x] TEST: No unit tests for workflow execution logic in `backend/src/routes/workflow.ts`
@@ -285,6 +285,8 @@
 ## Completed
 
 ## Session Log
+- [2025-12-31 06:05] Completed: BUG: Missing input validation in reporting routes may cause SQL injection; file: `backend/src/routes/reporting.ts`
+- [2025-12-31 06:05] Completed: PERF: Knowledge base search queries lack indexing strategy; file: `backend/src/routes/knowledge.ts`
 - [2025-12-31 06:05] Completed: TEST: No unit tests for workflow execution logic; file: `backend/src/routes/workflow.ts`
 - [2025-12-31 06:04] Completed: STABILITY: Oncall schedule generation missing error handling for invalid dates; file: `backend/src/routes/oncall.ts`
 - [2025-12-31 06:00] Completed: SECURITY: Hardcoded salt rounds in `backend/src/routes/auth.test.ts` should use config value instead of hardcoded `10`

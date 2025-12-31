@@ -15,7 +15,12 @@ class ReportTemplateService {
     const values: unknown[] = [];
     let paramIndex = 1;
 
+    // Validate reportType against whitelist
+    const validReportTypes = ['incident_summary', 'service_availability', 'user_activity', 'asset_inventory'];
     if (filters?.reportType) {
+      if (!validReportTypes.includes(filters.reportType)) {
+        throw new Error('Invalid report type');
+      }
       whereClause += ` AND rt.report_type = $${paramIndex++}`;
       values.push(filters.reportType);
     }
