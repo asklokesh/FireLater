@@ -1,11 +1,16 @@
 # FireLater Autonomous Development
 
 ## Priority Queue
+- [x] REFACTOR: Duplicated tenant context extraction logic across route handlers (`backend/src/routes/assets.ts`, `backend/src/routes/integrations.ts`) should be centralized into a shared utility or plugin
+- [x] TEST: No unit tests for critical workflows such as change request approval in `backend/src/routes/workflow.ts` - add coverage for success/failure paths
+- [ ] PERF: Missing database query indexing for common filters (e.g., status, assignee) in `backend/src/routes/requests.ts` and `backend/src/routes/oncall.ts` leading to slow lookups
+- [ ] BUG: Manual input sanitization is redundant and error-prone after global hook implementation in `backend/src/routes/reporting.ts` and other route files - remove all instances like `sanitizedEmail`, etc.
+- [ ] SECURITY: Passwords should never be logged or stored in plain text; ensure bcrypt hashing is applied before storage in `backend/src/routes/auth.test.ts` and registration logic
 - [x] REFACTOR: Duplicate input sanitization logic across multiple route files instead of using a centralized utility (`backend/src/routes/auth.test.ts`, `backend/src/routes/knowledge.ts`).
 - [x] TEST: Lack of input validation tests for auth routes; only happy path may be covered (`backend/src/routes/auth.test.ts`).
 - [x] PERF: No database connection pooling configuration shown, which can lead to performance issues under load (`backend/src/routes/reporting.ts`, `backend/src/routes/requests.ts`).
-- [ ] BUG: Input sanitization is applied inconsistently across routes; some fields like `firstName` and `lastName` are truncated without user feedback (`backend/src/routes/auth.test.ts`).
-- [ ] SECURITY: Passwords are not being sanitized or validated properly in the register route (`backend/src/routes/auth.test.ts`), which could lead to injection attacks or storage of invalid data.
+- [x] BUG: Input sanitization is applied inconsistently across routes; some fields like `firstName` and `lastName` are truncated without user feedback (`backend/src/routes/auth.test.ts`).
+- [x] SECURITY: Passwords are not being sanitized or validated properly in the register route (`backend/src/routes/auth.test.ts`), which could lead to injection attacks or storage of invalid data.
 - [x] REFACTOR: Input sanitization applied inconsistently across routes. Some routes (like `/knowledge`, `/workflow`) bypass sanitization while others use it. Standardize sanitization through Fastify hooks or middleware.
 - [x] TEST: Auth routes have no unit tests for rate limiting or failed login scenarios. Critical security features are untested in `/backend/src/routes/auth.test.ts`. Add tests for rate limit responses and validation error cases.
 - [x] PERF: Missing database indexing strategy for multi-tenant queries. With schema-per-tenant approach, critical routes like `/requests`, `/assets`, and `/oncall` need composite indexes on tenant_id. Add migration scripts for tenant-aware indexes.
@@ -205,6 +210,10 @@
 ## Completed
 
 ## Session Log
+- [2025-12-31 05:10] Completed: TEST: No unit tests for critical workflows such as change request approval in `backend/src/routes/workflow.ts` - add coverage for success/failure paths
+- [2025-12-31 05:09] Completed: REFACTOR: Duplicated tenant context extraction logic across route handlers (`backend/src/routes/assets.ts`, `backend/src/routes/integrations.ts`) should be centralized into a shared utility or plugin
+- [2025-12-31 05:08] Completed: SECURITY: Passwords are not being sanitized or validated properly in the register route (`backend/src/routes/auth.test.ts`), which could lead to injection attacks or storage of invalid data.
+- [2025-12-31 05:08] Completed: BUG: Input sanitization is applied inconsistently across routes; some fields like `firstName` and `lastName` are truncated without user feedback (`backend/src/routes/auth.test.ts`).
 - [2025-12-31 05:08] Completed: PERF: No database connection pooling configuration shown, which can lead to performance issues under load (`backend/src/routes/reporting.ts`, `backend/src/routes/requests.ts`).
 - [2025-12-31 05:07] Completed: TEST: Lack of input validation tests for auth routes; only happy path may be covered (`backend/src/routes/auth.test.ts`).
 - [2025-12-31 05:07] Completed: REFACTOR: Duplicate input sanitization logic across multiple route files instead of using a centralized utility (`backend/src/routes/auth.test.ts`, `backend/src/routes/knowledge.ts`).
