@@ -1,4 +1,3 @@
-// Enhanced CIDR validation function
 export const validateCIDR = (cidr: string): boolean => {
   try {
     // Handle IPv6 ranges properly
