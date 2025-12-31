@@ -4,8 +4,8 @@
 - [x] STABILITY: Redis connection not properly handled during BullMQ job processing - `backend/src/routes/notifications.ts`
 - [x] TEST: No integration tests for on-call rotation scheduling logic - `backend/src/routes/oncall.ts`
 - [x] PERF: N+1 query issue in asset inventory loading without proper joins - `backend/src/routes/assets.ts`
-- [ ] BUG: Missing input validation for service catalog builder allows malformed workflows - `backend/src/routes/workflow.ts`
-- [ ] SECURITY: Insecure error handling in auth route exposes internal errors; should sanitize before throwing - `backend/src/routes/auth.test.ts`
+- [x] BUG: Missing input validation for service catalog builder allows malformed workflows - `backend/src/routes/workflow.ts`
+- [x] SECURITY: Insecure error handling in auth route exposes internal errors; should sanitize before throwing - `backend/src/routes/auth.test.ts`
 - [x] STABILITY: BullMQ job processors missing proper error boundaries and retry configurations (backend/src/routes/notifications.ts, backend/src/routes/workflow.ts)
 - [x] TEST: Auth route lacks comprehensive test coverage for edge cases in CIDR validation and error scenarios (backend/src/routes/auth.test.ts)
 - [x] PERF: No database connection pooling configured for PostgreSQL leading to connection exhaustion under load (backend/src/routes/oncall.ts, backend/src/routes/assets.ts)
@@ -150,6 +150,8 @@
 ## Completed
 
 ## Session Log
+- [2025-12-31 04:12] Completed: SECURITY: Insecure error handling in auth route exposes internal errors; should sanitize before throwing - `backend/src/routes/auth.test.ts`
+- [2025-12-31 04:12] Completed: BUG: Missing input validation for service catalog builder allows malformed workflows - `backend/src/routes/workflow.ts`
 - [2025-12-31 04:12] Completed: PERF: N+1 query issue in asset inventory loading without proper joins - `backend/src/routes/assets.ts`
 - [2025-12-31 04:11] Completed: TEST: No integration tests for on-call rotation scheduling logic - `backend/src/routes/oncall.ts`
 - [2025-12-31 04:11] Completed: STABILITY: Redis connection not properly handled during BullMQ job processing - `backend/src/routes/notifications.ts`
