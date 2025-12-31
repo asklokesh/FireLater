@@ -1,3 +1,5 @@
+// Remove the local sanitizeInput function since it's now global
+
 fastify.get('/search', {
   schema: {
     tags: ['knowledge'],
@@ -14,45 +16,6 @@ fastify.get('/search', {
         categoryId: { type: 'string', pattern: '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$' }
       },
       additionalProperties: false
-    },
-    response: {
-      200: {
-        type: 'object',
-        properties: {
-          articles: {
-            type: 'array',
-            items: {
-              type: 'object',
-              properties: {
-                id: { type: 'string' },
-                article_number: { type: 'string' },
-                title: { type: 'string' },
-                slug: { type: 'string' },
-                summary: { type: 'string' },
-                type: { type: 'string' },
-                status: { type: 'string' },
-                visibility: { type: 'string' },
-                category_id: { type: 'string' },
-                author_id: { type: 'string' },
-                view_count: { type: 'integer' },
-                helpful_count: { type: 'integer' },
-                not_helpful_count: { type: 'integer' },
-                published_at: { type: 'string' },
-                created_at: { type: 'string' },
-                updated_at: { type: 'string' },
-                author_name: { type: 'string' },
-                author_email: { type: 'string' },
-                category_name: { type: 'string' },
-                related_problem_number: { type: 'string' },
-                related_issue_number: { type: 'string' }
-              }
-            }
-          },
-          total: { type: 'integer' },
-          page: { type: 'integer' },
-          perPage: { type: 'integer' }
-        }
-      }
     }
   },
   preHandler: [fastify.authenticate],
@@ -63,6 +26,7 @@ fastify.get('/search', {
     }
   }
 }, async (request, reply) => {
+  // Remove manual sanitization - now handled by global hook
   let { q, page = 1, perPage = 20, sort, order, type, visibility, categoryId } = request.query as {
     q?: string;
     page?: number;
@@ -74,32 +38,7 @@ fastify.get('/search', {
     categoryId?: string;
   };
 
-  // Sanitize inputs with improved validation
-  if (q) {
-    q = sanitizeInput(q);
-    // Limit search query length
-    if (q.length > 255) {
-      q = q.substring(0, 255);
-    }
-  }
-  
-  if (sort) {
-    sort = sanitizeInput(sort);
-    // Validate sort field against allowed values
-    const allowedSortFields = ['title', 'created_at', 'updated_at', 'view_count'];
-    if (!allowedSortFields.includes(sort)) {
-      sort = 'created_at'; // Default to safe value
-    }
-  }
-  
-  if (categoryId) {
-    categoryId = sanitizeInput(categoryId);
-    // Validate UUID format for category ID
-    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(categoryId)) {
-      categoryId = undefined; // Ignore invalid category ID
-    }
-  }
-
+  // Remove manual sanitization logic - validation schema handles constraints
   const pagination: PaginationParams = { 
     page: Math.max(1, Math.min(1000, page)), 
     perPage: Math.min(100, Math.max(1, perPage)),

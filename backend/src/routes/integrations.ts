@@ -1,18 +1,6 @@
-// Add input validation schema
-const webhooksQuerySchema = {
-  querystring: {
-    type: 'object',
-    properties: {
-      page: { type: 'integer', minimum: 1, maximum: 1000, default: 1 },
-      perPage: { type: 'integer', minimum: 1, maximum: 100, default: 20 },
-      status: { type: 'string', enum: ['active', 'inactive', 'error'] },
-      provider: { type: 'string', maxLength: 50 }
-    },
-    additionalProperties: false
-  }
-};
+// Remove the local sanitizeInput function since it's now global
 
-// List webhooks with caching and input sanitization
+// Remove manual sanitization in route handlers
 fastify.get('/webhooks', {
   schema: webhooksQuerySchema,
   config: {
@@ -23,42 +11,11 @@ fastify.get('/webhooks', {
   }
 }, async (request, reply) => {
   const tenant = (request as any).tenant;
+  // Remove manual sanitization - now handled by global hook
   const query = request.query as Record<string, any>;
   
-  // Sanitize query parameters
-  const sanitizedQuery: Record<string, any> = {};
-  for (const [key, value] of Object.entries(query)) {
-    if (typeof value === 'string') {
-      // Apply length limits and sanitization
-      const sanitizedValue = sanitizeInput(value);
-      if (key === 'provider') {
-        sanitizedQuery[key] = sanitizedValue.substring(0, 50);
-      } else if (key === 'status') {
-        // Already validated by schema, but double-check
-        const validStatuses = ['active', 'inactive', 'error'];
-        if (validStatuses.includes(sanitizedValue)) {
-          sanitizedQuery[key] = sanitizedValue;
-        }
-      } else {
-        sanitizedQuery[key] = sanitizedValue;
-      }
-    } else if (typeof value === 'number') {
-      // Apply bounds to numeric values
-      if (key === 'page') {
-        sanitizedQuery[key] = Math.max(1, Math.min(1000, value));
-      } else if (key === 'perPage') {
-        sanitizedQuery[key] = Math.min(100, Math.max(1, value));
-      } else {
-        sanitizedQuery[key] = value;
-      }
-    } else if (typeof value === 'boolean') {
-      sanitizedQuery[key] = value;
-    }
-    // Ignore other types to prevent injection
-  }
-  
   // Generate cache key
-  const cacheKey = generateIntegrationsCacheKey(tenant.slug, 'webhooks', sanitizedQuery);
+  const cacheKey = generateIntegrationsCacheKey(tenant.slug, 'webhooks', query);
   
   // Try to get from cache first
   const cachedData = await fastify.redis.get(cacheKey);
@@ -75,7 +32,7 @@ fastify.get('/webhooks', {
     for (let attempt = 1; attempt <= 3; attempt++) {
       try {
         webhooks = await Promise.race([
-          webhooksService.list(tenant.slug, sanitizedQuery),
+          webhooksService.list(tenant.slug, query),
           new Promise((_, reject) => 
             setTimeout(() => reject(new Error('Webhooks fetch timeout')), 30000)
           )
