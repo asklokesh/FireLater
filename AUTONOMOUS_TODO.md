@@ -3,7 +3,7 @@
 ## Priority Queue
 - [x] STABILITY: Missing error handling for Redis connection failures in `backend/src/routes/notifications.ts` BullMQ setup
 - [x] TEST: No integration tests for webhook handling in `backend/src/routes/integrations.ts` despite AWS sync functionality
-- [ ] PERF: N+1 query issue in `backend/src/routes/assets.ts` when fetching asset health scores without proper joins
+- [x] PERF: N+1 query issue in `backend/src/routes/assets.ts` when fetching asset health scores without proper joins
 - [ ] BUG: Missing input validation in `backend/src/routes/reporting.ts` for date range parameters could cause SQL injection
 - [ ] SECURITY: Hardcoded salt rounds in `backend/src/routes/auth.test.ts` should use config instead of hardcoded value
 - [x] STABILITY: Missing error handling for Redis connection failures in notifications service - backend/src/routes/notifications.ts
@@ -455,6 +455,7 @@
 ## Completed
 
 ## Session Log
+- [2025-12-31 07:56] Completed: PERF: N+1 query issue in `backend/src/routes/assets.ts` when fetching asset health scores without proper joins
 - [2025-12-31 07:56] Completed: TEST: No integration tests for webhook handling in `backend/src/routes/integrations.ts` despite AWS sync functionality
 - [2025-12-31 07:56] Completed: STABILITY: Missing error handling for Redis connection failures in `backend/src/routes/notifications.ts` BullMQ setup
 - [2025-12-31 07:55] Completed: SECURITY: Hardcoded salt rounds in auth route should use config value - backend/src/routes/auth.test.ts
