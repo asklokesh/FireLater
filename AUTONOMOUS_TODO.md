@@ -5,7 +5,7 @@
 - [x] TEST: Auth route lacks unit tests for `validateCIDR` function and error handling paths; only happy path appears covered (backend/src/routes/auth.test.ts)
 - [x] PERF: No caching strategy implemented for knowledge base or asset inventory queries; high-frequency reads will impact DB performance (backend/src/routes/knowledge.ts, backend/src/routes/assets.ts)
 - [x] BUG: Missing input validation on CIDR field allows potential injection or malformed data; validation occurs after error catch block (backend/src/routes/auth.test.ts)
-- [ ] SECURITY: Auth route exposes raw error messages to client via `getSafeErrorMessage` which may leak internal details; should sanitize all error responses in production (backend/src/routes/auth.test.ts)
+- [x] SECURITY: Auth route exposes raw error messages to client via `getSafeErrorMessage` which may leak internal details; should sanitize all error responses in production (backend/src/routes/auth.test.ts)
 - [x] STABILITY: `notifications.ts` uses synchronous Redis calls without timeout handling; wrap in try-catch and add retry logic.
 - [x] TEST: `workflow.ts` lacks unit tests for edge cases in approval chain logic; add comprehensive test coverage.
 - [x] PERF: `knowledge.ts` makes N+1 queries when fetching articles; optimize with batch loading or JOINs.
@@ -160,6 +160,7 @@
 ## Completed
 
 ## Session Log
+- [2025-12-31 04:16] Completed: SECURITY: Auth route exposes raw error messages to client via `getSafeErrorMessage` which may leak internal details; should sanitize all error responses in production (backend/src/routes/auth.test.ts)
 - [2025-12-31 04:16] Completed: BUG: Missing input validation on CIDR field allows potential injection or malformed data; validation occurs after error catch block (backend/src/routes/auth.test.ts)
 - [2025-12-31 04:16] Completed: PERF: No caching strategy implemented for knowledge base or asset inventory queries; high-frequency reads will impact DB performance (backend/src/routes/knowledge.ts, backend/src/routes/assets.ts)
 - [2025-12-31 04:15] Completed: TEST: Auth route lacks unit tests for `validateCIDR` function and error handling paths; only happy path appears covered (backend/src/routes/auth.test.ts)

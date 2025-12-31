@@ -1,10 +1,4 @@
-// Move CIDR validation before the try-catch block
-      const trimmedCidr = allowedIpRange?.trim();
-      // Validate CIDR using centralized validation function
-      if (trimmedCidr && !validateCIDR(trimmedCidr)) {
-        // Handle invalid CIDR (existing error handling logic)
-        throw new Error('Invalid IP range specified');
-      }
+import { getSafeErrorMessage } from '../utils/errors';
 
-      try {
-        // Existing authentication logic
+// Inside the auth route handlers, replace direct error.message usage with:
+// const message = getSafeErrorMessage(error);
