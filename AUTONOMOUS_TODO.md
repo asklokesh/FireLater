@@ -4,7 +4,7 @@
 - [x] STABILITY: `backend/src/routes/notifications.ts` lacks proper error boundaries for external webhook delivery, risking unhandled promise rejections.
 - [x] TEST: No unit tests for `validateCIDR` function in `backend/src/routes/auth.test.ts`; critical for security-related input validation.
 - [x] PERF: `backend/src/routes/assets.ts` performs N+1 queries when fetching asset health scores; should batch or join related data.
-- [ ] BUG: Missing input sanitization in `backend/src/routes/reporting.ts` for user-supplied filters could lead to SQL injection or incorrect query results.
+- [x] BUG: Missing input sanitization in `backend/src/routes/reporting.ts` for user-supplied filters could lead to SQL injection or incorrect query results.
 - [ ] SECURITY: Insecure CIDR validation logic in `backend/src/routes/auth.test.ts` lacks proper error handling and may allow invalid IP ranges; validation should throw or return explicit boolean.
 - [x] STABILITY: Unhandled promise rejection in `backend/src/routes/integrations.ts` - AWS sync jobs don't properly handle network timeouts which can crash the worker process
 - [x] TEST: Insufficient test coverage in `backend/src/routes/oncall.ts` - on-call scheduling logic lacks edge case testing for timezone transitions and rotation overlaps
@@ -130,6 +130,7 @@
 ## Completed
 
 ## Session Log
+- [2025-12-31 04:04] Completed: BUG: Missing input sanitization in `backend/src/routes/reporting.ts` for user-supplied filters could lead to SQL injection or incorrect query results.
 - [2025-12-31 04:04] Completed: PERF: `backend/src/routes/assets.ts` performs N+1 queries when fetching asset health scores; should batch or join related data.
 - [2025-12-31 04:03] Completed: TEST: No unit tests for `validateCIDR` function in `backend/src/routes/auth.test.ts`; critical for security-related input validation.
 - [2025-12-31 04:03] Completed: STABILITY: `backend/src/routes/notifications.ts` lacks proper error boundaries for external webhook delivery, risking unhandled promise rejections.
