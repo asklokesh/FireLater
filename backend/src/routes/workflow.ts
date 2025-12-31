@@ -1,127 +1,107 @@
-import { FastifyInstance } from 'fastify';
-import { z } from 'zod';
+// Add comprehensive tests for workflow execution logic
+import { describe, it, beforeEach, afterEach } from 'node:test';
+import { deepEqual, ok, rejects } from 'node:assert';
+import { buildTestServer } from '../test/helpers.js';
 import { workflowService } from '../services/workflow.js';
-import { authenticate, authorize } from '../middleware/auth.js';
-import { validateTenantAccess } from '../middleware/tenant.js';
 
-// Add workflow execution validation schema
-const workflowExecutionSchema = z.object({
-  requestId: z.string().uuid(),
-  action: z.string().min(1).max(50),
-  userId: z.string().uuid().optional(),
-  payload: z.record(z.any()).optional(),
-});
-
-export async function workflowRoutes(fastify: FastifyInstance) {
-  // POST /api/v1/workflow/execute
-  fastify.post('/execute', {
-    preHandler: [authenticate, authorize('execute:workflow'), validateTenantAccess],
-    schema: {
-      body: {
-        type: 'object',
-        required: ['requestId', 'action'],
-        properties: {
-          requestId: { type: 'string', format: 'uuid' },
-          action: { type: 'string', minLength: 1, maxLength: 50 },
-          userId: { type: 'string', format: 'uuid' },
-          payload: { type: 'object' }
-        }
-      }
-    }
-  }, async (request, reply) => {
-    const { tenantSlug } = request.params as { tenantSlug: string };
-    const { requestId, action, userId, payload } = request.body as {
-      requestId: string;
-      action: string;
-      userId?: string;
-      payload?: Record<string, any>;
-    };
-
-    try {
-      // Validate input
-      const validatedData = workflowExecutionSchema.parse({ requestId, action, userId, payload });
+describe('Workflow Routes', () => {
+  let app: any;
+  
+  beforeEach(async () => {
+    app = await buildTestServer();
+  });
+  
+  afterEach(async () => {
+    await app.close();
+  });
+  
+  describe('POST /api/v1/workflows/:workflowId/execute', () => {
+    it('should execute workflow successfully', async () => {
+      const mockResult = { 
+        executionId: 'exec-123', 
+        status: 'completed',
+        outputs: { result: 'success' }
+      };
       
-      // Execute workflow
-      const result = await workflowService.executeWorkflow(
-        tenantSlug, 
-        validatedData.requestId, 
-        validatedData.action, 
-        validatedData.userId || request.user.id,
-        validatedData.payload
+      const executeStub = sinon.stub(workflowService, 'execute').resolves(mockResult);
+      
+      const response = await app.inject({
+        method: 'POST',
+        url: '/api/v1/workflows/wf-123/execute',
+        headers: {
+          authorization: 'Bearer test-token'
+        },
+        payload: {
+          requestId: 'req-456',
+          action: 'approve',
+          userId: 'user-789'
+        }
+      });
+      
+      deepEqual(response.json(), mockResult);
+      ok(executeStub.calledOnce);
+      
+      executeStub.restore();
+    });
+    
+    it('should return 400 for invalid request payload', async () => {
+      const response = await app.inject({
+        method: 'POST',
+        url: '/api/v1/workflows/wf-123/execute',
+        headers: {
+          authorization: 'Bearer test-token'
+        },
+        payload: {
+          // Missing required fields
+        }
+      });
+      
+      deepEqual(response.statusCode, 400);
+    });
+    
+    it('should handle workflow execution errors', async () => {
+      const executeStub = sinon.stub(workflowService, 'execute').rejects(
+        new Error('Workflow execution failed')
       );
       
-      return reply.send(result);
-    } catch (error: any) {
-      if (error instanceof z.ZodError) {
-        return reply.status(400).send({
-          error: 'Validation failed',
-          details: error.errors
-        });
-      }
-      
-      if (error.code === 'WORKFLOW_NOT_FOUND') {
-        return reply.status(404).send({
-          error: 'Workflow not found',
-          code: 'WORKFLOW_NOT_FOUND'
-        });
-      }
-      
-      if (error.code === 'INVALID_STATE_TRANSITION') {
-        return reply.status(400).send({
-          error: 'Invalid state transition',
-          code: 'INVALID_STATE_TRANSITION',
-          details: error.message
-        });
-      }
-      
-      if (error.code === 'WORKFLOW_EXECUTION_FAILED') {
-        return reply.status(400).send({
-          error: 'Workflow execution failed',
-          code: 'WORKFLOW_EXECUTION_FAILED',
-          details: error.message
-        });
-      }
-      
-      fastify.log.error({ error }, 'Workflow execution error');
-      return reply.status(500).send({
-        error: 'Internal server error',
-        code: 'WORKFLOW_EXECUTION_ERROR'
-      });
-    }
-  });
-
-  // GET /api/v1/workflow/:requestId/state
-  fastify.get('/:requestId/state', {
-    preHandler: [authenticate, authorize('read:workflow'), validateTenantAccess],
-    schema: {
-      params: {
-        type: 'object',
-        required: ['requestId'],
-        properties: {
-          requestId: { type: 'string', format: 'uuid' }
+      const response = await app.inject({
+        method: 'POST',
+        url: '/api/v1/workflows/wf-123/execute',
+        headers: {
+          authorization: 'Bearer test-token'
+        },
+        payload: {
+          requestId: 'req-456',
+          action: 'approve',
+          userId: 'user-789'
         }
-      }
-    }
-  }, async (request, reply) => {
-    const { tenantSlug } = request.params as { tenantSlug: string };
-    const { requestId } = request.params as { requestId: string };
-
-    try {
-      const state = await workflowService.getCurrentState(tenantSlug, requestId);
-      return reply.send(state);
-    } catch (error: any) {
-      if (error.code === 'WORKFLOW_NOT_FOUND') {
-        return reply.status(404).send({
-          error: 'Workflow not found',
-          code: 'WORKFLOW_NOT_FOUND'
-        });
-      }
-      
-      fastify.log.error({ error }, 'Failed to get workflow state');
-      return reply.status(500).send({
-        error: 'Failed to retrieve workflow state',
-        code: 'WORKFLOW_STATE_ERROR'
       });
-    }
+      
+      deepEqual(response.statusCode, 500);
+      executeStub.restore();
+    });
+    
+    it('should handle validation errors', async () => {
+      const executeStub = sinon.stub(workflowService, 'execute').rejects({
+        code: 'VALIDATION_ERROR',
+        message: 'Invalid workflow state'
+      });
+      
+      const response = await app.inject({
+        method: 'POST',
+        url: '/api/v1/workflows/wf-123/execute',
+        headers: {
+          authorization: 'Bearer test-token'
+        },
+        payload: {
+          requestId: 'req-456',
+          action: 'approve',
+          userId: 'user-789'
+        }
+      });
+      
+      deepEqual(response.statusCode, 400);
+      executeStub.restore();
+    });
   });
-}
+});
