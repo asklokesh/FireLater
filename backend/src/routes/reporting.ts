@@ -1,103 +1,161 @@
-import { FastifyInstance, FastifyRequest } from 'fastify';
-import { reportingService } from '../services/reporting.js';
-import { authenticate, authorize } from '../middleware/auth.js';
-import { validatePagination } from '../middleware/validation.js';
-import { BadRequestError } from '../utils/errors.js';
-import { createHash } from 'crypto';
+import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
+import { reportTemplateService } from '../services/reporting.js';
+import { BadRequestError, NotFoundError } from '../utils/errors.js';
+import { logger } from '../utils/logger.js';
 
-// Add input sanitization helper
-const sanitizeInput = (input: string): string => {
-  return input.replace(/[^a-zA-Z0-9:_\-\. ]/g, '').trim();
-};
+// GET /api/v1/reporting/templates
+export async function listReportTemplates(
+  request: FastifyRequest<{
+    Params: { tenantSlug: string };
+    Querystring: {
+      page?: string;
+      perPage?: string;
+      reportType?: string;
+      isPublic?: string;
+    };
+  }>,
+  reply: FastifyReply
+) {
+  try {
+    const { tenantSlug } = request.params;
+    const {
+      page = '1',
+      perPage = '20',
+      reportType,
+      isPublic
+    } = request.query;
 
-// Add date validation helper
-const validateDateRange = (fromDate?: string, toDate?: string): void => {
-  if (fromDate && isNaN(Date.parse(fromDate))) {
-    throw new BadRequestError('Invalid fromDate parameter');
-  }
-  if (toDate && isNaN(Date.parse(toDate))) {
-    throw new BadRequestError('Invalid toDate parameter');
-  }
-  if (fromDate && toDate && new Date(fromDate) > new Date(toDate)) {
-    throw new BadRequestError('fromDate must be before toDate');
-  }
-};
+    const pagination = {
+      page: parseInt(page, 10),
+      perPage: parseInt(perPage, 10)
+    };
 
-// Generate cache key for analytics requests
-const generateAnalyticsCacheKey = (tenantSlug: string, query: any): string => {
-  const keyData = `${tenantSlug}:${JSON.stringify(query)}`;
-  return `analytics:${createHash('md5').update(keyData).digest('hex')}`;
-};
-
-export async function reportingRoutes(fastify: FastifyInstance) {
-  // GET /api/v1/reporting/analytics
-  fastify.get(
-    '/analytics',
-    {
-      preHandler: [authenticate, authorize('read:reports'), validatePagination],
-      schema: {
-        querystring: {
-          type: 'object',
-          properties: {
-            reportType: { type: 'string' },
-            fromDate: { type: 'string', format: 'date-time' },
-            toDate: { type: 'string', format: 'date-time' },
-            groupBy: { type: 'string' },
-          },
-        },
-      },
-      // Add rate limiting
-      config: {
-        rateLimit: {
-          max: 10,
-          timeWindow: '1 minute'
-        }
-      }
-    },
-    async (request: FastifyRequest<{ Querystring: { 
-      reportType?: string; 
-      fromDate?: string; 
-      toDate?: string; 
-      groupBy?: string;
-    } }>, reply) => {
-      const { tenantSlug } = request.user!;
-      let { reportType, fromDate, toDate, groupBy } = request.query;
-
-      // Sanitize inputs
-      if (reportType) reportType = sanitizeInput(reportType);
-      if (groupBy) groupBy = sanitizeInput(groupBy);
-
-      // Validate date parameters
-      validateDateRange(fromDate, toDate);
-
-      // Generate cache key
-      const cacheKey = generateAnalyticsCacheKey(tenantSlug, {
-        reportType,
-        fromDate,
-        toDate,
-        groupBy
-      });
-      
-      // Try to get from cache first
-      const cachedData = await fastify.redis.get(cacheKey);
-      if (cachedData) {
-        reply.header('X-Cache', 'HIT');
-        return { data: JSON.parse(cachedData) };
-      }
-
-      const data = await reportingService.getAnalytics(
-        tenantSlug,
-        reportType,
-        fromDate,
-        toDate,
-        groupBy
-      );
-
-      // Cache the result for 5 minutes
-      await fastify.redis.setex(cacheKey, 300, JSON.stringify(data));
-      reply.header('X-Cache', 'MISS');
-      
-      return { data };
+    if (isNaN(pagination.page) || pagination.page < 1) {
+      throw new BadRequestError('Invalid page parameter');
     }
-  );
+    if (isNaN(pagination.perPage) || pagination.perPage < 1 || pagination.perPage > 100) {
+      throw new BadRequestError('Invalid perPage parameter (must be between 1 and 100)');
+    }
+
+    const filters = {
+      reportType,
+      isPublic: isPublic === 'true' ? true : isPublic === 'false' ? false : undefined
+    };
+
+    const result = await reportTemplateService.list(tenantSlug, pagination, filters);
+    return reply.send(result);
+  } catch (error) {
+    logger.error({ error, params: request.params, query: request.query }, 'Failed to list report templates');
+    if (error instanceof BadRequestError || error instanceof NotFoundError) {
+      return reply.code(400).send({ error: error.message });
+    }
+    return reply.code(500).send({ error: 'Internal server error' });
+  }
+}
+
+// GET /api/v1/reporting/templates/:id
+export async function getReportTemplate(
+  request: FastifyRequest<{
+    Params: { tenantSlug: string; id: string };
+  }>,
+  reply: FastifyReply
+) {
+  try {
+    const { tenantSlug, id } = request.params;
+
+    if (!id) {
+      throw new BadRequestError('Template ID is required');
+    }
+
+    const template = await reportTemplateService.findById(tenantSlug, id);
+    if (!template) {
+      throw new NotFoundError('Report template', id);
+    }
+
+    return reply.send(template);
+  } catch (error) {
+    logger.error({ error, params: request.params }, 'Failed to get report template');
+    if (error instanceof BadRequestError || error instanceof NotFoundError) {
+      return reply.code(400).send({ error: error.message });
+    }
+    return reply.code(500).send({ error: 'Internal server error' });
+  }
+}
+
+// POST /api/v1/reporting/templates
+export async function createReportTemplate(
+  request: FastifyRequest<{
+    Params: { tenantSlug: string };
+    Body: any;
+  }>,
+  reply: FastifyReply
+) {
+  try {
+    const { tenantSlug } = request.params;
+    const userId = request.user?.id;
+
+    if (!userId) {
+      throw new BadRequestError('User ID is required');
+    }
+
+    const template = await reportTemplateService.create(tenantSlug, userId, request.body);
+    return reply.code(201).send(template);
+  } catch (error) {
+    logger.error({ error, params: request.params, body: request.body }, 'Failed to create report template');
+    if (error instanceof BadRequestError) {
+      return reply.code(400).send({ error: error.message });
+    }
+    return reply.code(500).send({ error: 'Internal server error' });
+  }
+}
+
+// PUT /api/v1/reporting/templates/:id
+export async function updateReportTemplate(
+  request: FastifyRequest<{
+    Params: { tenantSlug: string; id: string };
+    Body: any;
+  }>,
+  reply: FastifyReply
+) {
+  try {
+    const { tenantSlug, id } = request.params;
+
+    if (!id) {
+      throw new BadRequestError('Template ID is required');
+    }
+
+    const template = await reportTemplateService.update(tenantSlug, id, request.body);
+    return reply.send(template);
+  } catch (error) {
+    logger.error({ error, params: request.params, body: request.body }, 'Failed to update report template');
+    if (error instanceof BadRequestError || error instanceof NotFoundError) {
+      return reply.code(400).send({ error: error.message });
+    }
+    return reply.code(500).send({ error: 'Internal server error' });
+  }
+}
+
+// DELETE /api/v1/reporting/templates/:id
+export async function deleteReportTemplate(
+  request: FastifyRequest<{
+    Params: { tenantSlug: string; id: string };
+  }>,
+  reply: FastifyReply
+) {
+  try {
+    const { tenantSlug, id } = request.params;
+
+    if (!id) {
+      throw new BadRequestError('Template ID is required');
+    }
+
+    await reportTemplateService.delete(tenantSlug, id);
+    return reply.code(204).send();
+  } catch (error) {
+    logger.error({ error, params: request.params }, 'Failed to delete report template');
+    if (error instanceof BadRequestError || error instanceof NotFoundError) {
+      return reply.code(400).send({ error: error.message });
+    }
+    return reply.code(500).send({ error: 'Internal server error' });
+  }
 }
