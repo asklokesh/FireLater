@@ -3,7 +3,7 @@
 ## Priority Queue
 - [x] STABILITY: Redis connection not properly closed in notification service shutdown - backend/src/routes/notifications.ts
 - [x] TEST: No integration tests for workflow approval chains - backend/src/routes/workflow.ts
-- [ ] PERF: N+1 query pattern detected in knowledge base category loading - backend/src/routes/knowledge.ts
+- [x] PERF: N+1 query pattern detected in knowledge base category loading - backend/src/routes/knowledge.ts
 - [ ] BUG: Missing input validation for critical parameters in reporting routes - backend/src/routes/reporting.ts
 - [ ] SECURITY: Hardcoded salt rounds in auth route should use config value - backend/src/routes/auth.test.ts
 - [x] STABILITY: `backend/src/routes/oncall.ts` lacks proper error handling for calendar sync failures which could crash the process
@@ -465,6 +465,7 @@
 ## Completed
 
 ## Session Log
+- [2025-12-31 08:00] Completed: PERF: N+1 query pattern detected in knowledge base category loading - backend/src/routes/knowledge.ts
 - [2025-12-31 08:00] Completed: TEST: No integration tests for workflow approval chains - backend/src/routes/workflow.ts
 - [2025-12-31 07:59] Completed: STABILITY: Redis connection not properly closed in notification service shutdown - backend/src/routes/notifications.ts
 - [2025-12-31 07:59] Completed: SECURITY: Hardcoded salt rounds in `backend/src/routes/auth.test.ts` should use config instead of hardcoded value
