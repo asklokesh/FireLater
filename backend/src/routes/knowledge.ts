@@ -96,6 +96,26 @@ fastify.get('/search', {
   const pagination: PaginationParams = { page, perPage, sort, order };
   const filters = { type, visibility, categoryId };
 
+  // Generate cache key for knowledge search
+  const cacheKeyParams = {
+    q,
+    page,
+    perPage,
+    sort,
+    order,
+    type,
+    visibility,
+    categoryId
+  };
+  const cacheKey = `knowledge:search:${request.user.tenant}:${JSON.stringify(cacheKeyParams)}`;
+
+  // Try cache first
+  const cachedResult = await fastify.redis.get(cacheKey);
+  if (cachedResult) {
+    reply.header('X-Cache', 'HIT');
+    return JSON.parse(cachedResult);
+  }
+
   // Batch fetch articles with related data to avoid N+1 queries
   const { articles, total } = await knowledgeService.searchArticlesWithRelations(
     request.user.tenant,
@@ -104,10 +124,16 @@ fastify.get('/search', {
     filters
   );
 
-  return {
+  const result = {
     articles,
     total,
     page: pagination.page,
     perPage: pagination.perPage
   };
+
+  // Cache for 5 minutes
+  await fastify.redis.setex(cacheKey, 300, JSON.stringify(result));
+  reply.header('X-Cache', 'MISS');
+
+  return result;
 });
