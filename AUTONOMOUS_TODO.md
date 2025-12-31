@@ -2,8 +2,8 @@
 
 ## Priority Queue
 - [x] STABILITY: `backend/src/routes/notifications.ts` lacks proper error handling for failed email deliveries
-- [ ] TEST: No unit tests for workflow approval logic in `backend/src/routes/workflow.ts`
-- [ ] PERF: `backend/src/routes/assets.ts` makes N+1 database queries when fetching asset health scores
+- [x] TEST: No unit tests for workflow approval logic in `backend/src/routes/workflow.ts`
+- [x] PERF: `backend/src/routes/assets.ts` makes N+1 database queries when fetching asset health scores
 - [ ] BUG: Missing input validation in `backend/src/routes/reporting.ts` for date range parameters could cause SQL injection
 - [ ] SECURITY: Hardcoded salt rounds in `backend/src/routes/auth.test.ts` should use config instead of hardcoded value
 - [x] REFACTOR: Duplicate tenant schema access logic across multiple routes (oncall, assets, integrations); consider centralizing; files: `backend/src/routes/oncall.ts`, `backend/src/routes/assets.ts`, `backend/src/routes/integrations.ts`
@@ -405,6 +405,8 @@
 ## Completed
 
 ## Session Log
+- [2025-12-31 07:14] Completed: PERF: `backend/src/routes/assets.ts` makes N+1 database queries when fetching asset health scores
+- [2025-12-31 07:14] Completed: TEST: No unit tests for workflow approval logic in `backend/src/routes/workflow.ts`
 - [2025-12-31 07:14] Completed: STABILITY: `backend/src/routes/notifications.ts` lacks proper error handling for failed email deliveries
 - [2025-12-31 07:13] Completed: SECURITY: Hardcoded salt rounds in auth route should use config value; file: `backend/src/routes/auth.test.ts`
 - [2025-12-31 07:13] Completed: PERF: Missing database indexing on frequently queried fields in reporting routes; file: `backend/src/routes/reporting.ts`
