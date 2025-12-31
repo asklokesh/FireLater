@@ -12,6 +12,8 @@
 
     let query = this.db('knowledge_articles as ka')
       .leftJoin('knowledge_categories as kc', 'ka.category', 'kc.id')
+      .leftJoin('knowledge_article_assets as kaa', 'ka.id', 'kaa.article_id')
+      .leftJoin('assets as a', 'kaa.asset_id', 'a.id')
       .where('ka.tenant_slug', tenantSlug)
       .andWhere(qb => {
         if (filters.category) {
@@ -40,8 +42,10 @@
       .select([
         'ka.*',
         'kc.name as category_name',
-        'kc.description as category_description'
-      ]);
+        'kc.description as category_description',
+        this.db.raw('json_agg(a.*) filter (where a.id is not null) as related_assets')
+      ])
+      .groupBy('ka.id', 'kc.name', 'kc.description');
 
     return {
       articles,
