@@ -1,4 +1,3 @@
-// Add more robust date validation and sanitization
 fastify.post('/generate', {
   schema: {
     body: {
@@ -32,6 +31,16 @@ fastify.post('/generate', {
           }
         }
       }
+    },
+    response: {
+      200: {
+        type: 'object',
+        properties: {
+          reportId: { type: 'string' },
+          status: { type: 'string' },
+          message: { type: 'string' }
+        }
+      }
     }
   },
   preHandler: [authMiddleware, tenantMiddleware]
@@ -43,6 +52,12 @@ fastify.post('/generate', {
     filters?: Record<string, unknown>;
   };
   
+  // Validate reportType is one of allowed values
+  const allowedReportTypes = ['incident-summary', 'service-availability', 'change-history', 'oncall-coverage'];
+  if (!allowedReportTypes.includes(reportType)) {
+    throw new BadRequestError('Invalid reportType');
+  }
+
   // Validate date format and range with better error handling
   if (startDate) {
     const start = new Date(startDate);
@@ -96,9 +111,14 @@ fastify.post('/generate', {
     
     const validFilterTypes = ['string', 'number', 'boolean'];
     for (const [key, value] of Object.entries(filters)) {
-      // Prevent prototype pollution
-      if (key === '__proto__' || key === 'constructor') {
+      // Prevent prototype pollution and invalid keys
+      if (key === '__proto__' || key === 'constructor' || typeof key !== 'string') {
         throw new BadRequestError('Invalid filter keys');
+      }
+      
+      // Sanitize key to prevent injection
+      if (!/^[a-zA-Z0-9_-]+$/.test(key)) {
+        throw new BadRequestError(`Invalid characters in filter key: ${key}`);
       }
       
       if (Array.isArray(value)) {
