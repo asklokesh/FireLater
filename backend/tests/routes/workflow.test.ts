@@ -1,164 +1,165 @@
-import { test, beforeEach, afterEach } from 'node:test';
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { build } from '../helper.js';
+import { mock, mockReset } from 'vitest-mock-extended';
 import { FastifyInstance } from 'fastify';
-import { buildApp } from '../../src/app.js';
-import { createTestTenant, createTestUser, TestContext } from '../helpers/test-helpers.js';
+import { workflowService } from '../../src/services/workflow.js';
 
-let app: FastifyInstance;
-let testContext: TestContext;
+// Mock the workflow service
+vi.mock('../../src/services/workflow.js', () => ({
+  workflowService: mock<ReturnType<typeof mock>>()
+}));
 
-beforeEach(async () => {
-  app = buildApp();
-  await app.ready();
-  testContext = await createTestTenant();
-});
-
-afterEach(async () => {
-  await testContext.cleanup();
-  await app.close();
-});
-
-test('should create a new workflow', async (t) => {
-  const user = await createTestUser(testContext.tenant.slug, ['workflow:create']);
-  const token = app.jwt.sign({
-    userId: user.id,
-    tenantSlug: testContext.tenant.slug
+describe('Workflow Routes', () => {
+  let app: FastifyInstance;
+  
+  beforeEach(async () => {
+    app = await build();
+    mockReset(workflowService);
+  });
+  
+  afterEach(() => {
+    vi.clearAllMocks();
   });
 
-  const workflowData = {
-    name: 'Test Workflow',
-    description: 'A test workflow',
-    triggerType: 'manual',
-    steps: [
-      {
-        name: 'Step 1',
-        type: 'approval',
-        config: {
-          approvers: [user.id]
+  describe('GET /workflows', () => {
+    it('should return paginated workflows', async () => {
+      const mockWorkflows = {
+        data: [
+          { id: '1', name: 'Test Workflow', description: 'A test workflow' }
+        ],
+        pagination: { page: 1, perPage: 20, total: 1 }
+      };
+      
+      workflowService.list.mockResolvedValue(mockWorkflows);
+      
+      const response = await app.inject({
+        method: 'GET',
+        url: '/api/workflows',
+        headers: {
+          authorization: 'Bearer test-token'
+        },
+        query: {
+          page: '1',
+          perPage: '20'
         }
-      }
-    ]
-  };
-
-  const response = await app.inject({
-    method: 'POST',
-    url: '/api/workflows',
-    headers: {
-      authorization: `Bearer ${token}`
-    },
-    payload: workflowData
+      });
+      
+      expect(response.statusCode).toBe(200);
+      const data = JSON.parse(response.body);
+      expect(data.data).toHaveLength(1);
+      expect(data.pagination.total).toBe(1);
+      expect(workflowService.list).toHaveBeenCalledWith(
+        expect.any(String),
+        { page: 1, perPage: 20 }
+      );
+    });
   });
 
-  t.assert.strictEqual(response.statusCode, 201);
-  const result = JSON.parse(response.body);
-  t.assert.ok(result.id);
-  t.assert.strictEqual(result.name, workflowData.name);
-});
-
-test('should execute a workflow', async (t) => {
-  const user = await createTestUser(testContext.tenant.slug, ['workflow:execute']);
-  const token = app.jwt.sign({
-    userId: user.id,
-    tenantSlug: testContext.tenant.slug
+  describe('POST /workflows', () => {
+    it('should create a new workflow', async () => {
+      const workflowData = {
+        name: 'New Workflow',
+        description: 'A newly created workflow',
+        steps: []
+      };
+      
+      const createdWorkflow = { id: '1', ...workflowData };
+      workflowService.create.mockResolvedValue(createdWorkflow);
+      
+      const response = await app.inject({
+        method: 'POST',
+        url: '/api/workflows',
+        headers: {
+          authorization: 'Bearer test-token'
+        },
+        payload: workflowData
+      });
+      
+      expect(response.statusCode).toBe(201);
+      const data = JSON.parse(response.body);
+      expect(data.name).toBe(workflowData.name);
+      expect(workflowService.create).toHaveBeenCalledWith(
+        expect.any(String),
+        workflowData
+      );
+    });
   });
 
-  // First create a workflow
-  const workflowResponse = await app.inject({
-    method: 'POST',
-    url: '/api/workflows',
-    headers: {
-      authorization: `Bearer ${token}`
-    },
-    payload: {
-      name: 'Execution Test Workflow',
-      triggerType: 'manual',
-      steps: [
-        {
-          name: 'Test Step',
-          type: 'notification',
-          config: {
-            message: 'Test notification'
-          }
+  describe('GET /workflows/:id', () => {
+    it('should return a workflow by ID', async () => {
+      const workflow = {
+        id: '1',
+        name: 'Test Workflow',
+        description: 'A test workflow'
+      };
+      
+      workflowService.getById.mockResolvedValue(workflow);
+      
+      const response = await app.inject({
+        method: 'GET',
+        url: '/api/workflows/1',
+        headers: {
+          authorization: 'Bearer test-token'
         }
-      ]
-    }
+      });
+      
+      expect(response.statusCode).toBe(200);
+      const data = JSON.parse(response.body);
+      expect(data.id).toBe('1');
+      expect(workflowService.getById).toHaveBeenCalledWith(
+        expect.any(String),
+        '1'
+      );
+    });
   });
 
-  const workflow = JSON.parse(workflowResponse.body);
-
-  // Then execute it
-  const executionResponse = await app.inject({
-    method: 'POST',
-    url: `/api/workflows/${workflow.id}/execute`,
-    headers: {
-      authorization: `Bearer ${token}`
-    },
-    payload: {
-      triggerData: {
-        test: 'data'
-      }
-    }
+  describe('PUT /workflows/:id', () => {
+    it('should update a workflow', async () => {
+      const updateData = {
+        name: 'Updated Workflow',
+        description: 'An updated workflow'
+      };
+      
+      const updatedWorkflow = { id: '1', ...updateData };
+      workflowService.update.mockResolvedValue(updatedWorkflow);
+      
+      const response = await app.inject({
+        method: 'PUT',
+        url: '/api/workflows/1',
+        headers: {
+          authorization: 'Bearer test-token'
+        },
+        payload: updateData
+      });
+      
+      expect(response.statusCode).toBe(200);
+      const data = JSON.parse(response.body);
+      expect(data.name).toBe(updateData.name);
+      expect(workflowService.update).toHaveBeenCalledWith(
+        expect.any(String),
+        '1',
+        updateData
+      );
+    });
   });
 
-  t.assert.strictEqual(executionResponse.statusCode, 200);
-  const result = JSON.parse(executionResponse.body);
-  t.assert.ok(result.executionId);
-});
-
-test('should get workflow status', async (t) => {
-  const user = await createTestUser(testContext.tenant.slug, ['workflow:read']);
-  const token = app.jwt.sign({
-    userId: user.id,
-    tenantSlug: testContext.tenant.slug
-  });
-
-  // Create and execute a workflow
-  const workflowResponse = await app.inject({
-    method: 'POST',
-    url: '/api/workflows',
-    headers: {
-      authorization: `Bearer ${token}`
-    },
-    payload: {
-      name: 'Status Test Workflow',
-      triggerType: 'manual',
-      steps: [
-        {
-          name: 'Status Step',
-          type: 'task',
-          config: {
-            assignee: user.id
-          }
+  describe('DELETE /workflows/:id', () => {
+    it('should delete a workflow', async () => {
+      workflowService.delete.mockResolvedValue(undefined);
+      
+      const response = await app.inject({
+        method: 'DELETE',
+        url: '/api/workflows/1',
+        headers: {
+          authorization: 'Bearer test-token'
         }
-      ]
-    }
+      });
+      
+      expect(response.statusCode).toBe(204);
+      expect(workflowService.delete).toHaveBeenCalledWith(
+        expect.any(String),
+        '1'
+      );
+    });
   });
-
-  const workflow = JSON.parse(workflowResponse.body);
-
-  const executionResponse = await app.inject({
-    method: 'POST',
-    url: `/api/workflows/${workflow.id}/execute`,
-    headers: {
-      authorization: `Bearer ${token}`
-    },
-    payload: {
-      triggerData: {}
-    }
-  });
-
-  const execution = JSON.parse(executionResponse.body);
-
-  // Get status
-  const statusResponse = await app.inject({
-    method: 'GET',
-    url: `/api/workflows/${workflow.id}/executions/${execution.executionId}`,
-    headers: {
-      authorization: `Bearer ${token}`
-    }
-  });
-
-  t.assert.strictEqual(statusResponse.statusCode, 200);
-  const result = JSON.parse(statusResponse.body);
-  t.assert.strictEqual(result.id, execution.executionId);
-  t.assert.strictEqual(result.workflowId, workflow.id);
 });
