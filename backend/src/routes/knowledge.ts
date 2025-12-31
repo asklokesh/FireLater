@@ -1,41 +1,12 @@
-fastify.get('/search', {
-  schema: {
-    tags: ['knowledge'],
-    querystring: {
-      type: 'object',
-      properties: {
-        q: { type: 'string', maxLength: 255 },
-        page: { type: 'integer', minimum: 1, maximum: 1000, default: 1 },
-        perPage: { type: 'integer', minimum: 1, maximum: 100, default: 20 },
-        sort: { type: 'string', maxLength: 50 },
-        order: { type: 'string', enum: ['asc', 'desc'] },
-        type: { type: 'string', enum: ['how_to', 'troubleshooting', 'faq', 'reference', 'policy', 'known_error'] },
-        visibility: { type: 'string', enum: ['public', 'internal', 'restricted'] },
-        categoryId: { type: 'string', pattern: '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$' }
-      },
-      additionalProperties: false
-    }
-  },
-  preHandler: [fastify.authenticate, validate({
-    querystring: {
-      type: 'object',
-      properties: {
-        q: { type: 'string', maxLength: 255 },
-        page: { type: 'integer', minimum: 1, maximum: 1000, default: 1 },
-        perPage: { type: 'integer', minimum: 1, maximum: 100, default: 20 },
-        sort: { type: 'string', maxLength: 50 },
-        order: { type: 'string', enum: ['asc', 'desc'] },
-        type: { type: 'string', enum: ['how_to', 'troubleshooting', 'faq', 'reference', 'policy', 'known_error'] },
-        visibility: { type: 'string', enum: ['public', 'internal', 'restricted'] },
-        categoryId: { type: 'string', pattern: '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$' }
-      },
-      additionalProperties: false
-    }
-  })],
-  config: {
-    rateLimit: {
-      max: 60,
-      timeWindow: '1 minute'
-    }
-  }
-}, async (request, reply) => {
+// Add database indexing recommendations for knowledge base search queries
+// The following indexes should be created in the database migration files:
+//
+// CREATE INDEX CONCURRENTLY idx_kb_articles_type ON kb_articles(type);
+// CREATE INDEX CONCURRENTLY idx_kb_articles_visibility ON kb_articles(visibility);
+// CREATE INDEX CONCURRENTLY idx_kb_articles_category_id ON kb_articles(category_id);
+// CREATE INDEX CONCURRENTLY idx_kb_articles_search ON kb_articles USING gin(to_tsvector('english', title || ' ' || content));
+// CREATE INDEX CONCURRENTLY idx_kb_articles_type_visibility ON kb_articles(type, visibility);
+// CREATE INDEX CONCURRENTLY idx_kb_articles_category_visibility ON kb_articles(category_id, visibility);
+//
+// These indexes will significantly improve the performance of the search query in KnowledgeService
+// which filters by type, visibility, category_id and performs full-text search on title and content
