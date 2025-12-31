@@ -12,8 +12,6 @@
 
     let query = this.db('knowledge_articles as ka')
       .leftJoin('knowledge_categories as kc', 'ka.category', 'kc.id')
-      .leftJoin('knowledge_article_assets as kaa', 'ka.id', 'kaa.article_id')
-      .leftJoin('assets as a', 'kaa.asset_id', 'a.id')
       .where('ka.tenant_slug', tenantSlug)
       .andWhere(qb => {
         if (filters.category) {
@@ -42,10 +40,38 @@
       .select([
         'ka.*',
         'kc.name as category_name',
-        'kc.description as category_description',
-        this.db.raw('json_agg(a.*) filter (where a.id is not null) as related_assets')
-      ])
-      .groupBy('ka.id', 'kc.name', 'kc.description');
+        'kc.description as category_description'
+      ]);
+
+    // Fetch related assets for all articles in a single query
+    if (articles.length > 0) {
+      const articleIds = articles.map((article: any) => article.id);
+      const assetsQuery = this.db('knowledge_article_assets as kaa')
+        .leftJoin('assets as a', 'kaa.asset_id', 'a.id')
+        .whereIn('kaa.article_id', articleIds)
+        .select([
+          'kaa.article_id',
+          this.db.raw('json_agg(a.*) filter (where a.id is not null) as related_assets')
+        ])
+        .groupBy('kaa.article_id');
+      
+      const assetsResult = await assetsQuery;
+      
+      // Create a map of article_id to related_assets
+      const assetsMap = new Map();
+      assetsResult.forEach((assetRow: any) => {
+        assetsMap.set(assetRow.article_id, assetRow.related_assets);
+      });
+      
+      // Attach related_assets to each article
+      articles.forEach((article: any) => {
+        article.related_assets = assetsMap.get(article.id) || [];
+      });
+    } else {
+      articles.forEach((article: any) => {
+        article.related_assets = [];
+      });
+    }
 
     return {
       articles,
