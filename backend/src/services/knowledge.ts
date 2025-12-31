@@ -11,13 +11,14 @@ export class KnowledgeService {
         // Support both UUID and article_number
         const idColumn = id.startsWith('KB-') ? 'article_number' : 'id';
         
-        // Try to get from cache first
-        const cacheKey = `${this.ARTICLE_CACHE_PREFIX}:${tenantSlug}:${id}`;
+        // Try to get from cache first - include tenant in cache key for proper isolation
+        const cacheKey = `${this.ARTICLE_CACHE_PREFIX}:${tenantSlug}:${idColumn}:${id}`;
         const cachedArticle = await redis.get(cacheKey);
         if (cachedArticle) {
           return JSON.parse(cachedArticle) as Article;
         }
         
+        // Use explicit tenant filtering with proper index usage
         const result = await client.query(
           `SELECT a.*,
                   u.name as author_name, u.email as author_email,
@@ -26,13 +27,13 @@ export class KnowledgeService {
                   p.problem_number as related_problem_number,
                   i.issue_number as related_issue_number
            FROM kb_articles a
-           LEFT JOIN users u ON a.author_id = u.id
-           LEFT JOIN users r ON a.reviewer_id = r.id
-           LEFT JOIN kb_categories c ON a.category_id = c.id
-           LEFT JOIN problems p ON a.related_problem_id = p.id
-           LEFT JOIN issues i ON a.related_issue_id = i.id
-           WHERE a.${idColumn} = $1`,
-          [id]
+           LEFT JOIN users u ON a.author_id = u.id AND u.tenant_id = (SELECT id FROM tenants WHERE slug = $2)
+           LEFT JOIN users r ON a.reviewer_id = r.id AND r.tenant_id = (SELECT id FROM tenants WHERE slug = $2)
+           LEFT JOIN kb_categories c ON a.category_id = c.id AND c.tenant_id = (SELECT id FROM tenants WHERE slug = $2)
+           LEFT JOIN problems p ON a.related_problem_id = p.id AND p.tenant_id = (SELECT id FROM tenants WHERE slug = $2)
+           LEFT JOIN issues i ON a.related_issue_id = i.id AND i.tenant_id = (SELECT id FROM tenants WHERE slug = $2)
+           WHERE a.${idColumn} = $1 AND a.tenant_id = (SELECT id FROM tenants WHERE slug = $2)`,
+          [id, tenantSlug]
         );
 
         if (result.rows.length === 0) {
