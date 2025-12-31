@@ -2,7 +2,7 @@
 
 ## Priority Queue
 - [x] REFACTOR: Duplicate error handling logic with `getSafeErrorMessage()` in auth routes. Centralize error handling using Fastify's `setErrorHandler()` hook in `backend/src/routes/auth.test.ts` and other route files.
-- [ ] STABILITY: Missing input validation and rate limiting on public routes (`/login`, `/register`) can lead to abuse and denial of service. Implement Fastify plugins for rate limiting and schema validation.
+- [x] STABILITY: Missing input validation and rate limiting on public routes (`/login`, `/register`) can lead to abuse and denial of service. Implement Fastify plugins for rate limiting and schema validation.
 - [ ] PERF: Multi-tenant schema-per-tenant approach in PostgreSQL may cause connection pooling issues under load. Consider implementing a shared-schema multi-tenancy strategy with row-level security.
 - [ ] TEST: No unit or integration tests found for critical routes like `reporting.ts`, `workflow.ts`, and `oncall.ts`. Add test coverage for business logic and error handling.
 - [ ] SECURITY: Error messages in `/login` and `/register` routes may expose sensitive information. Use generic messages for invalid credentials and avoid revealing user existence. File: `backend/src/routes/auth.test.ts`
@@ -195,6 +195,7 @@
 ## Completed
 
 ## Session Log
+- [2025-12-31 04:57] Completed: STABILITY: Missing input validation and rate limiting on public routes (`/login`, `/register`) can lead to abuse and denial of service. Implement Fastify plugins for rate limiting and schema validation.
 - [2025-12-31 04:57] Completed: REFACTOR: Duplicate error handling logic with `getSafeErrorMessage()` in auth routes. Centralize error handling using Fastify's `setErrorHandler()` hook in `backend/src/routes/auth.test.ts` and other route files.
 - [2025-12-31 04:56] Completed: SECURITY: Direct error.message exposure in auth route responses may leak sensitive information - backend/src/routes/auth.test.ts
 - [2025-12-31 04:56] Completed: BUG: Missing input validation and sanitization across all route handlers - backend/src/routes/*.ts

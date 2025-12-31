@@ -1,35 +1,110 @@
-import { getSafeErrorMessage } from '../utils/errors';
+const { sanitizeInput } = require('../utils/sanitization');
 
-// Centralized error handler for auth routes
-fastify.setErrorHandler((error, request, reply) => {
-  const message = getSafeErrorMessage(error);
-  fastify.log.error({ error }, 'Request failed');
-  
-  // Handle specific error cases
-  if (request.routerPath === '/login') {
-    return reply.code(401).send({ error: `Authentication failed: ${message}` });
+// Add schema validation for login
+const loginSchema = {
+  body: {
+    type: 'object',
+    required: ['email', 'password'],
+    properties: {
+      email: { type: 'string', format: 'email', maxLength: 255 },
+      password: { type: 'string', minLength: 8, maxLength: 128 }
+    },
+    additionalProperties: false
   }
-  
-  if (request.routerPath === '/register') {
-    return reply.code(400).send({ error: `Registration failed: ${message}` });
-  }
-  
-  // Default error response
-  return reply.code(500).send({ error: 'Internal server error' });
-});
+};
 
-// Simplified login route without try/catch
+// Add schema validation for registration
+const registerSchema = {
+  body: {
+    type: 'object',
+    required: ['email', 'password', 'firstName', 'lastName', 'companyName'],
+    properties: {
+      email: { type: 'string', format: 'email', maxLength: 255 },
+      password: { type: 'string', minLength: 8, maxLength: 128 },
+      firstName: { type: 'string', minLength: 1, maxLength: 50 },
+      lastName: { type: 'string', minLength: 1, maxLength: 50 },
+      companyName: { type: 'string', minLength: 1, maxLength: 100 }
+    },
+    additionalProperties: false
+  }
+};
+
+// Apply rate limiting and validation to login route
 fastify.post('/login', {
-  // ... existing schema and config
+  schema: loginSchema,
+  config: {
+    rateLimit: {
+      max: 5,
+      timeWindow: '5 minutes'
+    }
+  }
 }, async (request, reply) => {
-  // ... existing login logic
-  // Errors will be handled by the centralized error handler
+  const { email, password } = request.body as { 
+    email: string; 
+    password: string; 
+  };
+
+  // Sanitize inputs
+  const sanitizedEmail = sanitizeInput(email).toLowerCase();
+  const sanitizedPassword = password; // Don't sanitize passwords
+
+  // Validate email format
+  if (!sanitizedEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(sanitizedEmail)) {
+    return reply.code(400).send({ error: 'Invalid email format' });
+  }
+
+  // Validate password length
+  if (!sanitizedPassword || sanitizedPassword.length < 8) {
+    return reply.code(400).send({ error: 'Password must be at least 8 characters' });
+  }
+
+  // Continue with authentication logic...
 });
 
-// Simplified register route without try/catch
+// Apply rate limiting and validation to register route
 fastify.post('/register', {
-  // ... existing schema and config
+  schema: registerSchema,
+  config: {
+    rateLimit: {
+      max: 3,
+      timeWindow: '10 minutes'
+    }
+  }
 }, async (request, reply) => {
-  // ... existing registration logic
-  // Errors will be handled by the centralized error handler
+  const { email, password, firstName, lastName, companyName } = request.body as { 
+    email: string; 
+    password: string;
+    firstName: string;
+    lastName: string;
+    companyName: string;
+  };
+
+  // Sanitize inputs
+  const sanitizedEmail = sanitizeInput(email).toLowerCase();
+  const sanitizedPassword = password; // Don't sanitize passwords
+  const sanitizedFirstName = sanitizeInput(firstName).substring(0, 50);
+  const sanitizedLastName = sanitizeInput(lastName).substring(0, 50);
+  const sanitizedCompanyName = sanitizeInput(companyName).substring(0, 100);
+
+  // Validate email format
+  if (!sanitizedEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(sanitizedEmail)) {
+    return reply.code(400).send({ error: 'Invalid email format' });
+  }
+
+  // Validate password length
+  if (!sanitizedPassword || sanitizedPassword.length < 8) {
+    return reply.code(400).send({ error: 'Password must be at least 8 characters' });
+  }
+
+  // Validate name fields
+  if (!sanitizedFirstName || !sanitizedLastName) {
+    return reply.code(400).send({ error: 'First name and last name are required' });
+  }
+
+  // Validate company name
+  if (!sanitizedCompanyName) {
+    return reply.code(400).send({ error: 'Company name is required' });
+  }
+
+  // Continue with registration logic...
 });
