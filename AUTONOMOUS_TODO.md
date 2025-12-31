@@ -1,11 +1,16 @@
 # FireLater Autonomous Development
 
 ## Priority Queue
+- [x] STABILITY: `backend/src/routes/notifications.ts` doesn't implement proper retry logic for failed webhook deliveries
+- [ ] TEST: `backend/src/routes/workflow.ts` lacks unit tests for approval workflow logic
+- [ ] PERF: `backend/src/routes/assets.ts` makes sequential database calls for related resources instead of using JOINs
+- [ ] BUG: Missing input validation in `backend/src/routes/reporting.ts` for date range parameters could cause SQL injection
+- [ ] SECURITY: Hardcoded salt rounds in `backend/src/routes/auth.test.ts` should use config instead of hardcoded value
 - [x] STABILITY: Oncall rotation updates don't handle timezone transitions properly; file: backend/src/routes/oncall.ts
 - [x] TEST: No integration tests for workflow approval chains; file: backend/src/routes/workflow.ts
 - [x] PERF: Knowledge base search queries lack proper indexing strategy; file: backend/src/routes/knowledge.ts
 - [x] BUG: Missing input validation on reporting route parameters; file: backend/src/routes/reporting.ts
-- [ ] SECURITY: Hardcoded salt rounds in auth route should use config value; file: backend/src/routes/auth.test.ts
+- [x] SECURITY: Hardcoded salt rounds in auth route should use config value; file: backend/src/routes/auth.test.ts
 - [x] STABILITY: Error handling missing for external API calls in integrations routes; file: `backend/src/routes/integrations.ts`
 - [x] TEST: No unit tests for on-call scheduling logic; file: `backend/src/routes/oncall.ts`
 - [x] PERF: N+1 query issue when fetching nested workflow steps in workflow routes; file: `backend/src/routes/workflow.ts`
@@ -305,6 +310,8 @@
 ## Completed
 
 ## Session Log
+- [2025-12-31 06:13] Completed: STABILITY: `backend/src/routes/notifications.ts` doesn't implement proper retry logic for failed webhook deliveries
+- [2025-12-31 06:13] Completed: SECURITY: Hardcoded salt rounds in auth route should use config value; file: backend/src/routes/auth.test.ts
 - [2025-12-31 06:12] Completed: BUG: Missing input validation on reporting route parameters; file: backend/src/routes/reporting.ts
 - [2025-12-31 06:12] Completed: PERF: Knowledge base search queries lack proper indexing strategy; file: backend/src/routes/knowledge.ts
 - [2025-12-31 06:12] Completed: TEST: No integration tests for workflow approval chains; file: backend/src/routes/workflow.ts
