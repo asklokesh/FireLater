@@ -11,6 +11,7 @@ fastify.get('/reports', {
         page: { type: 'integer', minimum: 1, maximum: 1000, default: 1 },
         perPage: { type: 'integer', minimum: 1, maximum: 100, default: 20 }
       },
+      required: ['type', 'startDate', 'endDate'],
       additionalProperties: false
     }
   },
@@ -25,6 +26,7 @@ fastify.get('/reports', {
         page: { type: 'integer', minimum: 1, maximum: 1000, default: 1 },
         perPage: { type: 'integer', minimum: 1, maximum: 100, default: 20 }
       },
+      required: ['type', 'startDate', 'endDate'],
       additionalProperties: false
     }
   })]
