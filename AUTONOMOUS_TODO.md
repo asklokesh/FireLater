@@ -4,7 +4,7 @@
 - [x] STABILITY: Notifications route doesn't handle Redis connection failures gracefully, could cause service crashes in backend/src/routes/notifications.ts
 - [x] TEST: Workflow route missing unit tests for approval chain logic and edge cases in backend/src/routes/workflow.ts
 - [x] PERF: Knowledge base route lacks caching for frequently accessed articles, causing repeated database queries in backend/src/routes/knowledge.ts
-- [ ] BUG: Reporting route missing tenant isolation in multi-tenant schema setup, queries may leak data across tenants in backend/src/routes/reporting.ts
+- [x] BUG: Reporting route missing tenant isolation in multi-tenant schema setup, queries may leak data across tenants in backend/src/routes/reporting.ts
 - [ ] SECURITY: Auth route uses direct error.message instead of getSafeErrorMessage utility, exposing internal errors to clients in backend/src/routes/auth.test.ts
 - [x] STABILITY: Background job processing in `backend/src/routes/notifications.ts` lacks proper error handling and retry mechanisms for failed notifications
 - [x] TEST: Auth routes have minimal test coverage - only basic happy path testing in `backend/src/routes/auth.test.ts` without edge cases or error scenarios
@@ -180,6 +180,7 @@
 ## Completed
 
 ## Session Log
+- [2025-12-31 04:52] Completed: BUG: Reporting route missing tenant isolation in multi-tenant schema setup, queries may leak data across tenants in backend/src/routes/reporting.ts
 - [2025-12-31 04:52] Completed: PERF: Knowledge base route lacks caching for frequently accessed articles, causing repeated database queries in backend/src/routes/knowledge.ts
 - [2025-12-31 04:51] Completed: TEST: Workflow route missing unit tests for approval chain logic and edge cases in backend/src/routes/workflow.ts
 - [2025-12-31 04:51] Completed: STABILITY: Notifications route doesn't handle Redis connection failures gracefully, could cause service crashes in backend/src/routes/notifications.ts

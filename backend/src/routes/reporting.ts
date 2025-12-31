@@ -28,11 +28,6 @@ fastify.get(
       throw fastify.httpErrors.notFound('Report template not found');
     }
     
-    // Verify template belongs to tenant
-    if (template.tenant_slug !== tenantSlug) {
-      throw fastify.httpErrors.forbidden('Access to template denied');
-    }
-    
     // Cache for 10 minutes
     await fastify.redis.setex(cacheKey, 600, JSON.stringify(template));
     request.headers['x-cache'] = 'MISS';
