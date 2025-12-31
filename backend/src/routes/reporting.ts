@@ -1,37 +1,53 @@
-fastify.get(
-  '/templates/:id',
-  {
-    preHandler: [authenticate, authorize('read:reports')],
-  },
-  async (request: FastifyRequest<{ Params: ReportTemplateParams }>) => {
-    const { tenantSlug } = request.user!;
-    const { id } = request.params;
-    
-    // Validate UUID format
-    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)) {
-      throw fastify.httpErrors.badRequest('Invalid template ID format');
-    }
+import { FastifyInstance } from 'fastify';
+import { reportTemplateService } from '../services/reporting.js';
+import { authenticate, authorize } from '../middleware/auth.js';
+import { validateTenantAccess } from '../middleware/tenant.js';
+import type { PaginationParams } from '../types/index.js';
 
-    // Generate cache key with tenant scope
-    const cacheKey = `report:${tenantSlug}:template:${id}`;
-    
-    // Try cache first
-    const cachedResult = await fastify.redis.get(cacheKey);
-    if (cachedResult) {
-      request.headers['x-cache'] = 'HIT';
-      return JSON.parse(cachedResult);
-    }
+interface ReportingQueryParams extends PaginationParams {
+  reportType?: string;
+  isPublic?: string;
+}
 
-    // Ensure tenant isolation in service call
-    const template = await reportTemplateService.findById(tenantSlug, id);
-    if (!template) {
-      throw fastify.httpErrors.notFound('Report template not found');
+export default async function reportingRoutes(fastify: FastifyInstance) {
+  // Add validation schema for query parameters
+  const queryParamsSchema = {
+    querystring: {
+      type: 'object',
+      properties: {
+        page: { type: 'integer', minimum: 1, default: 1 },
+        perPage: { type: 'integer', minimum: 1, maximum: 100, default: 20 },
+        reportType: { type: 'string' },
+        isPublic: { type: 'string', enum: ['true', 'false'] }
+      },
+      additionalProperties: false
     }
-    
-    // Cache for 10 minutes
-    await fastify.redis.setex(cacheKey, 600, JSON.stringify(template));
-    request.headers['x-cache'] = 'MISS';
-    
-    return template;
-  }
-);
+  };
+
+  // List report templates with validation
+  fastify.get(
+    '/templates',
+    {
+      preHandler: [authenticate, authorize('read:reports'), validateTenantAccess],
+      schema: queryParamsSchema
+    },
+    async (request, reply) => {
+      const { tenantSlug } = request.params as { tenantSlug: string };
+      const { page, perPage, reportType, isPublic } = request.query as ReportingQueryParams;
+      
+      // Sanitize and parse query parameters
+      const pagination = {
+        page: Math.max(1, parseInt(String(page), 10) || 1),
+        perPage: Math.min(100, Math.max(1, parseInt(String(perPage), 10) || 20))
+      };
+      
+      const filters = {
+        reportType: reportType || undefined,
+        isPublic: isPublic !== undefined ? isPublic === 'true' : undefined
+      };
+
+      const result = await reportTemplateService.list(tenantSlug, pagination, filters);
+      return reply.send(result);
+    }
+  );
+}
