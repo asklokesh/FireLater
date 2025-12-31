@@ -1,6 +1,11 @@
 # FireLater Autonomous Development
 
 ## Priority Queue
+- [x] STABILITY: `backend/src/routes/notifications.ts` doesn't implement proper retry logic or dead-letter queue handling for failed notification deliveries, risking message loss in BullMQ integration.
+- [ ] TEST: `backend/src/routes/workflow.ts` lacks unit tests for approval workflow logic and error states, with only basic route coverage present in `auth.test.ts`.
+- [ ] PERF: `backend/src/routes/assets.ts` makes sequential database calls for related asset data instead of using JOINs or batch queries, causing N+1 query problem during asset listing operations.
+- [ ] BUG: In `backend/src/routes/reporting.ts`, database queries for tenant-specific data don't properly sanitize tenant IDs, risking cross-tenant data leakage in multi-tenant schema setup.
+- [ ] SECURITY: `isTrustedProxy` function in `backend/src/routes/auth.test.ts` lacks input validation for `ip` parameter and uses overly broad try-catch, potentially masking important errors. Add explicit IP format validation and specific error handling.
 - [x] STABILITY: Hardcoded proxy trust configuration `backend/src/routes/auth.test.ts` - TRUST_ALL_PROXIES=true in production creates security vulnerability and deployment instability
 - [x] TEST: Auth routes missing comprehensive test coverage `backend/src/routes/auth.test.ts` - no tests for rate limiting, IP validation, or tenant validation logic
 - [x] PERF: Missing database indexing strategy in reporting routes `backend/src/routes/reporting.ts` - complex queries on large datasets will cause performance degradation
@@ -45,6 +50,7 @@
 ## Completed
 
 ## Session Log
+- [2025-12-31 02:54] Completed: STABILITY: `backend/src/routes/notifications.ts` doesn't implement proper retry logic or dead-letter queue handling for failed notification deliveries, risking message loss in BullMQ integration.
 - [2025-12-31 02:54] Completed: SECURITY: Insecure IP validation in `backend/src/routes/auth.test.ts` - regex patterns in `isValidIP()` don't properly validate IPv4/v6 ranges, allowing potential IP spoofing attacks
 - [2025-12-31 02:53] Completed: SECURITY: Weak tenantSlug validation in `backend/src/routes/auth.test.ts` - regex allows hyphens at start/end which may lead to injection vulnerabilities
 - [2025-12-31 02:53] Completed: PERF: Missing database indexing strategy in reporting routes `backend/src/routes/reporting.ts` - complex queries on large datasets will cause performance degradation
