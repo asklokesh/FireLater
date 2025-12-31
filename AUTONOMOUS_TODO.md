@@ -3,7 +3,7 @@
 ## Priority Queue
 - [x] STABILITY: `backend/src/routes/notifications.ts` doesn't handle Redis connection failures gracefully, could crash process
 - [x] TEST: `backend/src/routes/workflow.ts` lacks unit tests for approval chain logic and edge cases
-- [ ] PERF: `backend/src/routes/knowledge.ts` makes N+1 queries when fetching article metadata without proper JOINs
+- [x] PERF: `backend/src/routes/knowledge.ts` makes N+1 queries when fetching article metadata without proper JOINs
 - [ ] BUG: Missing input validation in `backend/src/routes/reporting.ts` for date range parameters could cause SQL injection
 - [ ] SECURITY: Hardcoded salt rounds in `backend/src/routes/auth.test.ts` should use config instead of hardcoded value
 - [x] STABILITY: `backend/src/routes/notifications.ts` doesn't implement proper retry logic for failed webhook deliveries
@@ -500,6 +500,7 @@
 ## Completed
 
 ## Session Log
+- [2025-12-31 08:15] Completed: PERF: `backend/src/routes/knowledge.ts` makes N+1 queries when fetching article metadata without proper JOINs
 - [2025-12-31 08:14] Completed: TEST: `backend/src/routes/workflow.ts` lacks unit tests for approval chain logic and edge cases
 - [2025-12-31 08:14] Completed: STABILITY: `backend/src/routes/notifications.ts` doesn't handle Redis connection failures gracefully, could crash process
 - [2025-12-31 08:13] Completed: SECURITY: Hardcoded salt rounds in `backend/src/routes/auth.test.ts` should use config instead of hardcoded value
