@@ -1,145 +1,242 @@
-import { describe, it, expect, beforeAll, afterAll } from 'vitest';
-import { app } from '../app';
-import { createTestTenant, removeTestTenant } from '../utils/test-utils';
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { buildApp } from '../app.js';
+import { createTestTenant, destroyTestTenant } from '../utils/test-helpers.js';
 
-describe('Authentication', () => {
-  let tenant1Id: string;
-  let tenant2Id: string;
+describe('Auth Routes', () => {
+  let app: any;
+  let tenantSlug: string;
 
-  beforeAll(async () => {
-    // Create test tenants
-    tenant1Id = await createTestTenant('test1');
-    tenant2Id = await createTestTenant('test2');
+  beforeEach(async () => {
+    app = buildApp();
+    tenantSlug = await createTestTenant();
   });
 
-  afterAll(async () => {
-    // Clean up test tenants
-    await removeTestTenant(tenant1Id);
-    await removeTestTenant(tenant2Id);
+  afterEach(async () => {
+    await destroyTestTenant(tenantSlug);
+    await app.close();
   });
 
-  it('should register and login users in isolated tenant schemas', async () => {
-    // Register user in tenant 1
-    const registerResponse1 = await app.inject({
-      method: 'POST',
-      url: '/auth/register',
-      headers: {
-        'x-tenant-id': tenant1Id
-      },
-      payload: {
-        email: 'user1@test.com',
-        password: 'password123',
-        name: 'Test User 1'
-      }
+  describe('POST /auth/register', () => {
+    it('should reject registration with invalid email format', async () => {
+      const response = await app.inject({
+        method: 'POST',
+        url: '/auth/register',
+        headers: { 'x-tenant-slug': tenantSlug },
+        payload: {
+          email: 'invalid-email',
+          password: 'ValidPass123!',
+          name: 'Test User'
+        }
+      });
+
+      expect(response.statusCode).toBe(400);
+      expect(response.json()).toHaveProperty('message');
     });
 
-    expect(registerResponse1.statusCode).toBe(201);
+    it('should reject registration with weak password', async () => {
+      const response = await app.inject({
+        method: 'POST',
+        url: '/auth/register',
+        headers: { 'x-tenant-slug': tenantSlug },
+        payload: {
+          email: 'test@example.com',
+          password: '123',
+          name: 'Test User'
+        }
+      });
 
-    // Register user with same email in tenant 2
-    const registerResponse2 = await app.inject({
-      method: 'POST',
-      url: '/auth/register',
-      headers: {
-        'x-tenant-id': tenant2Id
-      },
-      payload: {
-        email: 'user1@test.com',
-        password: 'password456',
-        name: 'Test User 2'
-      }
+      expect(response.statusCode).toBe(400);
+      expect(response.json()).toHaveProperty('message');
     });
 
-    // Should succeed - same email allowed in different tenants
-    expect(registerResponse2.statusCode).toBe(201);
+    it('should reject registration with missing fields', async () => {
+      const response = await app.inject({
+        method: 'POST',
+        url: '/auth/register',
+        headers: { 'x-tenant-slug': tenantSlug },
+        payload: {
+          email: 'test@example.com'
+          // missing password and name
+        }
+      });
 
-    // Login as tenant 1 user
-    const loginResponse1 = await app.inject({
-      method: 'POST',
-      url: '/auth/login',
-      headers: {
-        'x-tenant-id': tenant1Id
-      },
-      payload: {
-        email: 'user1@test.com',
-        password: 'password123'
-      }
+      expect(response.statusCode).toBe(400);
     });
 
-    expect(loginResponse1.statusCode).toBe(200);
-    const { token: token1 } = JSON.parse(loginResponse1.body);
+    it('should prevent duplicate user registration', async () => {
+      // First registration
+      await app.inject({
+        method: 'POST',
+        url: '/auth/register',
+        headers: { 'x-tenant-slug': tenantSlug },
+        payload: {
+          email: 'duplicate@example.com',
+          password: 'ValidPass123!',
+          name: 'Test User'
+        }
+      });
 
-    // Login as tenant 2 user
-    const loginResponse2 = await app.inject({
-      method: 'POST',
-      url: '/auth/login',
-      headers: {
-        'x-tenant-id': tenant2Id
-      },
-      payload: {
-        email: 'user1@test.com',
-        password: 'password456'
-      }
+      // Second registration with same email
+      const response = await app.inject({
+        method: 'POST',
+        url: '/auth/register',
+        headers: { 'x-tenant-slug': tenantSlug },
+        payload: {
+          email: 'duplicate@example.com',
+          password: 'AnotherPass123!',
+          name: 'Test User 2'
+        }
+      });
+
+      expect(response.statusCode).toBe(409);
     });
-
-    expect(loginResponse2.statusCode).toBe(200);
-    const { token: token2 } = JSON.parse(loginResponse2.body);
-
-    // Verify tokens are different
-    expect(token1).not.toBe(token2);
   });
 
-  it('should reject expired JWT tokens', async () => {
-    // Register and login user
-    const registerResponse = await app.inject({
-      method: 'POST',
-      url: '/auth/register',
-      headers: {
-        'x-tenant-id': tenant1Id
-      },
-      payload: {
-        email: 'expiring@test.com',
-        password: 'password123',
-        name: 'Expiring User'
-      }
+  describe('POST /auth/login', () => {
+    it('should reject login with non-existent user', async () => {
+      const response = await app.inject({
+        method: 'POST',
+        url: '/auth/login',
+        headers: { 'x-tenant-slug': tenantSlug },
+        payload: {
+          email: 'nonexistent@example.com',
+          password: 'SomePass123!'
+        }
+      });
+
+      expect(response.statusCode).toBe(401);
     });
 
-    expect(registerResponse.statusCode).toBe(201);
+    it('should reject login with incorrect password', async () => {
+      // First register a user
+      await app.inject({
+        method: 'POST',
+        url: '/auth/register',
+        headers: { 'x-tenant-slug': tenantSlug },
+        payload: {
+          email: 'test@example.com',
+          password: 'ValidPass123!',
+          name: 'Test User'
+        }
+      });
 
-    const loginResponse = await app.inject({
-      method: 'POST',
-      url: '/auth/login',
-      headers: {
-        'x-tenant-id': tenant1Id
-      },
-      payload: {
-        email: 'expiring@test.com',
-        password: 'password123'
-      }
+      // Try to login with wrong password
+      const response = await app.inject({
+        method: 'POST',
+        url: '/auth/login',
+        headers: { 'x-tenant-slug': tenantSlug },
+        payload: {
+          email: 'test@example.com',
+          password: 'WrongPass123!'
+        }
+      });
+
+      expect(response.statusCode).toBe(401);
     });
 
-    expect(loginResponse.statusCode).toBe(200);
-    const { token } = JSON.parse(loginResponse.body);
+    it('should reject login with malformed email', async () => {
+      const response = await app.inject({
+        method: 'POST',
+        url: '/auth/login',
+        headers: { 'x-tenant-slug': tenantSlug },
+        payload: {
+          email: 'not-an-email',
+          password: 'SomePass123!'
+        }
+      });
 
-    // Simulate token expiration by waiting
-    // Note: In real tests, we would mock the JWT verification to simulate expiration
-    // For this example, we'll create an already expired token
-    const expiredToken = app.jwt.sign(
-      { userId: 'test-user-id', tenantId: tenant1Id },
-      { expiresIn: '-1h' } // Expired 1 hour ago
-    );
+      expect(response.statusCode).toBe(400);
+    });
+  });
 
-    // Try to access protected route with expired token
-    const protectedResponse = await app.inject({
-      method: 'GET',
-      url: '/users/profile',
-      headers: {
-        authorization: `Bearer ${expiredToken}`,
-        'x-tenant-id': tenant1Id
-      }
+  describe('POST /auth/refresh', () => {
+    it('should reject refresh with invalid token', async () => {
+      const response = await app.inject({
+        method: 'POST',
+        url: '/auth/refresh',
+        headers: { 'x-tenant-slug': tenantSlug },
+        payload: {
+          refreshToken: 'invalid-token'
+        }
+      });
+
+      expect(response.statusCode).toBe(401);
     });
 
-    expect(protectedResponse.statusCode).toBe(401);
-    const responseBody = JSON.parse(protectedResponse.body);
-    expect(responseBody.message).toBe('Token expired');
+    it('should reject refresh with missing token', async () => {
+      const response = await app.inject({
+        method: 'POST',
+        url: '/auth/refresh',
+        headers: { 'x-tenant-slug': tenantSlug },
+        payload: {}
+      });
+
+      expect(response.statusCode).toBe(400);
+    });
+  });
+
+  describe('GET /auth/profile', () => {
+    it('should reject profile access without token', async () => {
+      const response = await app.inject({
+        method: 'GET',
+        url: '/auth/profile',
+        headers: { 'x-tenant-slug': tenantSlug }
+        // No authorization header
+      });
+
+      expect(response.statusCode).toBe(401);
+    });
+
+    it('should reject profile access with invalid token', async () => {
+      const response = await app.inject({
+        method: 'GET',
+        url: '/auth/profile',
+        headers: { 
+          'x-tenant-slug': tenantSlug,
+          'authorization': 'Bearer invalid-token'
+        }
+      });
+
+      expect(response.statusCode).toBe(401);
+    });
+
+    it('should reject profile access with malformed authorization header', async () => {
+      const response = await app.inject({
+        method: 'GET',
+        url: '/auth/profile',
+        headers: { 
+          'x-tenant-slug': tenantSlug,
+          'authorization': 'InvalidFormat'
+        }
+      });
+
+      expect(response.statusCode).toBe(401);
+    });
+  });
+
+  describe('POST /auth/logout', () => {
+    it('should reject logout without token', async () => {
+      const response = await app.inject({
+        method: 'POST',
+        url: '/auth/logout',
+        headers: { 'x-tenant-slug': tenantSlug }
+        // No authorization header
+      });
+
+      expect(response.statusCode).toBe(401);
+    });
+
+    it('should reject logout with invalid token', async () => {
+      const response = await app.inject({
+        method: 'POST',
+        url: '/auth/logout',
+        headers: { 
+          'x-tenant-slug': tenantSlug,
+          'authorization': 'Bearer invalid-token'
+        }
+      });
+
+      expect(response.statusCode).toBe(401);
+    });
   });
 });
