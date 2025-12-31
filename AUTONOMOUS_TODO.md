@@ -4,7 +4,7 @@
 - [x] STABILITY: BullMQ job retry configuration missing for notification failures; file: `backend/src/routes/notifications.ts`
 - [x] TEST: No integration tests for workflow approval chains; file: `backend/src/routes/workflow.ts`
 - [x] PERF: N+1 query issue in knowledge base category loading; file: `backend/src/routes/knowledge.ts`
-- [ ] BUG: Missing input validation on reporting route parameters; file: `backend/src/routes/reporting.ts`
+- [x] BUG: Missing input validation on reporting route parameters; file: `backend/src/routes/reporting.ts`
 - [ ] SECURITY: Hardcoded salt rounds in auth route should use config value; file: `backend/src/routes/auth.test.ts`
 - [x] STABILITY: `backend/src/routes/notifications.ts` doesn't implement proper retry logic for failed webhook deliveries
 - [x] TEST: `backend/src/routes/workflow.ts` lacks unit tests for approval workflow state transitions
@@ -595,6 +595,7 @@
 ## Completed
 
 ## Session Log
+- [2025-12-31 09:15] Completed: BUG: Missing input validation on reporting route parameters; file: `backend/src/routes/reporting.ts`
 - [2025-12-31 09:15] Completed: PERF: N+1 query issue in knowledge base category loading; file: `backend/src/routes/knowledge.ts`
 - [2025-12-31 09:15] Completed: TEST: No integration tests for workflow approval chains; file: `backend/src/routes/workflow.ts`
 - [2025-12-31 09:14] Completed: STABILITY: BullMQ job retry configuration missing for notification failures; file: `backend/src/routes/notifications.ts`
