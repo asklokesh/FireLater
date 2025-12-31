@@ -1,11 +1,16 @@
 # FireLater Autonomous Development
 
 ## Priority Queue
+- [x] STABILITY: BullMQ job retry configuration missing in `backend/src/routes/notifications.ts`; transient failures may cause permanent job loss
+- [ ] TEST: Auth route lacks unit tests for `validateCIDR` integration and error states in `backend/src/routes/auth.test.ts`
+- [ ] PERF: No rate limiting or caching implemented for reporting endpoints in `backend/src/routes/reporting.ts`; high-cardinality queries may degrade performance under load
+- [ ] BUG: Missing input sanitization for `trimmedCidr` before passing to `validateCIDR` in `backend/src/routes/auth.test.ts`; may cause unexpected behavior or crashes
+- [ ] SECURITY: `validateCIDR` error handling bypasses validation logic in `backend/src/routes/auth.test.ts`; the catch block should throw or return an error response instead of silently continuing
 - [x] REFACTOR: Duplicated middleware logic across route files (`integrations.ts`, `notifications.ts`) for tenant context extraction; consolidate into shared utility module.
 - [x] TEST: Incomplete test coverage for critical workflows in `workflow.ts` and `oncall.ts`; add unit tests for edge cases like rotation handoffs and approval chain failures.
-- [ ] PERF: Redundant database queries detected in `knowledge.ts` and `assets.ts` when fetching related entities; optimize with JOINs or batch loading to reduce N+1 query patterns.
-- [ ] BUG: Missing input sanitization in `reporting.ts` API endpoints could lead to SQL injection or XSS vulnerabilities; implement proper validation and escaping for user-provided parameters.
-- [ ] SECURITY: Centralized CIDR validation in `auth.test.ts` may bypass invalid input checks due to misplaced error handling logic; review and fix conditional flow in `validateCIDR` usage.
+- [x] PERF: Redundant database queries detected in `knowledge.ts` and `assets.ts` when fetching related entities; optimize with JOINs or batch loading to reduce N+1 query patterns.
+- [x] BUG: Missing input sanitization in `reporting.ts` API endpoints could lead to SQL injection or XSS vulnerabilities; implement proper validation and escaping for user-provided parameters.
+- [x] SECURITY: Centralized CIDR validation in `auth.test.ts` may bypass invalid input checks due to misplaced error handling logic; review and fix conditional flow in `validateCIDR` usage.
 - [x] STABILITY: Notifications route doesn't handle Redis connection failures gracefully; implement retry logic and circuit breaker pattern in `backend/src/routes/notifications.ts`
 - [x] TEST: Workflow route lacks unit tests for approval chain logic; add test coverage for sequential and parallel approvals in `backend/src/routes/workflow.ts`
 - [x] PERF: Knowledge base search endpoint performs full-table scans; implement database indexing and pagination in `backend/src/routes/knowledge.ts`
@@ -105,6 +110,10 @@
 ## Completed
 
 ## Session Log
+- [2025-12-31 03:51] Completed: STABILITY: BullMQ job retry configuration missing in `backend/src/routes/notifications.ts`; transient failures may cause permanent job loss
+- [2025-12-31 03:24] Completed: SECURITY: Centralized CIDR validation in `auth.test.ts` may bypass invalid input checks due to misplaced error handling logic; review and fix conditional flow in `validateCIDR` usage.
+- [2025-12-31 03:24] Completed: BUG: Missing input sanitization in `reporting.ts` API endpoints could lead to SQL injection or XSS vulnerabilities; implement proper validation and escaping for user-provided parameters.
+- [2025-12-31 03:24] Completed: PERF: Redundant database queries detected in `knowledge.ts` and `assets.ts` when fetching related entities; optimize with JOINs or batch loading to reduce N+1 query patterns.
 - [2025-12-31 03:24] Completed: TEST: Incomplete test coverage for critical workflows in `workflow.ts` and `oncall.ts`; add unit tests for edge cases like rotation handoffs and approval chain failures.
 - [2025-12-31 03:23] Completed: REFACTOR: Duplicated middleware logic across route files (`integrations.ts`, `notifications.ts`) for tenant context extraction; consolidate into shared utility module.
 - [2025-12-31 03:23] Completed: SECURITY: Auth route uses inline CIDR validation instead of centralized middleware; move `validateCIDR` call to proper middleware layer in `backend/src/routes/auth.test.ts`
