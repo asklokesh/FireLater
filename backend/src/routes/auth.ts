@@ -8,7 +8,7 @@ import { isValidUUID } from '../utils/errors.js';
 const loginSchema = z.object({
   email: z.string().email(),
   password: z.string().min(8),
-  tenantSlug: z.string().optional(),
+  tenantSlug: z.string().regex(/^[a-z0-9]([a-z0-9-]*[a-z0-9])?$/).min(3).max(63).optional(),
 });
 
 const registerSchema = z.object({
@@ -17,7 +17,7 @@ const registerSchema = z.object({
   firstName: z.string().min(1),
   lastName: z.string().min(1),
   tenantName: z.string().min(1),
-  tenantSlug: z.string().min(1),
+  tenantSlug: z.string().regex(/^[a-z0-9]([a-z0-9-]*[a-z0-9])?$/).min(3).max(63),
 });
 
 export default async function authRoutes(app: FastifyInstance) {
@@ -26,7 +26,11 @@ export default async function authRoutes(app: FastifyInstance) {
     config: {
       rateLimit: {
         max: 5, // Only 5 attempts per minute
-        timeWindow: 60000
+        timeWindow: 60000,
+        keyGenerator: (req) => {
+          const { tenantSlug } = req.body as { tenantSlug?: string };
+          return `login_${tenantSlug || 'default'}_${req.ip}`;
+        }
       }
     }
   }, async (request, reply) => {
@@ -40,7 +44,11 @@ export default async function authRoutes(app: FastifyInstance) {
     config: {
       rateLimit: {
         max: 3, // Only 3 registrations per hour
-        timeWindow: 3600000
+        timeWindow: 3600000,
+        keyGenerator: (req) => {
+          const { tenantSlug } = req.body as { tenantSlug: string };
+          return `register_${tenantSlug}_${req.ip}`;
+        }
       }
     }
   }, async (request, reply) => {
@@ -54,7 +62,11 @@ export default async function authRoutes(app: FastifyInstance) {
     config: {
       rateLimit: {
         max: 3, // Only 3 reset requests per hour
-        timeWindow: 3600000
+        timeWindow: 3600000,
+        keyGenerator: (req) => {
+          const { email } = req.body as { email: string };
+          return `reset_${email}_${req.ip}`;
+        }
       }
     }
   }, async (request, reply) => {
