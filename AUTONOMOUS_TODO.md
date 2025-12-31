@@ -4,7 +4,7 @@
 - [x] REFACTOR: Duplicate tenant schema validation logic across multiple route files; files: `backend/src/routes/assets.ts`, `backend/src/routes/settings.ts`
 - [x] STABILITY: BullMQ job retry configuration missing in notifications queue; file: `backend/src/routes/notifications.ts`
 - [x] TEST: No unit tests for workflow route business logic; file: `backend/src/routes/workflow.ts`
-- [ ] PERF: Missing database indexing on frequently queried fields in reporting routes; file: `backend/src/routes/reporting.ts`
+- [x] PERF: Missing database indexing on frequently queried fields in reporting routes; file: `backend/src/routes/reporting.ts`
 - [ ] SECURITY: Hardcoded salt rounds in auth route should use config value; file: `backend/src/routes/auth.test.ts`
 - [x] STABILITY: Error handling missing for external API calls in integrations route; file: `backend/src/routes/integrations.ts`
 - [x] TEST: No unit tests for workflow route business logic; file: `backend/src/routes/workflow.ts`
@@ -560,6 +560,7 @@
 ## Completed
 
 ## Session Log
+- [2025-12-31 09:01] Completed: PERF: Missing database indexing on frequently queried fields in reporting routes; file: `backend/src/routes/reporting.ts`
 - [2025-12-31 09:01] Completed: TEST: No unit tests for workflow route business logic; file: `backend/src/routes/workflow.ts`
 - [2025-12-31 09:00] Completed: STABILITY: BullMQ job retry configuration missing in notifications queue; file: `backend/src/routes/notifications.ts`
 - [2025-12-31 09:00] Completed: REFACTOR: Duplicate tenant schema validation logic across multiple route files; files: `backend/src/routes/assets.ts`, `backend/src/routes/settings.ts`
