@@ -3,8 +3,8 @@
 ## Priority Queue
 - [x] STABILITY: No circuit breaker pattern implemented for external cloud integration calls, risking cascading failures during provider outages (`backend/src/routes/integrations.ts`).
 - [x] TEST: Auth routes lack unit tests for rate limiting and tenant validation logic. Add test coverage for login, register, and reset password endpoints (`backend/src/routes/auth.test.ts`).
-- [ ] PERF: Missing database query indexing strategy for multi-tenant schema lookups may cause performance degradation as tenant count increases. Add composite indexes on tenant_id columns across core tables (`backend/src/routes/*.ts`).
-- [ ] BUG: Tenant slug regex in `/login` route incorrectly rejects valid single-character slugs due to missing match group. Revise regex to properly handle all valid cases (`backend/src/routes/auth.test.ts`).
+- [x] PERF: Missing database query indexing strategy for multi-tenant schema lookups may cause performance degradation as tenant count increases. Add composite indexes on tenant_id columns across core tables (`backend/src/routes/*.ts`).
+- [x] BUG: Tenant slug regex in `/login` route incorrectly rejects valid single-character slugs due to missing match group. Revise regex to properly handle all valid cases (`backend/src/routes/auth.test.ts`).
 - [ ] SECURITY: Rate limit key generation in `/login` route uses `x-forwarded-for` header without validation, potentially allowing IP spoofing. Consider adding trusted proxy configuration or stricter header validation (`backend/src/routes/auth.test.ts`).
 - [x] STABILITY: Background job processing with BullMQ lacks proper error handling and retry mechanisms for failed cloud integration sync operations.
 - [x] TEST: No unit tests found for critical authentication routes in `backend/src/routes/auth.test.ts` - only basic route registration tests exist.
@@ -40,6 +40,8 @@
 ## Completed
 
 ## Session Log
+- [2025-12-31 02:52] Completed: BUG: Tenant slug regex in `/login` route incorrectly rejects valid single-character slugs due to missing match group. Revise regex to properly handle all valid cases (`backend/src/routes/auth.test.ts`).
+- [2025-12-31 02:51] Completed: PERF: Missing database query indexing strategy for multi-tenant schema lookups may cause performance degradation as tenant count increases. Add composite indexes on tenant_id columns across core tables (`backend/src/routes/*.ts`).
 - [2025-12-31 02:51] Completed: TEST: Auth routes lack unit tests for rate limiting and tenant validation logic. Add test coverage for login, register, and reset password endpoints (`backend/src/routes/auth.test.ts`).
 - [2025-12-31 02:51] Completed: STABILITY: No circuit breaker pattern implemented for external cloud integration calls, risking cascading failures during provider outages (`backend/src/routes/integrations.ts`).
 - [2025-12-31 02:24] Completed: SECURITY: Rate limiting key generator in `backend/src/routes/auth.ts` uses `x-forwarded-for` header without validation, potentially allowing IP spoofing. Should validate and sanitize header value.

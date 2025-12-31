@@ -1,6 +1,3 @@
-import { loginRateLimit, registerRateLimit, resetPasswordRateLimit } from '../middleware/rateLimit.js';
-
-export default async function authRoutes(app: FastifyInstance) {
   // Login route with stricter rate limiting
   app.post('/login', {
     config: {
@@ -22,6 +19,3 @@ export default async function authRoutes(app: FastifyInstance) {
     if (!tenantSlug || typeof tenantSlug !== 'string' || !tenantSlug.match(/^[a-zA-Z0-9][a-zA-Z0-9\-]*[a-zA-Z0-9]$|^[a-zA-Z0-9]$/)) {
       throw new BadRequestError('Invalid tenant identifier');
     }
-    
-    // ... existing login logic
-  });
