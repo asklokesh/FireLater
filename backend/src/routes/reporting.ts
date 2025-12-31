@@ -17,6 +17,12 @@ function validateDateRange(fromDate?: string, toDate?: string): void {
   }
 }
 
+// Add validation for UUID format
+function validateUUID(id: string): boolean {
+  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  return uuidRegex.test(id);
+}
+
 export async function reportingRoutes(fastify: FastifyInstance) {
   // GET /api/v1/reporting/templates
   fastify.get('/reporting/templates', {
@@ -34,11 +40,15 @@ export async function reportingRoutes(fastify: FastifyInstance) {
       }
     }
   }, async (request: FastifyRequest<{ Querystring: { page?: number; perPage?: number; reportType?: string; isPublic?: boolean } }>) => {
+    if (!request.tenantSlug) {
+      throw new BadRequestError('Tenant context required');
+    }
+    
     const { page = 1, perPage = 20, reportType, isPublic } = request.query;
     const pagination = { page, perPage };
     
     const templates = await reportTemplateService.list(
-      request.tenantSlug!,
+      request.tenantSlug,
       pagination,
       { reportType, isPublic }
     );
@@ -64,11 +74,20 @@ export async function reportingRoutes(fastify: FastifyInstance) {
   }, async (request: FastifyRequest<{ Querystring: { templateId: string; fromDate?: string; toDate?: string } }>) => {
     const { templateId, fromDate, toDate } = request.query;
     
+    if (!request.tenantSlug) {
+      throw new BadRequestError('Tenant context required');
+    }
+    
+    // Validate templateId format
+    if (!validateUUID(templateId)) {
+      throw new BadRequestError('Invalid templateId format');
+    }
+    
     // Validate date parameters
     validateDateRange(fromDate, toDate);
     
     const report = await reportingService.generateReport(
-      request.tenantSlug!,
+      request.tenantSlug,
       templateId,
       fromDate,
       toDate
