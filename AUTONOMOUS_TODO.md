@@ -4,7 +4,7 @@
 - [x] STABILITY: `backend/src/routes/oncall.ts` lacks proper error handling for calendar sync failures
 - [x] TEST: No integration tests for webhook handling in `backend/src/routes/integrations.ts`
 - [x] PERF: `backend/src/routes/assets.ts` makes sequential database calls for health scoring instead of batch queries
-- [ ] BUG: Missing input validation in `backend/src/routes/reporting.ts` for date range parameters could cause SQL injection
+- [x] BUG: Missing input validation in `backend/src/routes/reporting.ts` for date range parameters could cause SQL injection
 - [ ] SECURITY: Hardcoded salt rounds in `backend/src/routes/auth.test.ts` should use config instead of hardcoded value
 - [x] REFACTOR: Duplicate tenant schema validation logic across multiple route files
 - [x] STABILITY: BullMQ job retry configuration missing for background tasks; file: backend/src/routes/notifications.ts
@@ -240,6 +240,7 @@
 ## Completed
 
 ## Session Log
+- [2025-12-31 05:21] Completed: BUG: Missing input validation in `backend/src/routes/reporting.ts` for date range parameters could cause SQL injection
 - [2025-12-31 05:21] Completed: PERF: `backend/src/routes/assets.ts` makes sequential database calls for health scoring instead of batch queries
 - [2025-12-31 05:20] Completed: TEST: No integration tests for webhook handling in `backend/src/routes/integrations.ts`
 - [2025-12-31 05:20] Completed: STABILITY: `backend/src/routes/oncall.ts` lacks proper error handling for calendar sync failures
