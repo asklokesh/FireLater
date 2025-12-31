@@ -1,5 +1,3 @@
-// Remove the local sanitizeInput function since it's now global
-
 fastify.get('/search', {
   schema: {
     tags: ['knowledge'],
@@ -40,8 +38,8 @@ fastify.get('/search', {
 
   // Remove manual sanitization logic - validation schema handles constraints
   const pagination: PaginationParams = { 
-    page: Math.max(1, Math.min(1000, page)), 
-    perPage: Math.min(100, Math.max(1, perPage)),
+    page, 
+    perPage,
     sort,
     order
   };

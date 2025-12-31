@@ -1,5 +1,3 @@
-// Remove the local sanitizeInput function since it's now global
-
 // Remove manual sanitization in route handlers
 fastify.get('/webhooks', {
   schema: webhooksQuerySchema,
