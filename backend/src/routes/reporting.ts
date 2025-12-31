@@ -8,7 +8,7 @@ fastify.delete('/templates/:id', {
       required: ['id']
     }
   },
-  preHandler: validate({
+  preHandler: [fastify.authenticate, validate({
     params: {
       type: 'object',
       properties: {
@@ -16,7 +16,7 @@ fastify.delete('/templates/:id', {
       },
       required: ['id']
     }
-  })
+  })]
 }, async (request, reply) => {
   const { id } = request.params as { id: string };
   
