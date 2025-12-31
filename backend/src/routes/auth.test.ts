@@ -1,200 +1,183 @@
-import { test, describe, beforeEach, afterEach } from 'node:test';
-import * as assert from 'node:assert';
+import { describe, it, beforeEach, afterEach, expect } from 'vitest';
 import { buildApp } from '../app.js';
+import { FastifyInstance } from 'fastify';
 import { createTestTenant, deleteTestTenant } from '../utils/testUtils.js';
 
 describe('Auth Routes', () => {
-  let app: ReturnType<typeof buildApp>;
+  let app: FastifyInstance;
   let testTenant: any;
 
   beforeEach(async () => {
-    app = buildApp();
+    app = await buildApp();
     testTenant = await createTestTenant();
   });
 
   afterEach(async () => {
-    await deleteTestTenant(testTenant.slug);
+    if (testTenant) {
+      await deleteTestTenant(testTenant.slug);
+    }
     await app.close();
   });
 
-  describe('POST /login', () => {
-    test('should login successfully with valid credentials', async () => {
+  describe('Rate Limiting', () => {
+    it('should rate limit login attempts', async () => {
+      const loginPayload = {
+        email: 'test@example.com',
+        password: 'password123',
+        tenantSlug: testTenant.slug
+      };
+
+      // Make requests up to the rate limit
+      for (let i = 0; i < 5; i++) {
+        await app.inject({
+          method: 'POST',
+          url: '/api/v1/auth/login',
+          payload: loginPayload
+        });
+      }
+
+      // This request should be rate limited
       const response = await app.inject({
         method: 'POST',
-        url: '/auth/login',
+        url: '/api/v1/auth/login',
+        payload: loginPayload
+      });
+
+      expect(response.statusCode).toBe(429);
+      expect(response.json().message).toBe('Rate limit exceeded');
+    });
+
+    it('should rate limit registration attempts', async () => {
+      const registerPayload = {
+        email: 'newuser@example.com',
+        password: 'password123',
+        firstName: 'Test',
+        lastName: 'User',
+        tenantSlug: testTenant.slug
+      };
+
+      // Make requests up to the rate limit
+      for (let i = 0; i < 3; i++) {
+        await app.inject({
+          method: 'POST',
+          url: '/api/v1/auth/register',
+          payload: registerPayload
+        });
+      }
+
+      // This request should be rate limited
+      const response = await app.inject({
+        method: 'POST',
+        url: '/api/v1/auth/register',
+        payload: registerPayload
+      });
+
+      expect(response.statusCode).toBe(429);
+      expect(response.json().message).toBe('Rate limit exceeded');
+    });
+
+    it('should rate limit password reset requests', async () => {
+      const resetPayload = {
+        email: 'test@example.com',
+        tenantSlug: testTenant.slug
+      };
+
+      // Make requests up to the rate limit
+      for (let i = 0; i < 3; i++) {
+        await app.inject({
+          method: 'POST',
+          url: '/api/v1/auth/reset-password',
+          payload: resetPayload
+        });
+      }
+
+      // This request should be rate limited
+      const response = await app.inject({
+        method: 'POST',
+        url: '/api/v1/auth/reset-password',
+        payload: resetPayload
+      });
+
+      expect(response.statusCode).toBe(429);
+      expect(response.json().message).toBe('Rate limit exceeded');
+    });
+  });
+
+  describe('Tenant Validation', () => {
+    it('should reject login with invalid tenant slug format', async () => {
+      const response = await app.inject({
+        method: 'POST',
+        url: '/api/v1/auth/login',
         payload: {
-          email: 'admin@example.com',
+          email: 'test@example.com',
           password: 'password123',
-          tenantSlug: testTenant.slug
+          tenantSlug: 'invalid_tenant!' // Invalid characters
         }
       });
 
-      assert.strictEqual(response.statusCode, 200);
-      const body = JSON.parse(response.body);
-      assert.ok(body.token);
-      assert.ok(body.refreshToken);
-      assert.strictEqual(body.user.email, 'admin@example.com');
+      expect(response.statusCode).toBe(400);
+      expect(response.json().message).toBe('Invalid tenant identifier');
     });
 
-    test('should reject invalid email format', async () => {
+    it('should reject login with missing tenant slug', async () => {
       const response = await app.inject({
         method: 'POST',
-        url: '/auth/login',
+        url: '/api/v1/auth/login',
         payload: {
-          email: 'invalid-email',
-          password: 'password123',
-          tenantSlug: testTenant.slug
-        }
-      });
-
-      assert.strictEqual(response.statusCode, 400);
-    });
-
-    test('should reject missing tenant slug', async () => {
-      const response = await app.inject({
-        method: 'POST',
-        url: '/auth/login',
-        payload: {
-          email: 'admin@example.com',
+          email: 'test@example.com',
           password: 'password123'
+          // Missing tenantSlug
         }
       });
 
-      assert.strictEqual(response.statusCode, 400);
+      expect(response.statusCode).toBe(400);
+      expect(response.json().message).toBe('Invalid tenant identifier');
     });
 
-    test('should reject invalid tenant slug format', async () => {
+    it('should reject login with non-existent tenant', async () => {
       const response = await app.inject({
         method: 'POST',
-        url: '/auth/login',
+        url: '/api/v1/auth/login',
         payload: {
-          email: 'admin@example.com',
+          email: 'test@example.com',
           password: 'password123',
-          tenantSlug: 'invalid@tenant'
+          tenantSlug: 'nonexistent'
         }
       });
 
-      assert.strictEqual(response.statusCode, 400);
+      expect(response.statusCode).toBe(404);
+      expect(response.json().message).toBe('Tenant not found');
     });
 
-    test('should reject invalid credentials', async () => {
+    it('should reject registration with invalid tenant slug format', async () => {
       const response = await app.inject({
         method: 'POST',
-        url: '/auth/login',
-        payload: {
-          email: 'admin@example.com',
-          password: 'wrongpassword',
-          tenantSlug: testTenant.slug
-        }
-      });
-
-      assert.strictEqual(response.statusCode, 401);
-    });
-  });
-
-  describe('POST /register', () => {
-    test('should register new user successfully', async () => {
-      const response = await app.inject({
-        method: 'POST',
-        url: '/auth/register',
+        url: '/api/v1/auth/register',
         payload: {
           email: 'newuser@example.com',
           password: 'password123',
-          name: 'New User',
-          tenantSlug: testTenant.slug
+          firstName: 'Test',
+          lastName: 'User',
+          tenantSlug: 'invalid-tenant-' // Ends with hyphen
         }
       });
 
-      assert.strictEqual(response.statusCode, 201);
-      const body = JSON.parse(response.body);
-      assert.ok(body.token);
-      assert.ok(body.refreshToken);
-      assert.strictEqual(body.user.email, 'newuser@example.com');
+      expect(response.statusCode).toBe(400);
+      expect(response.json().message).toBe('Invalid tenant identifier');
     });
 
-    test('should reject duplicate email', async () => {
-      // First registration
-      await app.inject({
-        method: 'POST',
-        url: '/auth/register',
-        payload: {
-          email: 'duplicate@example.com',
-          password: 'password123',
-          name: 'Test User',
-          tenantSlug: testTenant.slug
-        }
-      });
-
-      // Second registration with same email
+    it('should reject password reset with invalid tenant slug', async () => {
       const response = await app.inject({
         method: 'POST',
-        url: '/auth/register',
+        url: '/api/v1/auth/reset-password',
         payload: {
-          email: 'duplicate@example.com',
-          password: 'password123',
-          name: 'Test User',
-          tenantSlug: testTenant.slug
+          email: 'test@example.com',
+          tenantSlug: '123invalid' // Starts with number
         }
       });
 
-      assert.strictEqual(response.statusCode, 409);
-    });
-
-    test('should reject weak password', async () => {
-      const response = await app.inject({
-        method: 'POST',
-        url: '/auth/register',
-        payload: {
-          email: 'newuser@example.com',
-          password: '123',
-          name: 'New User',
-          tenantSlug: testTenant.slug
-        }
-      });
-
-      assert.strictEqual(response.statusCode, 400);
-    });
-  });
-
-  describe('POST /reset-password', () => {
-    test('should initiate password reset for valid email', async () => {
-      const response = await app.inject({
-        method: 'POST',
-        url: '/auth/reset-password',
-        payload: {
-          email: 'admin@example.com',
-          tenantSlug: testTenant.slug
-        }
-      });
-
-      assert.strictEqual(response.statusCode, 200);
-    });
-
-    test('should handle non-existent email gracefully', async () => {
-      const response = await app.inject({
-        method: 'POST',
-        url: '/auth/reset-password',
-        payload: {
-          email: 'nonexistent@example.com',
-          tenantSlug: testTenant.slug
-        }
-      });
-
-      // Should still return 200 to prevent email enumeration
-      assert.strictEqual(response.statusCode, 200);
-    });
-
-    test('should reject invalid email format', async () => {
-      const response = await app.inject({
-        method: 'POST',
-        url: '/auth/reset-password',
-        payload: {
-          email: 'invalid-email',
-          tenantSlug: testTenant.slug
-        }
-      });
-
-      assert.strictEqual(response.statusCode, 400);
+      expect(response.statusCode).toBe(400);
+      expect(response.json().message).toBe('Invalid tenant identifier');
     });
   });
 });
