@@ -3,7 +3,7 @@
 ## Priority Queue
 - [x] REFACTOR: Duplicate code for tenant context initialization across routes; files: `backend/src/routes/oncall.ts`, `backend/src/routes/requests.ts`
 - [x] STABILITY: Error handling missing for external API calls in integrations; file: `backend/src/routes/integrations.ts`
-- [ ] TEST: No unit tests for critical workflow logic; file: `backend/src/routes/workflow.ts`
+- [x] TEST: No unit tests for critical workflow logic; file: `backend/src/routes/workflow.ts`
 - [ ] PERF: Missing database indexing on frequently queried fields in reporting routes; file: `backend/src/routes/reporting.ts`
 - [ ] SECURITY: Hardcoded salt rounds in auth route should use config value; file: `backend/src/routes/auth.test.ts`
 - [x] STABILITY: `backend/src/routes/oncall.ts` lacks proper error handling for calendar sync failures
@@ -515,6 +515,7 @@
 ## Completed
 
 ## Session Log
+- [2025-12-31 08:20] Completed: TEST: No unit tests for critical workflow logic; file: `backend/src/routes/workflow.ts`
 - [2025-12-31 08:20] Completed: STABILITY: Error handling missing for external API calls in integrations; file: `backend/src/routes/integrations.ts`
 - [2025-12-31 08:19] Completed: REFACTOR: Duplicate code for tenant context initialization across routes; files: `backend/src/routes/oncall.ts`, `backend/src/routes/requests.ts`
 - [2025-12-31 08:19] Completed: SECURITY: Hardcoded salt rounds in `backend/src/routes/auth.test.ts` should use config instead of hardcoded value
