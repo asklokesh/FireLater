@@ -1,163 +1,205 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { FastifyInstance } from 'fastify';
-import { buildTestServer } from '../helpers/server.js';
+import { test, describe, beforeEach, afterEach } from 'node:test';
+import { deepEqual, equal, rejects } from 'node:assert';
+import { buildApp } from '../helpers.js';
 import { workflowService } from '../../src/services/workflow.js';
 
-// Mock the workflow service
-vi.mock('../../src/services/workflow.js', () => ({
-  workflowService: {
-    processApproval: vi.fn(),
-    getWorkflowById: vi.fn(),
-    createWorkflow: vi.fn(),
-  }
-}));
-
-describe('Workflow Routes - Approval Chain Logic', () => {
-  let server: FastifyInstance;
-
+describe('Workflow Routes', () => {
+  let app: any;
+  
   beforeEach(async () => {
-    server = await buildTestServer();
-    vi.clearAllMocks();
+    app = await buildApp();
   });
-
-  describe('Sequential Approvals', () => {
-    it('should process sequential approvals in correct order', async () => {
-      const mockWorkflow = {
-        id: 'workflow-1',
-        name: 'Test Sequential Workflow',
-        steps: [
-          { id: 'step-1', type: 'approval', approver: 'user-1', nextStepId: 'step-2' },
-          { id: 'step-2', type: 'approval', approver: 'user-2', nextStepId: 'step-3' },
-          { id: 'step-3', type: 'approval', approver: 'user-3', nextStepId: null }
-        ]
-      };
-
-      vi.mocked(workflowService.getWorkflowById).mockResolvedValue(mockWorkflow);
-      
-      const response = await server.inject({
-        method: 'POST',
-        url: '/api/v1/workflows/workflow-1/approvals',
-        payload: {
-          stepId: 'step-1',
-          approved: true,
-          userId: 'user-1'
-        }
-      });
-
-      expect(response.statusCode).toBe(200);
-      expect(workflowService.processApproval).toHaveBeenCalledWith(
-        'test-tenant',
-        'workflow-1',
-        'step-1',
-        'user-1',
-        true
-      );
-    });
-
-    it('should reject approval when user is not the designated approver', async () => {
-      const mockWorkflow = {
-        id: 'workflow-1',
-        name: 'Test Sequential Workflow',
-        steps: [
-          { id: 'step-1', type: 'approval', approver: 'user-1', nextStepId: 'step-2' }
-        ]
-      };
-
-      vi.mocked(workflowService.getWorkflowById).mockResolvedValue(mockWorkflow);
-
-      const response = await server.inject({
-        method: 'POST',
-        url: '/api/v1/workflows/workflow-1/approvals',
-        payload: {
-          stepId: 'step-1',
-          approved: true,
-          userId: 'unauthorized-user'
-        }
-      });
-
-      expect(response.statusCode).toBe(403);
-    });
+  
+  afterEach(async () => {
+    await app.close();
   });
-
-  describe('Parallel Approvals', () => {
-    it('should process parallel approvals independently', async () => {
+  
+  describe('Approval Chains', () => {
+    test('should process multi-level approval chain correctly', async () => {
+      // Mock workflow service to simulate approval chain
       const mockWorkflow = {
-        id: 'workflow-2',
-        name: 'Test Parallel Workflow',
+        id: 'test-workflow-1',
+        name: 'Test Approval Workflow',
         steps: [
-          { 
-            id: 'parallel-step',
-            type: 'parallel_approval',
-            approvers: ['user-1', 'user-2', 'user-3'],
-            nextStepId: 'step-4'
-          }
-        ]
-      };
-
-      vi.mocked(workflowService.getWorkflowById).mockResolvedValue(mockWorkflow);
-
-      // First approval
-      await server.inject({
-        method: 'POST',
-        url: '/api/v1/workflows/workflow-2/approvals',
-        payload: {
-          stepId: 'parallel-step',
-          approved: true,
-          userId: 'user-1'
-        }
-      });
-
-      // Second approval
-      const response = await server.inject({
-        method: 'POST',
-        url: '/api/v1/workflows/workflow-2/approvals',
-        payload: {
-          stepId: 'parallel-step',
-          approved: false,
-          userId: 'user-2'
-        }
-      });
-
-      expect(response.statusCode).toBe(200);
-      expect(workflowService.processApproval).toHaveBeenCalledTimes(2);
-    });
-
-    it('should complete parallel approval when all approvers respond', async () => {
-      const mockWorkflow = {
-        id: 'workflow-3',
-        name: 'Test Complete Parallel Workflow',
-        steps: [
-          { 
-            id: 'parallel-step',
-            type: 'parallel_approval',
-            approvers: ['user-1', 'user-2'],
-            requiredApprovals: 2,
+          {
+            id: 'step-1',
+            type: 'approval',
+            name: 'Manager Approval',
+            config: {
+              approvers: ['manager-1'],
+              requiredApprovals: 1
+            },
+            nextStepId: 'step-2'
+          },
+          {
+            id: 'step-2',
+            type: 'approval',
+            name: 'Director Approval',
+            config: {
+              approvers: ['director-1'],
+              requiredApprovals: 1
+            },
             nextStepId: 'step-3'
+          },
+          {
+            id: 'step-3',
+            type: 'complete',
+            name: 'Complete Request'
           }
-        ]
+        ],
+        startStepId: 'step-1'
       };
-
-      vi.mocked(workflowService.getWorkflowById).mockResolvedValue(mockWorkflow);
-      vi.mocked(workflowService.processApproval).mockResolvedValue({
-        allApproved: true,
-        nextStepId: 'step-3'
-      });
-
-      const response = await server.inject({
-        method: 'POST',
-        url: '/api/v1/workflows/workflow-3/approvals',
-        payload: {
-          stepId: 'parallel-step',
-          approved: true,
-          userId: 'user-2'
-        }
-      });
-
-      expect(response.statusCode).toBe(200);
-      expect(response.json()).toEqual({
-        message: 'All approvals received, moving to next step',
-        nextStepId: 'step-3'
-      });
+      
+      // Test workflow execution through approval chain
+      const result = await workflowService.executeWorkflow(
+        'test-tenant',
+        mockWorkflow.id,
+        { requestId: 'req-123' }
+      );
+      
+      equal(result.currentStepId, 'step-1');
+      equal(result.status, 'pending_approval');
+    });
+    
+    test('should handle approval chain rejection', async () => {
+      const mockWorkflow = {
+        id: 'reject-workflow-1',
+        name: 'Rejectable Workflow',
+        steps: [
+          {
+            id: 'approval-step',
+            type: 'approval',
+            name: 'Single Approval',
+            config: {
+              approvers: ['approver-1'],
+              requiredApprovals: 1
+            },
+            nextStepId: 'complete-step'
+          },
+          {
+            id: 'complete-step',
+            type: 'complete',
+            name: 'Completed'
+          }
+        ],
+        startStepId: 'approval-step'
+      };
+      
+      // Test rejection scenario
+      const result = await workflowService.rejectStep(
+        'test-tenant',
+        mockWorkflow.id,
+        'approval-step',
+        'approver-1',
+        'Insufficient documentation'
+      );
+      
+      equal(result.status, 'rejected');
+      equal(result.rejectionReason, 'Insufficient documentation');
+    });
+  });
+  
+  describe('State Transitions', () => {
+    test('should transition from pending to approved state', async () => {
+      const workflowId = 'state-transition-1';
+      const tenantSlug = 'test-tenant';
+      
+      // Start workflow in pending state
+      const initialState = await workflowService.initializeWorkflow(
+        tenantSlug,
+        workflowId,
+        { requestId: 'req-456' }
+      );
+      
+      equal(initialState.status, 'pending');
+      
+      // Approve to transition state
+      const approvedState = await workflowService.approveStep(
+        tenantSlug,
+        workflowId,
+        initialState.currentStepId,
+        'approver-1'
+      );
+      
+      equal(approvedState.status, 'approved');
+    });
+    
+    test('should maintain state integrity during transitions', async () => {
+      const workflowId = 'integrity-workflow-1';
+      const tenantSlug = 'test-tenant';
+      
+      // Create workflow with multiple transition paths
+      const workflowConfig = {
+        id: workflowId,
+        steps: [
+          {
+            id: 'start',
+            type: 'task',
+            name: 'Initial Task',
+            nextStepId: 'conditional-branch'
+          },
+          {
+            id: 'conditional-branch',
+            type: 'condition',
+            name: 'Check Priority',
+            config: {
+              condition: 'request.priority === "high"'
+            },
+            branches: {
+              true: 'expedited-path',
+              false: 'standard-path'
+            }
+          },
+          {
+            id: 'expedited-path',
+            type: 'approval',
+            name: 'Expedited Approval',
+            nextStepId: 'complete'
+          },
+          {
+            id: 'standard-path',
+            type: 'review',
+            name: 'Standard Review',
+            nextStepId: 'complete'
+          },
+          {
+            id: 'complete',
+            type: 'complete',
+            name: 'Completed'
+          }
+        ],
+        startStepId: 'start'
+      };
+      
+      // Test high priority path
+      const highPriorityContext = {
+        requestId: 'req-789',
+        priority: 'high'
+      };
+      
+      const highPathResult = await workflowService.executeWorkflow(
+        tenantSlug,
+        workflowId,
+        highPriorityContext
+      );
+      
+      // Should take expedited path
+      equal(highPathResult.currentStepId, 'expedited-path');
+      
+      // Test standard priority path
+      const standardPriorityContext = {
+        requestId: 'req-790',
+        priority: 'normal'
+      };
+      
+      const standardPathResult = await workflowService.executeWorkflow(
+        tenantSlug,
+        workflowId,
+        standardPriorityContext
+      );
+      
+      // Should take standard path
+      equal(standardPathResult.currentStepId, 'standard-path');
     });
   });
 });

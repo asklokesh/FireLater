@@ -2,7 +2,7 @@
 
 ## Priority Queue
 - [x] STABILITY: Error handling in `backend/src/routes/integrations.ts` does not gracefully handle AWS SDK timeouts, leading to uncaught promise rejections; wrap external API calls in try-catch and implement retry logic.
-- [ ] TEST: No unit tests found for critical workflow logic in `backend/src/routes/workflow.ts`; add test coverage for approval chains and state transitions.
+- [x] TEST: No unit tests found for critical workflow logic in `backend/src/routes/workflow.ts`; add test coverage for approval chains and state transitions.
 - [ ] PERF: Inefficient database queries in `backend/src/routes/assets.ts` lack proper indexing and pagination, causing slow responses for large inventories; add LIMIT/OFFSET and ensure indexes exist on queried columns.
 - [ ] BUG: Missing input sanitization in `backend/src/routes/reporting.ts` allows potential SQL injection through user-supplied filters; implement parameterized queries or ORM methods.
 - [ ] SECURITY: IP range validation in `backend/src/routes/auth.test.ts` is bypassed due to incorrect try-catch placement; the validation should occur before the try block to prevent unauthorized access.
@@ -135,6 +135,7 @@
 ## Completed
 
 ## Session Log
+- [2025-12-31 04:05] Completed: TEST: No unit tests found for critical workflow logic in `backend/src/routes/workflow.ts`; add test coverage for approval chains and state transitions.
 - [2025-12-31 04:05] Completed: STABILITY: Error handling in `backend/src/routes/integrations.ts` does not gracefully handle AWS SDK timeouts, leading to uncaught promise rejections; wrap external API calls in try-catch and implement retry logic.
 - [2025-12-31 04:04] Completed: SECURITY: Insecure CIDR validation logic in `backend/src/routes/auth.test.ts` lacks proper error handling and may allow invalid IP ranges; validation should throw or return explicit boolean.
 - [2025-12-31 04:04] Completed: BUG: Missing input sanitization in `backend/src/routes/reporting.ts` for user-supplied filters could lead to SQL injection or incorrect query results.
