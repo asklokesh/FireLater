@@ -1,7 +1,16 @@
 export default async function reportingRoutes(fastify: FastifyInstance) {
   // Apply validation to the list route
   fastify.get('/templates', {
-    preHandler: [authenticate, authorize(['read:reports']), validate(reportListSchema)],
+    preHandler: [authenticate, authorize(['read:reports']), validate({
+      querystring: {
+        type: 'object',
+        properties: {
+          page: { type: 'integer', minimum: 1, maximum: 1000, default: 1 },
+          perPage: { type: 'integer', minimum: 1, maximum: 100, default: 20 }
+        },
+        additionalProperties: false
+      }
+    })],
     handler: async (request, reply) => {
       // ... existing implementation
     }
