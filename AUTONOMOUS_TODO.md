@@ -3,7 +3,7 @@
 ## Priority Queue
 - [x] STABILITY: Error handling missing for external API calls in integrations routes; file: `backend/src/routes/integrations.ts`
 - [x] TEST: No unit tests for workflow execution logic; file: `backend/src/routes/workflow.ts`
-- [ ] PERF: N+1 query issue when fetching related assets in requests routes; file: `backend/src/routes/requests.ts`
+- [x] PERF: N+1 query issue when fetching related assets in requests routes; file: `backend/src/routes/requests.ts`
 - [ ] BUG: Missing input validation for critical parameters in reporting routes; file: `backend/src/routes/reporting.ts`
 - [ ] SECURITY: Hardcoded salt rounds in auth route handler should use config value; file: `backend/src/routes/auth.test.ts`
 - [x] STABILITY: `backend/src/routes/notifications.ts` lacks proper error handling for failed webhook deliveries
@@ -435,6 +435,7 @@
 ## Completed
 
 ## Session Log
+- [2025-12-31 07:25] Completed: PERF: N+1 query issue when fetching related assets in requests routes; file: `backend/src/routes/requests.ts`
 - [2025-12-31 07:25] Completed: TEST: No unit tests for workflow execution logic; file: `backend/src/routes/workflow.ts`
 - [2025-12-31 07:24] Completed: STABILITY: Error handling missing for external API calls in integrations routes; file: `backend/src/routes/integrations.ts`
 - [2025-12-31 07:24] Completed: SECURITY: Hardcoded salt rounds in `backend/src/routes/auth.test.ts` should use config instead of hardcoded value
