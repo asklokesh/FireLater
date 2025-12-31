@@ -2,8 +2,8 @@
 
 ## Priority Queue
 - [x] REFACTOR: Duplicate tenant schema access logic across multiple routes (oncall, assets, integrations); consider centralizing; files: `backend/src/routes/oncall.ts`, `backend/src/routes/assets.ts`, `backend/src/routes/integrations.ts`
-- [ ] STABILITY: Error handling bypass in notifications route for failed delivery attempts; file: `backend/src/routes/notifications.ts`
-- [ ] TEST: No unit tests for workflow validation logic; file: `backend/src/routes/workflow.ts`
+- [x] STABILITY: Error handling bypass in notifications route for failed delivery attempts; file: `backend/src/routes/notifications.ts`
+- [x] TEST: No unit tests for workflow validation logic; file: `backend/src/routes/workflow.ts`
 - [ ] PERF: Missing database indexing on frequently queried fields in reporting routes; file: `backend/src/routes/reporting.ts`
 - [ ] SECURITY: Hardcoded salt rounds in auth route should use config value; file: `backend/src/routes/auth.test.ts`
 - [x] STABILITY: Error handling missing for external API calls in integrations route; file: `backend/src/routes/integrations.ts`
@@ -400,6 +400,8 @@
 ## Completed
 
 ## Session Log
+- [2025-12-31 07:12] Completed: TEST: No unit tests for workflow validation logic; file: `backend/src/routes/workflow.ts`
+- [2025-12-31 07:12] Completed: STABILITY: Error handling bypass in notifications route for failed delivery attempts; file: `backend/src/routes/notifications.ts`
 - [2025-12-31 07:12] Completed: REFACTOR: Duplicate tenant schema access logic across multiple routes (oncall, assets, integrations); consider centralizing; files: `backend/src/routes/oncall.ts`, `backend/src/routes/assets.ts`, `backend/src/routes/integrations.ts`
 - [2025-12-31 07:11] Completed: SECURITY: Hardcoded salt rounds in auth route handler should use config value; file: `backend/src/routes/auth.test.ts`
 - [2025-12-31 07:11] Completed: BUG: Missing input validation for required fields in reporting routes; file: `backend/src/routes/reporting.ts`
