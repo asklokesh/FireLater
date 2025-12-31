@@ -1,14 +1,14 @@
 import { FastifyInstance } from 'fastify';
 import { notificationService } from '../services/notifications.js';
-import { authenticateTenant } from '../middleware/auth.js';
+import { redisClient } from '../config/redis.js';
 
-export async function notificationRoutes(fastify: FastifyInstance) {
-  // Register cleanup handler for graceful shutdown
-  fastify.addHook('onClose', async (instance) => {
-    if (notificationService.redisClient) {
-      await notificationService.redisClient.quit();
+export default async function notificationRoutes(fastify: FastifyInstance) {
+  // Register cleanup handler for Redis connection
+  fastify.addHook('onClose', async () => {
+    if (redisClient.isOpen) {
+      await redisClient.quit();
     }
   });
 
-  // ... existing route definitions
+  // Existing route definitions...
 }

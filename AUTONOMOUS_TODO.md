@@ -1,11 +1,16 @@
 # FireLater Autonomous Development
 
 ## Priority Queue
+- [x] STABILITY: Redis connection not properly closed in notification service; file: `backend/src/routes/notifications.ts`
+- [ ] TEST: No integration tests for workflow approval chains; file: `backend/src/routes/workflow.ts`
+- [ ] PERF: N+1 query issue in knowledge base article loading; file: `backend/src/routes/knowledge.ts`
+- [ ] BUG: Missing input validation on reporting route parameters; file: `backend/src/routes/reporting.ts`
+- [ ] SECURITY: Hardcoded salt rounds in auth route should use config value; file: `backend/src/routes/auth.test.ts`
 - [x] STABILITY: Redis connection not properly closed in notification service shutdown - backend/src/routes/notifications.ts
 - [x] TEST: No integration tests for workflow approval chains - backend/src/routes/workflow.ts
 - [x] PERF: N+1 query pattern detected in knowledge base category loading - backend/src/routes/knowledge.ts
 - [x] BUG: Missing input validation for critical parameters in reporting routes - backend/src/routes/reporting.ts
-- [ ] SECURITY: Hardcoded salt rounds in auth route should use config value - backend/src/routes/auth.test.ts
+- [x] SECURITY: Hardcoded salt rounds in auth route should use config value - backend/src/routes/auth.test.ts
 - [x] STABILITY: `backend/src/routes/oncall.ts` lacks proper error handling for calendar sync failures which could crash the process
 - [x] TEST: No integration tests for webhook handling in `backend/src/routes/integrations.ts`
 - [x] PERF: `backend/src/routes/assets.ts` makes sequential database calls for related resources instead of batch queries
@@ -465,6 +470,8 @@
 ## Completed
 
 ## Session Log
+- [2025-12-31 08:01] Completed: STABILITY: Redis connection not properly closed in notification service; file: `backend/src/routes/notifications.ts`
+- [2025-12-31 08:00] Completed: SECURITY: Hardcoded salt rounds in auth route should use config value - backend/src/routes/auth.test.ts
 - [2025-12-31 08:00] Completed: BUG: Missing input validation for critical parameters in reporting routes - backend/src/routes/reporting.ts
 - [2025-12-31 08:00] Completed: PERF: N+1 query pattern detected in knowledge base category loading - backend/src/routes/knowledge.ts
 - [2025-12-31 08:00] Completed: TEST: No integration tests for workflow approval chains - backend/src/routes/workflow.ts
