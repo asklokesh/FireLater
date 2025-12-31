@@ -1,32 +1,3 @@
-// Add validation for report template routes
-fastify.get('/templates/:templateId', {
-  schema: {
-    tags: ['Reporting'],
-    params: {
-      type: 'object',
-      properties: {
-        templateId: { type: 'string', pattern: '^[a-zA-Z0-9_-]+$' }
-      },
-      required: ['templateId']
-    }
-  },
-  preHandler: [fastify.authenticate, validate({
-    params: {
-      type: 'object',
-      properties: {
-        templateId: { 
-          type: 'string', 
-          pattern: '^[a-zA-Z0-9_-]+$', 
-          maxLength: 50 
-        }
-      },
-      required: ['templateId']
-    }
-  })]
-}, async (request, reply) => {
-  // Route implementation would go here
-});
-
 // Add validation for report generation routes
 fastify.post('/generate/:reportType', {
   schema: {
@@ -34,7 +5,11 @@ fastify.post('/generate/:reportType', {
     params: {
       type: 'object',
       properties: {
-        reportType: { type: 'string' }
+        reportType: { 
+          type: 'string',
+          pattern: '^[a-zA-Z0-9_-]+$',
+          enum: ['incidents', 'changes', 'services', 'oncall', 'costs']
+        }
       },
       required: ['reportType']
     },
@@ -53,6 +28,7 @@ fastify.post('/generate/:reportType', {
       properties: {
         reportType: { 
           type: 'string',
+          pattern: '^[a-zA-Z0-9_-]+$',
           enum: ['incidents', 'changes', 'services', 'oncall', 'costs']
         }
       },
