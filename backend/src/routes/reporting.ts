@@ -1,8 +1,3 @@
-import { FastifyInstance } from 'fastify';
-import { reportingService } from '../services/reporting.js';
-import { authenticate, authorize } from '../middleware/auth.js';
-import { validateTenantAccess } from '../middleware/tenant.js';
-
 export async function reportingRoutes(fastify: FastifyInstance) {
   // Add date validation helper
   const dateParamsSchema = {
@@ -17,6 +12,13 @@ export async function reportingRoutes(fastify: FastifyInstance) {
   fastify.get('/templates', {
     preHandler: [authenticate, authorize('read:reports'), validateTenantAccess],
     schema: {
+      params: {
+        type: 'object',
+        properties: {
+          tenantSlug: { type: 'string' }
+        },
+        required: ['tenantSlug']
+      },
       querystring: {
         type: 'object',
         properties: {
@@ -47,9 +49,10 @@ export async function reportingRoutes(fastify: FastifyInstance) {
       params: {
         type: 'object',
         properties: {
+          tenantSlug: { type: 'string' },
           templateId: { type: 'string' }
         },
-        required: ['templateId']
+        required: ['tenantSlug', 'templateId']
       },
       querystring: dateParamsSchema
     }
@@ -57,14 +60,6 @@ export async function reportingRoutes(fastify: FastifyInstance) {
     const { tenantSlug } = request.params as { tenantSlug: string };
     const { templateId } = request.params as { templateId: string };
     const { startDate, endDate } = request.query as { startDate?: string; endDate?: string };
-
-    // Validate date format and range
-    if (startDate && isNaN(Date.parse(startDate))) {
-      return reply.status(400).send({ error: 'Invalid startDate format' });
-    }
-    if (endDate && isNaN(Date.parse(endDate))) {
-      return reply.status(400).send({ error: 'Invalid endDate format' });
-    }
 
     const result = await reportingService.runReport(tenantSlug, templateId, { startDate, endDate });
     return reply.send(result);
