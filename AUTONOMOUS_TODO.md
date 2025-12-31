@@ -3,7 +3,7 @@
 ## Priority Queue
 - [x] STABILITY: Redis connection not properly closed in on-call scheduler; file: `backend/src/routes/oncall.ts`
 - [x] TEST: No tests for workflow approval chain logic; file: `backend/src/routes/workflow.ts`
-- [ ] PERF: N+1 query issue in knowledge base article loading; file: `backend/src/routes/knowledge.ts`
+- [x] PERF: N+1 query issue in knowledge base article loading; file: `backend/src/routes/knowledge.ts`
 - [ ] BUG: Missing input validation on reporting route parameters; file: `backend/src/routes/reporting.ts`
 - [ ] SECURITY: Hardcoded salt rounds in auth route should use config value; file: `backend/src/routes/auth.test.ts`
 - [x] STABILITY: BullMQ job retry configuration missing for critical notifications; file: `backend/src/routes/notifications.ts`
@@ -545,6 +545,7 @@
 ## Completed
 
 ## Session Log
+- [2025-12-31 08:55] Completed: PERF: N+1 query issue in knowledge base article loading; file: `backend/src/routes/knowledge.ts`
 - [2025-12-31 08:55] Completed: TEST: No tests for workflow approval chain logic; file: `backend/src/routes/workflow.ts`
 - [2025-12-31 08:54] Completed: STABILITY: Redis connection not properly closed in on-call scheduler; file: `backend/src/routes/oncall.ts`
 - [2025-12-31 08:54] Completed: SECURITY: Hardcoded salt rounds in auth route should use config value; file: `backend/src/routes/auth.test.ts`
