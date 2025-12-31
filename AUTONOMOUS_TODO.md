@@ -1,11 +1,16 @@
 # FireLater Autonomous Development
 
 ## Priority Queue
+- [x] STABILITY: `backend/src/routes/notifications.ts` doesn't implement proper retry logic for failed webhook deliveries
+- [ ] TEST: `backend/src/routes/workflow.ts` lacks unit tests for approval workflow edge cases
+- [ ] PERF: `backend/src/routes/assets.ts` makes N+1 queries when fetching asset health scores instead of using JOINs
+- [ ] BUG: Missing input validation in `backend/src/routes/reporting.ts` for date range parameters could cause SQL injection
+- [ ] SECURITY: Hardcoded salt rounds in `backend/src/routes/auth.test.ts` should use config instead of hardcoded value
 - [x] STABILITY: Oncall schedule rotation logic doesn't handle timezone edge cases properly (`backend/src/routes/oncall.ts`)
 - [x] TEST: No integration tests for workflow automation triggers and state transitions (`backend/src/routes/workflow.ts`)
 - [x] PERF: Knowledge base search queries not using database indexes causing slow response times (`backend/src/routes/knowledge.ts`)
-- [ ] BUG: Missing input validation on reporting route parameters leading to potential SQL injection (`backend/src/routes/reporting.ts`)
-- [ ] SECURITY: Hardcoded salt rounds in authentication route; should use config value consistently across all auth-related files (`backend/src/routes/auth.test.ts`)
+- [x] BUG: Missing input validation on reporting route parameters leading to potential SQL injection (`backend/src/routes/reporting.ts`)
+- [x] SECURITY: Hardcoded salt rounds in authentication route; should use config value consistently across all auth-related files (`backend/src/routes/auth.test.ts`)
 - [x] STABILITY: Error handling missing for external API calls in integrations module; file: `backend/src/routes/integrations.ts`
 - [x] TEST: No unit tests for workflow execution logic; file: `backend/src/routes/workflow.ts`
 - [x] PERF: Inefficient database queries without proper indexing in knowledge base search; file: `backend/src/routes/knowledge.ts`
@@ -490,6 +495,9 @@
 ## Completed
 
 ## Session Log
+- [2025-12-31 08:12] Completed: STABILITY: `backend/src/routes/notifications.ts` doesn't implement proper retry logic for failed webhook deliveries
+- [2025-12-31 08:12] Completed: SECURITY: Hardcoded salt rounds in authentication route; should use config value consistently across all auth-related files (`backend/src/routes/auth.test.ts`)
+- [2025-12-31 08:11] Completed: BUG: Missing input validation on reporting route parameters leading to potential SQL injection (`backend/src/routes/reporting.ts`)
 - [2025-12-31 08:11] Completed: PERF: Knowledge base search queries not using database indexes causing slow response times (`backend/src/routes/knowledge.ts`)
 - [2025-12-31 08:11] Completed: TEST: No integration tests for workflow automation triggers and state transitions (`backend/src/routes/workflow.ts`)
 - [2025-12-31 08:11] Completed: STABILITY: Oncall schedule rotation logic doesn't handle timezone edge cases properly (`backend/src/routes/oncall.ts`)

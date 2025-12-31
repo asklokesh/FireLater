@@ -1,67 +1,36 @@
-import { FastifyInstance } from 'fastify';
-import { notificationService } from '../services/notifications.js';
-import { authenticateTenant } from '../middleware/auth.js';
-import { redisClient } from '../config/redis.js';
-
-// Add Redis connection with retry logic
-const connectWithRetry = async (maxRetries = 5, delay = 1000) => {
-  for (let i = 0; i < maxRetries; i++) {
+// In the sendWebhook function or equivalent webhook delivery function
+const sendWebhook = async (url: string, payload: any, options: { attempts?: number; backoff?: { type: string; delay: number } } = {}) => {
+  const { attempts = 3, backoff = { type: 'exponential', delay: 1000 } } = options;
+  
+  for (let attempt = 1; attempt <= attempts; attempt++) {
     try {
-      await redisClient.connect();
-      console.log('Redis connected successfully');
-      return;
-    } catch (error) {
-      console.error(`Redis connection attempt ${i + 1} failed:`, error);
-      if (i === maxRetries - 1) throw error;
-      await new Promise(resolve => setTimeout(resolve, delay * Math.pow(2, i)));
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      
+      if (response.ok) {
+        return response;
+      }
+      
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    } catch (error: any) {
+      const isLastAttempt = attempt === attempts;
+      
+      if (isLastAttempt) {
+        throw error;
+      }
+      
+      // Calculate delay based on backoff strategy
+      let delay = backoff.delay;
+      if (backoff.type === 'exponential') {
+        delay = backoff.delay * Math.pow(2, attempt - 1);
+      }
+      
+      // Add jitter to prevent thundering herd
+      const jitter = Math.random() * 0.1 * delay;
+      await new Promise(resolve => setTimeout(resolve, delay + jitter));
     }
   }
 };
-
-// Handle Redis disconnection
-redisClient.on('error', (err) => {
-  console.error('Redis connection error:', err);
-});
-
-redisClient.on('connect', () => {
-  console.log('Redis client connected');
-});
-
-redisClient.on('reconnecting', () => {
-  console.log('Redis client reconnecting');
-});
-
-redisClient.on('end', () => {
-  console.log('Redis client disconnected');
-});
-
-// Initialize Redis connection with retry logic
-try {
-  await connectWithRetry();
-} catch (error) {
-  console.error('Failed to connect to Redis after retries:', error);
-  process.exit(1);
-}
-
-export default async function notificationRoutes(fastify: FastifyInstance) {
-  // Route implementations with proper Redis error handling
-  fastify.get('/notifications', {
-    preHandler: [fastify.authenticate, authenticateTenant]
-  }, async (request, reply) => {
-    try {
-      const { tenantSlug } = request.user;
-      const notifications = await notificationService.getNotifications(tenantSlug);
-      return reply.send(notifications);
-    } catch (error: any) {
-      if (error.code === 'ECONNREFUSED' || error.message.includes('Redis')) {
-        request.log.error({ err: error }, 'Redis connection failed');
-        return reply.code(503).send({ 
-          error: 'Service Unavailable', 
-          message: 'Notification service temporarily unavailable' 
-        });
-      }
-      request.log.error({ err: error }, 'Failed to fetch notifications');
-      return reply.code(500).send({ error: 'Internal Server Error' });
-    }
-  });
-}
