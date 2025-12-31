@@ -1,8 +1,7 @@
 import { FastifyInstance } from 'fastify';
 import { z } from 'zod';
-import { requirePermission } from '../middleware/auth.js';
 
-// Add validation schemas for workflow operations
+// Add workflow execution validation schema
 const workflowExecutionSchema = z.object({
   requestId: z.string().uuid(),
   action: z.string().min(1).max(50),
@@ -10,36 +9,60 @@ const workflowExecutionSchema = z.object({
   payload: z.record(z.any()).optional(),
 });
 
-const workflowListSchema = z.object({
-  querystring: z.object({
-    page: z.number().int().min(1).default(1),
-    perPage: z.number().int().min(1).max(100).default(20),
-    status: z.enum(['active', 'inactive', 'draft']).optional(),
-    sortBy: z.string().max(50).optional(),
-    sortOrder: z.enum(['asc', 'desc']).default('asc'),
-  }).strict(),
-});
-
 export default async function workflowRoutes(fastify: FastifyInstance) {
-  // Get workflow definitions
-  fastify.get('/workflows', {
-    preHandler: [requirePermission('workflow:read')],
-    schema: {
-      tags: ['Workflows'],
-      querystring: workflowListSchema.shape.querystring,
-    }
-  }, async (request, reply) => {
-    // Implementation would go here
-  });
+  // Execute workflow action
+  fastify.post('/execute', {
+    preHandler: [fastify.authenticate, validate({
+      body: {
+        type: 'object',
+        properties: {
+          requestId: { type: 'string', pattern: '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$' },
+          action: { type: 'string', minLength: 1, maxLength: 50 },
+          userId: { type: 'string', pattern: '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$' },
+          payload: { type: 'object' }
+        },
+        required: ['requestId', 'action']
+      }
+    })],
+    handler: async (request, reply) => {
+      try {
+        const { requestId, action, userId, payload } = request.body as {
+          requestId: string;
+          action: string;
+          userId?: string;
+          payload?: Record<string, any>;
+        };
+        const tenant = request.user.tenant;
 
-  // Execute workflow
-  fastify.post('/workflows/execute', {
-    preHandler: [requirePermission('workflow:execute')],
-    schema: {
-      tags: ['Workflows'],
-      body: workflowExecutionSchema,
+        // Validate workflow execution
+        const result = workflowExecutionSchema.safeParse({
+          requestId,
+          action,
+          userId: userId || request.user.id,
+          payload
+        });
+
+        if (!result.success) {
+          return reply.code(400).send({
+            message: 'Invalid workflow execution parameters',
+            errors: result.error.errors
+          });
+        }
+
+        // Execute workflow action
+        const executionResult = await fastify.workflowService.executeAction(
+          tenant.slug,
+          requestId,
+          action,
+          userId || request.user.id,
+          payload
+        );
+
+        return reply.code(200).send(executionResult);
+      } catch (error) {
+        request.log.error({ err: error }, 'Workflow execution failed');
+        return reply.code(500).send({ message: 'Failed to execute workflow action' });
+      }
     }
-  }, async (request, reply) => {
-    // Implementation would go here
   });
 }
