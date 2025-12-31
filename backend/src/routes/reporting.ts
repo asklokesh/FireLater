@@ -5,7 +5,9 @@ export async function reportingRoutes(fastify: FastifyInstance) {
     properties: {
       startDate: { type: 'string', format: 'date' },
       endDate: { type: 'string', format: 'date' }
-    }
+    },
+    required: ['startDate', 'endDate'],
+    additionalProperties: false
   };
 
   // GET /api/v1/reporting/templates
@@ -15,18 +17,20 @@ export async function reportingRoutes(fastify: FastifyInstance) {
       params: {
         type: 'object',
         properties: {
-          tenantSlug: { type: 'string' }
+          tenantSlug: { type: 'string', pattern: '^[a-z0-9]([a-z0-9-]*[a-z0-9])?$' }
         },
-        required: ['tenantSlug']
+        required: ['tenantSlug'],
+        additionalProperties: false
       },
       querystring: {
         type: 'object',
         properties: {
           page: { type: 'integer', minimum: 1, default: 1 },
           perPage: { type: 'integer', minimum: 1, maximum: 100, default: 20 },
-          reportType: { type: 'string' },
+          reportType: { type: 'string', maxLength: 50 },
           isPublic: { type: 'boolean' }
-        }
+        },
+        additionalProperties: false
       }
     }
   }, async (request, reply) => {
@@ -49,10 +53,11 @@ export async function reportingRoutes(fastify: FastifyInstance) {
       params: {
         type: 'object',
         properties: {
-          tenantSlug: { type: 'string' },
-          templateId: { type: 'string' }
+          tenantSlug: { type: 'string', pattern: '^[a-z0-9]([a-z0-9-]*[a-z0-9])?$' },
+          templateId: { type: 'string', pattern: '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$' }
         },
-        required: ['tenantSlug', 'templateId']
+        required: ['tenantSlug', 'templateId'],
+        additionalProperties: false
       },
       querystring: dateParamsSchema
     }
