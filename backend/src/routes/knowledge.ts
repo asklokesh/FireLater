@@ -1,3 +1,8 @@
+// Add input sanitization utility at the top of the file
+const sanitizeInput = (input: string): string => {
+  return input.replace(/[<>{}[\]|\\^`]/g, '').trim();
+};
+
 fastify.get('/search', {
   schema: {
     tags: ['knowledge'],
