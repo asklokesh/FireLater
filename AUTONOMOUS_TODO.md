@@ -3,7 +3,7 @@
 ## Priority Queue
 - [x] REFACTOR: Duplicate input sanitization logic across multiple route files instead of using a centralized utility (`backend/src/routes/auth.test.ts`, `backend/src/routes/knowledge.ts`).
 - [x] TEST: Lack of input validation tests for auth routes; only happy path may be covered (`backend/src/routes/auth.test.ts`).
-- [ ] PERF: No database connection pooling configuration shown, which can lead to performance issues under load (`backend/src/routes/reporting.ts`, `backend/src/routes/requests.ts`).
+- [x] PERF: No database connection pooling configuration shown, which can lead to performance issues under load (`backend/src/routes/reporting.ts`, `backend/src/routes/requests.ts`).
 - [ ] BUG: Input sanitization is applied inconsistently across routes; some fields like `firstName` and `lastName` are truncated without user feedback (`backend/src/routes/auth.test.ts`).
 - [ ] SECURITY: Passwords are not being sanitized or validated properly in the register route (`backend/src/routes/auth.test.ts`), which could lead to injection attacks or storage of invalid data.
 - [x] REFACTOR: Input sanitization applied inconsistently across routes. Some routes (like `/knowledge`, `/workflow`) bypass sanitization while others use it. Standardize sanitization through Fastify hooks or middleware.
@@ -205,6 +205,7 @@
 ## Completed
 
 ## Session Log
+- [2025-12-31 05:08] Completed: PERF: No database connection pooling configuration shown, which can lead to performance issues under load (`backend/src/routes/reporting.ts`, `backend/src/routes/requests.ts`).
 - [2025-12-31 05:07] Completed: TEST: Lack of input validation tests for auth routes; only happy path may be covered (`backend/src/routes/auth.test.ts`).
 - [2025-12-31 05:07] Completed: REFACTOR: Duplicate input sanitization logic across multiple route files instead of using a centralized utility (`backend/src/routes/auth.test.ts`, `backend/src/routes/knowledge.ts`).
 - [2025-12-31 05:06] Completed: SECURITY: Redundant input validation in auth routes - schema validation already covers email/password format but manual regex checks duplicate this logic. Remove manual validation in `/backend/src/routes/auth.test.ts` since Fastify schema handles it.

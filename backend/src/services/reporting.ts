@@ -8,10 +8,10 @@ class ReportTemplateService {
 
     // Use a single connection from pool with timeout
     const client = await pool.connect();
-    client.query(`SET LOCAL statement_timeout = ${REPORTING_QUERY_TIMEOUT}`);
-    client.query(`SET LOCAL app.current_tenant = $1`, [tenantSlug]);
-    
     try {
+      client.query(`SET LOCAL statement_timeout = ${REPORTING_QUERY_TIMEOUT}`);
+      client.query(`SET LOCAL app.current_tenant = $1`, [tenantSlug]);
+      
       let whereClause = 'WHERE rt.is_active = true';
       const values: unknown[] = [];
       let paramIndex = 1;
@@ -46,26 +46,6 @@ class ReportTemplateService {
 
       const total = result.rows.length > 0 ? parseInt(result.rows[0].total, 10) : 0;
       return { templates: result.rows, total };
-    } finally {
-      client.release();
-    }
-  }
-
-  async findById(tenantSlug: string, id: string): Promise<unknown | null> {
-    // Use connection with timeout
-    const client = await pool.connect();
-    client.query(`SET LOCAL statement_timeout = ${REPORTING_QUERY_TIMEOUT}`);
-    client.query(`SET LOCAL app.current_tenant = $1`, [tenantSlug]);
-    
-    try {
-      const result = await client.query(
-        `SELECT rt.*, u.name as created_by_name
-         FROM report_templates rt
-         LEFT JOIN users u ON rt.created_by = u.id
-         WHERE rt.id = $1 AND rt.is_active = true`,
-        [id]
-      );
-      return result.rows[0] || null;
     } finally {
       client.release();
     }
