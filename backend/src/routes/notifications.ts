@@ -1,58 +1,49 @@
-fastify.post('/webhooks/:provider', {
+fastify.post('/send', {
   schema: {
     tags: ['Notifications'],
-    params: {
-      type: 'object',
-      properties: {
-        provider: { type: 'string' }
-      },
-      required: ['provider']
-    },
     body: {
       type: 'object',
-      additionalProperties: true
+      properties: {
+        type: { type: 'string', enum: ['email', 'sms', 'slack', 'webhook'] },
+        recipient: { type: 'string' },
+        subject: { type: 'string' },
+        content: { type: 'string' },
+        metadata: { type: 'object' }
+      },
+      required: ['type', 'recipient', 'content']
     }
   },
-  preHandler: [fastify.authenticate, validate({
-    params: {
-      type: 'object',
-      properties: {
-        provider: { 
-          type: 'string',
-          enum: ['slack', 'email', 'sms', 'webhook']
-        }
-      },
-      required: ['provider']
-    },
-    body: {
-      type: 'object',
-      additionalProperties: true
-    }
-  })]
+  preHandler: [fastify.authenticate]
 }, async (request, reply) => {
-  const { provider } = request.params as { provider: string };
-  const payload = request.body as Record<string, any>;
+  const { type, recipient, subject, content, metadata } = request.body as any;
   const tenant = request.user.tenant;
   
   try {
     // Process notification with retry configuration
-    await notificationService.process(tenant.slug, provider, payload, {
-      attempts: 3,
+    await notificationService.send(tenant.slug, {
+      type,
+      recipient,
+      subject,
+      content,
+      metadata
+    }, {
+      attempts: 5,
       backoff: {
         type: 'exponential',
-        delay: 1000
-      }
+        delay: 2000
+      },
+      jitter: 0.3
     });
     
-    return reply.code(200).send({ message: 'Notification processed successfully' });
+    return reply.code(202).send({ message: 'Notification queued for delivery' });
   } catch (error: any) {
-    request.log.error({ err: error, provider, tenant: tenant.slug }, 'Notification processing failed');
+    request.log.error({ err: error, tenant: tenant.slug, type }, 'Notification delivery failed');
     
     // Handle specific error cases
     if (error.code === 'ECONNREFUSED' || error.code === 'ENOTFOUND') {
       return reply.code(503).send({ 
-        message: 'External service unavailable', 
-        provider,
+        message: 'External notification service unavailable', 
+        type,
         error: 'SERVICE_UNAVAILABLE' 
       });
     }
@@ -60,7 +51,7 @@ fastify.post('/webhooks/:provider', {
     if (error.response?.status >= 400 && error.response?.status < 500) {
       return reply.code(400).send({ 
         message: 'Invalid notification payload or configuration', 
-        provider,
+        type,
         error: 'BAD_REQUEST',
         details: error.response.data
       });
@@ -68,8 +59,8 @@ fastify.post('/webhooks/:provider', {
     
     if (error.response?.status >= 500) {
       return reply.code(502).send({ 
-        message: 'External service error', 
-        provider,
+        message: 'External notification service error', 
+        type,
         error: 'BAD_GATEWAY' 
       });
     }
@@ -77,8 +68,8 @@ fastify.post('/webhooks/:provider', {
     // Handle timeout errors
     if (error.code === 'ECONNABORTED' || error.name === 'TimeoutError') {
       return reply.code(408).send({ 
-        message: 'Request timeout when connecting to external service', 
-        provider,
+        message: 'Request timeout when connecting to notification service', 
+        type,
         error: 'REQUEST_TIMEOUT' 
       });
     }
@@ -86,8 +77,8 @@ fastify.post('/webhooks/:provider', {
     // Handle network errors
     if (error.code === 'ENETUNREACH' || error.code === 'EHOSTUNREACH') {
       return reply.code(503).send({ 
-        message: 'Network error when connecting to external service', 
-        provider,
+        message: 'Network error when connecting to notification service', 
+        type,
         error: 'NETWORK_ERROR' 
       });
     }
@@ -95,8 +86,8 @@ fastify.post('/webhooks/:provider', {
     // Handle DNS lookup failures
     if (error.code === 'ENOTFOUND' || error.code === 'EAI_AGAIN') {
       return reply.code(503).send({
-        message: 'DNS lookup failed for external service',
-        provider,
+        message: 'DNS lookup failed for notification service',
+        type,
         error: 'DNS_ERROR'
       });
     }
@@ -105,8 +96,8 @@ fastify.post('/webhooks/:provider', {
     if (error.code === 'CERT_HAS_EXPIRED' || error.code === 'UNABLE_TO_VERIFY_LEAF_SIGNATURE' || 
         error.code === 'SELF_SIGNED_CERT_IN_CHAIN' || error.code === 'ERR_TLS_CERT_ALTNAME_INVALID') {
       return reply.code(503).send({
-        message: 'SSL/TLS certificate error when connecting to external service',
-        provider,
+        message: 'SSL/TLS certificate error when connecting to notification service',
+        type,
         error: 'SSL_ERROR'
       });
     }
@@ -114,15 +105,15 @@ fastify.post('/webhooks/:provider', {
     // Handle connection timeout errors
     if (error.code === 'ETIMEDOUT') {
       return reply.code(408).send({
-        message: 'Connection timeout when connecting to external service',
-        provider,
+        message: 'Connection timeout when connecting to notification service',
+        type,
         error: 'CONNECTION_TIMEOUT'
       });
     }
     
     return reply.code(500).send({ 
-      message: 'Failed to process notification', 
-      provider,
+      message: 'Failed to queue notification', 
+      type,
       error: 'INTERNAL_ERROR' 
     });
   }

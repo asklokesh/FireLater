@@ -1,11 +1,16 @@
 # FireLater Autonomous Development
 
 ## Priority Queue
+- [x] STABILITY: `backend/src/routes/notifications.ts` doesn't implement proper retry logic for failed notification deliveries
+- [ ] TEST: `backend/src/routes/workflow.ts` lacks unit tests for approval workflow edge cases
+- [ ] PERF: `backend/src/routes/assets.ts` makes sequential database calls instead of batch queries for bulk operations
+- [ ] BUG: Missing input validation in `backend/src/routes/reporting.ts` for date range parameters could cause SQL injection
+- [ ] SECURITY: Hardcoded salt rounds in `backend/src/routes/auth.test.ts` should use config instead of hardcoded value
 - [x] TEST: No unit tests for on-call scheduling logic or rotation validation; file: `backend/src/routes/oncall.ts`
 - [x] STABILITY: BullMQ job retry strategy not configured properly in workflow engine; file: `backend/src/routes/workflow.ts`
 - [x] PERF: Inefficient database queries without proper indexing in knowledge base search; file: `backend/src/routes/knowledge.ts`
-- [ ] BUG: Missing input validation for critical parameters in reporting routes; file: `backend/src/routes/reporting.ts`
-- [ ] SECURITY: Hardcoded salt rounds in auth route handler should use config value; file: `backend/src/routes/auth.test.ts`
+- [x] BUG: Missing input validation for critical parameters in reporting routes; file: `backend/src/routes/reporting.ts`
+- [x] SECURITY: Hardcoded salt rounds in auth route handler should use config value; file: `backend/src/routes/auth.test.ts`
 - [x] STABILITY: Oncall schedule rotation logic doesn't handle DST transitions; file: `backend/src/routes/oncall.ts`
 - [x] TEST: No integration tests for workflow approval chains; file: `backend/src/routes/workflow.ts`
 - [x] PERF: Knowledge base search queries lack indexing optimization; file: `backend/src/routes/knowledge.ts`
@@ -420,6 +425,9 @@
 ## Completed
 
 ## Session Log
+- [2025-12-31 07:21] Completed: STABILITY: `backend/src/routes/notifications.ts` doesn't implement proper retry logic for failed notification deliveries
+- [2025-12-31 07:20] Completed: SECURITY: Hardcoded salt rounds in auth route handler should use config value; file: `backend/src/routes/auth.test.ts`
+- [2025-12-31 07:20] Completed: BUG: Missing input validation for critical parameters in reporting routes; file: `backend/src/routes/reporting.ts`
 - [2025-12-31 07:20] Completed: PERF: Inefficient database queries without proper indexing in knowledge base search; file: `backend/src/routes/knowledge.ts`
 - [2025-12-31 07:19] Completed: STABILITY: BullMQ job retry strategy not configured properly in workflow engine; file: `backend/src/routes/workflow.ts`
 - [2025-12-31 07:19] Completed: TEST: No unit tests for on-call scheduling logic or rotation validation; file: `backend/src/routes/oncall.ts`
