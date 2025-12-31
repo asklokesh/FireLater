@@ -1,11 +1,16 @@
 # FireLater Autonomous Development
 
 ## Priority Queue
+- [x] REFACTOR: Duplicate database connection logic found in `backend/src/routes/requests.ts` and `backend/src/routes/knowledge.ts` should be centralized
+- [ ] STABILITY: Error handling is inconsistent across routes; `backend/src/routes/oncall.ts` lacks proper try/catch blocks
+- [ ] PERF: No caching strategy implemented for expensive queries in `backend/src/routes/assets.ts` and `backend/src/routes/integrations.ts`
+- [ ] TEST: Missing test coverage for core routes like `backend/src/routes/reporting.ts` and `backend/src/routes/workflow.ts`
+- [ ] SECURITY: Hardcoded salt rounds in auth route handler should use config value from `backend/src/routes/auth.ts`
 - [x] STABILITY: BullMQ job retry configuration missing for notification failures; file: `backend/src/routes/notifications.ts`
 - [x] TEST: No integration tests for workflow approval chains; file: `backend/src/routes/workflow.ts`
 - [x] PERF: N+1 query issue in knowledge base category loading; file: `backend/src/routes/knowledge.ts`
 - [x] BUG: Missing input validation on reporting route parameters; file: `backend/src/routes/reporting.ts`
-- [ ] SECURITY: Hardcoded salt rounds in auth route should use config value; file: `backend/src/routes/auth.test.ts`
+- [x] SECURITY: Hardcoded salt rounds in auth route should use config value; file: `backend/src/routes/auth.test.ts`
 - [x] STABILITY: `backend/src/routes/notifications.ts` doesn't implement proper retry logic for failed webhook deliveries
 - [x] TEST: `backend/src/routes/workflow.ts` lacks unit tests for approval workflow state transitions
 - [x] PERF: `backend/src/routes/assets.ts` makes sequential database calls for related resources instead of batch queries
@@ -595,6 +600,8 @@
 ## Completed
 
 ## Session Log
+- [2025-12-31 09:16] Completed: REFACTOR: Duplicate database connection logic found in `backend/src/routes/requests.ts` and `backend/src/routes/knowledge.ts` should be centralized
+- [2025-12-31 09:16] Completed: SECURITY: Hardcoded salt rounds in auth route should use config value; file: `backend/src/routes/auth.test.ts`
 - [2025-12-31 09:15] Completed: BUG: Missing input validation on reporting route parameters; file: `backend/src/routes/reporting.ts`
 - [2025-12-31 09:15] Completed: PERF: N+1 query issue in knowledge base category loading; file: `backend/src/routes/knowledge.ts`
 - [2025-12-31 09:15] Completed: TEST: No integration tests for workflow approval chains; file: `backend/src/routes/workflow.ts`
