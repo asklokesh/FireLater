@@ -3,7 +3,7 @@
 ## Priority Queue
 - [x] REFACTOR: Duplicate tenant schema access logic across multiple routes; files: `backend/src/routes/assets.ts`, `backend/src/routes/oncall.ts`
 - [x] STABILITY: Error handling bypasses global error middleware in integrations route; file: `backend/src/routes/integrations.ts`
-- [ ] TEST: No unit tests for critical workflow logic; file: `backend/src/routes/workflow.ts`
+- [x] TEST: No unit tests for critical workflow logic; file: `backend/src/routes/workflow.ts`
 - [ ] PERF: Missing database indexing on frequently queried fields in reporting routes; file: `backend/src/routes/reporting.ts`
 - [ ] SECURITY: Hardcoded salt rounds in auth route should use config value; file: `backend/src/routes/auth.test.ts`
 - [x] STABILITY: BullMQ job retry configuration missing for critical background tasks; file: `backend/src/routes/notifications.ts`
@@ -275,6 +275,7 @@
 ## Completed
 
 ## Session Log
+- [2025-12-31 05:57] Completed: TEST: No unit tests for critical workflow logic; file: `backend/src/routes/workflow.ts`
 - [2025-12-31 05:57] Completed: STABILITY: Error handling bypasses global error middleware in integrations route; file: `backend/src/routes/integrations.ts`
 - [2025-12-31 05:57] Completed: REFACTOR: Duplicate tenant schema access logic across multiple routes; files: `backend/src/routes/assets.ts`, `backend/src/routes/oncall.ts`
 - [2025-12-31 05:56] Completed: SECURITY: Hardcoded salt rounds in auth route handler should use config value; file: `backend/src/routes/auth.test.ts`
