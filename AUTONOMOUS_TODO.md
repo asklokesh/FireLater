@@ -3,7 +3,7 @@
 ## Priority Queue
 - [x] STABILITY: Oncall schedule generation does not handle timezone edge cases for recurring rotations; file: `backend/src/routes/oncall.ts`
 - [x] TEST: No integration tests for workflow state transitions or error cases; file: `backend/src/routes/workflow.ts`
-- [ ] PERF: Knowledge base search endpoint lacks database indexing on title/content fields; file: `backend/src/routes/knowledge.ts`
+- [x] PERF: Knowledge base search endpoint lacks database indexing on title/content fields; file: `backend/src/routes/knowledge.ts`
 - [ ] BUG: Missing input validation for required fields in reporting route parameters; file: `backend/src/routes/reporting.ts`
 - [ ] SECURITY: Hardcoded salt rounds in auth route handler should use config value; file: `backend/src/routes/auth.test.ts`
 - [x] STABILITY: `backend/src/routes/notifications.ts` lacks proper error handling for failed email deliveries which could crash the worker process
@@ -265,6 +265,7 @@
 ## Completed
 
 ## Session Log
+- [2025-12-31 05:54] Completed: PERF: Knowledge base search endpoint lacks database indexing on title/content fields; file: `backend/src/routes/knowledge.ts`
 - [2025-12-31 05:54] Completed: TEST: No integration tests for workflow state transitions or error cases; file: `backend/src/routes/workflow.ts`
 - [2025-12-31 05:53] Completed: STABILITY: Oncall schedule generation does not handle timezone edge cases for recurring rotations; file: `backend/src/routes/oncall.ts`
 - [2025-12-31 05:53] Completed: SECURITY: Hardcoded salt rounds in `backend/src/routes/auth.test.ts` should use config instead of hardcoded value
