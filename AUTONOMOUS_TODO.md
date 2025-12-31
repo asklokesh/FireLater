@@ -3,7 +3,7 @@
 ## Priority Queue
 - [x] STABILITY: BullMQ job retry configuration missing for critical background tasks; file: `backend/src/routes/notifications.ts`
 - [x] TEST: No unit tests for workflow route business logic or error cases; file: `backend/src/routes/workflow.ts`
-- [ ] PERF: N+1 query issue in knowledge base article loading without proper joins; file: `backend/src/routes/knowledge.ts`
+- [x] PERF: N+1 query issue in knowledge base article loading without proper joins; file: `backend/src/routes/knowledge.ts`
 - [ ] BUG: Missing input validation for critical parameters in reporting routes; file: `backend/src/routes/reporting.ts`
 - [ ] SECURITY: Hardcoded salt rounds in auth route handler should use config value; file: `backend/src/routes/auth.test.ts`
 - [x] STABILITY: Error handling missing for external API calls in integrations route; file: `backend/src/routes/integrations.ts`
@@ -355,6 +355,7 @@
 ## Completed
 
 ## Session Log
+- [2025-12-31 06:54] Completed: PERF: N+1 query issue in knowledge base article loading without proper joins; file: `backend/src/routes/knowledge.ts`
 - [2025-12-31 06:54] Completed: TEST: No unit tests for workflow route business logic or error cases; file: `backend/src/routes/workflow.ts`
 - [2025-12-31 06:54] Completed: STABILITY: BullMQ job retry configuration missing for critical background tasks; file: `backend/src/routes/notifications.ts`
 - [2025-12-31 06:53] Completed: SECURITY: Hardcoded salt rounds in auth route handler should use config value; file: `backend/src/routes/auth.test.ts`
