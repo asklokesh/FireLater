@@ -4,7 +4,7 @@
 - [x] REFACTOR: Duplicate tenant schema validation logic across multiple route files; files: `backend/src/routes/assets.ts`, `backend/src/routes/oncall.ts`
 - [x] STABILITY: BullMQ job retry configuration missing in notifications queue processing; file: `backend/src/routes/notifications.ts`
 - [x] TEST: No unit tests for critical workflow logic in knowledge base CRUD operations; file: `backend/src/routes/knowledge.ts`
-- [ ] PERF: Missing database query optimizations in reporting routes for large datasets; file: `backend/src/routes/reporting.ts`
+- [x] PERF: Missing database query optimizations in reporting routes for large datasets; file: `backend/src/routes/reporting.ts`
 - [ ] SECURITY: Hardcoded salt rounds in auth route handler should use config value; file: `backend/src/routes/auth.test.ts`
 - [x] STABILITY: Unsafe tenant schema switching without validation in multi-tenant setup; file: `backend/src/routes/settings.ts`
 - [x] TEST: No unit tests for on-call schedule rotation logic; file: `backend/src/routes/oncall.ts`
@@ -585,6 +585,7 @@
 ## Completed
 
 ## Session Log
+- [2025-12-31 09:12] Completed: PERF: Missing database query optimizations in reporting routes for large datasets; file: `backend/src/routes/reporting.ts`
 - [2025-12-31 09:11] Completed: TEST: No unit tests for critical workflow logic in knowledge base CRUD operations; file: `backend/src/routes/knowledge.ts`
 - [2025-12-31 09:11] Completed: STABILITY: BullMQ job retry configuration missing in notifications queue processing; file: `backend/src/routes/notifications.ts`
 - [2025-12-31 09:11] Completed: REFACTOR: Duplicate tenant schema validation logic across multiple route files; files: `backend/src/routes/assets.ts`, `backend/src/routes/oncall.ts`

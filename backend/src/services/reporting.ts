@@ -1,4 +1,3 @@
-class ReportTemplateService {
   async list(
     tenantSlug: string,
     pagination: PaginationParams,
@@ -45,11 +44,10 @@ class ReportTemplateService {
       ${whereClause}
       ORDER BY rt.name
       LIMIT $${paramIndex++} OFFSET $${paramIndex}`,
-      [...values, ...values.slice(0, -2)], // Duplicate values for count subquery
+      [...values], // Remove duplicate values
       options
     );
 
     const total = result.rows.length > 0 ? parseInt(result.rows[0].total, 10) : 0;
     return { templates: result.rows, total };
   }
-}
