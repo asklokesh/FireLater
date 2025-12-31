@@ -1,4 +1,6 @@
-import { getSafeErrorMessage } from '../utils/errors';
-
-// Inside the auth route handlers, replace direct error.message usage with:
+// Replace direct error.message usage with getSafeErrorMessage utility
+// Example of what needs to be changed:
+// throw new Error(`Authentication failed: ${error.message}`);
+// Should become:
 // const message = getSafeErrorMessage(error);
+// throw new Error(`Authentication failed: ${message}`);

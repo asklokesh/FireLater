@@ -5,7 +5,7 @@
 - [x] TEST: No integration tests for workflow route state transitions; critical for change management reliability (backend/src/routes/workflow.ts)
 - [x] PERF: Knowledge base search endpoint performs full-table scans without proper indexing on title/content fields (backend/src/routes/knowledge.ts)
 - [x] BUG: Missing input validation in reporting route query parameters causes 500 errors on malformed requests (backend/src/routes/reporting.ts)
-- [ ] SECURITY: Direct error.message exposure in auth route responses may leak sensitive info; use getSafeErrorMessage utility instead (backend/src/routes/auth.test.ts)
+- [x] SECURITY: Direct error.message exposure in auth route responses may leak sensitive info; use getSafeErrorMessage utility instead (backend/src/routes/auth.test.ts)
 - [x] STABILITY: Notifications route doesn't handle Redis connection failures gracefully, could cause service crashes in backend/src/routes/notifications.ts
 - [x] TEST: Workflow route missing unit tests for approval chain logic and edge cases in backend/src/routes/workflow.ts
 - [x] PERF: Knowledge base route lacks caching for frequently accessed articles, causing repeated database queries in backend/src/routes/knowledge.ts
@@ -185,6 +185,7 @@
 ## Completed
 
 ## Session Log
+- [2025-12-31 04:54] Completed: SECURITY: Direct error.message exposure in auth route responses may leak sensitive info; use getSafeErrorMessage utility instead (backend/src/routes/auth.test.ts)
 - [2025-12-31 04:54] Completed: BUG: Missing input validation in reporting route query parameters causes 500 errors on malformed requests (backend/src/routes/reporting.ts)
 - [2025-12-31 04:54] Completed: PERF: Knowledge base search endpoint performs full-table scans without proper indexing on title/content fields (backend/src/routes/knowledge.ts)
 - [2025-12-31 04:53] Completed: TEST: No integration tests for workflow route state transitions; critical for change management reliability (backend/src/routes/workflow.ts)
