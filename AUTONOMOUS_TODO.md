@@ -1,11 +1,16 @@
 # FireLater Autonomous Development
 
 ## Priority Queue
+- [x] STABILITY: Error handling missing for external API calls in integrations route; file: `backend/src/routes/integrations.ts`
+- [ ] TEST: No unit tests for workflow route business logic; file: `backend/src/routes/workflow.ts`
+- [ ] PERF: N+1 query issue when fetching related assets in knowledge base; file: `backend/src/routes/knowledge.ts`
+- [ ] BUG: Missing input validation for critical parameters in reporting routes; file: `backend/src/routes/reporting.ts`
+- [ ] SECURITY: Hardcoded salt rounds in auth route handler should use config value; file: `backend/src/routes/auth.test.ts`
 - [x] STABILITY: `backend/src/routes/notifications.ts` lacks proper error handling for failed email deliveries
-- [ ] TEST: No integration tests for webhook handling in `backend/src/routes/integrations.ts`
-- [ ] PERF: `backend/src/routes/assets.ts` makes sequential database calls for related resources instead of batch queries
-- [ ] BUG: Missing input validation in `backend/src/routes/reporting.ts` for date range parameters could cause SQL injection
-- [ ] SECURITY: Hardcoded salt rounds in `backend/src/routes/auth.test.ts` should use config instead of hardcoded value
+- [x] TEST: No integration tests for webhook handling in `backend/src/routes/integrations.ts`
+- [x] PERF: `backend/src/routes/assets.ts` makes sequential database calls for related resources instead of batch queries
+- [x] BUG: Missing input validation in `backend/src/routes/reporting.ts` for date range parameters could cause SQL injection
+- [x] SECURITY: Hardcoded salt rounds in `backend/src/routes/auth.test.ts` should use config instead of hardcoded value
 - [x] STABILITY: Oncall schedule generation lacks timezone handling; file: `backend/src/routes/oncall.ts`
 - [x] TEST: No integration tests for workflow approval chains; file: `backend/src/routes/workflow.ts`
 - [x] PERF: Knowledge base search queries lack indexing optimization; file: `backend/src/routes/knowledge.ts`
@@ -345,6 +350,11 @@
 ## Completed
 
 ## Session Log
+- [2025-12-31 06:52] Completed: STABILITY: Error handling missing for external API calls in integrations route; file: `backend/src/routes/integrations.ts`
+- [2025-12-31 06:27] Completed: SECURITY: Hardcoded salt rounds in `backend/src/routes/auth.test.ts` should use config instead of hardcoded value
+- [2025-12-31 06:27] Completed: BUG: Missing input validation in `backend/src/routes/reporting.ts` for date range parameters could cause SQL injection
+- [2025-12-31 06:26] Completed: PERF: `backend/src/routes/assets.ts` makes sequential database calls for related resources instead of batch queries
+- [2025-12-31 06:26] Completed: TEST: No integration tests for webhook handling in `backend/src/routes/integrations.ts`
 - [2025-12-31 06:26] Completed: STABILITY: `backend/src/routes/notifications.ts` lacks proper error handling for failed email deliveries
 - [2025-12-31 06:25] Completed: SECURITY: Hardcoded salt rounds in auth route should use config value; file: `backend/src/routes/auth.test.ts`
 - [2025-12-31 06:25] Completed: BUG: Missing input validation on reporting route parameters; file: `backend/src/routes/reporting.ts`

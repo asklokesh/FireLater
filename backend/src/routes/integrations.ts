@@ -92,6 +92,34 @@ fastify.post('/webhooks/:provider', {
       });
     }
     
+    // Handle DNS lookup failures
+    if (error.code === 'ENOTFOUND' || error.code === 'EAI_AGAIN') {
+      return reply.code(503).send({
+        message: 'DNS lookup failed for external service',
+        provider,
+        error: 'DNS_ERROR'
+      });
+    }
+    
+    // Handle SSL/TLS errors
+    if (error.code === 'CERT_HAS_EXPIRED' || error.code === 'UNABLE_TO_VERIFY_LEAF_SIGNATURE' || 
+        error.code === 'SELF_SIGNED_CERT_IN_CHAIN' || error.code === 'ERR_TLS_CERT_ALTNAME_INVALID') {
+      return reply.code(503).send({
+        message: 'SSL/TLS certificate error when connecting to external service',
+        provider,
+        error: 'SSL_ERROR'
+      });
+    }
+    
+    // Handle connection timeout errors
+    if (error.code === 'ETIMEDOUT') {
+      return reply.code(408).send({
+        message: 'Connection timeout when connecting to external service',
+        provider,
+        error: 'CONNECTION_TIMEOUT'
+      });
+    }
+    
     return reply.code(500).send({ 
       message: 'Failed to process webhook', 
       provider,
