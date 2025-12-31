@@ -5,7 +5,7 @@
 - [x] TEST: The auth route in `backend/src/routes/auth.test.ts` lacks test coverage for IPv6 CIDR validation and edge cases like invalid IP formats, malformed CIDRs, and IPv4-mapped IPv6 addresses.
 - [x] PERF: The `isTrustedProxy` function in `backend/src/routes/auth.test.ts` recreates `Address4`/`Address6` objects for every CIDR check in the loop instead of pre-parsing them, causing unnecessary CPU overhead on every request.
 - [x] BUG: No error handling for when `TRUSTED_PROXY_CIDIRS` is undefined or empty in `backend/src/routes/auth.test.ts`, which would cause all proxy checks to fail and potentially break authentication flows.
-- [ ] SECURITY: The `isTrustedProxy` function in `backend/src/routes/auth.test.ts` has flawed CIDR validation logic that could allow IP spoofing; it incorrectly falls back to exact string matching when parsing fails, and doesn't properly handle IPv4-mapped IPv6 addresses.
+- [x] SECURITY: The `isTrustedProxy` function in `backend/src/routes/auth.test.ts` has flawed CIDR validation logic that could allow IP spoofing; it incorrectly falls back to exact string matching when parsing fails, and doesn't properly handle IPv4-mapped IPv6 addresses.
 - [x] STABILITY: In `backend/src/routes/oncall.ts`, the on-call rotation scheduler does not handle timezone transitions properly during daylight saving time changes, risking incorrect assignment schedules.
 - [x] TEST: Missing unit tests for critical authentication flows in `backend/src/routes/auth.test.ts`. Specifically, there are no tests covering multi-tenant schema isolation or JWT token refresh mechanisms.
 - [x] PERF: The service catalog feature in `backend/src/routes/workflow.ts` uses synchronous drag-and-drop operations without debouncing, which can cause performance degradation when handling large numbers of catalog items concurrently.
@@ -60,6 +60,7 @@
 ## Completed
 
 ## Session Log
+- [2025-12-31 03:04] Completed: SECURITY: The `isTrustedProxy` function in `backend/src/routes/auth.test.ts` has flawed CIDR validation logic that could allow IP spoofing; it incorrectly falls back to exact string matching when parsing fails, and doesn't properly handle IPv4-mapped IPv6 addresses.
 - [2025-12-31 03:04] Completed: BUG: No error handling for when `TRUSTED_PROXY_CIDIRS` is undefined or empty in `backend/src/routes/auth.test.ts`, which would cause all proxy checks to fail and potentially break authentication flows.
 - [2025-12-31 03:03] Completed: PERF: The `isTrustedProxy` function in `backend/src/routes/auth.test.ts` recreates `Address4`/`Address6` objects for every CIDR check in the loop instead of pre-parsing them, causing unnecessary CPU overhead on every request.
 - [2025-12-31 03:03] Completed: TEST: The auth route in `backend/src/routes/auth.test.ts` lacks test coverage for IPv6 CIDR validation and edge cases like invalid IP formats, malformed CIDRs, and IPv4-mapped IPv6 addresses.
