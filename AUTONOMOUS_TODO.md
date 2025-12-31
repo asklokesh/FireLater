@@ -1,11 +1,16 @@
 # FireLater Autonomous Development
 
 ## Priority Queue
+- [x] STABILITY: `backend/src/routes/notifications.ts` lacks proper error boundaries for external webhook delivery, risking unhandled promise rejections.
+- [ ] TEST: No unit tests for `validateCIDR` function in `backend/src/routes/auth.test.ts`; critical for security-related input validation.
+- [ ] PERF: `backend/src/routes/assets.ts` performs N+1 queries when fetching asset health scores; should batch or join related data.
+- [ ] BUG: Missing input sanitization in `backend/src/routes/reporting.ts` for user-supplied filters could lead to SQL injection or incorrect query results.
+- [ ] SECURITY: Insecure CIDR validation logic in `backend/src/routes/auth.test.ts` lacks proper error handling and may allow invalid IP ranges; validation should throw or return explicit boolean.
 - [x] STABILITY: Unhandled promise rejection in `backend/src/routes/integrations.ts` - AWS sync jobs don't properly handle network timeouts which can crash the worker process
-- [ ] TEST: Insufficient test coverage in `backend/src/routes/oncall.ts` - on-call scheduling logic lacks edge case testing for timezone transitions and rotation overlaps
-- [ ] PERF: N+1 query pattern in `backend/src/routes/assets.ts` - asset health scoring performs individual database queries for each asset instead of batch processing
-- [ ] BUG: Missing input validation in `backend/src/routes/reporting.ts` - report generation endpoint accepts unsanitized user parameters that could lead to injection attacks
-- [ ] SECURITY: Insecure error handling in `backend/src/routes/auth.test.ts` - sensitive error details may be exposed to clients without proper sanitization
+- [x] TEST: Insufficient test coverage in `backend/src/routes/oncall.ts` - on-call scheduling logic lacks edge case testing for timezone transitions and rotation overlaps
+- [x] PERF: N+1 query pattern in `backend/src/routes/assets.ts` - asset health scoring performs individual database queries for each asset instead of batch processing
+- [x] BUG: Missing input validation in `backend/src/routes/reporting.ts` - report generation endpoint accepts unsanitized user parameters that could lead to injection attacks
+- [x] SECURITY: Insecure error handling in `backend/src/routes/auth.test.ts` - sensitive error details may be exposed to clients without proper sanitization
 - [x] STABILITY: Redis connection not properly closed in `backend/src/routes/notifications.ts` - missing cleanup logic causing connection leaks under high load
 - [x] TEST: No integration tests for workflow engine in `backend/src/routes/workflow.ts` - critical business logic lacks test coverage for approval chains and state transitions
 - [x] PERF: N+1 query pattern in `backend/src/routes/assets.ts` - asset health scoring fetches individual resource data instead of batch querying related resources
@@ -125,6 +130,11 @@
 ## Completed
 
 ## Session Log
+- [2025-12-31 04:03] Completed: STABILITY: `backend/src/routes/notifications.ts` lacks proper error boundaries for external webhook delivery, risking unhandled promise rejections.
+- [2025-12-31 03:58] Completed: SECURITY: Insecure error handling in `backend/src/routes/auth.test.ts` - sensitive error details may be exposed to clients without proper sanitization
+- [2025-12-31 03:58] Completed: BUG: Missing input validation in `backend/src/routes/reporting.ts` - report generation endpoint accepts unsanitized user parameters that could lead to injection attacks
+- [2025-12-31 03:58] Completed: PERF: N+1 query pattern in `backend/src/routes/assets.ts` - asset health scoring performs individual database queries for each asset instead of batch processing
+- [2025-12-31 03:57] Completed: TEST: Insufficient test coverage in `backend/src/routes/oncall.ts` - on-call scheduling logic lacks edge case testing for timezone transitions and rotation overlaps
 - [2025-12-31 03:57] Completed: STABILITY: Unhandled promise rejection in `backend/src/routes/integrations.ts` - AWS sync jobs don't properly handle network timeouts which can crash the worker process
 - [2025-12-31 03:56] Completed: SECURITY: Insecure CIDR validation logic in `backend/src/routes/auth.test.ts` - validation bypass possible due to unchecked `trimmedCidr` before `validateCIDR()` call
 - [2025-12-31 03:56] Completed: BUG: Missing error handling in `backend/src/routes/reporting.ts` - database query errors not properly caught or logged, leading to unhandled promise rejections
