@@ -3,7 +3,7 @@
 ## Priority Queue
 - [x] STABILITY: Oncall schedule rotation logic doesn't handle timezone edge cases properly (`backend/src/routes/oncall.ts`)
 - [x] TEST: No integration tests for workflow automation triggers and state transitions (`backend/src/routes/workflow.ts`)
-- [ ] PERF: Knowledge base search queries not using database indexes causing slow response times (`backend/src/routes/knowledge.ts`)
+- [x] PERF: Knowledge base search queries not using database indexes causing slow response times (`backend/src/routes/knowledge.ts`)
 - [ ] BUG: Missing input validation on reporting route parameters leading to potential SQL injection (`backend/src/routes/reporting.ts`)
 - [ ] SECURITY: Hardcoded salt rounds in authentication route; should use config value consistently across all auth-related files (`backend/src/routes/auth.test.ts`)
 - [x] STABILITY: Error handling missing for external API calls in integrations module; file: `backend/src/routes/integrations.ts`
@@ -490,6 +490,7 @@
 ## Completed
 
 ## Session Log
+- [2025-12-31 08:11] Completed: PERF: Knowledge base search queries not using database indexes causing slow response times (`backend/src/routes/knowledge.ts`)
 - [2025-12-31 08:11] Completed: TEST: No integration tests for workflow automation triggers and state transitions (`backend/src/routes/workflow.ts`)
 - [2025-12-31 08:11] Completed: STABILITY: Oncall schedule rotation logic doesn't handle timezone edge cases properly (`backend/src/routes/oncall.ts`)
 - [2025-12-31 08:10] Completed: SECURITY: Hardcoded salt rounds in auth route handler should use config value; file: `backend/src/routes/auth.test.ts`
