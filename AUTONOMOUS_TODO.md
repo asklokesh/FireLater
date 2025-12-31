@@ -1,11 +1,16 @@
 # FireLater Autonomous Development
 
 ## Priority Queue
+- [x] STABILITY: Redis connection not properly handled during BullMQ job processing - `backend/src/routes/notifications.ts`
+- [x] TEST: No integration tests for on-call rotation scheduling logic - `backend/src/routes/oncall.ts`
+- [x] PERF: N+1 query issue in asset inventory loading without proper joins - `backend/src/routes/assets.ts`
+- [ ] BUG: Missing input validation for service catalog builder allows malformed workflows - `backend/src/routes/workflow.ts`
+- [ ] SECURITY: Insecure error handling in auth route exposes internal errors; should sanitize before throwing - `backend/src/routes/auth.test.ts`
 - [x] STABILITY: BullMQ job processors missing proper error boundaries and retry configurations (backend/src/routes/notifications.ts, backend/src/routes/workflow.ts)
 - [x] TEST: Auth route lacks comprehensive test coverage for edge cases in CIDR validation and error scenarios (backend/src/routes/auth.test.ts)
 - [x] PERF: No database connection pooling configured for PostgreSQL leading to connection exhaustion under load (backend/src/routes/oncall.ts, backend/src/routes/assets.ts)
 - [x] BUG: Missing input sanitization and validation across multiple routes (reporting, knowledge, integrations) leading to potential injection vulnerabilities
-- [ ] SECURITY: IP range validation in auth route has logic inside catch block, should be moved outside try-catch for proper error handling (backend/src/routes/auth.test.ts)
+- [x] SECURITY: IP range validation in auth route has logic inside catch block, should be moved outside try-catch for proper error handling (backend/src/routes/auth.test.ts)
 - [x] STABILITY: Oncall schedule rotation logic doesn't handle timezone edge cases; implement proper TZ conversion in `backend/src/routes/oncall.ts`
 - [x] TEST: No unit tests for workflow execution logic; add coverage for approval chains in `backend/src/routes/workflow.ts`
 - [x] PERF: Knowledge base search queries lack indexing strategy; add DB indexes for `title` and `content` fields in `backend/src/routes/knowledge.ts`
@@ -145,6 +150,10 @@
 ## Completed
 
 ## Session Log
+- [2025-12-31 04:12] Completed: PERF: N+1 query issue in asset inventory loading without proper joins - `backend/src/routes/assets.ts`
+- [2025-12-31 04:11] Completed: TEST: No integration tests for on-call rotation scheduling logic - `backend/src/routes/oncall.ts`
+- [2025-12-31 04:11] Completed: STABILITY: Redis connection not properly handled during BullMQ job processing - `backend/src/routes/notifications.ts`
+- [2025-12-31 04:10] Completed: SECURITY: IP range validation in auth route has logic inside catch block, should be moved outside try-catch for proper error handling (backend/src/routes/auth.test.ts)
 - [2025-12-31 04:10] Completed: BUG: Missing input sanitization and validation across multiple routes (reporting, knowledge, integrations) leading to potential injection vulnerabilities
 - [2025-12-31 04:10] Completed: PERF: No database connection pooling configured for PostgreSQL leading to connection exhaustion under load (backend/src/routes/oncall.ts, backend/src/routes/assets.ts)
 - [2025-12-31 04:09] Completed: TEST: Auth route lacks comprehensive test coverage for edge cases in CIDR validation and error scenarios (backend/src/routes/auth.test.ts)

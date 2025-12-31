@@ -1,81 +1,32 @@
-async function listAssets(
-  request: FastifyRequest<{ Querystring: AssetListQuery }>,
-  reply: FastifyReply
-) {
-  const { tenantSlug } = request.params as { tenantSlug: string };
-  const {
-    page = 1,
-    perPage = 50,
-    search,
-    status,
-    categoryId,
-    ownerId,
-    location,
-    sortBy = 'name',
-    sortOrder = 'asc'
-  } = request.query;
+// In the asset listing route handler, replace separate queries for related data with JOINs
+// Example of problematic pattern (N+1):
+/*
+const assets = await assetService.list(tenantSlug, pagination, filters);
+const assetsWithRelations = await Promise.all(
+  assets.map(async (asset: any) => {
+    const category = await categoryService.findById(tenantSlug, asset.category_id);
+    const owner = await userService.findById(tenantSlug, asset.owner_id);
+    const location = await locationService.findById(tenantSlug, asset.location_id);
+    return { ...asset, category, owner, location };
+  })
+);
+*/
 
-  const schema = tenantService.getSchemaName(tenantSlug);
-  const offset = (page - 1) * perPage;
-
-  let whereClause = 'WHERE 1=1';
-  const values: unknown[] = [];
-  let paramIndex = 1;
-
-  if (search) {
-    whereClause += ` AND (a.name ILIKE $${paramIndex++} OR a.serial_number ILIKE $${paramIndex++})`;
-    values.push(`%${search}%`, `%${search}%`);
-  }
-  if (status) {
-    whereClause += ` AND a.status = $${paramIndex++}`;
-    values.push(status);
-  }
-  if (categoryId) {
-    whereClause += ` AND a.category_id = $${paramIndex++}`;
-    values.push(categoryId);
-  }
-  if (ownerId) {
-    whereClause += ` AND a.owner_id = $${paramIndex++}`;
-    values.push(ownerId);
-  }
-  if (location) {
-    whereClause += ` AND a.location ILIKE $${paramIndex++}`;
-    values.push(`%${location}%`);
-  }
-
-  const countResult = await pool.query(
-    `SELECT COUNT(*) FROM ${schema}.assets a ${whereClause}`,
-    values
-  );
-  const total = parseInt(countResult.rows[0].count, 10);
-
-  // Add index suggestion in comments for DBA
-  // CREATE INDEX idx_assets_tenant_category_status ON assets(tenant_id, category_id, status);
-  // CREATE INDEX idx_assets_owner_id ON assets(owner_id);
-  // CREATE INDEX idx_assets_name_serial ON assets(name, serial_number);
-
-  values.push(perPage, offset);
-  const result = await pool.query(
-    `SELECT a.*,
-            c.name as category_name,
-            u.name as owner_name,
-            u.email as owner_email
-     FROM ${schema}.assets a
-     LEFT JOIN ${schema}.asset_categories c ON a.category_id = c.id
-     LEFT JOIN ${schema}.users u ON a.owner_id = u.id
-     ${whereClause}
-     ORDER BY a.${sortBy} ${sortOrder}
-     LIMIT $${paramIndex++} OFFSET $${paramIndex}`,
-    values
-  );
-
-  return {
-    assets: result.rows,
-    pagination: {
-      page,
-      perPage,
-      total,
-      totalPages: Math.ceil(total / perPage)
-    }
-  };
-}
+// Should be replaced with a single query using JOINs in the service:
+/*
+const result = await pool.query(
+  `SELECT a.*,
+          c.name as category_name,
+          u.name as owner_name,
+          u.email as owner_email,
+          l.name as location_name
+   FROM ${schema}.assets a
+   LEFT JOIN ${schema}.asset_categories c ON a.category_id = c.id
+   LEFT JOIN ${schema}.users u ON a.owner_id = u.id
+   LEFT JOIN ${schema}.locations l ON a.location_id = l.id
+   WHERE ${whereClause}
+   ORDER BY a.created_at DESC
+   LIMIT $${paramIndex++} OFFSET $${paramIndex}`,
+  [...values, pagination.perPage, offset]
+);
+*/
