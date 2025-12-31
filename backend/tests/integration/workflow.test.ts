@@ -1,86 +1,98 @@
-import { describe, it, beforeEach, afterEach } from 'vitest';
-import { buildTestServer } from '../../test/helpers/setup.js';
-import { createTestTenant } from '../../test/helpers/tenant.js';
+import { test } from 'tap';
+import { build } from '../../src/app.js';
+import { createTestTenant, destroyTestTenant } from '../helpers/tenant.js';
+import { createTestUser, destroyTestUser } from '../helpers/auth.js';
 import { workflowService } from '../../src/services/workflow.js';
-import { requestService } from '../../src/services/requests.js';
 
-describe('Workflow Automation Integration Tests', () => {
-  let server: any;
-  let tenant: any;
+test('workflow route state transitions', async (t) => {
+  const tenant = await createTestTenant();
+  const user = await createTestUser(tenant.slug, ['workflow:manage']);
   
-  beforeEach(async () => {
-    server = await buildTestServer();
-    tenant = await createTestTenant();
+  const app = build();
+  
+  t.teardown(async () => {
+    await destroyTestUser(user.id);
+    await destroyTestTenant(tenant.slug);
+    await app.close();
   });
   
-  afterEach(async () => {
-    await server.close();
+  // Create a test workflow
+  const workflow = await workflowService.createWorkflow(tenant.slug, {
+    name: 'Test Workflow',
+    description: 'Test workflow for state transitions',
+    initialState: 'draft',
+    states: ['draft', 'active', 'archived'],
+    transitions: [
+      { from: 'draft', to: 'active' },
+      { from: 'active', to: 'archived' }
+    ]
   });
   
-  it('should trigger workflow on request creation', async () => {
-    // Create a workflow with request creation trigger
-    const workflow = await workflowService.create(tenant.slug, {
-      name: 'Test Workflow',
-      trigger: {
-        type: 'request.created',
-        conditions: []
+  t.test('should transition workflow state from draft to active', async (t) => {
+    const response = await app.inject({
+      method: 'POST',
+      url: `/workflows/${workflow.id}/transition`,
+      headers: {
+        authorization: `Bearer ${user.token}`,
+        'x-tenant-slug': tenant.slug
       },
-      actions: [{
-        type: 'notification.email',
-        config: {
-          to: 'test@example.com',
-          subject: 'Request Created',
-          body: 'A new request was created'
-        }
-      }]
+      body: {
+        newState: 'active'
+      }
     });
     
-    // Create a request which should trigger the workflow
-    const request = await requestService.create(tenant.slug, {
-      title: 'Test Request',
-      description: 'Test description'
-    });
-    
-    // Verify workflow was triggered by checking execution history
-    const executions = await workflowService.getExecutions(tenant.slug, workflow.id);
-    expect(executions).toHaveLength(1);
-    expect(executions[0].status).toBe('completed');
+    t.equal(response.statusCode, 200);
+    const result = JSON.parse(response.body);
+    t.equal(result.state, 'active');
   });
   
-  it('should handle workflow state transitions', async () => {
-    // Create workflow with state transition trigger
-    const workflow = await workflowService.create(tenant.slug, {
-      name: 'State Transition Workflow',
-      trigger: {
-        type: 'request.status.changed',
-        conditions: [{
-          field: 'to',
-          operator: 'equals',
-          value: 'in_progress'
-        }]
+  t.test('should transition workflow state from active to archived', async (t) => {
+    const response = await app.inject({
+      method: 'POST',
+      url: `/workflows/${workflow.id}/transition`,
+      headers: {
+        authorization: `Bearer ${user.token}`,
+        'x-tenant-slug': tenant.slug
       },
-      actions: [{
-        type: 'assign.user',
-        config: {
-          userId: 'test-user-id'
-        }
-      }]
+      body: {
+        newState: 'archived'
+      }
     });
     
-    // Create initial request
-    const request = await requestService.create(tenant.slug, {
-      title: 'Test Request',
-      description: 'Test description'
+    t.equal(response.statusCode, 200);
+    const result = JSON.parse(response.body);
+    t.equal(result.state, 'archived');
+  });
+  
+  t.test('should reject invalid state transition', async (t) => {
+    const response = await app.inject({
+      method: 'POST',
+      url: `/workflows/${workflow.id}/transition`,
+      headers: {
+        authorization: `Bearer ${user.token}`,
+        'x-tenant-slug': tenant.slug
+      },
+      body: {
+        newState: 'draft' // Cannot transition from archived to draft
+      }
     });
     
-    // Update request status to trigger workflow
-    await requestService.update(tenant.slug, request.id, {
-      status: 'in_progress'
+    t.equal(response.statusCode, 400);
+  });
+  
+  t.test('should reject transition for non-existent workflow', async (t) => {
+    const response = await app.inject({
+      method: 'POST',
+      url: '/workflows/00000000-0000-0000-0000-000000000000/transition',
+      headers: {
+        authorization: `Bearer ${user.token}`,
+        'x-tenant-slug': tenant.slug
+      },
+      body: {
+        newState: 'active'
+      }
     });
     
-    // Verify workflow execution
-    const executions = await workflowService.getExecutions(tenant.slug, workflow.id);
-    expect(executions).toHaveLength(1);
-    expect(executions[0].status).toBe('completed');
+    t.equal(response.statusCode, 404);
   });
 });
