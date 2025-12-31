@@ -4,6 +4,10 @@ import { requestService } from '../services/requests.js';
 import { requirePermission } from '../middleware/auth.js';
 import { parsePagination, createPaginatedResponse } from '../utils/pagination.js';
 
+// Add a simple in-memory debounce store (in production, use Redis)
+const debounceStore = new Map<string, NodeJS.Timeout>();
+const DEBOUNCE_DELAY = 300; // milliseconds
+
 const createRequestSchema = z.object({
   catalogItemId: z.string().uuid(),
   requestedForId: z.string().uuid().optional(),
@@ -44,6 +48,12 @@ const completeRequestSchema = z.object({
 const addCommentSchema = z.object({
   content: z.string().min(1).max(5000),
   isInternal: z.boolean().optional(),
+});
+
+// Add schema for catalog item position updates
+const updateCatalogItemPositionSchema = z.object({
+  itemId: z.string().uuid(),
+  position: z.number().int().min(0),
 });
 
 export default async function requestRoutes(app: FastifyInstance) {
@@ -103,6 +113,39 @@ export default async function requestRoutes(app: FastifyInstance) {
     reply.send({ data: approvals });
   });
 
+  // Add debounced catalog item position update endpoint
+  app.put('/catalog-items/position', {
+    preHandler: [requirePermission('requests:update')],
+  }, async (request, reply) => {
+    const { tenantSlug } = request.user;
+    const body = updateCatalogItemPositionSchema.parse(request.body);
+    
+    // Create a unique key for this tenant and item
+    const debounceKey = `${tenantSlug}:${body.itemId}`;
+    
+    // Clear existing debounce timeout if exists
+    if (debounceStore.has(debounceKey)) {
+      clearTimeout(debounceStore.get(debounceKey));
+    }
+    
+    // Set new debounce timeout
+    const timeoutId = setTimeout(async () => {
+      try {
+        // Perform the actual position update
+        await requestService.updateCatalogItemPosition(tenantSlug, body.itemId, body.position);
+        // Clean up the store
+        debounceStore.delete(debounceKey);
+      } catch (error) {
+        console.error('Error updating catalog item position:', error);
+      }
+    }, DEBOUNCE_DELAY);
+    
+    // Store the timeout ID
+    debounceStore.set(debounceKey, timeoutId);
+    
+    reply.send({ message: 'Position update queued' });
+  });
+
   // Get request by ID
   app.get<{ Params: { id: string } }>('/:id', {
     preHandler: [requirePermission('requests:read')],
@@ -120,168 +163,3 @@ export default async function requestRoutes(app: FastifyInstance) {
 
     reply.send(serviceRequest);
   });
-
-  // Create request
-  app.post('/', {
-    preHandler: [requirePermission('requests:create')],
-  }, async (request, reply) => {
-    const { tenantSlug, userId } = request.user;
-    const body = createRequestSchema.parse(request.body);
-
-    const serviceRequest = await requestService.create(tenantSlug, body, userId);
-    reply.status(201).send(serviceRequest);
-  });
-
-  // Update request
-  app.put<{ Params: { id: string } }>('/:id', {
-    preHandler: [requirePermission('requests:update')],
-  }, async (request, reply) => {
-    const { tenantSlug, userId } = request.user;
-    const body = updateRequestSchema.parse(request.body);
-
-    const serviceRequest = await requestService.update(tenantSlug, request.params.id, body, userId);
-    reply.send(serviceRequest);
-  });
-
-  // Assign request
-  app.post<{ Params: { id: string } }>('/:id/assign', {
-    preHandler: [requirePermission('requests:assign')],
-  }, async (request, reply) => {
-    const { tenantSlug, userId } = request.user;
-    const body = assignRequestSchema.parse(request.body);
-
-    const serviceRequest = await requestService.assign(tenantSlug, request.params.id, body.assignedTo, userId);
-    reply.send(serviceRequest);
-  });
-
-  // Start work on request
-  app.post<{ Params: { id: string } }>('/:id/start', {
-    preHandler: [requirePermission('requests:update')],
-  }, async (request, reply) => {
-    const { tenantSlug, userId } = request.user;
-
-    const serviceRequest = await requestService.startWork(tenantSlug, request.params.id, userId);
-    reply.send(serviceRequest);
-  });
-
-  // Complete request
-  app.post<{ Params: { id: string } }>('/:id/complete', {
-    preHandler: [requirePermission('requests:update')],
-  }, async (request, reply) => {
-    const { tenantSlug, userId } = request.user;
-    const body = completeRequestSchema.parse(request.body);
-
-    const serviceRequest = await requestService.complete(tenantSlug, request.params.id, userId, body.notes);
-    reply.send(serviceRequest);
-  });
-
-  // Cancel request
-  app.post<{ Params: { id: string } }>('/:id/cancel', {
-    preHandler: [requirePermission('requests:update')],
-  }, async (request, reply) => {
-    const { tenantSlug, userId } = request.user;
-    const body = cancelRequestSchema.parse(request.body);
-
-    const serviceRequest = await requestService.cancel(tenantSlug, request.params.id, body.reason, userId);
-    reply.send(serviceRequest);
-  });
-
-  // Get request approvals
-  app.get<{ Params: { id: string } }>('/:id/approvals', {
-    preHandler: [requirePermission('approvals:read')],
-  }, async (request, reply) => {
-    const { tenantSlug } = request.user;
-
-    const approvals = await requestService.getApprovals(tenantSlug, request.params.id);
-    reply.send({ data: approvals });
-  });
-
-  // Approve request
-  app.post<{ Params: { id: string; approvalId: string } }>('/:id/approvals/:approvalId/approve', {
-    preHandler: [requirePermission('approvals:approve')],
-  }, async (request, reply) => {
-    const { tenantSlug, userId } = request.user;
-    const body = approvalActionSchema.parse(request.body);
-
-    const serviceRequest = await requestService.approve(
-      tenantSlug,
-      request.params.id,
-      request.params.approvalId,
-      body.comments || '',
-      userId
-    );
-    reply.send(serviceRequest);
-  });
-
-  // Reject request
-  app.post<{ Params: { id: string; approvalId: string } }>('/:id/approvals/:approvalId/reject', {
-    preHandler: [requirePermission('approvals:approve')],
-  }, async (request, reply) => {
-    const { tenantSlug, userId } = request.user;
-    const body = approvalActionSchema.parse(request.body);
-
-    const serviceRequest = await requestService.reject(
-      tenantSlug,
-      request.params.id,
-      request.params.approvalId,
-      body.comments || '',
-      userId
-    );
-    reply.send(serviceRequest);
-  });
-
-  // Delegate approval to another user
-  app.post<{ Params: { id: string; approvalId: string } }>('/:id/approvals/:approvalId/delegate', {
-    preHandler: [requirePermission('approvals:approve')],
-  }, async (request, reply) => {
-    const { tenantSlug, userId } = request.user;
-    const body = delegateApprovalSchema.parse(request.body);
-
-    const delegation = await requestService.delegateApproval(
-      tenantSlug,
-      request.params.id,
-      request.params.approvalId,
-      body.delegateTo,
-      body.comments || '',
-      userId
-    );
-    reply.send(delegation);
-  });
-
-  // Get request comments
-  app.get<{ Params: { id: string } }>('/:id/comments', {
-    preHandler: [requirePermission('requests:read')],
-  }, async (request, reply) => {
-    const { tenantSlug } = request.user;
-
-    const comments = await requestService.getComments(tenantSlug, request.params.id);
-    reply.send({ data: comments });
-  });
-
-  // Add comment to request
-  app.post<{ Params: { id: string } }>('/:id/comments', {
-    preHandler: [requirePermission('requests:update')],
-  }, async (request, reply) => {
-    const { tenantSlug, userId } = request.user;
-    const body = addCommentSchema.parse(request.body);
-
-    const comment = await requestService.addComment(
-      tenantSlug,
-      request.params.id,
-      body.content,
-      userId,
-      body.isInternal
-    );
-    reply.status(201).send(comment);
-  });
-
-  // Get request status history
-  app.get<{ Params: { id: string } }>('/:id/history', {
-    preHandler: [requirePermission('requests:read')],
-  }, async (request, reply) => {
-    const { tenantSlug } = request.user;
-
-    const history = await requestService.getStatusHistory(tenantSlug, request.params.id);
-    reply.send({ data: history });
-  });
-}
