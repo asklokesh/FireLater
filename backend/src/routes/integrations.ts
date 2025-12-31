@@ -74,6 +74,24 @@ fastify.post('/webhooks/:provider', {
       });
     }
     
+    // Handle timeout errors
+    if (error.code === 'ECONNABORTED' || error.name === 'TimeoutError') {
+      return reply.code(408).send({ 
+        message: 'Request timeout when connecting to external service', 
+        provider,
+        error: 'REQUEST_TIMEOUT' 
+      });
+    }
+    
+    // Handle network errors
+    if (error.code === 'ENETUNREACH' || error.code === 'EHOSTUNREACH') {
+      return reply.code(503).send({ 
+        message: 'Network error when connecting to external service', 
+        provider,
+        error: 'NETWORK_ERROR' 
+      });
+    }
+    
     return reply.code(500).send({ 
       message: 'Failed to process webhook', 
       provider,
