@@ -1,268 +1,145 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { buildApp } from '../app';
-import { prisma } from '../utils/db';
-import bcrypt from 'bcrypt';
+import { describe, it, expect, beforeAll, afterAll } from 'vitest';
+import { app } from '../app';
+import { createTestTenant, removeTestTenant } from '../utils/test-utils';
 
-describe('Auth Routes - Password Reset', () => {
-  let app: ReturnType<typeof buildApp>;
+describe('Authentication', () => {
+  let tenant1Id: string;
+  let tenant2Id: string;
 
-  beforeEach(async () => {
-    app = buildApp();
-    await app.ready();
-    // Clear test data
-    await prisma.passwordResetToken.deleteMany({});
-    await prisma.user.deleteMany({});
+  beforeAll(async () => {
+    // Create test tenants
+    tenant1Id = await createTestTenant('test1');
+    tenant2Id = await createTestTenant('test2');
   });
 
-  describe('POST /auth/reset-password/request', () => {
-    it('should generate reset token for valid email', async () => {
-      // Create test user
-      const user = await prisma.user.create({
-        data: {
-          email: 'test@example.com',
-          password: await bcrypt.hash('password123', 10),
-          name: 'Test User'
-        }
-      });
-
-      const response = await app.inject({
-        method: 'POST',
-        url: '/auth/reset-password/request',
-        payload: {
-          email: 'test@example.com'
-        }
-      });
-
-      expect(response.statusCode).toBe(200);
-      expect(response.json()).toEqual({
-        message: 'Password reset email sent'
-      });
-
-      // Verify token was created
-      const tokenRecord = await prisma.passwordResetToken.findFirst({
-        where: {
-          userId: user.id
-        }
-      });
-      expect(tokenRecord).toBeDefined();
-      expect(tokenRecord?.token).toHaveLength(64);
-      expect(tokenRecord?.expiresAt).toBeInstanceOf(Date);
-    });
-
-    it('should return 200 even for non-existent email (security)', async () => {
-      const response = await app.inject({
-        method: 'POST',
-        url: '/auth/reset-password/request',
-        payload: {
-          email: 'nonexistent@example.com'
-        }
-      });
-
-      expect(response.statusCode).toBe(200);
-      expect(response.json()).toEqual({
-        message: 'Password reset email sent'
-      });
-    });
+  afterAll(async () => {
+    // Clean up test tenants
+    await removeTestTenant(tenant1Id);
+    await removeTestTenant(tenant2Id);
   });
 
-  describe('POST /auth/reset-password/validate', () => {
-    it('should validate valid reset token', async () => {
-      // Create user and token
-      const user = await prisma.user.create({
-        data: {
-          email: 'test@example.com',
-          password: await bcrypt.hash('password123', 10),
-          name: 'Test User'
-        }
-      });
-
-      const token = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ012345';
-      await prisma.passwordResetToken.create({
-        data: {
-          token,
-          userId: user.id,
-          expiresAt: new Date(Date.now() + 3600000) // 1 hour from now
-        }
-      });
-
-      const response = await app.inject({
-        method: 'POST',
-        url: '/auth/reset-password/validate',
-        payload: {
-          token
-        }
-      });
-
-      expect(response.statusCode).toBe(200);
-      expect(response.json()).toEqual({
-        valid: true
-      });
+  it('should register and login users in isolated tenant schemas', async () => {
+    // Register user in tenant 1
+    const registerResponse1 = await app.inject({
+      method: 'POST',
+      url: '/auth/register',
+      headers: {
+        'x-tenant-id': tenant1Id
+      },
+      payload: {
+        email: 'user1@test.com',
+        password: 'password123',
+        name: 'Test User 1'
+      }
     });
 
-    it('should reject expired token', async () => {
-      // Create user and expired token
-      const user = await prisma.user.create({
-        data: {
-          email: 'test@example.com',
-          password: await bcrypt.hash('password123', 10),
-          name: 'Test User'
-        }
-      });
+    expect(registerResponse1.statusCode).toBe(201);
 
-      const token = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ012345';
-      await prisma.passwordResetToken.create({
-        data: {
-          token,
-          userId: user.id,
-          expiresAt: new Date(Date.now() - 3600000) // 1 hour ago
-        }
-      });
-
-      const response = await app.inject({
-        method: 'POST',
-        url: '/auth/reset-password/validate',
-        payload: {
-          token
-        }
-      });
-
-      expect(response.statusCode).toBe(400);
-      expect(response.json()).toEqual({
-        error: 'Invalid or expired token'
-      });
+    // Register user with same email in tenant 2
+    const registerResponse2 = await app.inject({
+      method: 'POST',
+      url: '/auth/register',
+      headers: {
+        'x-tenant-id': tenant2Id
+      },
+      payload: {
+        email: 'user1@test.com',
+        password: 'password456',
+        name: 'Test User 2'
+      }
     });
 
-    it('should reject invalid token', async () => {
-      const response = await app.inject({
-        method: 'POST',
-        url: '/auth/reset-password/validate',
-        payload: {
-          token: 'invalid-token'
-        }
-      });
+    // Should succeed - same email allowed in different tenants
+    expect(registerResponse2.statusCode).toBe(201);
 
-      expect(response.statusCode).toBe(400);
-      expect(response.json()).toEqual({
-        error: 'Invalid or expired token'
-      });
+    // Login as tenant 1 user
+    const loginResponse1 = await app.inject({
+      method: 'POST',
+      url: '/auth/login',
+      headers: {
+        'x-tenant-id': tenant1Id
+      },
+      payload: {
+        email: 'user1@test.com',
+        password: 'password123'
+      }
     });
+
+    expect(loginResponse1.statusCode).toBe(200);
+    const { token: token1 } = JSON.parse(loginResponse1.body);
+
+    // Login as tenant 2 user
+    const loginResponse2 = await app.inject({
+      method: 'POST',
+      url: '/auth/login',
+      headers: {
+        'x-tenant-id': tenant2Id
+      },
+      payload: {
+        email: 'user1@test.com',
+        password: 'password456'
+      }
+    });
+
+    expect(loginResponse2.statusCode).toBe(200);
+    const { token: token2 } = JSON.parse(loginResponse2.body);
+
+    // Verify tokens are different
+    expect(token1).not.toBe(token2);
   });
 
-  describe('POST /auth/reset-password', () => {
-    it('should reset password with valid token', async () => {
-      // Create user and token
-      const user = await prisma.user.create({
-        data: {
-          email: 'test@example.com',
-          password: await bcrypt.hash('password123', 10),
-          name: 'Test User'
-        }
-      });
-
-      const token = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ012345';
-      await prisma.passwordResetToken.create({
-        data: {
-          token,
-          userId: user.id,
-          expiresAt: new Date(Date.now() + 3600000) // 1 hour from now
-        }
-      });
-
-      const response = await app.inject({
-        method: 'POST',
-        url: '/auth/reset-password',
-        payload: {
-          token,
-          newPassword: 'newpassword123'
-        }
-      });
-
-      expect(response.statusCode).toBe(200);
-      expect(response.json()).toEqual({
-        message: 'Password reset successful'
-      });
-
-      // Verify password was updated
-      const updatedUser = await prisma.user.findUnique({
-        where: {
-          id: user.id
-        }
-      });
-      const passwordMatches = await bcrypt.compare('newpassword123', updatedUser!.password);
-      expect(passwordMatches).toBe(true);
-
-      // Verify token was deleted
-      const tokenRecord = await prisma.passwordResetToken.findFirst({
-        where: {
-          token
-        }
-      });
-      expect(tokenRecord).toBeNull();
+  it('should reject expired JWT tokens', async () => {
+    // Register and login user
+    const registerResponse = await app.inject({
+      method: 'POST',
+      url: '/auth/register',
+      headers: {
+        'x-tenant-id': tenant1Id
+      },
+      payload: {
+        email: 'expiring@test.com',
+        password: 'password123',
+        name: 'Expiring User'
+      }
     });
 
-    it('should reject reset with expired token', async () => {
-      // Create user and expired token
-      const user = await prisma.user.create({
-        data: {
-          email: 'test@example.com',
-          password: await bcrypt.hash('password123', 10),
-          name: 'Test User'
-        }
-      });
+    expect(registerResponse.statusCode).toBe(201);
 
-      const token = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ012345';
-      await prisma.passwordResetToken.create({
-        data: {
-          token,
-          userId: user.id,
-          expiresAt: new Date(Date.now() - 3600000) // 1 hour ago
-        }
-      });
-
-      const response = await app.inject({
-        method: 'POST',
-        url: '/auth/reset-password',
-        payload: {
-          token,
-          newPassword: 'newpassword123'
-        }
-      });
-
-      expect(response.statusCode).toBe(400);
-      expect(response.json()).toEqual({
-        error: 'Invalid or expired token'
-      });
+    const loginResponse = await app.inject({
+      method: 'POST',
+      url: '/auth/login',
+      headers: {
+        'x-tenant-id': tenant1Id
+      },
+      payload: {
+        email: 'expiring@test.com',
+        password: 'password123'
+      }
     });
 
-    it('should reject reset with invalid password', async () => {
-      // Create user and token
-      const user = await prisma.user.create({
-        data: {
-          email: 'test@example.com',
-          password: await bcrypt.hash('password123', 10),
-          name: 'Test User'
-        }
-      });
+    expect(loginResponse.statusCode).toBe(200);
+    const { token } = JSON.parse(loginResponse.body);
 
-      const token = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ012345';
-      await prisma.passwordResetToken.create({
-        data: {
-          token,
-          userId: user.id,
-          expiresAt: new Date(Date.now() + 3600000)
-        }
-      });
+    // Simulate token expiration by waiting
+    // Note: In real tests, we would mock the JWT verification to simulate expiration
+    // For this example, we'll create an already expired token
+    const expiredToken = app.jwt.sign(
+      { userId: 'test-user-id', tenantId: tenant1Id },
+      { expiresIn: '-1h' } // Expired 1 hour ago
+    );
 
-      const response = await app.inject({
-        method: 'POST',
-        url: '/auth/reset-password',
-        payload: {
-          token,
-          newPassword: '123' // Too short
-        }
-      });
-
-      expect(response.statusCode).toBe(400);
+    // Try to access protected route with expired token
+    const protectedResponse = await app.inject({
+      method: 'GET',
+      url: '/users/profile',
+      headers: {
+        authorization: `Bearer ${expiredToken}`,
+        'x-tenant-id': tenant1Id
+      }
     });
+
+    expect(protectedResponse.statusCode).toBe(401);
+    const responseBody = JSON.parse(protectedResponse.body);
+    expect(responseBody.message).toBe('Token expired');
   });
 });

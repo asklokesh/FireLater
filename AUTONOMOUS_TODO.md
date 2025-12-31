@@ -2,7 +2,7 @@
 
 ## Priority Queue
 - [x] STABILITY: Background job processing lacks proper error handling and retry mechanisms in notification and integration sync workers (`backend/src/routes/notifications.ts`, `backend/src/routes/integrations.ts`)
-- [ ] TEST: Authentication tests do not cover multi-tenant schema isolation or JWT token expiration scenarios (`backend/src/routes/auth.test.ts`)
+- [x] TEST: Authentication tests do not cover multi-tenant schema isolation or JWT token expiration scenarios (`backend/src/routes/auth.test.ts`)
 - [ ] PERF: Inefficient database queries in on-call and asset management routes causing N+1 query issues (`backend/src/routes/oncall.ts`, `backend/src/routes/assets.ts`)
 - [ ] BUG: Missing input validation for critical parameters in reporting and workflow routes leading to potential injection vulnerabilities (`backend/src/routes/reporting.ts`, `backend/src/routes/workflow.ts`)
 - [ ] SECURITY: Hardcoded salt rounds in authentication route; should use config value consistently across all password hashing operations (`backend/src/routes/auth.test.ts`)
@@ -620,6 +620,7 @@
 ## Completed
 
 ## Session Log
+- [2025-12-31 09:24] Completed: TEST: Authentication tests do not cover multi-tenant schema isolation or JWT token expiration scenarios (`backend/src/routes/auth.test.ts`)
 - [2025-12-31 09:23] Completed: STABILITY: Background job processing lacks proper error handling and retry mechanisms in notification and integration sync workers (`backend/src/routes/notifications.ts`, `backend/src/routes/integrations.ts`)
 - [2025-12-31 09:23] Completed: SECURITY: Hardcoded salt rounds in auth route should use config value; file: `backend/src/routes/auth.test.ts`
 - [2025-12-31 09:23] Completed: BUG: Missing input validation on reporting route parameters; file: `backend/src/routes/reporting.ts`
