@@ -3,8 +3,8 @@
 ## Priority Queue
 - [x] STABILITY: `backend/src/routes/notifications.ts` lacks proper error handling for failed email deliveries
 - [x] TEST: No unit tests for workflow execution logic in `backend/src/routes/workflow.ts`
-- [ ] PERF: `backend/src/routes/assets.ts` makes N+1 queries when fetching asset health scores without proper batching
-- [ ] BUG: Missing input validation in `backend/src/routes/reporting.ts` for date range parameters could cause SQL injection
+- [x] PERF: `backend/src/routes/assets.ts` makes N+1 queries when fetching asset health scores without proper batching
+- [x] BUG: Missing input validation in `backend/src/routes/reporting.ts` for date range parameters could cause SQL injection
 - [ ] SECURITY: Hardcoded salt rounds in `backend/src/routes/auth.test.ts` should use config value instead of hardcoded `10`
 - [x] STABILITY: `backend/src/routes/oncall.ts` lacks proper error handling for calendar sync failures
 - [x] TEST: No integration tests for webhook handling in `backend/src/routes/integrations.ts`
@@ -570,6 +570,8 @@
 ## Completed
 
 ## Session Log
+- [2025-12-31 09:07] Completed: BUG: Missing input validation in `backend/src/routes/reporting.ts` for date range parameters could cause SQL injection
+- [2025-12-31 09:06] Completed: PERF: `backend/src/routes/assets.ts` makes N+1 queries when fetching asset health scores without proper batching
 - [2025-12-31 09:06] Completed: TEST: No unit tests for workflow execution logic in `backend/src/routes/workflow.ts`
 - [2025-12-31 09:06] Completed: STABILITY: `backend/src/routes/notifications.ts` lacks proper error handling for failed email deliveries
 - [2025-12-31 09:03] Completed: SECURITY: Hardcoded salt rounds in `backend/src/routes/auth.test.ts` should use config instead of hardcoded value
