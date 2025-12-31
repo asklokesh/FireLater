@@ -3,8 +3,8 @@
 ## Priority Queue
 - [x] STABILITY: Oncall rotation updates don't handle timezone transitions properly; file: `backend/src/routes/oncall.ts`
 - [x] TEST: No integration tests for workflow approval chains; file: `backend/src/routes/workflow.ts`
-- [ ] PERF: Knowledge base search queries lack indexing optimization; file: `backend/src/routes/knowledge.ts`
-- [ ] BUG: Missing input validation on reporting route parameters; file: `backend/src/routes/reporting.ts`
+- [x] PERF: Knowledge base search queries lack indexing optimization; file: `backend/src/routes/knowledge.ts`
+- [x] BUG: Missing input validation on reporting route parameters; file: `backend/src/routes/reporting.ts`
 - [ ] SECURITY: Hardcoded salt rounds in auth route should use config value; file: `backend/src/routes/auth.test.ts`
 - [x] STABILITY: Error handling missing for Redis connection in notifications route; file: backend/src/routes/notifications.ts
 - [x] TEST: No unit tests for workflow route business logic; file: backend/src/routes/workflow.ts
@@ -380,6 +380,8 @@
 ## Completed
 
 ## Session Log
+- [2025-12-31 07:06] Completed: BUG: Missing input validation on reporting route parameters; file: `backend/src/routes/reporting.ts`
+- [2025-12-31 07:05] Completed: PERF: Knowledge base search queries lack indexing optimization; file: `backend/src/routes/knowledge.ts`
 - [2025-12-31 07:05] Completed: TEST: No integration tests for workflow approval chains; file: `backend/src/routes/workflow.ts`
 - [2025-12-31 07:05] Completed: STABILITY: Oncall rotation updates don't handle timezone transitions properly; file: `backend/src/routes/oncall.ts`
 - [2025-12-31 07:01] Completed: SECURITY: Hardcoded salt rounds in auth route should use config value; file: backend/src/routes/auth.test.ts
