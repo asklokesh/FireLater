@@ -29,26 +29,31 @@
         }
       });
 
+    // Clone query for count before adding pagination
     const totalQuery = query.clone();
+    
+    // Apply pagination to main query
+    query = query
+      .orderBy('ka.created_at', 'desc')
+      .limit(perPage)
+      .offset(offset);
+
+    // Execute count query
     const [totalResult] = await totalQuery.count('ka.id as count');
     const total = parseInt(totalResult.count as string, 10);
 
     // Select only necessary fields to improve performance
-    const articles = await query
-      .orderBy('ka.created_at', 'desc')
-      .limit(perPage)
-      .offset(offset)
-      .select([
-        'ka.id',
-        'ka.title',
-        'ka.content',
-        'ka.status',
-        'ka.category',
-        'ka.created_at',
-        'ka.updated_at',
-        'kc.name as category_name',
-        'kc.description as category_description'
-      ]);
+    const articles = await query.select([
+      'ka.id',
+      'ka.title',
+      'ka.content',
+      'ka.status',
+      'ka.category',
+      'ka.created_at',
+      'ka.updated_at',
+      'kc.name as category_name',
+      'kc.description as category_description'
+    ]);
 
     // Fetch related assets for all articles in a single query
     if (articles.length > 0) {
@@ -82,6 +87,8 @@
 
     return {
       articles,
-      total
+      total,
+      page,
+      perPage
     };
   }
