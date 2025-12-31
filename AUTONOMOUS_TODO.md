@@ -4,7 +4,7 @@
 - [x] STABILITY: Redis connection not properly closed in notifications service; file: `backend/src/routes/notifications.ts`
 - [x] TEST: No unit tests for workflow state transitions; file: `backend/src/routes/workflow.ts`
 - [x] PERF: N+1 query issue in knowledge base category loading; file: `backend/src/routes/knowledge.ts`
-- [ ] BUG: Missing input validation on reporting route parameters; file: `backend/src/routes/reporting.ts`
+- [x] BUG: Missing input validation on reporting route parameters; file: `backend/src/routes/reporting.ts`
 - [ ] SECURITY: Hardcoded salt rounds in auth route should use config value; file: `backend/src/routes/auth.test.ts`
 - [x] STABILITY: `backend/src/routes/notifications.ts` lacks proper error handling for failed email deliveries
 - [x] TEST: No unit tests for workflow approval logic in `backend/src/routes/workflow.ts`
@@ -230,6 +230,7 @@
 ## Completed
 
 ## Session Log
+- [2025-12-31 05:17] Completed: BUG: Missing input validation on reporting route parameters; file: `backend/src/routes/reporting.ts`
 - [2025-12-31 05:17] Completed: PERF: N+1 query issue in knowledge base category loading; file: `backend/src/routes/knowledge.ts`
 - [2025-12-31 05:16] Completed: TEST: No unit tests for workflow state transitions; file: `backend/src/routes/workflow.ts`
 - [2025-12-31 05:16] Completed: STABILITY: Redis connection not properly closed in notifications service; file: `backend/src/routes/notifications.ts`

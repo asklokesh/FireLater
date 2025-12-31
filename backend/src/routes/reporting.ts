@@ -1,18 +1,3 @@
-import { FastifyInstance, FastifyRequest } from 'fastify';
-import { reportingService } from '../services/reporting.js';
-import { authenticate, authorize } from '../middleware/auth.js';
-import { validatePagination } from '../middleware/validation.js';
-import { BadRequestError } from '../utils/errors.js';
-
-// Add date validation helper
-function validateDate(dateString?: string): boolean {
-  if (!dateString) return true;
-  const date = new Date(dateString);
-  return date instanceof Date && !isNaN(date.getTime());
-}
-
-async function reportingRoutes(fastify: FastifyInstance) {
-  // GET /api/v1/reporting/templates
   fastify.get('/templates', {
     preHandler: [authenticate, authorize('read:reports'), validatePagination],
     schema: {
@@ -23,7 +8,9 @@ async function reportingRoutes(fastify: FastifyInstance) {
           page: { type: 'integer', minimum: 1 },
           perPage: { type: 'integer', minimum: 1, maximum: 100 },
           reportType: { type: 'string' },
-          isPublic: { type: 'boolean' }
+          isPublic: { type: 'boolean' },
+          startDate: { type: 'string', format: 'date-time' },
+          endDate: { type: 'string', format: 'date-time' }
         }
       },
       response: {
@@ -79,4 +66,3 @@ async function reportingRoutes(fastify: FastifyInstance) {
       perPage: pagination.perPage
     };
   });
-}
