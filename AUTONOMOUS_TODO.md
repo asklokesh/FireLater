@@ -4,7 +4,7 @@
 - [x] REFACTOR: Duplicate rate limiting configuration across /login, /register, and /reset-password routes should be abstracted into shared middleware - backend/src/routes/auth.ts
 - [x] TEST: No unit tests for critical auth routes including registration and password reset - backend/src/routes/auth.test.ts
 - [x] PERF: No database connection pooling configuration shown for PostgreSQL - backend/src/config/database.ts
-- [ ] BUG: Missing input validation for tenantSlug in login route allows potential injection attacks - backend/src/routes/auth.ts
+- [x] BUG: Missing input validation for tenantSlug in login route allows potential injection attacks - backend/src/routes/auth.ts
 - [ ] SECURITY: Rate limiting key generation uses `req.socket.remoteAddress` which can be spoofed; should use `request.ip` or `request.headers['x-forwarded-for']` - backend/src/routes/auth.ts
 - [x] REFACTOR: Workflow route has duplicated business logic that should be extracted to shared services (`backend/src/routes/workflow.ts`)
 - [x] STABILITY: Oncall schedule rotation logic doesn't handle timezone transitions properly (`backend/src/routes/oncall.ts`)
@@ -30,6 +30,7 @@
 ## Completed
 
 ## Session Log
+- [2025-12-31 02:22] Completed: BUG: Missing input validation for tenantSlug in login route allows potential injection attacks - backend/src/routes/auth.ts
 - [2025-12-31 02:22] Completed: PERF: No database connection pooling configuration shown for PostgreSQL - backend/src/config/database.ts
 - [2025-12-31 02:21] Completed: TEST: No unit tests for critical auth routes including registration and password reset - backend/src/routes/auth.test.ts
 - [2025-12-31 02:21] Completed: REFACTOR: Duplicate rate limiting configuration across /login, /register, and /reset-password routes should be abstracted into shared middleware - backend/src/routes/auth.ts
