@@ -1,38 +1,86 @@
-// Add validation for approval workflow edge cases
-function validateApprovalRequest(request: FastifyRequest): void {
-  const { action, comment } = request.body as { action: string; comment?: string };
+// Add validation for workflow state transitions
+fastify.post('/transitions', {
+  schema: {
+    body: {
+      type: 'object',
+      required: ['workflowId', 'requestId', 'fromState', 'toState'],
+      properties: {
+        workflowId: { type: 'string', format: 'uuid' },
+        requestId: { type: 'string', format: 'uuid' },
+        fromState: { type: 'string' },
+        toState: { type: 'string' },
+        userId: { type: 'string', format: 'uuid' },
+        comment: { type: 'string' }
+      }
+    }
+  },
+  preHandler: [authMiddleware, tenantMiddleware]
+}, async (request, reply) => {
+  const { workflowId, requestId, fromState, toState, userId, comment } = request.body as {
+    workflowId: string;
+    requestId: string;
+    fromState: string;
+    toState: string;
+    userId?: string;
+    comment?: string;
+  };
   
-  if (!action) {
-    throw new BadRequestError('Approval action is required');
+  const { tenantSlug } = request;
+  
+  // Validate that fromState and toState are different
+  if (fromState === toState) {
+    throw new BadRequestError('fromState and toState must be different');
   }
   
-  if (!['approve', 'reject', 'cancel'].includes(action)) {
-    throw new BadRequestError('Invalid approval action. Must be approve, reject, or cancel');
+  // Validate workflow exists and belongs to tenant
+  const workflow = await workflowService.getById(tenantSlug, workflowId);
+  if (!workflow) {
+    throw new NotFoundError('Workflow not found');
   }
   
-  if (comment && comment.length > 1000) {
-    throw new BadRequestError('Comment must be less than 1000 characters');
+  // Validate request exists and belongs to tenant
+  const req = await requestService.getById(tenantSlug, requestId);
+  if (!req) {
+    throw new NotFoundError('Request not found');
   }
-}
-
-// In the approval route handler, add edge case validations:
-// Check if workflow exists and is active
-const workflow = await workflowService.getById(tenantSlug, workflowId);
-if (!workflow) {
-  throw new NotFoundError('Workflow not found');
-}
-
-if (!workflow.isActive) {
-  throw new BadRequestError('Cannot approve inactive workflow');
-}
-
-// Check if user has permission to approve this workflow
-const hasPermission = await workflowService.canUserApprove(tenantSlug, workflowId, request.user.id);
-if (!hasPermission) {
-  throw new ForbiddenError('User does not have permission to approve this workflow');
-}
-
-// Check if workflow is in approvable state
-if (workflow.status !== 'pending_approval') {
-  throw new BadRequestError(`Workflow is in ${workflow.status} state and cannot be approved`);
-}
+  
+  // Validate that the transition is allowed by workflow definition
+  const isValidTransition = await workflowService.validateStateTransition(
+    tenantSlug,
+    workflowId,
+    fromState,
+    toState
+  );
+  
+  if (!isValidTransition) {
+    throw new BadRequestError(`Invalid state transition from ${fromState} to ${toState}`);
+  }
+  
+  // Check user permissions for this transition
+  if (userId) {
+    const hasPermission = await workflowService.canUserTransition(
+      tenantSlug,
+      workflowId,
+      userId,
+      fromState,
+      toState
+    );
+    
+    if (!hasPermission) {
+      throw new ForbiddenError('User does not have permission to perform this transition');
+    }
+  }
+  
+  // Execute the state transition
+  const result = await workflowService.executeTransition(
+    tenantSlug,
+    workflowId,
+    requestId,
+    fromState,
+    toState,
+    userId,
+    comment
+  );
+  
+  return result;
+});
