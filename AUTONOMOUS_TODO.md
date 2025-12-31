@@ -1,11 +1,16 @@
 # FireLater Autonomous Development
 
 ## Priority Queue
+- [x] STABILITY: Oncall rotation updates don't handle timezone transitions during DST changes; file: `backend/src/routes/oncall.ts`
+- [ ] TEST: No integration tests for workflow approval chains or escalation logic; file: `backend/src/routes/workflow.ts`
+- [ ] PERF: Knowledge base search queries lack indexing on title/content fields; file: `backend/src/routes/knowledge.ts`
+- [ ] BUG: Missing input validation on reporting route parameters causing potential injection; file: `backend/src/routes/reporting.ts`
+- [ ] SECURITY: Hardcoded salt rounds in auth route handler should use config value; file: `backend/src/routes/auth.test.ts`
 - [x] STABILITY: Redis connection not properly closed in notifications service; file: backend/src/routes/notifications.ts
 - [x] TEST: No unit tests for workflow state transitions; file: backend/src/routes/workflow.ts
 - [x] PERF: N+1 query issue in knowledge base category loading; file: backend/src/routes/knowledge.ts
 - [x] BUG: Missing input validation on reporting route parameters; file: backend/src/routes/reporting.ts
-- [ ] SECURITY: Hardcoded salt rounds in auth route should use config value; file: backend/src/routes/auth.test.ts
+- [x] SECURITY: Hardcoded salt rounds in auth route should use config value; file: backend/src/routes/auth.test.ts
 - [x] STABILITY: BullMQ job retry configuration missing for critical background tasks; file: `backend/src/routes/notifications.ts`
 - [x] TEST: No unit tests for workflow route business logic or error cases; file: `backend/src/routes/workflow.ts`
 - [x] PERF: N+1 query issue in knowledge base article loading without proper joins; file: `backend/src/routes/knowledge.ts`
@@ -360,6 +365,8 @@
 ## Completed
 
 ## Session Log
+- [2025-12-31 06:57] Completed: STABILITY: Oncall rotation updates don't handle timezone transitions during DST changes; file: `backend/src/routes/oncall.ts`
+- [2025-12-31 06:56] Completed: SECURITY: Hardcoded salt rounds in auth route should use config value; file: backend/src/routes/auth.test.ts
 - [2025-12-31 06:56] Completed: BUG: Missing input validation on reporting route parameters; file: backend/src/routes/reporting.ts
 - [2025-12-31 06:56] Completed: PERF: N+1 query issue in knowledge base category loading; file: backend/src/routes/knowledge.ts
 - [2025-12-31 06:56] Completed: TEST: No unit tests for workflow state transitions; file: backend/src/routes/workflow.ts
