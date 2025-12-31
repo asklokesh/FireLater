@@ -2,9 +2,9 @@
 
 ## Priority Queue
 - [x] STABILITY: Error handling missing for external API calls in integrations routes; file: `backend/src/routes/integrations.ts`
-- [ ] TEST: No unit tests for on-call scheduling logic; file: `backend/src/routes/oncall.ts`
-- [ ] PERF: N+1 query issue when fetching nested workflow steps in workflow routes; file: `backend/src/routes/workflow.ts`
-- [ ] BUG: Missing input validation for critical parameters in reporting routes; file: `backend/src/routes/reporting.ts`
+- [x] TEST: No unit tests for on-call scheduling logic; file: `backend/src/routes/oncall.ts`
+- [x] PERF: N+1 query issue when fetching nested workflow steps in workflow routes; file: `backend/src/routes/workflow.ts`
+- [x] BUG: Missing input validation for critical parameters in reporting routes; file: `backend/src/routes/reporting.ts`
 - [ ] SECURITY: Hardcoded salt rounds in auth route handler should use config value; file: `backend/src/routes/auth.test.ts`
 - [x] REFACTOR: Duplicate code for tenant context initialization across routes; files: `backend/src/routes/oncall.ts`, `backend/src/routes/requests.ts`
 - [x] STABILITY: Error handling missing for external API calls in integrations route; file: `backend/src/routes/integrations.ts`
@@ -300,6 +300,9 @@
 ## Completed
 
 ## Session Log
+- [2025-12-31 06:11] Completed: BUG: Missing input validation for critical parameters in reporting routes; file: `backend/src/routes/reporting.ts`
+- [2025-12-31 06:10] Completed: PERF: N+1 query issue when fetching nested workflow steps in workflow routes; file: `backend/src/routes/workflow.ts`
+- [2025-12-31 06:10] Completed: TEST: No unit tests for on-call scheduling logic; file: `backend/src/routes/oncall.ts`
 - [2025-12-31 06:10] Completed: STABILITY: Error handling missing for external API calls in integrations routes; file: `backend/src/routes/integrations.ts`
 - [2025-12-31 06:09] Completed: SECURITY: Hardcoded salt rounds in auth route should use config value; file: `backend/src/routes/auth.test.ts`
 - [2025-12-31 06:09] Completed: PERF: Missing database indexing on frequently queried columns in reporting routes; file: `backend/src/routes/reporting.ts`

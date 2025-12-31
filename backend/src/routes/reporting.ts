@@ -14,10 +14,19 @@ export default async function reportingRoutes(fastify: FastifyInstance) {
         type: 'object',
         properties: {
           templateId: { type: 'string', pattern: '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$' },
-          parameters: { type: 'object' },
+          parameters: { 
+            type: 'object',
+            additionalProperties: true,
+            properties: {
+              startDate: { type: 'string', format: 'date-time' },
+              endDate: { type: 'string', format: 'date-time' },
+              tenantId: { type: 'string', pattern: '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$' }
+            }
+          },
           format: { type: 'string', enum: ['pdf', 'csv', 'json'] }
         },
-        required: ['templateId', 'format']
+        required: ['templateId', 'format'],
+        additionalProperties: false
       }
     })],
     handler: async (request, reply) => {
