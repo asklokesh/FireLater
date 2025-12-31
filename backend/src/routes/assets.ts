@@ -1,14 +1,32 @@
-// In the route handler where assets are fetched, modify the query to include health scores via JOIN
-// Replace separate health score queries with a single JOIN query
-const assetsQuery = `
-  SELECT 
-    a.*,
-    h.score as health_score,
-    h.last_checked as health_last_checked,
-    h.status as health_status
-  FROM ${schema}.assets a
-  LEFT JOIN ${schema}.asset_health_scores h ON a.id = h.asset_id
-  WHERE a.tenant_id = $1
-  ORDER BY a.created_at DESC
-  LIMIT $2 OFFSET $3
-`;
+fastify.get('/health-scores', {
+  preHandler: [authenticateTenant],
+  schema: {
+    tags: ['Assets'],
+    response: {
+      200: {
+        type: 'array',
+        items: {
+          type: 'object',
+          properties: {
+            id: { type: 'string' },
+            name: { type: 'string' },
+            healthScore: { type: 'number' },
+            lastChecked: { type: 'string', format: 'date-time' }
+          }
+        }
+      }
+    }
+  }
+}, async (request: FastifyRequest, reply) => {
+  const { tenantSlug } = request;
+  
+  // Replace individual health score fetching with single query using JOINs
+  const assetsWithHealth = await assetsService.getAssetsWithHealthScores(tenantSlug);
+  
+  return assetsWithHealth.map(asset => ({
+    id: asset.id,
+    name: asset.name,
+    healthScore: asset.health_score,
+    lastChecked: asset.last_checked
+  }));
+});
