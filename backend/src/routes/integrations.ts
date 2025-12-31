@@ -28,8 +28,14 @@ fastify.post('/webhooks/:provider', {
       });
     }
     
-    // Process webhook
-    await webhooksService.process(tenant.slug, provider, payload);
+    // Process webhook with retry configuration
+    await webhooksService.process(tenant.slug, provider, payload, {
+      attempts: 3,
+      backoff: {
+        type: 'exponential',
+        delay: 1000
+      }
+    });
     
     return reply.code(200).send({ message: 'Webhook processed successfully' });
   } catch (error: any) {
