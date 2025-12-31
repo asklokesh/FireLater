@@ -16,15 +16,8 @@ fastify.post('/register', {
     companyName: string;
   };
 
-  // Remove manual sanitization - now handled by global hook
-  const sanitizedEmail = email.toLowerCase();
-  const sanitizedPassword = password; // Don't sanitize passwords
-  const sanitizedFirstName = firstName.substring(0, 50);
-  const sanitizedLastName = lastName.substring(0, 50);
-  const sanitizedCompanyName = companyName.substring(0, 100);
-
   // Hash password before storage
-  const hashedPassword = await bcrypt.hash(sanitizedPassword, 12);
+  const hashedPassword = await bcrypt.hash(password, 12);
 
   // Continue with registration logic using hashedPassword...
 });
