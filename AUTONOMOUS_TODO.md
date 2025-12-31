@@ -1,6 +1,11 @@
 # FireLater Autonomous Development
 
 ## Priority Queue
+- [x] REFACTOR: Duplicate rate limiting configuration across /login, /register, and /reset-password routes should be abstracted into shared middleware - backend/src/routes/auth.ts
+- [ ] TEST: No unit tests for critical auth routes including registration and password reset - backend/src/routes/auth.test.ts
+- [ ] PERF: No database connection pooling configuration shown for PostgreSQL - backend/src/config/database.ts
+- [ ] BUG: Missing input validation for tenantSlug in login route allows potential injection attacks - backend/src/routes/auth.ts
+- [ ] SECURITY: Rate limiting key generation uses `req.socket.remoteAddress` which can be spoofed; should use `request.ip` or `request.headers['x-forwarded-for']` - backend/src/routes/auth.ts
 - [x] REFACTOR: Workflow route has duplicated business logic that should be extracted to shared services (`backend/src/routes/workflow.ts`)
 - [x] STABILITY: Oncall schedule rotation logic doesn't handle timezone transitions properly (`backend/src/routes/oncall.ts`)
 - [x] PERF: Knowledge base search queries lack proper indexing strategy and pagination (`backend/src/routes/knowledge.ts`)
@@ -25,6 +30,7 @@
 ## Completed
 
 ## Session Log
+- [2025-12-31 02:21] Completed: REFACTOR: Duplicate rate limiting configuration across /login, /register, and /reset-password routes should be abstracted into shared middleware - backend/src/routes/auth.ts
 - [2025-12-31 02:20] Completed: SECURITY: Rate limiting key generators are vulnerable to IP spoofing via headers like X-Forwarded-For in auth routes (`backend/src/routes/auth.ts`)
 - [2025-12-31 02:20] Completed: BUG: Missing input validation for critical parameters in reporting routes may cause SQL injection (`backend/src/routes/reporting.ts`)
 - [2025-12-31 02:20] Completed: PERF: Knowledge base search queries lack proper indexing strategy and pagination (`backend/src/routes/knowledge.ts`)
