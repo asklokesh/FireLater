@@ -4,7 +4,7 @@
 - [x] STABILITY: Error handling missing for external API calls in integrations route; file: `backend/src/routes/integrations.ts`
 - [x] TEST: No unit tests for workflow route business logic; file: `backend/src/routes/workflow.ts`
 - [x] PERF: N+1 query issue when fetching related assets in knowledge base; file: `backend/src/routes/knowledge.ts`
-- [ ] BUG: Missing input validation for required fields in reporting routes; file: `backend/src/routes/reporting.ts`
+- [x] BUG: Missing input validation for required fields in reporting routes; file: `backend/src/routes/reporting.ts`
 - [ ] SECURITY: Hardcoded salt rounds in auth route handler should use config value; file: `backend/src/routes/auth.test.ts`
 - [x] STABILITY: Missing error handling for Redis connection failures in on-call scheduling - backend/src/routes/oncall.ts
 - [x] TEST: No integration tests for webhook handling in integrations route - backend/src/routes/integrations.ts
@@ -555,6 +555,7 @@
 ## Completed
 
 ## Session Log
+- [2025-12-31 08:59] Completed: BUG: Missing input validation for required fields in reporting routes; file: `backend/src/routes/reporting.ts`
 - [2025-12-31 08:59] Completed: PERF: N+1 query issue when fetching related assets in knowledge base; file: `backend/src/routes/knowledge.ts`
 - [2025-12-31 08:58] Completed: TEST: No unit tests for workflow route business logic; file: `backend/src/routes/workflow.ts`
 - [2025-12-31 08:58] Completed: STABILITY: Error handling missing for external API calls in integrations route; file: `backend/src/routes/integrations.ts`

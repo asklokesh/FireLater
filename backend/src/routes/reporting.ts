@@ -52,12 +52,12 @@ fastify.post('/generate', {
     filters?: Record<string, unknown>;
   };
   
-  // Validate required fields
+  // Validate required fields (handled by schema, but keeping for safety)
   if (!reportType) {
     throw new BadRequestError('reportType is required');
   }
   
-  // Validate reportType is one of allowed values
+  // Validate reportType is one of allowed values (handled by schema, but keeping for safety)
   const allowedReportTypes = ['incident-summary', 'service-availability', 'change-history', 'oncall-coverage'];
   if (!allowedReportTypes.includes(reportType)) {
     throw new BadRequestError('Invalid reportType');
