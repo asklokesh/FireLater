@@ -3,8 +3,8 @@
 ## Priority Queue
 - [x] STABILITY: Missing error handling for Redis connection failures in notification service initialization in `backend/src/routes/notifications.ts`
 - [x] TEST: No integration tests for workflow approval chains in `backend/src/routes/workflow.ts` leaving critical business logic untested
-- [ ] PERF: N+1 query issue in on-call schedule retrieval without proper JOIN optimization in `backend/src/routes/oncall.ts`
-- [ ] BUG: Missing input validation for required fields in service catalog builder endpoints in `backend/src/routes/requests.ts` allowing invalid data submission
+- [x] PERF: N+1 query issue in on-call schedule retrieval without proper JOIN optimization in `backend/src/routes/oncall.ts`
+- [x] BUG: Missing input validation for required fields in service catalog builder endpoints in `backend/src/routes/requests.ts` allowing invalid data submission
 - [ ] SECURITY: Hardcoded salt rounds in auth route should use config value from `backend/src/config/index.ts` instead of hardcoded `10` in `backend/src/routes/auth.test.ts`
 - [x] STABILITY: `backend/src/routes/notifications.ts` doesn't implement proper retry logic for failed webhook deliveries
 - [x] TEST: `backend/src/routes/workflow.ts` lacks unit tests for approval workflow logic
@@ -315,6 +315,8 @@
 ## Completed
 
 ## Session Log
+- [2025-12-31 06:16] Completed: BUG: Missing input validation for required fields in service catalog builder endpoints in `backend/src/routes/requests.ts` allowing invalid data submission
+- [2025-12-31 06:16] Completed: PERF: N+1 query issue in on-call schedule retrieval without proper JOIN optimization in `backend/src/routes/oncall.ts`
 - [2025-12-31 06:16] Completed: TEST: No integration tests for workflow approval chains in `backend/src/routes/workflow.ts` leaving critical business logic untested
 - [2025-12-31 06:15] Completed: STABILITY: Missing error handling for Redis connection failures in notification service initialization in `backend/src/routes/notifications.ts`
 - [2025-12-31 06:15] Completed: SECURITY: Hardcoded salt rounds in `backend/src/routes/auth.test.ts` should use config instead of hardcoded value
