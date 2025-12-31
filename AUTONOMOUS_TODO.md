@@ -1,6 +1,11 @@
 # FireLater Autonomous Development
 
 ## Priority Queue
+- [x] STABILITY: Redis connection handling in `backend/src/routes/notifications.ts` lacks proper retry logic and fails silently, leading to missed alert deliveries
+- [ ] TEST: No integration tests for on-call rotation logic in `backend/src/routes/oncall.ts`; critical scheduling bugs could go undetected during deployment
+- [ ] PERF: N+1 query problem in `backend/src/routes/reporting.ts` when fetching asset health scores causes severe performance degradation with >1000 assets
+- [ ] BUG: Missing input validation for service catalog builder in `backend/src/routes/requests.ts` allows malformed workflow configurations that crash the drag-and-drop interface
+- [ ] SECURITY: Insecure CIDR sanitization in `backend/src/routes/auth.test.ts` uses string escaping instead of proper validation; replace with `ipaddr.js` or similar library for robust IP range validation
 - [x] STABILITY: `backend/src/routes/notifications.ts` doesn't implement proper retry logic or dead-letter queue for failed webhook deliveries
 - [x] TEST: `backend/src/routes/workflow.ts` lacks unit tests for approval chain logic, particularly edge cases with circular dependencies
 - [x] PERF: `backend/src/routes/assets.ts` makes sequential database calls for health scoring instead of batched queries, causing N+1 performance issues
@@ -80,6 +85,7 @@
 ## Completed
 
 ## Session Log
+- [2025-12-31 03:13] Completed: STABILITY: Redis connection handling in `backend/src/routes/notifications.ts` lacks proper retry logic and fails silently, leading to missed alert deliveries
 - [2025-12-31 03:12] Completed: SECURITY: CIDR sanitization regex in `backend/src/routes/auth.test.ts` may not fully prevent log injection; replace with explicit allowlist or proper escaping
 - [2025-12-31 03:12] Completed: BUG: Missing input validation in `backend/src/routes/reporting.ts` for date range parameters could cause SQL errors or excessive resource usage
 - [2025-12-31 03:12] Completed: PERF: `backend/src/routes/assets.ts` makes sequential database calls for health scoring instead of batched queries, causing N+1 performance issues

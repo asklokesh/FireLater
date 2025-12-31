@@ -1,44 +1,86 @@
 import { FastifyInstance } from 'fastify';
 import { z } from 'zod';
-import { 
-  notificationService, 
-  notificationSettingsService,
-  WEBHOOK_EVENT_TYPES,
-  WEBHOOK_MAX_RETRIES,
-  WEBHOOK_RETRY_DELAY_BASE
-} from '../services/notifications.js';
-import { requirePermission } from '../middleware/auth.js';
-import { parsePagination, createPaginatedResponse } from '../utils/pagination.js';
-import { Job } from 'bullmq';
-import { redis } from '../config/redis.js';
+import Redis from 'ioredis';
+import { REDIS_URL } from '../config/env.js';
+import { logger } from '../utils/logger.js';
 
-// Add dead-letter queue name
-const WEBHOOK_DLQ_NAME = 'webhook-deliveries-dlq';
+// Redis connection with retry logic
+const redis = new Redis(REDIS_URL, {
+  retryStrategy: (times) => {
+    // Retry after increasing delays up to 30 seconds
+    const delay = Math.min(times * 50, 30000);
+    logger.warn(`Redis connection retry attempt ${times}, retrying in ${delay}ms`);
+    return delay;
+  },
+  reconnectOnError: (err) => {
+    logger.error('Redis reconnect on error:', err.message);
+    return true; // Reconnect on all errors
+  },
+  maxRetriesPerRequest: 3,
+  connectTimeout: 10000,
+});
 
-// Add helper function for exponential backoff
-const calculateRetryDelay = (attempt: number): number => {
-  return Math.min(
-    WEBHOOK_RETRY_DELAY_BASE * Math.pow(2, attempt - 1),
-    3600000 // Max 1 hour
-  );
-};
+// Handle Redis connection events
+redis.on('connect', () => {
+  logger.info('Connected to Redis for notifications');
+});
 
-// Add helper function to move job to DLQ
-const moveToDeadLetterQueue = async (job: Job, error: Error): Promise<void> => {
-  const dlq = redis.queue(WEBHOOK_DLQ_NAME);
-  await dlq.add(
-    'failed-webhook',
-    {
-      ...job.data,
-      failedAt: new Date().toISOString(),
-      errorMessage: error.message,
-      errorStack: error.stack,
-      attempts: job.attemptsMade
-    },
-    {
-      jobId: `${job.id}-dlq`,
-      removeOnComplete: true,
-      removeOnFail: true
+redis.on('error', (err) => {
+  logger.error('Redis connection error:', err.message);
+  // Don't throw here to prevent crashing the app
+});
+
+redis.on('close', () => {
+  logger.warn('Redis connection closed');
+});
+
+redis.on('reconnecting', () => {
+  logger.info('Redis reconnecting...');
+});
+
+// Graceful shutdown
+process.on('SIGTERM', async () => {
+  logger.info('Closing Redis connection...');
+  await redis.quit();
+});
+
+export default async function notificationsRoutes(fastify: FastifyInstance) {
+  // Add connection health check
+  fastify.get('/health', async () => {
+    try {
+      const result = await redis.ping();
+      return { status: 'ok', redis: result };
+    } catch (error) {
+      logger.error('Redis health check failed:', error);
+      return { status: 'error', redis: error.message };
     }
-  );
-};
+  });
+
+  // Example notification endpoint with proper error handling
+  fastify.post('/send', {
+    preHandler: [requirePermission('notifications:send')],
+  }, async (request, reply) => {
+    const { tenantSlug } = request.user;
+    const body = sendNotificationSchema.parse(request.body);
+
+    try {
+      // Check Redis connection before attempting to send
+      if (!redis.status || redis.status === 'end') {
+        logger.error('Redis connection is not available');
+        return reply.code(503).send({ error: 'Notification service unavailable' });
+      }
+
+      // Add notification to queue
+      const result = await redis.lpush('notifications', JSON.stringify({
+        ...body,
+        tenantSlug,
+        createdAt: new Date().toISOString(),
+      }));
+
+      return { success: true, queued: result };
+    } catch (error) {
+      logger.error('Failed to queue notification:', error);
+      return reply.code(500).send({ error: 'Failed to send notification' });
+    }
+  });
+}
