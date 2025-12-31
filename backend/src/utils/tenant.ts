@@ -1,8 +1,11 @@
-import { FastifyRequest } from 'fastify';
-
-export function getTenantSlug(request: FastifyRequest): string {
-  if (!request.tenantSlug) {
-    throw new Error('Tenant slug not found in request');
+// Add new utility function:
+export async function getTenantSchema(request: FastifyRequest, tenantSlug: string) {
+  const tenant = await tenantService.getBySlug(tenantSlug);
+  if (!tenant) {
+    throw request.server.httpErrors.notFound('Tenant not found');
   }
-  return request.tenantSlug;
+  if (tenant.slug !== request.user.tenant) {
+    throw request.server.httpErrors.forbidden('Access denied');
+  }
+  return tenant;
 }
