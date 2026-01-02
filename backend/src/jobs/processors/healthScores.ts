@@ -359,14 +359,22 @@ export async function scheduleHealthScoreCalculation(): Promise<number> {
   let queuedCount = 0;
 
   for (const tenant of tenantsResult.rows) {
-    await healthScoreQueue.add(
-      'calculate-all',
-      { tenantSlug: tenant.slug },
-      {
-        jobId: `health-all-${tenant.slug}-${Date.now()}`,
-      }
-    );
-    queuedCount++;
+    try {
+      await healthScoreQueue.add(
+        'calculate-all',
+        { tenantSlug: tenant.slug },
+        {
+          jobId: `health-all-${tenant.slug}-${Date.now()}`,
+        }
+      );
+      queuedCount++;
+    } catch (queueError) {
+      logger.error(
+        { err: queueError, tenantSlug: tenant.slug },
+        'Failed to schedule health score calculation due to Redis error'
+      );
+      // Continue with other tenants even if one fails
+    }
   }
 
   logger.info({ count: queuedCount }, 'Scheduled health score calculations');

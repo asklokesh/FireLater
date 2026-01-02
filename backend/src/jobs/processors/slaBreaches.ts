@@ -209,30 +209,38 @@ async function queueBreachNotifications(
       recipientIds.push(notifyInfo.managerId);
     }
 
-    await notificationQueue.add(
-      'sla-breach',
-      {
-        tenantSlug,
-        type: 'sla_breach',
-        recipientIds: recipientIds.length > 0 ? recipientIds : undefined,
-        issueId: breach.issueId,
-        issueNumber: breach.issueNumber,
-        priority: breach.priority,
-        breachType: breach.breachType,
-        breachedAt: breach.breachedAt.toISOString(),
-        data: {
+    try {
+      await notificationQueue.add(
+        'sla-breach',
+        {
+          tenantSlug,
+          type: 'sla_breach',
+          recipientIds: recipientIds.length > 0 ? recipientIds : undefined,
           issueId: breach.issueId,
           issueNumber: breach.issueNumber,
           priority: breach.priority,
           breachType: breach.breachType,
           breachedAt: breach.breachedAt.toISOString(),
+          data: {
+            issueId: breach.issueId,
+            issueNumber: breach.issueNumber,
+            priority: breach.priority,
+            breachType: breach.breachType,
+            breachedAt: breach.breachedAt.toISOString(),
+          },
         },
-      },
-      {
-        jobId: `sla-breach-${breach.issueId}-${breach.breachType}`,
-        priority: breach.priority === 'critical' ? 1 : 2,
-      }
-    );
+        {
+          jobId: `sla-breach-${breach.issueId}-${breach.breachType}`,
+          priority: breach.priority === 'critical' ? 1 : 2,
+        }
+      );
+    } catch (queueError) {
+      logger.error(
+        { err: queueError, tenantSlug, issueId: breach.issueId, breachType: breach.breachType },
+        'Failed to queue SLA breach notification due to Redis error'
+      );
+      // Continue with other breaches even if one fails
+    }
   }
 }
 
@@ -330,14 +338,22 @@ export async function scheduleSlaBreachChecks(): Promise<number> {
   let queuedCount = 0;
 
   for (const tenant of tenantsResult.rows) {
-    await slaBreachQueue.add(
-      'check-breaches',
-      { tenantSlug: tenant.slug },
-      {
-        jobId: `sla-check-${tenant.slug}-${Date.now()}`,
-      }
-    );
-    queuedCount++;
+    try {
+      await slaBreachQueue.add(
+        'check-breaches',
+        { tenantSlug: tenant.slug },
+        {
+          jobId: `sla-check-${tenant.slug}-${Date.now()}`,
+        }
+      );
+      queuedCount++;
+    } catch (queueError) {
+      logger.error(
+        { err: queueError, tenantSlug: tenant.slug },
+        'Failed to schedule SLA breach check due to Redis error'
+      );
+      // Continue with other tenants even if one fails
+    }
   }
 
   logger.info({ count: queuedCount }, 'Scheduled SLA breach checks');

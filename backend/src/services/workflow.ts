@@ -572,17 +572,25 @@ export async function executeWorkflowAction(
         // Queue notification for each recipient
         const { notificationQueue } = await import('../jobs/queues.js');
         for (const recipientId of recipientIds) {
-          await notificationQueue.add('send-notification', {
-            tenantSlug,
-            type: 'workflow_notification',
-            recipientIds: [recipientId],
-            data: {
-              entityType,
-              entityId,
-              message,
-              subject: `Workflow Notification: ${entityType}`,
-            },
-          });
+          try {
+            await notificationQueue.add('send-notification', {
+              tenantSlug,
+              type: 'workflow_notification',
+              recipientIds: [recipientId],
+              data: {
+                entityType,
+                entityId,
+                message,
+                subject: `Workflow Notification: ${entityType}`,
+              },
+            });
+          } catch (queueError) {
+            logger.error(
+              { err: queueError, tenantSlug, recipientId, entityType, entityId },
+              'Failed to queue workflow notification due to Redis error'
+            );
+            // Continue with other recipients even if one fails
+          }
         }
         break;
       }

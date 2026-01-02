@@ -199,18 +199,26 @@ export async function scheduleCleanup(): Promise<number> {
   let queuedCount = 0;
 
   for (const tenant of tenantsResult.rows) {
-    await cleanupQueue.add(
-      'run-cleanup',
-      {
-        tenantSlug: tenant.slug,
-        cleanupType: 'all',
-        retentionDays: 90,
-      },
-      {
-        jobId: `cleanup-${tenant.slug}-${Date.now()}`,
-      }
-    );
-    queuedCount++;
+    try {
+      await cleanupQueue.add(
+        'run-cleanup',
+        {
+          tenantSlug: tenant.slug,
+          cleanupType: 'all',
+          retentionDays: 90,
+        },
+        {
+          jobId: `cleanup-${tenant.slug}-${Date.now()}`,
+        }
+      );
+      queuedCount++;
+    } catch (queueError) {
+      logger.error(
+        { err: queueError, tenantSlug: tenant.slug },
+        'Failed to schedule cleanup job due to Redis error'
+      );
+      // Continue with other tenants even if one fails
+    }
   }
 
   logger.info({ count: queuedCount }, 'Scheduled cleanup jobs');

@@ -157,17 +157,25 @@ export async function queueDueScheduledReports(): Promise<number> {
     const dueReports = await scheduledReportService.getDueReports(tenantSlug);
 
     for (const report of dueReports) {
-      await scheduledReportsQueue.add(
-        'execute-scheduled',
-        {
-          scheduledReportId: report.id,
-          tenantSlug,
-        },
-        {
-          jobId: `scheduled-${report.id}-${Date.now()}`,
-        }
-      );
-      queuedCount++;
+      try {
+        await scheduledReportsQueue.add(
+          'execute-scheduled',
+          {
+            scheduledReportId: report.id,
+            tenantSlug,
+          },
+          {
+            jobId: `scheduled-${report.id}-${Date.now()}`,
+          }
+        );
+        queuedCount++;
+      } catch (queueError) {
+        logger.error(
+          { err: queueError, tenantSlug, reportId: report.id },
+          'Failed to queue scheduled report due to Redis error'
+        );
+        // Continue with other reports even if one fails
+      }
     }
   }
 
