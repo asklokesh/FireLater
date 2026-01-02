@@ -5,6 +5,7 @@ import { logger } from '../utils/logger.js';
 import type { PaginationParams } from '../types/index.js';
 import { getOffset } from '../utils/pagination.js';
 import { dashboardService } from './dashboard.js';
+import { sanitizeMarkdown } from '../utils/contentSanitization.js';
 
 type RequestStatus = 'submitted' | 'pending_approval' | 'approved' | 'rejected' | 'in_progress' | 'completed' | 'cancelled';
 
@@ -651,11 +652,14 @@ export class RequestService {
       throw new NotFoundError('Service request', requestId);
     }
 
+    // Sanitize comment content to prevent XSS attacks
+    const sanitizedContent = sanitizeMarkdown(content);
+
     const result = await pool.query(
       `INSERT INTO ${schema}.request_comments (request_id, user_id, content, is_internal)
        VALUES ($1, $2, $3, $4)
        RETURNING *`,
-      [request.id, userId, content, isInternal]
+      [request.id, userId, sanitizedContent, isInternal]
     );
 
     await pool.query(

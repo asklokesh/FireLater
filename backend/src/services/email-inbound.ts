@@ -1,5 +1,6 @@
 import { pool } from '../config/database.js';
 import { logger } from '../utils/logger.js';
+import { sanitizeHTML } from '../utils/contentSanitization.js';
 
 // ============================================
 // EMAIL-TO-TICKET SERVICE
@@ -356,10 +357,13 @@ async function addCommentToIssue(
 ): Promise<void> {
   const schema = `tenant_${tenantSlug.replace(/-/g, '_')}`;
 
+  // Sanitize email content to prevent XSS attacks
+  const sanitizedContent = sanitizeHTML(content);
+
   await pool.query(
     `INSERT INTO ${schema}.issue_comments (issue_id, user_id, content, is_internal, source)
      VALUES ($1, $2, $3, $4, 'email')`,
-    [issueId, userId || null, content, isInternal]
+    [issueId, userId || null, sanitizedContent, isInternal]
   );
 }
 

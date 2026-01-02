@@ -4,6 +4,7 @@ import { NotFoundError, BadRequestError } from '../utils/errors.js';
 import { logger } from '../utils/logger.js';
 import type { PaginationParams, ProblemStatus, ProblemType, ProblemPriority, IssueImpact, IssueUrgency } from '../types/index.js';
 import { getOffset } from '../utils/pagination.js';
+import { sanitizeMarkdown, sanitizePlainText } from '../utils/contentSanitization.js';
 
 interface CreateProblemParams {
   title: string;
@@ -255,6 +256,9 @@ export class ProblemService {
 
     const problemNumber = await this.generateProblemNumber(schema);
 
+    // Sanitize description to prevent XSS attacks
+    const sanitizedDescription = params.description ? sanitizeMarkdown(params.description) : null;
+
     const result = await pool.query(
       `INSERT INTO ${schema}.problems (
         problem_number, title, description, priority, impact, urgency,
@@ -265,7 +269,7 @@ export class ProblemService {
       [
         problemNumber,
         params.title,
-        params.description || null,
+        sanitizedDescription,
         params.priority || 'medium',
         params.impact || null,
         params.urgency || null,
@@ -303,7 +307,8 @@ export class ProblemService {
     }
     if (params.description !== undefined) {
       updates.push(`description = $${paramIndex++}`);
-      values.push(params.description);
+      // Sanitize description to prevent XSS attacks
+      values.push(sanitizeMarkdown(params.description));
     }
     if (params.priority !== undefined) {
       updates.push(`priority = $${paramIndex++}`);
@@ -335,7 +340,8 @@ export class ProblemService {
     }
     if (params.rootCause !== undefined) {
       updates.push(`root_cause = $${paramIndex++}`);
-      values.push(params.rootCause);
+      // Sanitize root cause to prevent XSS attacks
+      values.push(sanitizeMarkdown(params.rootCause));
       if (params.rootCause && !existing.root_cause) {
         updates.push(`root_cause_identified_at = NOW()`);
         updates.push(`root_cause_identified_by = $${paramIndex++}`);
@@ -344,7 +350,8 @@ export class ProblemService {
     }
     if (params.workaround !== undefined) {
       updates.push(`workaround = $${paramIndex++}`);
-      values.push(params.workaround);
+      // Sanitize workaround to prevent XSS attacks
+      values.push(sanitizeMarkdown(params.workaround));
       if (params.workaround) {
         updates.push(`has_workaround = true`);
         if (!existing.workaround_documented_at) {
@@ -354,7 +361,8 @@ export class ProblemService {
     }
     if (params.resolution !== undefined) {
       updates.push(`resolution = $${paramIndex++}`);
-      values.push(params.resolution);
+      // Sanitize resolution to prevent XSS attacks
+      values.push(sanitizeMarkdown(params.resolution));
     }
     if (params.resolutionCode !== undefined) {
       updates.push(`resolution_code = $${paramIndex++}`);
@@ -473,10 +481,13 @@ export class ProblemService {
 
     await this.getById(tenantSlug, problemId);
 
+    // Sanitize comment content to prevent XSS attacks
+    const sanitizedContent = sanitizeMarkdown(content);
+
     const result = await pool.query(
       `INSERT INTO ${schema}.problem_comments (problem_id, user_id, content, is_internal)
        VALUES ($1, $2, $3, $4) RETURNING id`,
-      [problemId, userId, content, isInternal]
+      [problemId, userId, sanitizedContent, isInternal]
     );
 
     await pool.query(
@@ -589,10 +600,13 @@ export class ProblemService {
 
     await this.getById(tenantSlug, problemId);
 
+    // Sanitize worklog description to prevent XSS attacks
+    const sanitizedDescription = sanitizePlainText(description);
+
     const result = await pool.query(
       `INSERT INTO ${schema}.problem_worklogs (problem_id, user_id, time_spent, description, work_type)
        VALUES ($1, $2, $3, $4, $5) RETURNING id`,
-      [problemId, userId, timeSpent, description, workType]
+      [problemId, userId, timeSpent, sanitizedDescription, workType]
     );
 
     return { id: result.rows[0].id };

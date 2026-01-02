@@ -5,6 +5,7 @@ import { logger } from '../utils/logger.js';
 import type { PaginationParams, IssuePriority, IssueStatus, IssueSeverity, IssueImpact, IssueUrgency, IssueType, IssueSource } from '../types/index.js';
 import { getOffset } from '../utils/pagination.js';
 import { dashboardService } from './dashboard.js';
+import { sanitizeMarkdown } from '../utils/contentSanitization.js';
 
 interface CreateIssueParams {
   title: string;
@@ -550,11 +551,14 @@ export class IssueService {
       throw new NotFoundError('Issue', issueId);
     }
 
+    // Sanitize comment content to prevent XSS attacks
+    const sanitizedContent = sanitizeMarkdown(content);
+
     const result = await pool.query(
       `INSERT INTO ${schema}.issue_comments (issue_id, user_id, content, is_internal)
        VALUES ($1, $2, $3, $4)
        RETURNING *`,
-      [issue.id, userId, content, isInternal]
+      [issue.id, userId, sanitizedContent, isInternal]
     );
 
     // Update issue updated_at

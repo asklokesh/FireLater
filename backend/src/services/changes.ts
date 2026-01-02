@@ -3,6 +3,7 @@ import { tenantService } from './tenant.js';
 import { NotFoundError, BadRequestError } from '../utils/errors.js';
 import { getOffset } from '../utils/pagination.js';
 import type { PaginationParams } from '../types/index.js';
+import { sanitizeMarkdown } from '../utils/contentSanitization.js';
 
 interface ChangeWindowFilters {
   type?: string;
@@ -1262,11 +1263,14 @@ class ChangeRequestService {
       throw new NotFoundError('Change request', changeId);
     }
 
+    // Sanitize comment content to prevent XSS attacks
+    const sanitizedContent = sanitizeMarkdown(content);
+
     const result = await pool.query(
       `INSERT INTO ${schema}.change_comments (change_id, user_id, content, is_internal)
        VALUES ($1, $2, $3, $4)
        RETURNING *`,
-      [change.id, userId, content, isInternal]
+      [change.id, userId, sanitizedContent, isInternal]
     );
 
     return result.rows[0];

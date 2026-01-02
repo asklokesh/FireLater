@@ -1,6 +1,7 @@
 import { pool } from '../config/database.js';
 import { tenantService } from './tenant.js';
 import { logger } from '../utils/logger.js';
+import { sanitizeMarkdown } from '../utils/contentSanitization.js';
 
 // ============================================
 // TYPES
@@ -560,10 +561,12 @@ export async function executeWorkflowAction(
         const { content, isInternal } = action.parameters as { content: string; isInternal?: boolean };
         const commentTable = getCommentTable(entityType);
         const foreignKey = getForeignKeyColumn(entityType);
+        // Sanitize comment content to prevent XSS attacks
+        const sanitizedContent = sanitizeMarkdown(content);
         await pool.query(`
           INSERT INTO ${schema}.${commentTable} (${foreignKey}, content, is_internal, is_system)
           VALUES ($1, $2, $3, true)
-        `, [entityId, content, isInternal ?? false]);
+        `, [entityId, sanitizedContent, isInternal ?? false]);
         break;
       }
 

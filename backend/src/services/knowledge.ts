@@ -4,6 +4,7 @@ import { NotFoundError, BadRequestError } from '../utils/errors.js';
 import { logger } from '../utils/logger.js';
 import type { PaginationParams } from '../types/index.js';
 import { getOffset } from '../utils/pagination.js';
+import { sanitizeMarkdown, ContentType } from '../utils/contentSanitization.js';
 
 interface CreateArticleParams {
   title: string;
@@ -294,6 +295,9 @@ class KnowledgeService {
   async createArticle(tenantSlug: string, params: CreateArticleParams) {
     const schema = tenantService.getSchemaName(tenantSlug);
 
+    // Sanitize content to prevent XSS attacks
+    const sanitizedContent = sanitizeMarkdown(params.content);
+
     // Get next article number
     const seqResult = await pool.query(
       `UPDATE ${schema}.id_sequences
@@ -320,7 +324,7 @@ class KnowledgeService {
         articleNumber,
         params.title,
         slug,
-        params.content,
+        sanitizedContent,
         params.summary || null,
         params.type || 'how_to',
         params.status || 'draft',
@@ -358,7 +362,8 @@ class KnowledgeService {
     if (params.content !== undefined) {
       paramCount++;
       updates.push(`content = $${paramCount}`);
-      values.push(params.content);
+      // Sanitize content to prevent XSS attacks
+      values.push(sanitizeMarkdown(params.content));
     }
 
     if (params.summary !== undefined) {
