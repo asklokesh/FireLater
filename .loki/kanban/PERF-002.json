@@ -2,14 +2,14 @@
   "id": "loki-PERF-002",
   "title": "[general] Task",
   "description": "{}",
-  "status": "doing",
+  "status": "done",
   "agent": "unassigned",
   "tags": [
     "general",
     "phase-bootstrap",
-    "priority-P0"
+    "priority-5"
   ],
-  "createdAt": "2026-01-02T21:00:28.191548Z",
+  "createdAt": "2026-01-02T21:04:52.566806Z",
   "metadata": {
     "lokiId": "PERF-002",
     "lokiPhase": "BOOTSTRAP",

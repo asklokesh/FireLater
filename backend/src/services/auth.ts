@@ -301,14 +301,25 @@ export class AuthService {
   }
 
   async cacheUserPermissions(userId: string, tenantSlug: string, permissions: string[]): Promise<void> {
-    const key = `permissions:${tenantSlug}:${userId}`;
-    await redis.setex(key, 300, JSON.stringify(permissions)); // 5 min cache
+    try {
+      const key = `permissions:${tenantSlug}:${userId}`;
+      await redis.setex(key, 300, JSON.stringify(permissions)); // 5 min cache
+    } catch (error) {
+      // Log but don't throw - cache is not critical
+      logger.warn({ error, userId, tenantSlug }, 'Failed to cache user permissions');
+    }
   }
 
   async getCachedPermissions(userId: string, tenantSlug: string): Promise<string[] | null> {
-    const key = `permissions:${tenantSlug}:${userId}`;
-    const cached = await redis.get(key);
-    return cached ? JSON.parse(cached) : null;
+    try {
+      const key = `permissions:${tenantSlug}:${userId}`;
+      const cached = await redis.get(key);
+      return cached ? JSON.parse(cached) : null;
+    } catch (error) {
+      // Log and return null - graceful degradation to DB lookup
+      logger.warn({ error, userId, tenantSlug }, 'Failed to get cached permissions');
+      return null;
+    }
   }
 
   async requestPasswordReset(tenantSlug: string, email: string): Promise<void> {
@@ -342,10 +353,15 @@ export class AuthService {
 
     // Store reset token in Redis
     const key = `password_reset:${tenantSlug}:${tokenHash}`;
-    await redis.setex(key, 3600, JSON.stringify({
-      userId: user.id,
-      email: user.email,
-    }));
+    try {
+      await redis.setex(key, 3600, JSON.stringify({
+        userId: user.id,
+        email: user.email,
+      }));
+    } catch (error) {
+      logger.error({ error, userId: user.id }, 'Failed to store password reset token in Redis');
+      throw new Error('Failed to initiate password reset. Please try again later.');
+    }
 
     // Send password reset email
     await emailService.sendPasswordResetEmail(user.email, user.name, resetToken, tenantSlug);
@@ -367,7 +383,14 @@ export class AuthService {
     const key = `password_reset:${tenantSlug}:${tokenHash}`;
 
     // Get token data from Redis
-    const tokenData = await redis.get(key);
+    let tokenData: string | null;
+    try {
+      tokenData = await redis.get(key);
+    } catch (error) {
+      logger.error({ error, tenantSlug }, 'Failed to retrieve password reset token from Redis');
+      throw new Error('Password reset service unavailable. Please try again later.');
+    }
+
     if (!tokenData) {
       throw new BadRequestError('Invalid or expired reset token');
     }
@@ -383,7 +406,12 @@ export class AuthService {
     );
 
     // Delete used token
-    await redis.del(key);
+    try {
+      await redis.del(key);
+    } catch (error) {
+      // Log but don't throw - password is already updated
+      logger.warn({ error, userId }, 'Failed to delete used password reset token from Redis');
+    }
 
     // Revoke all refresh tokens
     await this.revokeAllUserTokens(userId, schema);

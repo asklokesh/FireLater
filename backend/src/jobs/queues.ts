@@ -111,6 +111,10 @@ const createQueueEvents = (queueName: string): QueueEvents => {
     logger.warn({ jobId, queue: queueName }, 'Job stalled');
   });
 
+  events.on('error', (err) => {
+    logger.error({ err, queue: queueName }, 'Queue event error');
+  });
+
   return events;
 };
 
@@ -136,24 +140,38 @@ export interface QueueStatus {
 }
 
 export async function getQueueStatus(queue: Queue): Promise<QueueStatus> {
-  const [waiting, active, completed, failed, delayed, isPaused] = await Promise.all([
-    queue.getWaitingCount(),
-    queue.getActiveCount(),
-    queue.getCompletedCount(),
-    queue.getFailedCount(),
-    queue.getDelayedCount(),
-    queue.isPaused(),
-  ]);
+  try {
+    const [waiting, active, completed, failed, delayed, isPaused] = await Promise.all([
+      queue.getWaitingCount(),
+      queue.getActiveCount(),
+      queue.getCompletedCount(),
+      queue.getFailedCount(),
+      queue.getDelayedCount(),
+      queue.isPaused(),
+    ]);
 
-  return {
-    name: queue.name,
-    waiting,
-    active,
-    completed,
-    failed,
-    delayed,
-    paused: isPaused,
-  };
+    return {
+      name: queue.name,
+      waiting,
+      active,
+      completed,
+      failed,
+      delayed,
+      paused: isPaused,
+    };
+  } catch (error) {
+    logger.error({ error, queueName: queue.name }, 'Failed to get queue status - Redis unavailable');
+    // Return default status when Redis is unavailable
+    return {
+      name: queue.name,
+      waiting: -1,
+      active: -1,
+      completed: -1,
+      failed: -1,
+      delayed: -1,
+      paused: false,
+    };
+  }
 }
 
 export async function getAllQueuesStatus(): Promise<QueueStatus[]> {
