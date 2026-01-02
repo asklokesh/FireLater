@@ -518,6 +518,88 @@ export async function getAssetRelationships(
   };
 }
 
+/**
+ * Batch load asset relationships for multiple assets to avoid N+1 queries.
+ * This is critical for list views where relationships need to be shown.
+ *
+ * Instead of calling getAssetRelationships() N times for N assets,
+ * this function loads all relationships in 2 queries total.
+ *
+ * @param tenantSlug - Tenant identifier
+ * @param assetIds - Array of asset IDs to load relationships for
+ * @returns Map of assetId -> { parents, children }
+ */
+export async function batchGetAssetRelationships(
+  tenantSlug: string,
+  assetIds: string[]
+): Promise<Map<string, { parents: AssetRelationship[]; children: AssetRelationship[] }>> {
+  if (assetIds.length === 0) {
+    return new Map();
+  }
+
+  const schema = tenantService.getSchemaName(tenantSlug);
+
+  // Use WHERE IN to fetch all relationships in 2 queries instead of 2*N queries
+  const [parentsResult, childrenResult] = await Promise.all([
+    // Get all parent relationships (where our assets are children)
+    pool.query(`
+      SELECT
+        ar.id,
+        ar.parent_asset_id,
+        p.name as parent_asset_name,
+        ar.child_asset_id,
+        c.name as child_asset_name,
+        ar.relationship_type,
+        ar.created_at
+      FROM ${schema}.asset_relationships ar
+      JOIN ${schema}.assets p ON ar.parent_asset_id = p.id
+      JOIN ${schema}.assets c ON ar.child_asset_id = c.id
+      WHERE ar.child_asset_id = ANY($1::uuid[])
+    `, [assetIds]),
+    // Get all child relationships (where our assets are parents)
+    pool.query(`
+      SELECT
+        ar.id,
+        ar.parent_asset_id,
+        p.name as parent_asset_name,
+        ar.child_asset_id,
+        c.name as child_asset_name,
+        ar.relationship_type,
+        ar.created_at
+      FROM ${schema}.asset_relationships ar
+      JOIN ${schema}.assets p ON ar.parent_asset_id = p.id
+      JOIN ${schema}.assets c ON ar.child_asset_id = c.id
+      WHERE ar.parent_asset_id = ANY($1::uuid[])
+    `, [assetIds]),
+  ]);
+
+  // Build a map of assetId -> { parents: [], children: [] }
+  const relationshipMap = new Map<string, { parents: AssetRelationship[]; children: AssetRelationship[] }>();
+
+  // Initialize all assets with empty arrays
+  for (const assetId of assetIds) {
+    relationshipMap.set(assetId, { parents: [], children: [] });
+  }
+
+  // Populate parents
+  for (const row of parentsResult.rows) {
+    const entry = relationshipMap.get(row.child_asset_id);
+    if (entry) {
+      entry.parents.push(row);
+    }
+  }
+
+  // Populate children
+  for (const row of childrenResult.rows) {
+    const entry = relationshipMap.get(row.parent_asset_id);
+    if (entry) {
+      entry.children.push(row);
+    }
+  }
+
+  return relationshipMap;
+}
+
 export async function createAssetRelationship(
   tenantSlug: string,
   parentAssetId: string,
@@ -705,6 +787,7 @@ export const assetService = {
   updateAsset,
   deleteAsset,
   getAssetRelationships,
+  batchGetAssetRelationships,
   createAssetRelationship,
   deleteAssetRelationship,
   linkAssetToIssue,

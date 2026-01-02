@@ -1,7 +1,7 @@
 {
-  "exportedAt": "2026-01-02T21:04:52.567183Z",
+  "exportedAt": "2026-01-02T21:09:57.779118Z",
   "phase": "BOOTSTRAP",
-  "taskCount": 13,
+  "taskCount": 14,
   "tasks": [
     "STAB-003",
     "PERF-003",
@@ -15,6 +15,7 @@
     "STAB-001",
     "STAB-002",
     "PERF-001",
-    "PERF-002"
+    "PERF-002",
+    "STAB-003"
   ]
 }
