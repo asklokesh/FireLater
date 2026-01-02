@@ -201,6 +201,44 @@ export class TenantService {
     return `tenant_${sanitizedSlug}`;
   }
 
+  /**
+   * Validate that a tenant schema exists in the database.
+   * This adds defense-in-depth to prevent SQL injection or data corruption
+   * from race conditions or manual database modifications.
+   *
+   * @param slug - The tenant slug
+   * @returns The validated schema name
+   * @throws NotFoundError if tenant or schema doesn't exist
+   */
+  async validateAndGetSchema(slug: string): Promise<string> {
+    // First verify tenant exists in public.tenants table
+    const tenant = await this.findBySlug(slug);
+    if (!tenant) {
+      throw new NotFoundError('Tenant', slug);
+    }
+
+    const schemaName = this.getSchemaName(slug);
+
+    // Verify schema actually exists in PostgreSQL
+    const schemaExists = await pool.query(
+      'SELECT 1 FROM pg_namespace WHERE nspname = $1',
+      [schemaName]
+    );
+
+    if (schemaExists.rows.length === 0) {
+      logger.error(
+        { slug, schemaName },
+        'Tenant exists in database but schema does not exist'
+      );
+      throw new NotFoundError(
+        'Tenant schema',
+        `${slug} (expected schema: ${schemaName})`
+      );
+    }
+
+    return schemaName;
+  }
+
   async getSettings(slug: string): Promise<{ tenant: Tenant; settings: Record<string, unknown> }> {
     const tenant = await this.findBySlug(slug);
     if (!tenant) {
