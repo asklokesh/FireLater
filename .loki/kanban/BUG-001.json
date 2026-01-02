@@ -2,14 +2,14 @@
   "id": "loki-BUG-001",
   "title": "[general] Task",
   "description": "{}",
-  "status": "todo",
+  "status": "done",
   "agent": "unassigned",
   "tags": [
     "general",
     "phase-bootstrap",
-    "priority-P1"
+    "priority-5"
   ],
-  "createdAt": "2026-01-02T21:52:55.813103Z",
+  "createdAt": "2026-01-02T23:15:29.188381Z",
   "metadata": {
     "lokiId": "BUG-001",
     "lokiPhase": "BOOTSTRAP",

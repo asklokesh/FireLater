@@ -1,20 +1,21 @@
 {
-  "exportedAt": "2026-01-02T21:52:55.815180Z",
+  "exportedAt": "2026-01-02T23:15:29.188877Z",
   "phase": "BOOTSTRAP",
-  "taskCount": 13,
+  "taskCount": 14,
   "tasks": [
-    "SEC-002",
-    "SEC-003",
     "TEST-002",
     "TEST-003",
     "PERF-004",
-    "BUG-001",
     "STAB-001",
     "STAB-002",
     "PERF-001",
     "PERF-002",
     "STAB-003",
     "PERF-003",
-    "SEC-001"
+    "SEC-001",
+    "SEC-002",
+    "SEC-003",
+    "BUG-001",
+    "PERF-004"
   ]
 }
