@@ -6,6 +6,7 @@ import { requirePermission, optionalAuth } from '../middleware/auth.js';
 import { parsePagination, createPaginatedResponse } from '../utils/pagination.js';
 import { tenantService as _tenantService } from '../services/tenant.js';
 import { isValidUUID } from '../utils/errors.js';
+import { validateDate, validateDateRange } from '../utils/validation.js';
 
 // ============================================
 // SCHEDULE SCHEMAS
@@ -283,8 +284,16 @@ export default async function oncallRoutes(app: FastifyInstance) {
     const { tenantSlug } = request.user;
     const query = request.query as Record<string, string>;
 
-    const startDate = query.start_date ? new Date(query.start_date) : new Date();
-    const endDate = query.end_date ? new Date(query.end_date) : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+    // Validate and parse date parameters with defaults
+    const startDate = query.start_date
+      ? validateDate(query.start_date, 'start_date') || new Date()
+      : new Date();
+    const endDate = query.end_date
+      ? validateDate(query.end_date, 'end_date') || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
+      : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+
+    // Validate date range (max 90 days for schedule queries)
+    validateDateRange(startDate, endDate, 90);
 
     const shifts = await oncallScheduleService.getShifts(tenantSlug, id, startDate, endDate);
     reply.send({ data: shifts });
@@ -661,8 +670,11 @@ export default async function oncallRoutes(app: FastifyInstance) {
     const { tenantSlug, userId } = request.user;
     const query = request.query as Record<string, string>;
 
-    const from = query.from ? new Date(query.from) : undefined;
-    const to = query.to ? new Date(query.to) : undefined;
+    const from = validateDate(query.from, 'from');
+    const to = validateDate(query.to, 'to');
+    if (from && to) {
+      validateDateRange(from, to, 365);
+    }
 
     const icalContent = await icalExportService.generateICalendar(tenantSlug, {
       scheduleId: request.params.scheduleId,
@@ -709,8 +721,11 @@ export default async function oncallRoutes(app: FastifyInstance) {
       return;
     }
 
-    const from = query.from ? new Date(query.from) : undefined;
-    const to = query.to ? new Date(query.to) : undefined;
+    const from = validateDate(query.from, 'from');
+    const to = validateDate(query.to, 'to');
+    if (from && to) {
+      validateDateRange(from, to, 365);
+    }
 
     const icalContent = await icalExportService.generateICalendar(subscription.tenantSlug, {
       scheduleId: request.params.scheduleId,

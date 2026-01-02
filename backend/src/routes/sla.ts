@@ -1,6 +1,7 @@
 import { FastifyInstance } from 'fastify';
 import { z } from 'zod';
 import { slaService } from '../services/sla.js';
+import { validateDate, validateDateRange } from '../utils/validation.js';
 
 // ============================================
 // SCHEMAS
@@ -204,10 +205,17 @@ export default async function slaRoutes(fastify: FastifyInstance) {
 
     let dateRange: { start: Date; end: Date } | undefined;
     if (query.startDate && query.endDate) {
-      dateRange = {
-        start: new Date(query.startDate),
-        end: new Date(query.endDate),
-      };
+      // Validate date parameters
+      const startDate = validateDate(query.startDate, 'startDate');
+      const endDate = validateDate(query.endDate, 'endDate');
+
+      if (startDate && endDate) {
+        validateDateRange(startDate, endDate, 365);
+        dateRange = {
+          start: startDate,
+          end: endDate,
+        };
+      }
     }
 
     const stats = await slaService.getSlaStats(

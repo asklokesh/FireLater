@@ -1,6 +1,7 @@
 import { FastifyPluginAsync } from 'fastify';
 import { requirePermission } from '../middleware/auth.js';
 import { auditService, AuditAction } from '../services/audit.js';
+import { validateDate, validateDateRange, validateLimit, validateOffset } from '../utils/validation.js';
 
 // ============================================
 // AUDIT LOG ROUTES
@@ -39,16 +40,25 @@ const auditRoutes: FastifyPluginAsync = async (app) => {
         offset,
       } = request.query;
 
+      // Validate date parameters to prevent SQL injection
+      const validatedStartDate = validateDate(startDate, 'startDate');
+      const validatedEndDate = validateDate(endDate, 'endDate');
+      validateDateRange(validatedStartDate, validatedEndDate, 365);
+
+      // Validate pagination
+      const validatedLimit = validateLimit(limit, 1000);
+      const validatedOffset = validateOffset(offset);
+
       const result = await auditService.query(tenantSlug, {
         userId,
         action,
         entityType,
         entityId,
         ipAddress,
-        startDate: startDate ? new Date(startDate) : undefined,
-        endDate: endDate ? new Date(endDate) : undefined,
-        limit: limit ? parseInt(limit, 10) : undefined,
-        offset: offset ? parseInt(offset, 10) : undefined,
+        startDate: validatedStartDate,
+        endDate: validatedEndDate,
+        limit: validatedLimit,
+        offset: validatedOffset,
       });
 
       return result;
