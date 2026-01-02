@@ -5,6 +5,7 @@ import { logger } from '../utils/logger.js';
 import type { PaginationParams } from '../types/index.js';
 import { getOffset } from '../utils/pagination.js';
 import { sanitizeMarkdown, ContentType } from '../utils/contentSanitization.js';
+import { cacheService } from '../utils/cache.js';
 
 interface CreateArticleParams {
   title: string;
@@ -52,8 +53,35 @@ class KnowledgeService {
    * 1. Using LEFT JOINs to fetch category data in main query
    * 2. Using window function COUNT(*) OVER() to get total in single query
    * 3. Batch fetching author/reviewer details with single query
+   * 4. Redis caching with 5-minute TTL to reduce database load
    */
   async listArticles(
+    tenantSlug: string,
+    filters: SearchFilters = {},
+    pagination: PaginationParams = { page: 1, perPage: 20 }
+  ) {
+    const { page = 1, perPage = 20 } = pagination;
+
+    // Generate cache key based on tenant, filters, and pagination
+    const cacheKey = `${tenantSlug}:kb:articles:${JSON.stringify({
+      filters,
+      page,
+      perPage,
+    })}`;
+
+    // Use cache with 5-minute TTL (300 seconds)
+    return cacheService.getOrSet(
+      cacheKey,
+      async () => this.listArticlesUncached(tenantSlug, filters, pagination),
+      { ttl: 300, prefix: 'kb' }
+    );
+  }
+
+  /**
+   * Internal uncached implementation of listArticles
+   * Called by listArticles when cache misses
+   */
+  private async listArticlesUncached(
     tenantSlug: string,
     filters: SearchFilters = {},
     pagination: PaginationParams = { page: 1, perPage: 20 }
@@ -340,6 +368,9 @@ class KnowledgeService {
 
     logger.info(`Created KB article ${articleNumber} in tenant ${tenantSlug}`);
 
+    // Invalidate knowledge base cache for this tenant
+    await this.invalidateCache(tenantSlug);
+
     return result.rows[0];
   }
 
@@ -438,6 +469,9 @@ class KnowledgeService {
 
     logger.info(`Updated KB article ${articleId} in tenant ${tenantSlug}`);
 
+    // Invalidate knowledge base cache for this tenant
+    await this.invalidateCache(tenantSlug);
+
     return result.rows[0];
   }
 
@@ -457,6 +491,9 @@ class KnowledgeService {
     }
 
     logger.info(`Deleted KB article ${result.rows[0].article_number} in tenant ${tenantSlug}`);
+
+    // Invalidate knowledge base cache for this tenant
+    await this.invalidateCache(tenantSlug);
 
     return { success: true };
   }
@@ -519,6 +556,26 @@ class KnowledgeService {
       `UPDATE ${schema}.kb_articles SET view_count = view_count + 1 WHERE id = $1`,
       [articleId]
     );
+  }
+
+  /**
+   * Invalidate all knowledge base cache entries for a tenant
+   * Called after create/update/delete operations to ensure cache consistency
+   */
+  private async invalidateCache(tenantSlug: string): Promise<void> {
+    try {
+      const deleted = await cacheService.invalidate(`kb:${tenantSlug}:kb:articles:*`);
+      logger.debug(
+        { tenantSlug, deletedKeys: deleted },
+        'Invalidated knowledge base cache'
+      );
+    } catch (error) {
+      // Log error but don't fail the operation
+      logger.error(
+        { err: error, tenantSlug },
+        'Failed to invalidate knowledge base cache'
+      );
+    }
   }
 }
 
