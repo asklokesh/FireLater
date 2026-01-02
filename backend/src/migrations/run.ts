@@ -18,6 +18,12 @@ import { migration015Workflows } from './015_workflows.js';
 import { migration016Assets } from './016_assets.js';
 import { migration017EmailIntegration } from './017_email_integration.js';
 import { migration018Integrations } from './018_integrations.js';
+import { migration019RcaTools } from './019_rca_tools.js';
+import { migration020CabMeetings } from './020_cab_meetings.js';
+import { migration021ShiftSwaps } from './021_shift_swaps.js';
+import { migration022FinancialImpact } from './022_financial_impact.js';
+import { migration023IcalSubscriptions } from './023_ical_subscriptions.js';
+import { migration024PerformanceIndexes } from './024_performance_indexes.js';
 
 interface Migration {
   name: string;
@@ -43,6 +49,12 @@ const migrations: Migration[] = [
   { name: '016_assets', up: migration016Assets },
   { name: '017_email_integration', up: migration017EmailIntegration },
   { name: '018_integrations', up: migration018Integrations },
+  { name: '019_rca_tools', up: migration019RcaTools },
+  { name: '020_cab_meetings', up: migration020CabMeetings },
+  { name: '021_shift_swaps', up: migration021ShiftSwaps },
+  { name: '022_financial_impact', up: migration022FinancialImpact },
+  { name: '023_ical_subscriptions', up: migration023IcalSubscriptions },
+  { name: '024_performance_indexes', up: migration024PerformanceIndexes },
 ];
 
 async function ensureMigrationsTable() {
