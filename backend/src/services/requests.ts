@@ -346,13 +346,34 @@ export class RequestService {
     try {
       await client.query('BEGIN');
 
-      const existing = await this.findById(tenantSlug, requestId);
-      if (!existing) {
+      // Lock the request row to prevent concurrent approval race conditions
+      const existingResult = await client.query(
+        `SELECT * FROM ${schema}.service_requests WHERE id = $1 FOR UPDATE`,
+        [requestId]
+      );
+
+      if (existingResult.rows.length === 0) {
         throw new NotFoundError('Service request', requestId);
       }
 
+      const existing = existingResult.rows[0];
+
       if (existing.status !== 'pending_approval') {
         throw new BadRequestError('Request is not pending approval');
+      }
+
+      // Verify approval exists and is still pending
+      const approvalCheck = await client.query(
+        `SELECT status FROM ${schema}.request_approvals WHERE id = $1 AND request_id = $2`,
+        [approvalId, existing.id]
+      );
+
+      if (approvalCheck.rows.length === 0) {
+        throw new NotFoundError('Approval', approvalId);
+      }
+
+      if (approvalCheck.rows[0].status !== 'pending') {
+        throw new BadRequestError('Approval has already been processed');
       }
 
       // Update approval record
@@ -363,7 +384,7 @@ export class RequestService {
         [comments, approvalId]
       );
 
-      // Check if all approvals are complete
+      // Check if all approvals are complete (lock ensures accurate count)
       const pendingResult = await client.query(
         `SELECT COUNT(*) FROM ${schema}.request_approvals
          WHERE request_id = $1 AND status = 'pending'`,
@@ -409,13 +430,34 @@ export class RequestService {
     try {
       await client.query('BEGIN');
 
-      const existing = await this.findById(tenantSlug, requestId);
-      if (!existing) {
+      // Lock the request row to prevent concurrent rejection race conditions
+      const existingResult = await client.query(
+        `SELECT * FROM ${schema}.service_requests WHERE id = $1 FOR UPDATE`,
+        [requestId]
+      );
+
+      if (existingResult.rows.length === 0) {
         throw new NotFoundError('Service request', requestId);
       }
 
+      const existing = existingResult.rows[0];
+
       if (existing.status !== 'pending_approval') {
         throw new BadRequestError('Request is not pending approval');
+      }
+
+      // Verify approval exists and is still pending
+      const approvalCheck = await client.query(
+        `SELECT status FROM ${schema}.request_approvals WHERE id = $1 AND request_id = $2`,
+        [approvalId, existing.id]
+      );
+
+      if (approvalCheck.rows.length === 0) {
+        throw new NotFoundError('Approval', approvalId);
+      }
+
+      if (approvalCheck.rows[0].status !== 'pending') {
+        throw new BadRequestError('Approval has already been processed');
       }
 
       // Update approval record
