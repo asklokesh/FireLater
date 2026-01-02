@@ -2,14 +2,14 @@
   "id": "loki-SEC-001",
   "title": "[general] Task",
   "description": "{}",
-  "status": "todo",
+  "status": "done",
   "agent": "unassigned",
   "tags": [
     "general",
     "phase-bootstrap",
-    "priority-P0"
+    "priority-5"
   ],
-  "createdAt": "2026-01-02T21:16:09.010101Z",
+  "createdAt": "2026-01-02T21:23:16.146604Z",
   "metadata": {
     "lokiId": "SEC-001",
     "lokiPhase": "BOOTSTRAP",

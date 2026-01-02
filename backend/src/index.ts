@@ -5,6 +5,7 @@ import jwt from '@fastify/jwt';
 import cookie from '@fastify/cookie';
 import rateLimit from '@fastify/rate-limit';
 import multipart from '@fastify/multipart';
+import csrf from '@fastify/csrf-protection';
 import { config } from './config/index.js';
 import { testConnection, closeDatabase } from './config/database.js';
 import { testRedisConnection, closeRedis, redis } from './config/redis.js';
@@ -73,6 +74,53 @@ async function registerPlugins() {
     secret: config.jwt.secret,
   });
 
+  await app.register(csrf, {
+    cookieOpts: {
+      signed: true,
+      httpOnly: true,
+      sameSite: 'strict',
+      secure: config.isProd,
+    },
+    sessionPlugin: '@fastify/cookie',
+  });
+
+  // CSRF protection hook for state-changing operations
+  // Note: JWT bearer tokens already provide CSRF protection since browsers
+  // cannot be forced to send custom Authorization headers cross-origin.
+  // This adds defense-in-depth for any cookie-based flows.
+  app.addHook('preHandler', async (request, reply) => {
+    const isStateChanging = ['POST', 'PUT', 'PATCH', 'DELETE'].includes(request.method);
+    const isPublicRoute = request.url.startsWith('/health') ||
+                          request.url.startsWith('/ready') ||
+                          request.url === '/csrf-token' ||
+                          request.url.startsWith('/v1/auth/login') ||
+                          request.url.startsWith('/v1/auth/register') ||
+                          request.url.startsWith('/v1/auth/refresh') ||
+                          request.url.startsWith('/v1/auth/forgot-password') ||
+                          request.url.startsWith('/v1/auth/reset-password');
+
+    // Apply CSRF protection to state-changing operations on protected routes
+    if (isStateChanging && !isPublicRoute) {
+      // Check if using JWT bearer token (primary auth method)
+      const authHeader = request.headers.authorization;
+      const hasJWT = authHeader && authHeader.startsWith('Bearer ');
+
+      // If using JWT, CSRF protection is inherent (browsers can't force custom headers)
+      // If not using JWT (e.g., API key or cookie auth), require CSRF token
+      if (!hasJWT) {
+        try {
+          await request.csrfProtection();
+        } catch (error) {
+          reply.code(403).send({
+            statusCode: 403,
+            error: 'Forbidden',
+            message: 'Invalid CSRF token',
+          });
+        }
+      }
+    }
+  });
+
   await app.register(jwt, {
     secret: config.jwt.secret,
     sign: {
@@ -95,6 +143,12 @@ async function registerPlugins() {
 }
 
 async function registerRoutes() {
+  // CSRF token endpoint - must be called before any state-changing operations
+  app.get('/csrf-token', async (request, reply) => {
+    const token = await reply.generateCsrf();
+    return { csrfToken: token };
+  });
+
   // Basic liveness check - just confirms the server is running
   app.get('/health', async () => {
     return { status: 'ok', timestamp: new Date().toISOString() };

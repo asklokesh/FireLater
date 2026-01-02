@@ -17,6 +17,7 @@ export const api: AxiosInstance = axios.create({
 
 // Token storage
 let accessToken: string | null = null;
+let csrfToken: string | null = null;
 
 export function setAccessToken(token: string | null) {
   accessToken = token;
@@ -34,13 +35,43 @@ export function getAccessToken(): string | null {
   return accessToken;
 }
 
-// Request interceptor to add auth header
+// CSRF token management
+export async function fetchCsrfToken(): Promise<string> {
+  try {
+    const response = await axios.get(`${API_URL}/csrf-token`, { withCredentials: true });
+    csrfToken = response.data.csrfToken;
+    return csrfToken;
+  } catch (error) {
+    console.error('[FireLater] Failed to fetch CSRF token:', error);
+    return '';
+  }
+}
+
+export function getCsrfToken(): string | null {
+  return csrfToken;
+}
+
+// Request interceptor to add auth header and CSRF token
 api.interceptors.request.use(
-  (config: InternalAxiosRequestConfig) => {
+  async (config: InternalAxiosRequestConfig) => {
     const token = getAccessToken();
     if (token && config.headers) {
       config.headers.Authorization = `Bearer ${token}`;
     }
+
+    // Add CSRF token for state-changing operations
+    const isStateChanging = config.method && ['post', 'put', 'patch', 'delete'].includes(config.method.toLowerCase());
+    if (isStateChanging && config.headers) {
+      // Fetch CSRF token if not already available
+      let csrf = getCsrfToken();
+      if (!csrf) {
+        csrf = await fetchCsrfToken();
+      }
+      if (csrf) {
+        config.headers['x-csrf-token'] = csrf;
+      }
+    }
+
     return config;
   },
   (error) => Promise.reject(error)
