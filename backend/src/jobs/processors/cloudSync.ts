@@ -791,7 +791,7 @@ async function processSyncCloudAccount(job: Job<SyncCloudAccountJobData>): Promi
   const { accountId, tenantSlug, syncType } = job.data;
   const schema = tenantService.getSchemaName(tenantSlug);
 
-  logger.info({ jobId: job.id, accountId, syncType }, 'Syncing cloud account');
+  logger.info({ jobId: job.id, accountId, syncType, attemptNumber: job.attemptsMade }, 'Syncing cloud account');
 
   const result: CloudSyncResult = {
     accountId,
@@ -819,51 +819,71 @@ async function processSyncCloudAccount(job: Job<SyncCloudAccountJobData>): Promi
     if (syncType === 'resources' || syncType === 'all') {
       let resources: CloudResource[] = [];
 
-      switch (account.provider) {
-        case 'aws':
-          resources = await syncAwsResources(credentials);
-          break;
-        case 'azure':
-          resources = await syncAzureResources(credentials);
-          break;
-        case 'gcp':
-          resources = await syncGcpResources(credentials);
-          break;
-      }
+      try {
+        switch (account.provider) {
+          case 'aws':
+            resources = await syncAwsResources(credentials);
+            break;
+          case 'azure':
+            resources = await syncAzureResources(credentials);
+            break;
+          case 'gcp':
+            resources = await syncGcpResources(credentials);
+            break;
+        }
 
-      result.resourcesUpdated = await updateResources(schema, accountId, resources);
+        result.resourcesUpdated = await updateResources(schema, accountId, resources);
+      } catch (error) {
+        const errMsg = error instanceof Error ? error.message : 'Unknown error';
+        result.errors.push(`Resource sync failed: ${errMsg}`);
+        logger.error({ err: error, accountId, provider: account.provider }, 'Resource sync error');
+        // Don't throw - allow cost sync to proceed
+      }
     }
 
     // Sync costs
     if (syncType === 'costs' || syncType === 'all') {
       let costs: CloudCost[] = [];
 
-      switch (account.provider) {
-        case 'aws':
-          costs = await syncAwsCosts(credentials);
-          break;
-        case 'azure':
-          costs = await syncAzureCosts(credentials);
-          break;
-        case 'gcp':
-          costs = await syncGcpCosts(credentials);
-          break;
-      }
+      try {
+        switch (account.provider) {
+          case 'aws':
+            costs = await syncAwsCosts(credentials);
+            break;
+          case 'azure':
+            costs = await syncAzureCosts(credentials);
+            break;
+          case 'gcp':
+            costs = await syncGcpCosts(credentials);
+            break;
+        }
 
-      result.costsUpdated = await updateCosts(schema, accountId, costs);
+        result.costsUpdated = await updateCosts(schema, accountId, costs);
+      } catch (error) {
+        const errMsg = error instanceof Error ? error.message : 'Unknown error';
+        result.errors.push(`Cost sync failed: ${errMsg}`);
+        logger.error({ err: error, accountId, provider: account.provider }, 'Cost sync error');
+        // Don't throw - mark partial success
+      }
     }
 
     await markSyncComplete(schema, accountId);
 
     logger.info(
-      { jobId: job.id, accountId, resourcesUpdated: result.resourcesUpdated, costsUpdated: result.costsUpdated },
+      { jobId: job.id, accountId, resourcesUpdated: result.resourcesUpdated, costsUpdated: result.costsUpdated, errorCount: result.errors.length },
       'Cloud account sync completed'
     );
+
+    // If both resource and cost sync failed, throw to trigger retry
+    if (result.resourcesUpdated === 0 && result.costsUpdated === 0 && result.errors.length > 0) {
+      throw new Error(`Complete sync failure: ${result.errors.join('; ')}`);
+    }
   } catch (error) {
     const errMsg = error instanceof Error ? error.message : 'Unknown error';
     result.errors.push(errMsg);
     await markSyncFailed(schema, accountId, errMsg);
     logger.error({ err: error, accountId }, 'Cloud account sync failed');
+    throw error; // Re-throw to trigger BullMQ retry
   }
 
   return result;
@@ -963,6 +983,13 @@ export async function scheduleCloudSync(): Promise<number> {
       },
       {
         jobId: `cloud-sync-${tenant.slug}-${Date.now()}`,
+        attempts: 3,
+        backoff: {
+          type: 'exponential',
+          delay: 5000, // Start with 5 seconds for external API calls
+        },
+        removeOnComplete: { count: 50 },
+        removeOnFail: { count: 200 },
       }
     );
     queuedCount++;

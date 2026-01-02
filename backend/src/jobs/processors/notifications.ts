@@ -255,7 +255,7 @@ async function processNotification(job: Job<NotificationJobData>): Promise<unkno
   const { tenantSlug, type, recipientIds, recipientEmails, channel = 'all', data = {} } = job.data;
   const schema = tenantService.getSchemaName(tenantSlug);
 
-  logger.info({ jobId: job.id, type, channel }, 'Processing notification');
+  logger.info({ jobId: job.id, type, channel, attemptNumber: job.attemptsMade }, 'Processing notification');
 
   // Get notification template
   const template = getNotificationTemplate(type, { ...data, ...job.data });
@@ -270,20 +270,25 @@ async function processNotification(job: Job<NotificationJobData>): Promise<unkno
   // Get recipients
   let recipients: Array<{ id: string; email: string; notification_preferences?: unknown }> = [];
 
-  if (recipientIds && recipientIds.length > 0) {
-    const userResult = await pool.query(`
-      SELECT id, email, notification_preferences
-      FROM ${schema}.users
-      WHERE id = ANY($1) AND status = 'active'
-    `, [recipientIds]);
-    recipients = userResult.rows;
-  } else if (recipientEmails && recipientEmails.length > 0) {
-    const userResult = await pool.query(`
-      SELECT id, email, notification_preferences
-      FROM ${schema}.users
-      WHERE email = ANY($1) AND status = 'active'
-    `, [recipientEmails]);
-    recipients = userResult.rows;
+  try {
+    if (recipientIds && recipientIds.length > 0) {
+      const userResult = await pool.query(`
+        SELECT id, email, notification_preferences
+        FROM ${schema}.users
+        WHERE id = ANY($1) AND status = 'active'
+      `, [recipientIds]);
+      recipients = userResult.rows;
+    } else if (recipientEmails && recipientEmails.length > 0) {
+      const userResult = await pool.query(`
+        SELECT id, email, notification_preferences
+        FROM ${schema}.users
+        WHERE email = ANY($1) AND status = 'active'
+      `, [recipientEmails]);
+      recipients = userResult.rows;
+    }
+  } catch (error) {
+    logger.error({ err: error, tenantSlug }, 'Failed to fetch recipients from database');
+    throw new Error(`Database error: ${error instanceof Error ? error.message : 'Unknown error'}`);
   }
 
   // Process each recipient
@@ -309,14 +314,22 @@ async function processNotification(job: Job<NotificationJobData>): Promise<unkno
       // Email notification
       if (channel === 'all' || channel === 'email') {
         if (prefs.email !== false) {
-          const emailResult = await emailService.send({
-            to: recipient.email,
-            type,
-            data: { ...data, ...job.data },
-            tenantSlug,
-          });
-          if (emailResult.success) {
-            results.email++;
+          try {
+            const emailResult = await emailService.send({
+              to: recipient.email,
+              type,
+              data: { ...data, ...job.data },
+              tenantSlug,
+            });
+            if (emailResult.success) {
+              results.email++;
+            } else {
+              results.errors.push(`${recipient.email}: Email delivery failed`);
+            }
+          } catch (emailError) {
+            const errMsg = emailError instanceof Error ? emailError.message : 'Unknown email error';
+            results.errors.push(`${recipient.email}: ${errMsg}`);
+            logger.error({ err: emailError, recipientId: recipient.id }, 'Email delivery error');
           }
         }
       }
@@ -330,20 +343,34 @@ async function processNotification(job: Job<NotificationJobData>): Promise<unkno
   // Slack notification (typically to a channel, not per-user)
   if (channel === 'all' || channel === 'slack') {
     const slackWebhook = (data as { slackWebhook?: string }).slackWebhook;
-    try {
-      const slackResult = await slackService.send({
-        webhookUrl: slackWebhook,
-        type,
-        data: { ...data, ...job.data },
-        tenantSlug,
-      });
-      if (slackResult.success) {
-        results.slack++;
+    if (slackWebhook) {
+      try {
+        const slackResult = await slackService.send({
+          webhookUrl: slackWebhook,
+          type,
+          data: { ...data, ...job.data },
+          tenantSlug,
+        });
+        if (slackResult.success) {
+          results.slack++;
+        } else {
+          results.errors.push('Slack: Delivery failed');
+        }
+      } catch (error) {
+        const errMsg = error instanceof Error ? error.message : 'Unknown error';
+        results.errors.push(`Slack: ${errMsg}`);
+        logger.error({ err: error }, 'Slack delivery error');
       }
-    } catch (error) {
-      const errMsg = error instanceof Error ? error.message : 'Unknown error';
-      results.errors.push(`Slack: ${errMsg}`);
     }
+  }
+
+  // If all deliveries failed and we have recipients, throw error to trigger retry
+  const totalSent = results.inApp + results.email + results.slack;
+  const totalExpected = recipients.length * (channel === 'all' ? 2 : 1); // Rough estimate
+
+  if (totalSent === 0 && recipients.length > 0 && results.errors.length > 0) {
+    logger.error({ jobId: job.id, results }, 'All notification deliveries failed, will retry');
+    throw new Error(`All deliveries failed: ${results.errors.slice(0, 3).join('; ')}`);
   }
 
   logger.info(
@@ -355,13 +382,37 @@ async function processNotification(job: Job<NotificationJobData>): Promise<unkno
 }
 
 async function processEmailDelivery(job: Job<EmailDeliveryJobData>): Promise<boolean> {
-  logger.info({ jobId: job.id, to: job.data.to }, 'Processing email delivery');
-  return sendEmail(job.data);
+  logger.info({ jobId: job.id, to: job.data.to, attemptNumber: job.attemptsMade }, 'Processing email delivery');
+
+  try {
+    const result = await sendEmail(job.data);
+
+    if (!result) {
+      throw new Error('Email delivery failed - will retry');
+    }
+
+    return result;
+  } catch (error) {
+    logger.error({ err: error, jobId: job.id, to: job.data.to }, 'Email delivery error');
+    throw error; // Re-throw to trigger BullMQ retry
+  }
 }
 
 async function processSlackDelivery(job: Job<SlackDeliveryJobData>): Promise<boolean> {
-  logger.info({ jobId: job.id }, 'Processing Slack delivery');
-  return sendSlackMessage(job.data);
+  logger.info({ jobId: job.id, attemptNumber: job.attemptsMade }, 'Processing Slack delivery');
+
+  try {
+    const result = await sendSlackMessage(job.data);
+
+    if (!result) {
+      throw new Error('Slack delivery failed - will retry');
+    }
+
+    return result;
+  } catch (error) {
+    logger.error({ err: error, jobId: job.id }, 'Slack delivery error');
+    throw error; // Re-throw to trigger BullMQ retry
+  }
 }
 
 // ============================================
@@ -434,6 +485,13 @@ export async function queueNotification(
     },
     {
       priority: options.priority || 2,
+      attempts: 5,
+      backoff: {
+        type: 'exponential',
+        delay: 2000, // Start with 2 seconds, doubles each retry
+      },
+      removeOnComplete: { count: 100 },
+      removeOnFail: { count: 500 },
     }
   );
 
