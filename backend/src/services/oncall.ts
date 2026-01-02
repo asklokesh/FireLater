@@ -4,6 +4,7 @@ import { NotFoundError } from '../utils/errors.js';
 import { logger } from '../utils/logger.js';
 import type { PaginationParams } from '../types/index.js';
 import { getOffset } from '../utils/pagination.js';
+import { randomBytes } from 'crypto';
 
 // ============================================
 // SCHEDULES
@@ -53,11 +54,31 @@ interface Schedule {
   updated_at: Date;
 }
 
+interface ScheduleFilters {
+  groupId?: string;
+  isActive?: boolean;
+}
+
+interface CreateShiftParams {
+  scheduleId: string;
+  userId: string;
+  startTime: Date;
+  endTime: Date;
+  shiftType?: string;
+  layer?: number;
+}
+
+interface CreateOverrideParams {
+  scheduleId: string;
+  userId: string;
+  startTime: Date;
+  endTime: Date;
+  reason?: string;
+  originalUserId?: string;
+}
+
 export class OnCallScheduleService {
-  async list(tenantSlug: string, params: PaginationParams, filters?: {
-    groupId?: string;
-    isActive?: boolean;
-  }): Promise<{ schedules: Schedule[]; total: number }> {
+  async list(tenantSlug: string, params: PaginationParams, filters?: ScheduleFilters): Promise<{ schedules: Schedule[]; total: number }> {
     const schema = tenantService.getSchemaName(tenantSlug);
     const offset = getOffset(params);
 
@@ -323,14 +344,7 @@ export class OnCallScheduleService {
     return result.rows;
   }
 
-  async createShift(tenantSlug: string, params: {
-    scheduleId: string;
-    userId: string;
-    startTime: Date;
-    endTime: Date;
-    shiftType?: string;
-    layer?: number;
-  }, createdBy: string): Promise<unknown> {
+  async createShift(tenantSlug: string, params: CreateShiftParams, createdBy: string): Promise<unknown> {
     const schema = tenantService.getSchemaName(tenantSlug);
 
     const result = await pool.query(
@@ -352,14 +366,7 @@ export class OnCallScheduleService {
     return result.rows[0];
   }
 
-  async createOverride(tenantSlug: string, params: {
-    scheduleId: string;
-    userId: string;
-    startTime: Date;
-    endTime: Date;
-    reason?: string;
-    originalUserId?: string;
-  }, createdBy: string): Promise<unknown> {
+  async createOverride(tenantSlug: string, params: CreateOverrideParams, createdBy: string): Promise<unknown> {
     const schema = tenantService.getSchemaName(tenantSlug);
 
     const result = await pool.query(
@@ -502,6 +509,25 @@ interface EscalationPolicy {
   metadata: Record<string, unknown>;
   created_at: Date;
   updated_at: Date;
+}
+
+interface AddStepParams {
+  stepNumber?: number;
+  delayMinutes?: number;
+  notifyType: 'schedule' | 'user' | 'group';
+  scheduleId?: string;
+  userId?: string;
+  groupId?: string;
+  notificationChannels?: string[];
+}
+
+interface UpdateStepParams {
+  delayMinutes?: number;
+  notifyType?: 'schedule' | 'user' | 'group';
+  scheduleId?: string | null;
+  userId?: string | null;
+  groupId?: string | null;
+  notificationChannels?: string[];
 }
 
 export class EscalationPolicyService {
@@ -669,15 +695,7 @@ export class EscalationPolicyService {
     return result.rows;
   }
 
-  async addStep(tenantSlug: string, policyId: string, params: {
-    stepNumber?: number;
-    delayMinutes?: number;
-    notifyType: 'schedule' | 'user' | 'group';
-    scheduleId?: string;
-    userId?: string;
-    groupId?: string;
-    notificationChannels?: string[];
-  }): Promise<unknown> {
+  async addStep(tenantSlug: string, policyId: string, params: AddStepParams): Promise<unknown> {
     const schema = tenantService.getSchemaName(tenantSlug);
 
     // Get max step number if not specified
@@ -711,14 +729,7 @@ export class EscalationPolicyService {
     return result.rows[0];
   }
 
-  async updateStep(tenantSlug: string, policyId: string, stepId: string, params: {
-    delayMinutes?: number;
-    notifyType?: 'schedule' | 'user' | 'group';
-    scheduleId?: string | null;
-    userId?: string | null;
-    groupId?: string | null;
-    notificationChannels?: string[];
-  }): Promise<unknown> {
+  async updateStep(tenantSlug: string, policyId: string, stepId: string, params: UpdateStepParams): Promise<unknown> {
     const schema = tenantService.getSchemaName(tenantSlug);
 
     const updates: string[] = [];
@@ -802,6 +813,22 @@ interface ICalExportParams {
   from?: Date;
   to?: Date;
   userId?: string;
+}
+
+interface SubscriptionTokenResult {
+  tenantSlug: string;
+  userId: string;
+  filterUserId: string | null;
+}
+
+interface CreateSubscriptionResult {
+  token: string;
+  url: string;
+}
+
+interface ValidateSubscriptionResult {
+  userId: string;
+  filterUserId: string | null;
 }
 
 export class ICalExportService {
@@ -945,7 +972,7 @@ export class ICalExportService {
     scheduleId: string,
     userId: string,
     filterUserId?: string
-  ): Promise<{ token: string; url: string }> {
+  ): Promise<CreateSubscriptionResult> {
     const schema = tenantService.getSchemaName(tenantSlug);
 
     // Verify schedule exists
@@ -955,8 +982,7 @@ export class ICalExportService {
     }
 
     // Generate a secure token
-    const crypto = await import('crypto');
-    const token = crypto.randomBytes(32).toString('hex');
+    const token = randomBytes(32).toString('hex');
 
     // Store subscription in database
     await pool.query(
@@ -983,7 +1009,7 @@ export class ICalExportService {
     tenantSlug: string,
     scheduleId: string,
     token: string
-  ): Promise<{ userId: string; filterUserId: string | null } | null> {
+  ): Promise<ValidateSubscriptionResult | null> {
     const schema = tenantService.getSchemaName(tenantSlug);
 
     const result = await pool.query(
@@ -1013,41 +1039,58 @@ export class ICalExportService {
   /**
    * Validate subscription token for public endpoint (no tenant context)
    * Searches across all tenant schemas to find the subscription
+   * Optimized to avoid N+1 query pattern by using UNION ALL
    */
   async validatePublicSubscriptionToken(
     scheduleId: string,
     token: string
-  ): Promise<{ tenantSlug: string; userId: string; filterUserId: string | null } | null> {
+  ): Promise<SubscriptionTokenResult | null> {
     // Get all tenant schemas
     const schemasResult = await pool.query(
       `SELECT nspname FROM pg_namespace WHERE nspname LIKE 'tenant_%'`
     );
 
+    if (schemasResult.rows.length === 0) {
+      return null;
+    }
+
+    // Build UNION ALL query to search all tenant schemas in single query
+    const unionQueries: string[] = [];
     for (const row of schemasResult.rows) {
       const schema = row.nspname;
+      unionQueries.push(`
+        SELECT
+          '${schema}' as schema_name,
+          user_id,
+          filter_user_id
+        FROM ${schema}.oncall_calendar_subscriptions
+        WHERE schedule_id = $1 AND token = $2
+      `);
+    }
+
+    const unionQuery = unionQueries.join(' UNION ALL ');
+
+    // Execute single query across all tenant schemas
+    const result = await pool.query(unionQuery, [scheduleId, token]);
+
+    if (result.rows.length > 0) {
+      const subscription = result.rows[0];
+      const schema = subscription.schema_name;
       const tenantSlug = schema.replace('tenant_', '').replace(/_/g, '-');
 
-      const result = await pool.query(
-        `SELECT user_id, filter_user_id FROM ${schema}.oncall_calendar_subscriptions
+      // Update last accessed timestamp in the specific tenant schema
+      await pool.query(
+        `UPDATE ${schema}.oncall_calendar_subscriptions
+         SET last_accessed_at = NOW()
          WHERE schedule_id = $1 AND token = $2`,
         [scheduleId, token]
       );
 
-      if (result.rows.length > 0) {
-        // Update last accessed timestamp
-        await pool.query(
-          `UPDATE ${schema}.oncall_calendar_subscriptions
-           SET last_accessed_at = NOW()
-           WHERE schedule_id = $1 AND token = $2`,
-          [scheduleId, token]
-        );
-
-        return {
-          tenantSlug,
-          userId: result.rows[0].user_id,
-          filterUserId: result.rows[0].filter_user_id,
-        };
-      }
+      return {
+        tenantSlug,
+        userId: subscription.user_id,
+        filterUserId: subscription.filter_user_id,
+      };
     }
 
     return null;
