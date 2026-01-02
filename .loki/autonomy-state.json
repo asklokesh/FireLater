@@ -1,8 +1,8 @@
 {
-    "retryCount": 1,
+    "retryCount": 2,
     "status": "running",
     "lastExitCode": 0,
-    "lastRun": "2026-01-02T20:25:12Z",
+    "lastRun": "2026-01-02T20:39:13Z",
     "prdPath": "",
     "pid": 98091,
     "maxRetries": 50,
