@@ -1,0 +1,19 @@
+{
+  "id": "loki-PERF-001",
+  "title": "[general] Task",
+  "description": "{}",
+  "status": "doing",
+  "agent": "unassigned",
+  "tags": [
+    "general",
+    "phase-bootstrap",
+    "priority-P0"
+  ],
+  "createdAt": "2026-01-02T20:31:01.550606Z",
+  "metadata": {
+    "lokiId": "PERF-001",
+    "lokiPhase": "BOOTSTRAP",
+    "retries": 0,
+    "lastError": null
+  }
+}

@@ -1,15 +1,35 @@
 import { pool } from '../config/database.js';
 import { tenantService } from './tenant.js';
+import { cacheService } from '../utils/cache.js';
 
 // ============================================
 // DASHBOARD AGGREGATION SERVICE
 // ============================================
+
+// Cache TTLs (in seconds)
+const CACHE_TTL = {
+  overview: 300, // 5 minutes - main dashboard data
+  trends: 600, // 10 minutes - historical trends change slowly
+  distribution: 300, // 5 minutes - aggregated stats
+  activity: 60, // 1 minute - recent activity should be fresh
+  mobile: 180, // 3 minutes - mobile summary
+};
 
 class DashboardService {
   /**
    * Get overview statistics for the main dashboard
    */
   async getOverview(tenantSlug: string): Promise<unknown> {
+    const cacheKey = `${tenantSlug}:dashboard:overview`;
+
+    return cacheService.getOrSet(
+      cacheKey,
+      async () => this._fetchOverview(tenantSlug),
+      { ttl: CACHE_TTL.overview }
+    );
+  }
+
+  private async _fetchOverview(tenantSlug: string): Promise<unknown> {
     const schema = tenantService.getSchemaName(tenantSlug);
 
     const [
@@ -76,6 +96,16 @@ class DashboardService {
    * Get issue trends for chart display
    */
   async getIssueTrends(tenantSlug: string, days: number = 30): Promise<unknown[]> {
+    const cacheKey = `${tenantSlug}:dashboard:trends:issues:${days}`;
+
+    return cacheService.getOrSet(
+      cacheKey,
+      async () => this._fetchIssueTrends(tenantSlug, days),
+      { ttl: CACHE_TTL.trends }
+    );
+  }
+
+  private async _fetchIssueTrends(tenantSlug: string, days: number): Promise<unknown[]> {
     const schema = tenantService.getSchemaName(tenantSlug);
 
     const result = await pool.query(`
@@ -96,6 +126,16 @@ class DashboardService {
    * Get issues by priority distribution
    */
   async getIssuesByPriority(tenantSlug: string): Promise<unknown[]> {
+    const cacheKey = `${tenantSlug}:dashboard:issues:by-priority`;
+
+    return cacheService.getOrSet(
+      cacheKey,
+      async () => this._fetchIssuesByPriority(tenantSlug),
+      { ttl: CACHE_TTL.distribution }
+    );
+  }
+
+  private async _fetchIssuesByPriority(tenantSlug: string): Promise<unknown[]> {
     const schema = tenantService.getSchemaName(tenantSlug);
 
     const result = await pool.query(`
@@ -121,6 +161,16 @@ class DashboardService {
    * Get issues by status distribution
    */
   async getIssuesByStatus(tenantSlug: string): Promise<unknown[]> {
+    const cacheKey = `${tenantSlug}:dashboard:issues:by-status`;
+
+    return cacheService.getOrSet(
+      cacheKey,
+      async () => this._fetchIssuesByStatus(tenantSlug),
+      { ttl: CACHE_TTL.distribution }
+    );
+  }
+
+  private async _fetchIssuesByStatus(tenantSlug: string): Promise<unknown[]> {
     const schema = tenantService.getSchemaName(tenantSlug);
 
     const result = await pool.query(`
@@ -140,6 +190,16 @@ class DashboardService {
    * Get change success rate over time
    */
   async getChangeSuccessRate(tenantSlug: string, days: number = 30): Promise<unknown[]> {
+    const cacheKey = `${tenantSlug}:dashboard:trends:changes:${days}`;
+
+    return cacheService.getOrSet(
+      cacheKey,
+      async () => this._fetchChangeSuccessRate(tenantSlug, days),
+      { ttl: CACHE_TTL.trends }
+    );
+  }
+
+  private async _fetchChangeSuccessRate(tenantSlug: string, days: number): Promise<unknown[]> {
     const schema = tenantService.getSchemaName(tenantSlug);
 
     const result = await pool.query(`
@@ -167,6 +227,16 @@ class DashboardService {
    * Get health score distribution across applications
    */
   async getHealthDistribution(tenantSlug: string): Promise<unknown> {
+    const cacheKey = `${tenantSlug}:dashboard:health:distribution`;
+
+    return cacheService.getOrSet(
+      cacheKey,
+      async () => this._fetchHealthDistribution(tenantSlug),
+      { ttl: CACHE_TTL.distribution }
+    );
+  }
+
+  private async _fetchHealthDistribution(tenantSlug: string): Promise<unknown> {
     const schema = tenantService.getSchemaName(tenantSlug);
 
     const result = await pool.query(`
@@ -191,6 +261,16 @@ class DashboardService {
    * Get health scores by tier
    */
   async getHealthByTier(tenantSlug: string): Promise<unknown[]> {
+    const cacheKey = `${tenantSlug}:dashboard:health:by-tier`;
+
+    return cacheService.getOrSet(
+      cacheKey,
+      async () => this._fetchHealthByTier(tenantSlug),
+      { ttl: CACHE_TTL.distribution }
+    );
+  }
+
+  private async _fetchHealthByTier(tenantSlug: string): Promise<unknown[]> {
     const schema = tenantService.getSchemaName(tenantSlug);
 
     const result = await pool.query(`
@@ -224,6 +304,16 @@ class DashboardService {
    * Get top critical applications (lowest health scores)
    */
   async getCriticalApplications(tenantSlug: string, limit: number = 5): Promise<unknown[]> {
+    const cacheKey = `${tenantSlug}:dashboard:health:critical:${limit}`;
+
+    return cacheService.getOrSet(
+      cacheKey,
+      async () => this._fetchCriticalApplications(tenantSlug, limit),
+      { ttl: CACHE_TTL.distribution }
+    );
+  }
+
+  private async _fetchCriticalApplications(tenantSlug: string, limit: number): Promise<unknown[]> {
     const schema = tenantService.getSchemaName(tenantSlug);
 
     const result = await pool.query(`
@@ -254,6 +344,16 @@ class DashboardService {
    * Get request volume by catalog item
    */
   async getRequestsByItem(tenantSlug: string, limit: number = 10): Promise<unknown[]> {
+    const cacheKey = `${tenantSlug}:dashboard:requests:by-item:${limit}`;
+
+    return cacheService.getOrSet(
+      cacheKey,
+      async () => this._fetchRequestsByItem(tenantSlug, limit),
+      { ttl: CACHE_TTL.distribution }
+    );
+  }
+
+  private async _fetchRequestsByItem(tenantSlug: string, limit: number): Promise<unknown[]> {
     const schema = tenantService.getSchemaName(tenantSlug);
 
     const result = await pool.query(`
@@ -281,6 +381,16 @@ class DashboardService {
    * Get upcoming scheduled changes
    */
   async getUpcomingChanges(tenantSlug: string, days: number = 7): Promise<unknown[]> {
+    const cacheKey = `${tenantSlug}:dashboard:changes:upcoming:${days}`;
+
+    return cacheService.getOrSet(
+      cacheKey,
+      async () => this._fetchUpcomingChanges(tenantSlug, days),
+      { ttl: CACHE_TTL.distribution }
+    );
+  }
+
+  private async _fetchUpcomingChanges(tenantSlug: string, days: number): Promise<unknown[]> {
     const schema = tenantService.getSchemaName(tenantSlug);
 
     const result = await pool.query(`
@@ -306,6 +416,16 @@ class DashboardService {
    * Get recent activity feed
    */
   async getRecentActivity(tenantSlug: string, limit: number = 20): Promise<unknown[]> {
+    const cacheKey = `${tenantSlug}:dashboard:activity:recent:${limit}`;
+
+    return cacheService.getOrSet(
+      cacheKey,
+      async () => this._fetchRecentActivity(tenantSlug, limit),
+      { ttl: CACHE_TTL.activity }
+    );
+  }
+
+  private async _fetchRecentActivity(tenantSlug: string, limit: number): Promise<unknown[]> {
     const schema = tenantService.getSchemaName(tenantSlug);
 
     // Union of recent activities from different tables
@@ -365,6 +485,16 @@ class DashboardService {
    * Get SLA compliance metrics
    */
   async getSlaCompliance(tenantSlug: string): Promise<unknown> {
+    const cacheKey = `${tenantSlug}:dashboard:sla:compliance`;
+
+    return cacheService.getOrSet(
+      cacheKey,
+      async () => this._fetchSlaCompliance(tenantSlug),
+      { ttl: CACHE_TTL.distribution }
+    );
+  }
+
+  private async _fetchSlaCompliance(tenantSlug: string): Promise<unknown> {
     const schema = tenantService.getSchemaName(tenantSlug);
 
     const result = await pool.query(`
@@ -397,6 +527,16 @@ class DashboardService {
    * Get cloud cost trends
    */
   async getCloudCostTrends(tenantSlug: string, months: number = 6): Promise<unknown[]> {
+    const cacheKey = `${tenantSlug}:dashboard:cloud:costs:${months}`;
+
+    return cacheService.getOrSet(
+      cacheKey,
+      async () => this._fetchCloudCostTrends(tenantSlug, months),
+      { ttl: CACHE_TTL.trends }
+    );
+  }
+
+  private async _fetchCloudCostTrends(tenantSlug: string, months: number): Promise<unknown[]> {
     const schema = tenantService.getSchemaName(tenantSlug);
 
     const result = await pool.query(`
@@ -418,6 +558,16 @@ class DashboardService {
    * Get mobile-optimized summary data
    */
   async getMobileSummary(tenantSlug: string): Promise<unknown> {
+    const cacheKey = `${tenantSlug}:dashboard:mobile:summary`;
+
+    return cacheService.getOrSet(
+      cacheKey,
+      async () => this._fetchMobileSummary(tenantSlug),
+      { ttl: CACHE_TTL.mobile }
+    );
+  }
+
+  private async _fetchMobileSummary(tenantSlug: string): Promise<unknown> {
     const schema = tenantService.getSchemaName(tenantSlug);
 
     const [issues, changes, requests, health] = await Promise.all([
@@ -458,6 +608,20 @@ class DashboardService {
       avgHealthScore: parseFloat(health.rows[0].avg_score) || 0,
       criticalApps: parseInt(health.rows[0].critical_apps, 10) || 0,
     };
+  }
+
+  /**
+   * Invalidate dashboard cache for a specific tenant
+   * Call this when data changes that affect dashboard metrics
+   */
+  async invalidateCache(tenantSlug: string, category?: 'issues' | 'changes' | 'requests' | 'health' | 'all'): Promise<void> {
+    if (category && category !== 'all') {
+      // Invalidate specific category
+      await cacheService.invalidate(`cache:${tenantSlug}:dashboard:*${category}*`);
+    } else {
+      // Invalidate all dashboard data for tenant
+      await cacheService.invalidate(`cache:${tenantSlug}:dashboard:*`);
+    }
   }
 }
 

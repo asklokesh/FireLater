@@ -2,10 +2,10 @@
 
 ## Priority Queue
 - [x] STABILITY: Background job processing for cloud integrations has no error handling or retry logic (`backend/src/routes/integrations.ts`)
-- [ ] TEST: Auth route lacks comprehensive test coverage for edge cases like password complexity and email validation (`backend/src/routes/auth.test.ts`)
-- [ ] PERF: No caching strategy implemented for knowledge base articles despite Redis dependency (`backend/src/routes/knowledge.ts`)
-- [ ] BUG: Missing input validation for required fields in service catalog builder endpoints (`backend/src/routes/requests.ts`)
-- [ ] SECURITY: Hardcoded salt rounds in auth route should use config value consistently across all password hashing operations (`backend/src/routes/auth.test.ts`)
+- [x] TEST: Auth route lacks comprehensive test coverage for edge cases like password complexity and email validation (`backend/src/routes/auth.test.ts`)
+- [x] PERF: No caching strategy implemented for knowledge base articles despite Redis dependency (`backend/src/routes/knowledge.ts`)
+- [x] BUG: Missing input validation for required fields in service catalog builder endpoints (`backend/src/routes/requests.ts`)
+- [x] SECURITY: Hardcoded salt rounds in auth route should use config value consistently across all password hashing operations (`backend/src/routes/auth.test.ts`)
 - [x] STABILITY: BullMQ job processing missing proper error handling and retry mechanisms; file: `backend/src/routes/notifications.ts`
 - [x] TEST: Auth routes lack comprehensive test coverage for edge cases and error scenarios; file: `backend/src/routes/auth.test.ts`
 - [x] PERF: Inefficient database queries in knowledge base search without proper indexing; file: `backend/src/routes/knowledge.ts`
@@ -630,6 +630,10 @@
 ## Completed
 
 ## Session Log
+- [2025-12-31 09:28] Completed: SECURITY: Hardcoded salt rounds in auth route should use config value consistently across all password hashing operations (`backend/src/routes/auth.test.ts`)
+- [2025-12-31 09:28] Completed: BUG: Missing input validation for required fields in service catalog builder endpoints (`backend/src/routes/requests.ts`)
+- [2025-12-31 09:28] Completed: PERF: No caching strategy implemented for knowledge base articles despite Redis dependency (`backend/src/routes/knowledge.ts`)
+- [2025-12-31 09:27] Completed: TEST: Auth route lacks comprehensive test coverage for edge cases like password complexity and email validation (`backend/src/routes/auth.test.ts`)
 - [2025-12-31 09:27] Completed: STABILITY: Background job processing for cloud integrations has no error handling or retry logic (`backend/src/routes/integrations.ts`)
 - [2025-12-31 09:26] Completed: SECURITY: Hardcoded salt rounds in auth route handler should use config value; file: `backend/src/routes/auth.test.ts`
 - [2025-12-31 09:26] Completed: BUG: Missing input validation for critical parameters in reporting routes; file: `backend/src/routes/reporting.ts`

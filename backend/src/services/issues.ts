@@ -4,6 +4,7 @@ import { NotFoundError, BadRequestError } from '../utils/errors.js';
 import { logger } from '../utils/logger.js';
 import type { PaginationParams, IssuePriority, IssueStatus, IssueSeverity, IssueImpact, IssueUrgency, IssueType, IssueSource } from '../types/index.js';
 import { getOffset } from '../utils/pagination.js';
+import { dashboardService } from './dashboard.js';
 
 interface CreateIssueParams {
   title: string;
@@ -275,6 +276,12 @@ export class IssueService {
       await client.query('COMMIT');
 
       logger.info({ issueId: issue.id, issueNumber }, 'Issue created');
+
+      // Invalidate dashboard cache (non-blocking)
+      dashboardService.invalidateCache(tenantSlug, 'issues').catch((err) => {
+        logger.warn({ err, tenantSlug }, 'Failed to invalidate dashboard cache after issue creation');
+      });
+
       return this.findById(tenantSlug, issue.id) as Promise<Issue>;
     } catch (error) {
       await client.query('ROLLBACK');
@@ -361,6 +368,12 @@ export class IssueService {
     );
 
     logger.info({ issueId: existing.id }, 'Issue updated');
+
+    // Invalidate dashboard cache (non-blocking)
+    dashboardService.invalidateCache(tenantSlug, 'issues').catch((err) => {
+      logger.warn({ err, tenantSlug }, 'Failed to invalidate dashboard cache after issue update');
+    });
+
     return this.findById(tenantSlug, existing.id) as Promise<Issue>;
   }
 

@@ -1,0 +1,19 @@
+{
+  "id": "loki-STAB-001",
+  "title": "[general] Task",
+  "description": "{}",
+  "status": "done",
+  "agent": "unassigned",
+  "tags": [
+    "general",
+    "phase-bootstrap",
+    "priority-5"
+  ],
+  "createdAt": "2026-01-02T20:31:01.550874Z",
+  "metadata": {
+    "lokiId": "STAB-001",
+    "lokiPhase": "BOOTSTRAP",
+    "retries": 0,
+    "lastError": null
+  }
+}

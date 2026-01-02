@@ -4,6 +4,7 @@ import { NotFoundError, BadRequestError } from '../utils/errors.js';
 import { logger } from '../utils/logger.js';
 import type { PaginationParams } from '../types/index.js';
 import { getOffset } from '../utils/pagination.js';
+import { dashboardService } from './dashboard.js';
 
 type RequestStatus = 'submitted' | 'pending_approval' | 'approved' | 'rejected' | 'in_progress' | 'completed' | 'cancelled';
 
@@ -251,6 +252,12 @@ export class RequestService {
       await client.query('COMMIT');
 
       logger.info({ requestId: request.id, requestNumber }, 'Service request created');
+
+      // Invalidate dashboard cache (non-blocking)
+      dashboardService.invalidateCache(tenantSlug, 'requests').catch((err) => {
+        logger.warn({ err, tenantSlug }, 'Failed to invalidate dashboard cache after request creation');
+      });
+
       return this.findById(tenantSlug, request.id) as Promise<ServiceRequest>;
     } catch (error) {
       await client.query('ROLLBACK');
@@ -306,6 +313,12 @@ export class RequestService {
     );
 
     logger.info({ requestId: existing.id }, 'Service request updated');
+
+    // Invalidate dashboard cache (non-blocking)
+    dashboardService.invalidateCache(tenantSlug, 'requests').catch((err) => {
+      logger.warn({ err, tenantSlug }, 'Failed to invalidate dashboard cache after request update');
+    });
+
     return this.findById(tenantSlug, existing.id) as Promise<ServiceRequest>;
   }
 
