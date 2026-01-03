@@ -3,7 +3,7 @@ import { z } from 'zod';
 import { authService } from '../services/auth.js';
 import { tenantService } from '../services/tenant.js';
 import { authenticate } from '../middleware/auth.js';
-import { BadRequestError } from '../utils/errors.js';
+import { BadRequestError, ConflictError } from '../utils/errors.js';
 
 const loginSchema = z.object({
   email: z.string().email(),
@@ -78,12 +78,7 @@ export default async function authRoutes(app: FastifyInstance) {
       );
 
       if (existingUser.rows.length > 0) {
-        reply.status(409).send({
-          statusCode: 409,
-          error: 'Conflict',
-          message: 'User with this email already exists',
-        });
-        return;
+        throw new ConflictError('User with this email already exists');
       }
 
       // Create user

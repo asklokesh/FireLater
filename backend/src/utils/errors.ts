@@ -78,6 +78,7 @@ export class ForbiddenError extends Error {
 
 export class ConflictError extends Error {
   statusCode = 409;
+  error = 'Conflict';
 
   constructor(message: string) {
     super(message);
