@@ -88,7 +88,7 @@ class KnowledgeService {
   ) {
     const schema = tenantService.getSchemaName(tenantSlug);
     const { page = 1, perPage = 20 } = pagination;
-    const offset = getOffset(page, perPage);
+    const offset = getOffset({ page, perPage });
 
     // Build optimized query with LEFT JOINs for category
     let query = `
