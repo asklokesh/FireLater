@@ -1,4 +1,5 @@
 import { Pool } from 'pg';
+import { logger } from '../utils/logger.js';
 
 export async function migration014KnowledgeBase(pool: Pool): Promise<void> {
   await pool.query(`
@@ -426,7 +427,7 @@ export async function migration014KnowledgeBase(pool: Pool): Promise<void> {
         RESET search_path;
       `);
     } catch (err) {
-      console.error(`Failed to apply KB migration to tenant ${tenant.slug}:`, err);
+      logger.error({ err, tenantSlug: tenant.slug }, 'Failed to apply knowledge base migration to tenant');
     }
   }
 }

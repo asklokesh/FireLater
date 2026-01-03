@@ -1,4 +1,5 @@
 import { Pool } from 'pg';
+import { logger } from '../utils/logger.js';
 
 export async function migration015Workflows(pool: Pool): Promise<void> {
   await pool.query(`
@@ -204,7 +205,7 @@ export async function migration015Workflows(pool: Pool): Promise<void> {
         RESET search_path;
       `);
     } catch (err) {
-      console.error(`Failed to apply workflow migration to tenant ${tenant.slug}:`, err);
+      logger.error({ err, tenantSlug: tenant.slug }, 'Failed to apply workflow migration to tenant');
     }
   }
 }

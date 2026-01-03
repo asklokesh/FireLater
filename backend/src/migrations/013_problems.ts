@@ -1,4 +1,5 @@
 import { Pool } from 'pg';
+import { logger } from '../utils/logger.js';
 
 export async function migration013Problems(pool: Pool): Promise<void> {
   // Add problem sequence to the id_sequences table
@@ -576,7 +577,7 @@ export async function migration013Problems(pool: Pool): Promise<void> {
         RESET search_path;
       `);
     } catch (err) {
-      console.error(`Failed to apply migration to tenant ${tenant.slug}:`, err);
+      logger.error({ err, tenantSlug: tenant.slug }, 'Failed to apply problems migration to tenant');
     }
   }
 }

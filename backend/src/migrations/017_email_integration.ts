@@ -1,4 +1,5 @@
 import { Pool } from 'pg';
+import { logger } from '../utils/logger.js';
 
 export async function migration017EmailIntegration(pool: Pool): Promise<void> {
   await pool.query(`
@@ -235,7 +236,7 @@ export async function migration017EmailIntegration(pool: Pool): Promise<void> {
         RESET search_path;
       `);
     } catch (err) {
-      console.error(`Failed to apply email integration migration to tenant ${tenant.slug}:`, err);
+      logger.error({ err, tenantSlug: tenant.slug }, 'Failed to apply email integration migration to tenant');
     }
   }
 }
