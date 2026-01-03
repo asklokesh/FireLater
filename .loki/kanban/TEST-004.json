@@ -1,0 +1,29 @@
+{
+  "id": "TEST-004",
+  "category": "TEST",
+  "severity": "HIGH",
+  "title": "Fix backend unit test failures (51 failing tests)",
+  "description": "Backend unit tests have 51 failures out of 363 tests. Main issues: (1) Zod schemas not exported from route files, causing 'Cannot read properties of undefined' errors when tests try to use createTemplateSchema, createWebhookSchema, etc. (2) Stub service implementations throwing 'Not implemented' errors. (3) Missing validation schemas for various services.",
+  "status": "pending",
+  "createdAt": "2026-01-03T04:20:00Z",
+  "blockers": [],
+  "files": [
+    "src/routes/reporting.ts",
+    "src/routes/integrations.ts",
+    "src/services/reporting.ts",
+    "tests/unit/services/reporting.test.ts",
+    "tests/unit/services/integrations.test.ts"
+  ],
+  "tasks": [
+    "Export zod schemas from route files for test usage",
+    "Implement stub service methods to not throw errors",
+    "Fix schema validation tests",
+    "Verify all 363 tests pass"
+  ],
+  "currentResults": {
+    "passed": 292,
+    "failed": 51,
+    "skipped": 20,
+    "total": 363
+  }
+}
