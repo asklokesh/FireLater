@@ -1,5 +1,6 @@
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import ReportsPage from '../page';
 
 // Mock Next.js router
@@ -10,7 +11,28 @@ vi.mock('next/navigation', () => ({
   }),
 }));
 
-// Mock API hooks
+// Mock API layer instead of hooks
+const mockListTemplates = vi.fn();
+const mockListExecutions = vi.fn();
+const mockListSchedules = vi.fn();
+const mockExecuteReport = vi.fn();
+const mockDeleteTemplate = vi.fn();
+const mockDeleteSchedule = vi.fn();
+const mockUpdateSchedule = vi.fn();
+
+vi.mock('@/lib/api', () => ({
+  reportsApi: {
+    listTemplates: (...args: any[]) => mockListTemplates(...args),
+    listExecutions: (...args: any[]) => mockListExecutions(...args),
+    listSchedules: (...args: any[]) => mockListSchedules(...args),
+    executeReport: (...args: any[]) => mockExecuteReport(...args),
+    deleteTemplate: (...args: any[]) => mockDeleteTemplate(...args),
+    deleteSchedule: (...args: any[]) => mockDeleteSchedule(...args),
+    updateSchedule: (...args: any[]) => mockUpdateSchedule(...args),
+  },
+}));
+
+// Mock data
 const mockTemplatesData = {
   data: [
     {
@@ -129,70 +151,59 @@ const mockSchedulesData = {
   ],
 };
 
-const mockExecuteReport = vi.fn();
-const mockDeleteTemplate = vi.fn();
-const mockDeleteSchedule = vi.fn();
-const mockUpdateSchedule = vi.fn();
-
-vi.mock('@/hooks/useApi', () => ({
-  useReportTemplates: () => ({
-    data: mockTemplatesData,
-    isLoading: false,
-    error: null,
-  }),
-  useReportExecutions: () => ({
-    data: mockExecutionsData,
-    isLoading: false,
-    error: null,
-  }),
-  useReportSchedules: () => ({
-    data: mockSchedulesData,
-    isLoading: false,
-    error: null,
-  }),
-  useExecuteReport: () => ({
-    mutateAsync: mockExecuteReport,
-    isPending: false,
-  }),
-  useDeleteReportTemplate: () => ({
-    mutateAsync: mockDeleteTemplate,
-  }),
-  useDeleteReportSchedule: () => ({
-    mutateAsync: mockDeleteSchedule,
-  }),
-  useUpdateReportSchedule: () => ({
-    mutateAsync: mockUpdateSchedule,
-  }),
-}));
+// Helper to render component with QueryClientProvider
+function renderWithQueryClient(component: React.ReactElement) {
+  const queryClient = new QueryClient({
+    defaultOptions: {
+      queries: {
+        retry: false,
+      },
+    },
+  });
+  return render(
+    <QueryClientProvider client={queryClient}>
+      {component}
+    </QueryClientProvider>
+  );
+}
 
 describe('ReportsPage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+
+    // Setup default API mock responses
+    mockListTemplates.mockResolvedValue(mockTemplatesData);
+    mockListExecutions.mockResolvedValue(mockExecutionsData);
+    mockListSchedules.mockResolvedValue(mockSchedulesData);
+    mockExecuteReport.mockResolvedValue({});
+    mockDeleteTemplate.mockResolvedValue({});
+    mockDeleteSchedule.mockResolvedValue({});
+    mockUpdateSchedule.mockResolvedValue({});
   });
 
   describe('Basic Rendering', () => {
     it('renders page title', () => {
-      render(<ReportsPage />);
+      renderWithQueryClient(<ReportsPage />);
       expect(screen.getByText('Reports')).toBeInTheDocument();
     });
 
     it('renders page subtitle', () => {
-      render(<ReportsPage />);
+      renderWithQueryClient(<ReportsPage />);
       expect(screen.getByText('Generate and schedule reports')).toBeInTheDocument();
     });
 
     it('renders Create Report button', () => {
-      render(<ReportsPage />);
+      renderWithQueryClient(<ReportsPage />);
       expect(screen.getByRole('link', { name: /Create Report/i })).toBeInTheDocument();
     });
 
     it('renders search input', () => {
-      render(<ReportsPage />);
+      renderWithQueryClient(<ReportsPage />);
       expect(screen.getByPlaceholderText('Search reports...')).toBeInTheDocument();
     });
 
     it('renders all three tabs', () => {
-      render(<ReportsPage />);
+      renderWithQueryClient(<ReportsPage />);
       expect(screen.getByText('Report Templates')).toBeInTheDocument();
       expect(screen.getByText('Report History')).toBeInTheDocument();
       expect(screen.getByText('Scheduled Reports')).toBeInTheDocument();
@@ -201,32 +212,34 @@ describe('ReportsPage', () => {
 
   describe('Tab Switching', () => {
     it('defaults to templates tab', () => {
-      render(<ReportsPage />);
+      renderWithQueryClient(<ReportsPage />);
       const templatesTab = screen.getByText('Report Templates').closest('button');
       expect(templatesTab).toHaveClass('border-blue-500', 'text-blue-600');
     });
 
     it('switches to history tab', () => {
-      render(<ReportsPage />);
+      renderWithQueryClient(<ReportsPage />);
       fireEvent.click(screen.getByText('Report History'));
       const historyTab = screen.getByText('Report History').closest('button');
       expect(historyTab).toHaveClass('border-blue-500', 'text-blue-600');
     });
 
     it('switches to scheduled tab', () => {
-      render(<ReportsPage />);
+      renderWithQueryClient(<ReportsPage />);
       fireEvent.click(screen.getByText('Scheduled Reports'));
       const scheduledTab = screen.getByText('Scheduled Reports').closest('button');
       expect(scheduledTab).toHaveClass('border-blue-500', 'text-blue-600');
     });
 
-    it('displays template count badge', () => {
-      render(<ReportsPage />);
-      expect(screen.getByText('3')).toBeInTheDocument();
+    it('displays template count badge', async () => {
+      renderWithQueryClient(<ReportsPage />);
+      await waitFor(() => {
+        expect(screen.getByText('3')).toBeInTheDocument();
+      });
     });
 
     it('displays active schedule count badge', async () => {
-      render(<ReportsPage />);
+      renderWithQueryClient(<ReportsPage />);
       // 2 out of 3 schedules are active (sched-1 and sched-3)
       await waitFor(() => {
         expect(screen.getByText(/2 active/i)).toBeInTheDocument();
@@ -235,58 +248,72 @@ describe('ReportsPage', () => {
   });
 
   describe('Templates Tab', () => {
-    it('displays all report templates', () => {
-      render(<ReportsPage />);
-      expect(screen.getByText('Incident Report')).toBeInTheDocument();
+    it('displays all report templates', async () => {
+      renderWithQueryClient(<ReportsPage />);
+      await waitFor(() => {
+        expect(screen.getByText('Incident Report')).toBeInTheDocument();
+      });
       expect(screen.getByText('Change Success Report')).toBeInTheDocument();
       expect(screen.getByText('SLA Compliance')).toBeInTheDocument();
     });
 
-    it('displays template descriptions', () => {
-      render(<ReportsPage />);
-      expect(screen.getByText('Monthly incident statistics')).toBeInTheDocument();
+    it('displays template descriptions', async () => {
+      renderWithQueryClient(<ReportsPage />);
+      await waitFor(() => {
+        expect(screen.getByText('Monthly incident statistics')).toBeInTheDocument();
+      });
       expect(screen.getByText('Track change implementation success rates')).toBeInTheDocument();
     });
 
-    it('displays "No description" for templates without description', () => {
-      render(<ReportsPage />);
-      expect(screen.getByText('No description')).toBeInTheDocument();
+    it('displays "No description" for templates without description', async () => {
+      renderWithQueryClient(<ReportsPage />);
+      await waitFor(() => {
+        expect(screen.getByText('No description')).toBeInTheDocument();
+      });
     });
 
-    it('displays template type icons with correct colors', () => {
-      render(<ReportsPage />);
-      const templates = screen.getAllByRole('button', { name: '' });
-      // Check that colored divs exist
-      const coloredDivs = document.querySelectorAll('.bg-red-100, .bg-yellow-100, .bg-purple-100');
-      expect(coloredDivs.length).toBeGreaterThan(0);
+    it('displays template type icons with correct colors', async () => {
+      renderWithQueryClient(<ReportsPage />);
+      await waitFor(() => {
+        const coloredDivs = document.querySelectorAll('.bg-red-100, .bg-yellow-100, .bg-purple-100');
+        expect(coloredDivs.length).toBeGreaterThan(0);
+      });
     });
 
-    it('displays updated timestamps', () => {
-      render(<ReportsPage />);
-      expect(screen.getByText(/Updated Jan 15, 2024/)).toBeInTheDocument();
+    it('displays updated timestamps', async () => {
+      renderWithQueryClient(<ReportsPage />);
+      await waitFor(() => {
+        expect(screen.getByText(/Updated Jan 15, 2024/)).toBeInTheDocument();
+      });
       expect(screen.getByText(/Updated Jan 20, 2024/)).toBeInTheDocument();
       expect(screen.getByText(/Updated Jan 25, 2024/)).toBeInTheDocument();
     });
 
-    it('displays Run Now button for each template', () => {
-      render(<ReportsPage />);
-      const runButtons = screen.getAllByRole('button', { name: /Run Now/i });
-      expect(runButtons).toHaveLength(3);
+    it('displays Run Now button for each template', async () => {
+      renderWithQueryClient(<ReportsPage />);
+      await waitFor(() => {
+        const runButtons = screen.getAllByRole('button', { name: /Run Now/i });
+        expect(runButtons).toHaveLength(3);
+      });
     });
 
-    it('displays schedule button for each template', () => {
-      render(<ReportsPage />);
-      const scheduleButtons = screen.getAllByRole('link', { name: '' });
-      // Calendar icon links
-      const calendarLinks = scheduleButtons.filter((btn) =>
-        btn.getAttribute('href')?.includes('/schedule')
-      );
-      expect(calendarLinks.length).toBeGreaterThan(0);
+    it('displays schedule button for each template', async () => {
+      renderWithQueryClient(<ReportsPage />);
+      await waitFor(() => {
+        const scheduleButtons = screen.getAllByRole('link', { name: '' });
+        // Calendar icon links
+        const calendarLinks = scheduleButtons.filter((btn) =>
+          btn.getAttribute('href')?.includes('/schedule')
+        );
+        expect(calendarLinks.length).toBeGreaterThan(0);
+      });
     });
 
     it('calls execute report when Run Now clicked', async () => {
-      mockExecuteReport.mockResolvedValue({});
-      render(<ReportsPage />);
+      renderWithQueryClient(<ReportsPage />);
+      await waitFor(() => {
+        expect(screen.getByText('Incident Report')).toBeInTheDocument();
+      });
       const runButtons = screen.getAllByRole('button', { name: /Run Now/i });
       fireEvent.click(runButtons[0]);
       await waitFor(() => {
@@ -296,8 +323,14 @@ describe('ReportsPage', () => {
   });
 
   describe('Search Functionality', () => {
-    it('filters templates by name', () => {
-      render(<ReportsPage />);
+    beforeEach(() => {
+      renderWithQueryClient(<ReportsPage />);
+    });
+
+    it('filters templates by name', async () => {
+      await waitFor(() => {
+        expect(screen.getByText('Incident Report')).toBeInTheDocument();
+      });
       const searchInput = screen.getByPlaceholderText('Search reports...');
       fireEvent.change(searchInput, { target: { value: 'Incident' } });
       expect(screen.getByText('Incident Report')).toBeInTheDocument();
@@ -306,7 +339,6 @@ describe('ReportsPage', () => {
     });
 
     it('filters templates by description', () => {
-      render(<ReportsPage />);
       const searchInput = screen.getByPlaceholderText('Search reports...');
       fireEvent.change(searchInput, { target: { value: 'success rates' } });
       expect(screen.getByText('Change Success Report')).toBeInTheDocument();
@@ -314,14 +346,12 @@ describe('ReportsPage', () => {
     });
 
     it('is case insensitive', () => {
-      render(<ReportsPage />);
       const searchInput = screen.getByPlaceholderText('Search reports...');
       fireEvent.change(searchInput, { target: { value: 'INCIDENT' } });
       expect(screen.getByText('Incident Report')).toBeInTheDocument();
     });
 
     it('shows empty state when no matches', () => {
-      render(<ReportsPage />);
       const searchInput = screen.getByPlaceholderText('Search reports...');
       fireEvent.change(searchInput, { target: { value: 'nonexistent' } });
       expect(screen.getByText('No report templates')).toBeInTheDocument();
@@ -331,7 +361,11 @@ describe('ReportsPage', () => {
 
   describe('History Tab', () => {
     beforeEach(async () => {
-      render(<ReportsPage />);
+      renderWithQueryClient(<ReportsPage />);
+      // Wait for initial render
+      await waitFor(() => {
+        expect(screen.getByText(/Report Templates/i)).toBeInTheDocument();
+      });
       fireEvent.click(screen.getByText('Report History'));
       await waitFor(() => {
         expect(screen.getByText('Incident Report')).toBeInTheDocument();
@@ -393,8 +427,15 @@ describe('ReportsPage', () => {
   });
 
   describe('Scheduled Tab', () => {
+    beforeEach(async () => {
+      renderWithQueryClient(<ReportsPage />);
+      // Wait for initial data load
+      await waitFor(() => {
+        expect(mockListTemplates).toHaveBeenCalled();
+      });
+    });
+
     it('displays all schedules', async () => {
-      render(<ReportsPage />);
       fireEvent.click(screen.getByText('Scheduled Reports'));
       await waitFor(() => {
         expect(screen.getByText('Monthly Incident Report')).toBeInTheDocument();
@@ -404,7 +445,6 @@ describe('ReportsPage', () => {
     });
 
     it('displays template names for schedules', async () => {
-      render(<ReportsPage />);
       fireEvent.click(screen.getByText('Scheduled Reports'));
       await waitFor(() => {
         expect(screen.getByText('Incident Report')).toBeInTheDocument();
@@ -413,7 +453,6 @@ describe('ReportsPage', () => {
     });
 
     it('displays schedule types', async () => {
-      render(<ReportsPage />);
       fireEvent.click(screen.getByText('Scheduled Reports'));
       await waitFor(() => {
         expect(screen.getByText('Monthly')).toBeInTheDocument();
@@ -423,7 +462,6 @@ describe('ReportsPage', () => {
     });
 
     it('displays cron expressions when available', async () => {
-      render(<ReportsPage />);
       fireEvent.click(screen.getByText('Scheduled Reports'));
       await waitFor(() => {
         expect(screen.getByText('0 0 1 * *')).toBeInTheDocument();
@@ -431,7 +469,6 @@ describe('ReportsPage', () => {
     });
 
     it('displays delivery methods', async () => {
-      render(<ReportsPage />);
       fireEvent.click(screen.getByText('Scheduled Reports'));
       await waitFor(() => {
         expect(screen.getByText(/email/i)).toBeInTheDocument();
@@ -441,7 +478,6 @@ describe('ReportsPage', () => {
     });
 
     it('displays recipients', async () => {
-      render(<ReportsPage />);
       fireEvent.click(screen.getByText('Scheduled Reports'));
       await waitFor(() => {
         expect(screen.getByText('admin@example.com, team@example.com')).toBeInTheDocument();
@@ -451,7 +487,6 @@ describe('ReportsPage', () => {
     });
 
     it('displays next run time when available', async () => {
-      render(<ReportsPage />);
       fireEvent.click(screen.getByText('Scheduled Reports'));
       await waitFor(() => {
         expect(screen.getByText(/Feb 1, 2024/)).toBeInTheDocument();
@@ -460,7 +495,6 @@ describe('ReportsPage', () => {
     });
 
     it('displays dash for schedules without next run', async () => {
-      render(<ReportsPage />);
       fireEvent.click(screen.getByText('Scheduled Reports'));
       await waitFor(() => {
         const cells = screen.getAllByText('-');
@@ -469,7 +503,6 @@ describe('ReportsPage', () => {
     });
 
     it('displays active status badge', async () => {
-      render(<ReportsPage />);
       fireEvent.click(screen.getByText('Scheduled Reports'));
       await waitFor(() => {
         const activeBadges = screen.getAllByText('Active');
@@ -478,7 +511,6 @@ describe('ReportsPage', () => {
     });
 
     it('displays paused status badge', async () => {
-      render(<ReportsPage />);
       fireEvent.click(screen.getByText('Scheduled Reports'));
       await waitFor(() => {
         expect(screen.getByText('Paused')).toBeInTheDocument();
@@ -486,7 +518,6 @@ describe('ReportsPage', () => {
     });
 
     it('active schedules have green badge', async () => {
-      render(<ReportsPage />);
       fireEvent.click(screen.getByText('Scheduled Reports'));
       await waitFor(() => {
         const activeBadges = screen.getAllByText('Active');
@@ -497,7 +528,6 @@ describe('ReportsPage', () => {
     });
 
     it('paused schedules have gray badge', async () => {
-      render(<ReportsPage />);
       fireEvent.click(screen.getByText('Scheduled Reports'));
       await waitFor(() => {
         const pausedBadge = screen.getByText('Paused');
@@ -506,7 +536,6 @@ describe('ReportsPage', () => {
     });
 
     it('displays pause button for active schedules', async () => {
-      render(<ReportsPage />);
       fireEvent.click(screen.getByText('Scheduled Reports'));
       await waitFor(() => {
         const buttons = document.querySelectorAll('[title="Pause"]');
@@ -515,7 +544,6 @@ describe('ReportsPage', () => {
     });
 
     it('displays play button for paused schedules', async () => {
-      render(<ReportsPage />);
       fireEvent.click(screen.getByText('Scheduled Reports'));
       await waitFor(() => {
         const buttons = document.querySelectorAll('[title="Activate"]');
@@ -524,8 +552,6 @@ describe('ReportsPage', () => {
     });
 
     it('calls toggle schedule when pause clicked', async () => {
-      mockUpdateSchedule.mockResolvedValue({});
-      render(<ReportsPage />);
       fireEvent.click(screen.getByText('Scheduled Reports'));
       await waitFor(() => {
         expect(screen.getByText('Monthly Incident Report')).toBeInTheDocument();
@@ -541,8 +567,6 @@ describe('ReportsPage', () => {
     });
 
     it('calls toggle schedule when activate clicked', async () => {
-      mockUpdateSchedule.mockResolvedValue({});
-      render(<ReportsPage />);
       fireEvent.click(screen.getByText('Scheduled Reports'));
       await waitFor(() => {
         expect(screen.getByText('Weekly Change Report')).toBeInTheDocument();
@@ -558,7 +582,6 @@ describe('ReportsPage', () => {
     });
 
     it('truncates long recipient lists', async () => {
-      render(<ReportsPage />);
       fireEvent.click(screen.getByText('Scheduled Reports'));
       await waitFor(() => {
         expect(screen.getByText('Monthly Incident Report')).toBeInTheDocument();
@@ -570,103 +593,82 @@ describe('ReportsPage', () => {
   });
 
   describe('Empty States', () => {
-    it('shows empty templates message when no templates', () => {
-      vi.mock('@/hooks/useApi', () => ({
-        useReportTemplates: () => ({
-          data: { data: [] },
-          isLoading: false,
-        }),
-        useReportExecutions: () => ({
-          data: mockExecutionsData,
-          isLoading: false,
-        }),
-        useReportSchedules: () => ({
-          data: mockSchedulesData,
-          isLoading: false,
-        }),
-        useExecuteReport: () => ({ mutateAsync: mockExecuteReport, isPending: false }),
-        useDeleteReportTemplate: () => ({ mutateAsync: mockDeleteTemplate }),
-        useDeleteReportSchedule: () => ({ mutateAsync: mockDeleteSchedule }),
-        useUpdateReportSchedule: () => ({ mutateAsync: mockUpdateSchedule }),
-      }));
-
-      // Need to re-render with new mock
-      const { rerender } = render(<ReportsPage />);
-      rerender(<ReportsPage />);
+    it('shows empty templates message when no templates', async () => {
+      mockListTemplates.mockResolvedValue({ data: [] });
+      renderWithQueryClient(<ReportsPage />);
+      await waitFor(() => {
+        expect(screen.getByText('No report templates')).toBeInTheDocument();
+      });
+      expect(screen.getByText('Get started by creating a new report template.')).toBeInTheDocument();
     });
 
-    it('shows empty history message', () => {
-      render(<ReportsPage />);
+    it('shows empty history message', async () => {
+      mockListExecutions.mockResolvedValue({ data: [] });
+      renderWithQueryClient(<ReportsPage />);
+      await waitFor(() => {
+        expect(mockListTemplates).toHaveBeenCalled();
+      });
       fireEvent.click(screen.getByText('Report History'));
-
-      vi.mock('@/hooks/useApi', () => ({
-        useReportTemplates: () => ({ data: mockTemplatesData, isLoading: false }),
-        useReportExecutions: () => ({ data: { data: [] }, isLoading: false }),
-        useReportSchedules: () => ({ data: mockSchedulesData, isLoading: false }),
-        useExecuteReport: () => ({ mutateAsync: mockExecuteReport, isPending: false }),
-        useDeleteReportTemplate: () => ({ mutateAsync: mockDeleteTemplate }),
-        useDeleteReportSchedule: () => ({ mutateAsync: mockDeleteSchedule }),
-        useUpdateReportSchedule: () => ({ mutateAsync: mockUpdateSchedule }),
-      }));
+      await waitFor(() => {
+        expect(screen.getByText('No report history')).toBeInTheDocument();
+      });
     });
 
-    it('shows empty scheduled reports message', () => {
-      render(<ReportsPage />);
+    it('shows empty scheduled reports message', async () => {
+      mockListSchedules.mockResolvedValue({ data: [] });
+      renderWithQueryClient(<ReportsPage />);
+      await waitFor(() => {
+        expect(mockListTemplates).toHaveBeenCalled();
+      });
       fireEvent.click(screen.getByText('Scheduled Reports'));
-
-      vi.mock('@/hooks/useApi', () => ({
-        useReportTemplates: () => ({ data: mockTemplatesData, isLoading: false }),
-        useReportExecutions: () => ({ data: mockExecutionsData, isLoading: false }),
-        useReportSchedules: () => ({ data: { data: [] }, isLoading: false }),
-        useExecuteReport: () => ({ mutateAsync: mockExecuteReport, isPending: false }),
-        useDeleteReportTemplate: () => ({ mutateAsync: mockDeleteTemplate }),
-        useDeleteReportSchedule: () => ({ mutateAsync: mockDeleteSchedule }),
-        useUpdateReportSchedule: () => ({ mutateAsync: mockUpdateSchedule }),
-      }));
+      await waitFor(() => {
+        expect(screen.getByText('No scheduled reports')).toBeInTheDocument();
+      });
     });
   });
 
   describe('Loading States', () => {
-    it('shows loading spinner for templates', () => {
-      vi.mock('@/hooks/useApi', () => ({
-        useReportTemplates: () => ({ data: null, isLoading: true }),
-        useReportExecutions: () => ({ data: mockExecutionsData, isLoading: false }),
-        useReportSchedules: () => ({ data: mockSchedulesData, isLoading: false }),
-        useExecuteReport: () => ({ mutateAsync: mockExecuteReport, isPending: false }),
-        useDeleteReportTemplate: () => ({ mutateAsync: mockDeleteTemplate }),
-        useDeleteReportSchedule: () => ({ mutateAsync: mockDeleteSchedule }),
-        useUpdateReportSchedule: () => ({ mutateAsync: mockUpdateSchedule }),
-      }));
+    it('shows loading spinner for templates', async () => {
+      // Mock with a delayed response to catch loading state
+      mockListTemplates.mockImplementation(() => new Promise(resolve => setTimeout(() => resolve(mockTemplatesData), 100)));
+      renderWithQueryClient(<ReportsPage />);
+      // Loading spinner shows while waiting
+      expect(document.querySelector('.animate-spin')).toBeInTheDocument();
     });
 
-    it('shows loading spinner for history', () => {
-      vi.mock('@/hooks/useApi', () => ({
-        useReportTemplates: () => ({ data: mockTemplatesData, isLoading: false }),
-        useReportExecutions: () => ({ data: null, isLoading: true }),
-        useReportSchedules: () => ({ data: mockSchedulesData, isLoading: false }),
-        useExecuteReport: () => ({ mutateAsync: mockExecuteReport, isPending: false }),
-        useDeleteReportTemplate: () => ({ mutateAsync: mockDeleteTemplate }),
-        useDeleteReportSchedule: () => ({ mutateAsync: mockDeleteSchedule }),
-        useUpdateReportSchedule: () => ({ mutateAsync: mockUpdateSchedule }),
-      }));
+    it('shows loading spinner for history', async () => {
+      mockListExecutions.mockImplementation(() => new Promise(resolve => setTimeout(() => resolve(mockExecutionsData), 100)));
+      renderWithQueryClient(<ReportsPage />);
+      await waitFor(() => {
+        expect(mockListTemplates).toHaveBeenCalled();
+      });
+      fireEvent.click(screen.getByText('Report History'));
+      // Loading spinner shows while waiting
+      await waitFor(() => {
+        expect(document.querySelector('.animate-spin')).toBeInTheDocument();
+      });
     });
 
-    it('shows loading spinner for scheduled', () => {
-      vi.mock('@/hooks/useApi', () => ({
-        useReportTemplates: () => ({ data: mockTemplatesData, isLoading: false }),
-        useReportExecutions: () => ({ data: mockExecutionsData, isLoading: false }),
-        useReportSchedules: () => ({ data: null, isLoading: true }),
-        useExecuteReport: () => ({ mutateAsync: mockExecuteReport, isPending: false }),
-        useDeleteReportTemplate: () => ({ mutateAsync: mockDeleteTemplate }),
-        useDeleteReportSchedule: () => ({ mutateAsync: mockDeleteSchedule }),
-        useUpdateReportSchedule: () => ({ mutateAsync: mockUpdateSchedule }),
-      }));
+    it('shows loading spinner for scheduled', async () => {
+      mockListSchedules.mockImplementation(() => new Promise(resolve => setTimeout(() => resolve(mockSchedulesData), 100)));
+      renderWithQueryClient(<ReportsPage />);
+      await waitFor(() => {
+        expect(mockListTemplates).toHaveBeenCalled();
+      });
+      fireEvent.click(screen.getByText('Scheduled Reports'));
+      // Loading spinner shows while waiting
+      await waitFor(() => {
+        expect(document.querySelector('.animate-spin')).toBeInTheDocument();
+      });
     });
   });
 
   describe('Delete Confirmation Modal', () => {
-    it('shows delete modal when delete template clicked', () => {
-      render(<ReportsPage />);
+    it('shows delete modal when delete template clicked', async () => {
+      renderWithQueryClient(<ReportsPage />);
+      await waitFor(() => {
+        expect(mockListTemplates).toHaveBeenCalled();
+      });
       // The template cards have a dropdown menu that appears on hover
       // Find all cards
       const cards = document.querySelectorAll('.group');
@@ -677,23 +679,30 @@ describe('ReportsPage', () => {
       expect(screen.getByText('Incident Report')).toBeInTheDocument();
     });
 
-    it('closes modal when cancel clicked', () => {
-      render(<ReportsPage />);
+    it('closes modal when cancel clicked', async () => {
+      renderWithQueryClient(<ReportsPage />);
+      await waitFor(() => {
+        expect(mockListTemplates).toHaveBeenCalled();
+      });
       // Modal functionality exists but requires complex hover interactions
       // Verify base page renders correctly
       expect(screen.getByText('Reports')).toBeInTheDocument();
     });
 
     it('calls delete template when confirmed', async () => {
-      mockDeleteTemplate.mockResolvedValue({});
-      render(<ReportsPage />);
+      renderWithQueryClient(<ReportsPage />);
+      await waitFor(() => {
+        expect(mockListTemplates).toHaveBeenCalled();
+      });
       // Delete template functionality exists
       expect(mockDeleteTemplate).toBeDefined();
     });
 
     it('calls delete schedule when confirmed in scheduled tab', async () => {
-      mockDeleteSchedule.mockResolvedValue({});
-      render(<ReportsPage />);
+      renderWithQueryClient(<ReportsPage />);
+      await waitFor(() => {
+        expect(mockListSchedules).toHaveBeenCalled();
+      });
       fireEvent.click(screen.getByText('Scheduled Reports'));
       // Delete schedule functionality exists
       expect(mockDeleteSchedule).toBeDefined();
@@ -701,31 +710,49 @@ describe('ReportsPage', () => {
   });
 
   describe('File Size Formatting', () => {
-    it('formats bytes correctly', () => {
-      render(<ReportsPage />);
-      fireEvent.click(screen.getByText('Report History'));
-      expect(screen.getByText('512.0 KB')).toBeInTheDocument();
+    beforeEach(async () => {
+      renderWithQueryClient(<ReportsPage />);
+      await waitFor(() => {
+        expect(mockListExecutions).toHaveBeenCalled();
+      });
     });
 
-    it('displays dash for missing file size', () => {
-      render(<ReportsPage />);
+    it('formats bytes correctly', async () => {
       fireEvent.click(screen.getByText('Report History'));
-      const dashes = screen.getAllByText('-');
-      expect(dashes.length).toBeGreaterThan(0);
+      await waitFor(() => {
+        expect(screen.getByText('512.0 KB')).toBeInTheDocument();
+      });
+    });
+
+    it('displays dash for missing file size', async () => {
+      fireEvent.click(screen.getByText('Report History'));
+      await waitFor(() => {
+        const dashes = screen.getAllByText('-');
+        expect(dashes.length).toBeGreaterThan(0);
+      });
     });
   });
 
   describe('Date Formatting', () => {
-    it('formats dates with month, day, year, and time', () => {
-      render(<ReportsPage />);
+    it('formats dates with month, day, year, and time', async () => {
+      renderWithQueryClient(<ReportsPage />);
+      await waitFor(() => {
+        expect(mockListTemplates).toHaveBeenCalled();
+      });
       // Date formatting is locale dependent, just verify dates are present
       expect(screen.getByText(/Jan 15, 2024/)).toBeInTheDocument();
     });
   });
 
   describe('Template Menu', () => {
+    beforeEach(async () => {
+      renderWithQueryClient(<ReportsPage />);
+      await waitFor(() => {
+        expect(mockListTemplates).toHaveBeenCalled();
+      });
+    });
+
     it('displays Edit link in template menu', () => {
-      render(<ReportsPage />);
       // Edit links exist in the hidden dropdown menu
       const allLinks = screen.getAllByRole('link');
       const editLinks = allLinks.filter((link) => link.getAttribute('href')?.startsWith('/reports/tpl-'));
@@ -733,7 +760,6 @@ describe('ReportsPage', () => {
     });
 
     it('displays schedule link for templates', () => {
-      render(<ReportsPage />);
       // Calendar button links to schedule page
       const scheduleLinks = screen.getAllByRole('link').filter((link) =>
         link.getAttribute('href')?.includes('/schedule')
@@ -743,8 +769,14 @@ describe('ReportsPage', () => {
   });
 
   describe('Schedule Actions', () => {
+    beforeEach(async () => {
+      renderWithQueryClient(<ReportsPage />);
+      await waitFor(() => {
+        expect(mockListTemplates).toHaveBeenCalled();
+      });
+    });
+
     it('displays settings button for schedules', async () => {
-      render(<ReportsPage />);
       fireEvent.click(screen.getByText('Scheduled Reports'));
       await waitFor(() => {
         const settingsLinks = screen.getAllByRole('link').filter((link) =>
@@ -755,7 +787,6 @@ describe('ReportsPage', () => {
     });
 
     it('settings button links to correct schedule', async () => {
-      render(<ReportsPage />);
       fireEvent.click(screen.getByText('Scheduled Reports'));
       await waitFor(() => {
         const settingsLinks = screen.getAllByRole('link').filter((link) =>
@@ -767,20 +798,31 @@ describe('ReportsPage', () => {
   });
 
   describe('Edge Cases', () => {
-    it('handles template without optional fields', () => {
-      render(<ReportsPage />);
+    it('handles template without optional fields', async () => {
+      renderWithQueryClient(<ReportsPage />);
+      await waitFor(() => {
+        expect(mockListTemplates).toHaveBeenCalled();
+      });
       // SLA Compliance has no description
       expect(screen.getByText('No description')).toBeInTheDocument();
     });
 
-    it('handles execution without template_name', () => {
-      render(<ReportsPage />);
+    it('handles execution without template_name', async () => {
+      renderWithQueryClient(<ReportsPage />);
+      await waitFor(() => {
+        expect(mockListExecutions).toHaveBeenCalled();
+      });
       fireEvent.click(screen.getByText('Report History'));
-      expect(screen.getByText('Unknown Report')).toBeInTheDocument();
+      await waitFor(() => {
+        expect(screen.getByText('Unknown Report')).toBeInTheDocument();
+      });
     });
 
     it('handles schedule without template_name', async () => {
-      render(<ReportsPage />);
+      renderWithQueryClient(<ReportsPage />);
+      await waitFor(() => {
+        expect(mockListSchedules).toHaveBeenCalled();
+      });
       fireEvent.click(screen.getByText('Scheduled Reports'));
       await waitFor(() => {
         expect(screen.getByText('Daily SLA Report')).toBeInTheDocument();
@@ -788,25 +830,35 @@ describe('ReportsPage', () => {
     });
 
     it('handles schedule without next_run_at', async () => {
-      render(<ReportsPage />);
+      renderWithQueryClient(<ReportsPage />);
+      await waitFor(() => {
+        expect(mockListSchedules).toHaveBeenCalled();
+      });
       fireEvent.click(screen.getByText('Scheduled Reports'));
       await waitFor(() => {
         expect(screen.getByText('Weekly Change Report')).toBeInTheDocument();
       });
     });
 
-    it('handles unknown report type with fallback icon', () => {
-      render(<ReportsPage />);
+    it('handles unknown report type with fallback icon', async () => {
+      renderWithQueryClient(<ReportsPage />);
+      await waitFor(() => {
+        expect(mockListTemplates).toHaveBeenCalled();
+      });
       // Tests that unknown types get default icon/color
       const coloredDivs = document.querySelectorAll('[class*="bg-"]');
       expect(coloredDivs.length).toBeGreaterThan(0);
     });
 
-    it('handles unknown status with fallback', () => {
-      render(<ReportsPage />);
+    it('handles unknown status with fallback', async () => {
+      renderWithQueryClient(<ReportsPage />);
+      await waitFor(() => {
+        expect(mockListExecutions).toHaveBeenCalled();
+      });
       fireEvent.click(screen.getByText('Report History'));
-      // All statuses are known in mock, but code has fallback
-      expect(screen.getByText('Completed')).toBeInTheDocument();
+      await waitFor(() => {
+        expect(screen.getByText('Completed')).toBeInTheDocument();
+      });
     });
   });
 });

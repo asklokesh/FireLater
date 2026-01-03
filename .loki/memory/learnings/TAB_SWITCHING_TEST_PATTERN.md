@@ -139,9 +139,47 @@ vi.mock('@/hooks/useApi', () => ({
 - Integrations page: 5 failing tests
 - Total impact: 29 failing tests
 
+## Solution Implemented (Iteration 29)
+
+**Successful approach: Option 1 - Mock at API Layer**
+
+Changed from mocking `@/hooks/useApi` to mocking `@/lib/api`:
+
+```typescript
+// Mock API layer instead of hooks
+const mockListTemplates = vi.fn();
+const mockListExecutions = vi.fn();
+const mockListSchedules = vi.fn();
+
+vi.mock('@/lib/api', () => ({
+  reportsApi: {
+    listTemplates: (...args: any[]) => mockListTemplates(...args),
+    listExecutions: (...args: any[]) => mockListExecutions(...args),
+    listSchedules: (...args: any[]) => mockListSchedules(...args),
+  },
+}));
+
+// In beforeEach:
+mockListTemplates.mockResolvedValue(mockTemplatesData);
+mockListExecutions.mockResolvedValue(mockExecutionsData);
+mockListSchedules.mockResolvedValue(mockSchedulesData);
+```
+
+**Key changes:**
+1. Mock `@/lib/api` instead of `@/hooks/useApi`
+2. Wrap components in `QueryClientProvider` (hooks use React Query)
+3. API mocks are called on every render, not just once at module load
+4. Individual tests must use `await waitFor()` to wait for async data loading
+5. Don't rely on `beforeEach` for data loading state - each test should wait independently
+
+**Results:**
+- Reports page: 24 failing → 12 failing (50% improvement)
+- Remaining failures: Missing `waitFor()` in specific tests
+- Same pattern will fix Integrations page tab-switching tests
+
 ## Recommendation for Next Iteration
 
-Try Option 3 (Test Each Tab Separately) first - least invasive, maintains current test structure. If that fails, try Option 1 (Mock at Component Level) to avoid hook mocking issues entirely.
+Apply same API-layer mocking pattern to Integrations page. Ensure all tests that depend on async data use `await waitFor()`.
 
 ## Related Files
 
