@@ -85,6 +85,9 @@ const updateIntegrationSchema = z.object({
   fieldMappings: z.record(z.any()).optional(),
 });
 
+// Export schemas for testing
+export { createWebhookSchema, updateWebhookSchema, createConnectionSchema, updateConnectionSchema };
+
 export default async function integrationsRoutes(fastify: FastifyInstance) {
   // Require authentication for all routes
   fastify.addHook('onRequest', async (request, reply) => {

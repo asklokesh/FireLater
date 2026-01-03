@@ -63,6 +63,9 @@ const createWidgetSchema = z.object({
   showLegend: z.boolean().optional(),
 });
 
+// Export schemas for testing
+export { createTemplateSchema, createScheduleSchema, createWidgetSchema };
+
 export default async function reportingRoutes(app: FastifyInstance) {
   // ============================================
   // REPORT TEMPLATES
