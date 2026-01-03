@@ -1,4 +1,5 @@
 import { Pool } from 'pg';
+import { logger } from '../utils/logger.js';
 
 /**
  * PERF-004: Add composite indexes for frequently queried field combinations
@@ -202,7 +203,7 @@ export async function migration024PerformanceIndexes(pool: Pool): Promise<void> 
     ANALYZE audit_logs;
   `);
 
-  console.log('[Migration 024] Performance indexes created successfully');
+  logger.info('[Migration 024] Performance indexes created successfully');
 }
 
 /**
@@ -238,5 +239,5 @@ export async function migration024PerformanceIndexesDown(pool: Pool): Promise<vo
     DROP INDEX IF EXISTS idx_oncall_schedules_group_active;
   `);
 
-  console.log('[Migration 024] Performance indexes rolled back successfully');
+  logger.info('[Migration 024] Performance indexes rolled back successfully');
 }

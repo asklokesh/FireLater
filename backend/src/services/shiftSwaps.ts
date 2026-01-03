@@ -1,6 +1,7 @@
 import { pool } from '../config/database.js';
 import { tenantService } from './tenant.js';
 import { oncallScheduleService } from './oncall.js';
+import { notificationDeliveryService } from './notification-delivery.js';
 import { NotFoundError, BadRequestError, ForbiddenError } from '../utils/errors.js';
 import { logger } from '../utils/logger.js';
 import { getOffset } from '../utils/pagination.js';
@@ -528,7 +529,27 @@ class ShiftSwapService {
       'Shift swap request accepted'
     );
 
-    // TODO: Send notification to requester
+    // Send notification to requester
+    try {
+      const requester = await pool.query(
+        `SELECT id, email, name FROM ${schema}.users WHERE id = $1`,
+        [swap.requester_id]
+      );
+      if (requester.rows[0]) {
+        await notificationDeliveryService.deliver(tenantSlug, {
+          id: `swap-accepted-${swap.id}`,
+          eventType: 'shift_swap_accepted',
+          title: 'Shift Swap Accepted',
+          body: `Your shift swap request ${swap.swap_number} has been accepted`,
+          entityType: 'shift_swap',
+          entityId: swap.id,
+          metadata: { swapId: swap.id, accepterId },
+          user: requester.rows[0],
+        });
+      }
+    } catch (error) {
+      logger.error({ error, swapId: swap.id }, 'Failed to send swap acceptance notification');
+    }
 
     return this.getById(tenantSlug, swapId);
   }
@@ -572,7 +593,27 @@ class ShiftSwapService {
       'Shift swap request rejected'
     );
 
-    // TODO: Send notification to requester
+    // Send notification to requester
+    try {
+      const requester = await pool.query(
+        `SELECT id, email, name FROM ${schema}.users WHERE id = $1`,
+        [swap.requester_id]
+      );
+      if (requester.rows[0]) {
+        await notificationDeliveryService.deliver(tenantSlug, {
+          id: `swap-rejected-${swap.id}`,
+          eventType: 'shift_swap_rejected',
+          title: 'Shift Swap Rejected',
+          body: `Your shift swap request ${swap.swap_number} has been rejected${message ? ': ' + message : ''}`,
+          entityType: 'shift_swap',
+          entityId: swap.id,
+          metadata: { swapId: swap.id, userId, message },
+          user: requester.rows[0],
+        });
+      }
+    } catch (error) {
+      logger.error({ error, swapId: swap.id }, 'Failed to send swap rejection notification');
+    }
 
     return this.getById(tenantSlug, result.rows[0].id);
   }
