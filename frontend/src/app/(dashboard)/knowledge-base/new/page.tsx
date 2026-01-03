@@ -76,7 +76,7 @@ export default function NewArticlePage() {
       </div>
 
       {/* Form */}
-      <form onSubmit={handleSubmit} className="bg-white rounded-lg shadow">
+      <form onSubmit={handleSubmit} className="bg-white rounded-lg shadow" role="form">
         <div className="p-6 space-y-6">
           {error && (
             <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-sm text-red-600">
@@ -86,10 +86,11 @@ export default function NewArticlePage() {
 
           {/* Title */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label htmlFor="title" className="block text-sm font-medium text-gray-700 mb-1">
               Title <span className="text-red-500">*</span>
             </label>
             <input
+              id="title"
               type="text"
               value={formData.title}
               onChange={(e) => setFormData({ ...formData, title: e.target.value })}
@@ -101,10 +102,11 @@ export default function NewArticlePage() {
 
           {/* Summary */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label htmlFor="summary" className="block text-sm font-medium text-gray-700 mb-1">
               Summary
             </label>
             <textarea
+              id="summary"
               value={formData.summary}
               onChange={(e) => setFormData({ ...formData, summary: e.target.value })}
               rows={2}
@@ -115,10 +117,11 @@ export default function NewArticlePage() {
 
           {/* Content */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label htmlFor="content" className="block text-sm font-medium text-gray-700 mb-1">
               Content <span className="text-red-500">*</span>
             </label>
             <textarea
+              id="content"
               value={formData.content}
               onChange={(e) => setFormData({ ...formData, content: e.target.value })}
               rows={12}
@@ -132,10 +135,11 @@ export default function NewArticlePage() {
           {/* Type and Visibility */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label htmlFor="type" className="block text-sm font-medium text-gray-700 mb-1">
                 Article Type
               </label>
               <select
+                id="type"
                 value={formData.type}
                 onChange={(e) => setFormData({ ...formData, type: e.target.value as typeof formData.type })}
                 className="w-full px-4 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -149,10 +153,11 @@ export default function NewArticlePage() {
               </select>
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label htmlFor="visibility" className="block text-sm font-medium text-gray-700 mb-1">
                 Visibility
               </label>
               <select
+                id="visibility"
                 value={formData.visibility}
                 onChange={(e) => setFormData({ ...formData, visibility: e.target.value as typeof formData.visibility })}
                 className="w-full px-4 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -163,10 +168,11 @@ export default function NewArticlePage() {
               </select>
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label htmlFor="category" className="block text-sm font-medium text-gray-700 mb-1">
                 Category
               </label>
               <select
+                id="category"
                 value={formData.categoryId}
                 onChange={(e) => setFormData({ ...formData, categoryId: e.target.value })}
                 className="w-full px-4 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -182,10 +188,11 @@ export default function NewArticlePage() {
           {/* Tags and Keywords */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label htmlFor="tags" className="block text-sm font-medium text-gray-700 mb-1">
                 Tags
               </label>
               <input
+                id="tags"
                 type="text"
                 value={formData.tags}
                 onChange={(e) => setFormData({ ...formData, tags: e.target.value })}
@@ -195,10 +202,11 @@ export default function NewArticlePage() {
               <p className="mt-1 text-xs text-gray-500">Comma-separated list</p>
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label htmlFor="keywords" className="block text-sm font-medium text-gray-700 mb-1">
                 Keywords
               </label>
               <input
+                id="keywords"
                 type="text"
                 value={formData.keywords}
                 onChange={(e) => setFormData({ ...formData, keywords: e.target.value })}
