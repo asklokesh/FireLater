@@ -80,30 +80,36 @@ async function checkResponseTimeBreaches(
 ): Promise<SlaBreachResult[]> {
   const breaches: SlaBreachResult[] = [];
 
-  for (const config of slaConfig) {
-    const result = await pool.query(
-      format(
-        `SELECT id, issue_number, priority, created_at
-        FROM %I.issues
-        WHERE priority = $1
-        AND status NOT IN ('resolved', 'closed')
-        AND first_response_at IS NULL
-        AND sla_breached = false
-        AND created_at < NOW() - INTERVAL '1 minute' * $2`,
-        schema
-      ),
-      [config.priority, config.responseTimeMinutes]
-    );
+  // Batch query optimization - single query instead of N queries
+  if (slaConfig.length === 0) return breaches;
 
-    for (const issue of result.rows) {
-      breaches.push({
-        issueId: issue.id,
-        issueNumber: issue.issue_number,
-        priority: issue.priority,
-        breachType: 'response',
-        breachedAt: new Date(),
-      });
-    }
+  // Build UNION ALL query for all priorities
+  const queries = slaConfig.map((config, idx) => {
+    const priorityParam = idx * 2 + 1;
+    const minutesParam = idx * 2 + 2;
+    return format(
+      `SELECT id, issue_number, priority, created_at
+      FROM %I.issues
+      WHERE priority = $${priorityParam}
+      AND status NOT IN ('resolved', 'closed')
+      AND first_response_at IS NULL
+      AND sla_breached = false
+      AND created_at < NOW() - INTERVAL '1 minute' * $${minutesParam}`,
+      schema
+    );
+  });
+
+  const values = slaConfig.flatMap(c => [c.priority, c.responseTimeMinutes]);
+  const result = await pool.query(queries.join(' UNION ALL '), values);
+
+  for (const issue of result.rows) {
+    breaches.push({
+      issueId: issue.id,
+      issueNumber: issue.issue_number,
+      priority: issue.priority,
+      breachType: 'response',
+      breachedAt: new Date(),
+    });
   }
 
   return breaches;
@@ -116,29 +122,35 @@ async function checkResolutionTimeBreaches(
 ): Promise<SlaBreachResult[]> {
   const breaches: SlaBreachResult[] = [];
 
-  for (const config of slaConfig) {
-    const result = await pool.query(
-      format(
-        `SELECT id, issue_number, priority, created_at
-        FROM %I.issues
-        WHERE priority = $1
-        AND status NOT IN ('resolved', 'closed')
-        AND sla_breached = false
-        AND created_at < NOW() - INTERVAL '1 minute' * $2`,
-        schema
-      ),
-      [config.priority, config.resolutionTimeMinutes]
-    );
+  // Batch query optimization - single query instead of N queries
+  if (slaConfig.length === 0) return breaches;
 
-    for (const issue of result.rows) {
-      breaches.push({
-        issueId: issue.id,
-        issueNumber: issue.issue_number,
-        priority: issue.priority,
-        breachType: 'resolution',
-        breachedAt: new Date(),
-      });
-    }
+  // Build UNION ALL query for all priorities
+  const queries = slaConfig.map((config, idx) => {
+    const priorityParam = idx * 2 + 1;
+    const minutesParam = idx * 2 + 2;
+    return format(
+      `SELECT id, issue_number, priority, created_at
+      FROM %I.issues
+      WHERE priority = $${priorityParam}
+      AND status NOT IN ('resolved', 'closed')
+      AND sla_breached = false
+      AND created_at < NOW() - INTERVAL '1 minute' * $${minutesParam}`,
+      schema
+    );
+  });
+
+  const values = slaConfig.flatMap(c => [c.priority, c.resolutionTimeMinutes]);
+  const result = await pool.query(queries.join(' UNION ALL '), values);
+
+  for (const issue of result.rows) {
+    breaches.push({
+      issueId: issue.id,
+      issueNumber: issue.issue_number,
+      priority: issue.priority,
+      breachType: 'resolution',
+      breachedAt: new Date(),
+    });
   }
 
   return breaches;
