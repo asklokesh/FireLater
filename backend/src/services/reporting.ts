@@ -17,6 +17,11 @@ interface ScheduledReport {
   template_id: string;
   created_by: string;
   created_at: Date;
+  is_active: boolean;
+  parameters?: Record<string, unknown>;
+  output_format?: string;
+  schedule?: string;
+  last_run?: Date;
 }
 
 interface ReportExecution {
@@ -98,7 +103,7 @@ class ScheduledReportService {
     // Stub implementation
   }
 
-  async getDueReports(): Promise<unknown[]> {
+  async getDueReports(tenantSlug: string): Promise<ScheduledReport[]> {
     return [];
   }
 }

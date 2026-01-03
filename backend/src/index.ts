@@ -107,7 +107,7 @@ async function registerPlugins() {
 
       // If using JWT, CSRF protection is inherent (browsers can't force custom headers)
       // If not using JWT (e.g., API key or cookie auth), require CSRF token
-      if (!hasJWT) {
+      if (!hasJWT && request.csrfProtection) {
         try {
           await request.csrfProtection();
         } catch (error) {

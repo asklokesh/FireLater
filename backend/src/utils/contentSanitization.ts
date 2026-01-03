@@ -70,7 +70,6 @@ export function sanitizeMarkdown(markdown: string): string {
 
   // Configure marked for security
   marked.setOptions({
-    mangle: false, // Don't mangle email addresses (we'll sanitize hrefs anyway)
     breaks: true, // GFM line breaks
   });
 
