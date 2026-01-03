@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import ForgotPasswordPage from '../page';
 import { authApi } from '@/lib/api';
-import { AxiosError } from 'axios';
+import { AxiosError, type InternalAxiosRequestConfig } from 'axios';
 
 // Mock Next.js Link component
 vi.mock('next/link', () => ({
@@ -273,7 +273,7 @@ describe('ForgotPasswordPage', () => {
           statusText: 'Not Found',
           data: { message: errorMessage },
           headers: {},
-          config: {} as any,
+          config: {} as InternalAxiosRequestConfig,
         }
       );
       vi.mocked(authApi.forgotPassword).mockRejectedValue(axiosError);
@@ -346,7 +346,7 @@ describe('ForgotPasswordPage', () => {
           statusText: 'Not Found',
           data: { message: errorMessage },
           headers: {},
-          config: {} as any,
+          config: {} as InternalAxiosRequestConfig,
         }
       );
       vi.mocked(authApi.forgotPassword).mockRejectedValueOnce(axiosError).mockResolvedValueOnce(undefined);
