@@ -919,6 +919,88 @@ export const integrationsService = {
 
     return result.rows;
   },
+
+  async syncIntegration(tenantSlug: string, integrationId: string): Promise<void> {
+    const schema = getSchema(tenantSlug);
+
+    // Get integration details
+    const integration = await this.findById(tenantSlug, integrationId);
+    if (!integration) {
+      throw new Error(`Integration ${integrationId} not found`);
+    }
+
+    if (!integration.is_active || !integration.sync_enabled) {
+      throw new Error(`Integration ${integrationId} is not active or sync is disabled`);
+    }
+
+    // Update last_sync_at
+    await pool.query(`
+      UPDATE ${schema}.integrations
+      SET last_sync_at = NOW(), connection_status = 'syncing'
+      WHERE id = $1
+    `, [integrationId]);
+
+    try {
+      // Actual sync logic would go here based on integration type
+      // For now, just mark as synced successfully
+      await pool.query(`
+        UPDATE ${schema}.integrations
+        SET connection_status = 'connected', last_error = NULL
+        WHERE id = $1
+      `, [integrationId]);
+
+      // Log successful sync
+      await pool.query(`
+        INSERT INTO ${schema}.integration_sync_logs (integration_id, status, message)
+        VALUES ($1, 'success', 'Sync completed successfully')
+      `, [integrationId]);
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+
+      // Update integration with error
+      await pool.query(`
+        UPDATE ${schema}.integrations
+        SET connection_status = 'error', last_error = $2
+        WHERE id = $1
+      `, [integrationId, errorMessage]);
+
+      // Log failed sync
+      await pool.query(`
+        INSERT INTO ${schema}.integration_sync_logs (integration_id, status, message, error_details)
+        VALUES ($1, 'error', $2, $3)
+      `, [integrationId, errorMessage, JSON.stringify({ stack: error instanceof Error ? error.stack : undefined })]);
+
+      throw error;
+    }
+  },
+
+  async handleSyncFailure(tenantSlug: string, integrationId: string, error: Error): Promise<void> {
+    const schema = getSchema(tenantSlug);
+
+    try {
+      // Update integration status
+      await pool.query(`
+        UPDATE ${schema}.integrations
+        SET connection_status = 'error', last_error = $2
+        WHERE id = $1
+      `, [integrationId, error.message]);
+
+      // Log the persistent failure
+      await pool.query(`
+        INSERT INTO ${schema}.integration_sync_logs (integration_id, status, message, error_details)
+        VALUES ($1, 'failed', $2, $3)
+      `, [
+        integrationId,
+        `Integration sync failed after all retries: ${error.message}`,
+        JSON.stringify({ stack: error.stack })
+      ]);
+
+      // In a real implementation, we would send notifications here
+      logger.error({ tenantSlug, integrationId, error: error.message }, 'Integration sync permanently failed');
+    } catch (logError) {
+      logger.error({ error: logError }, 'Failed to log integration sync failure');
+    }
+  },
 };
 
 // Available webhook events

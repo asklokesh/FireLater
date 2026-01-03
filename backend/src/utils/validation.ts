@@ -23,7 +23,7 @@ export function validateDate(dateString: string | undefined, fieldName: string):
   const trimmed = dateString.trim();
 
   // Check for SQL injection patterns
-  const sqlPattern = /['";--\/\*\*\/\\]/;
+  const sqlPattern = /['";\\-\\-\\/\\*\\*\\/\\\\]/;
   if (sqlPattern.test(trimmed)) {
     logger.warn({ dateString: trimmed, fieldName }, 'Potential SQL injection attempt in date field');
     throw new BadRequestError(`Invalid ${fieldName}: contains illegal characters`);

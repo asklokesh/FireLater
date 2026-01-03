@@ -1,6 +1,10 @@
 import { Pool } from 'pg';
 
-export async function up(pool: Pool, tenantSlug?: string): Promise<void> {
+export async function migration020CabMeetings(pool: Pool): Promise<void> {
+  await up(pool);
+}
+
+async function up(pool: Pool, tenantSlug?: string): Promise<void> {
   const schemas: string[] = [];
 
   if (tenantSlug) {
@@ -128,7 +132,7 @@ export async function up(pool: Pool, tenantSlug?: string): Promise<void> {
   }
 }
 
-export async function down(pool: Pool, tenantSlug?: string): Promise<void> {
+async function down(pool: Pool, tenantSlug?: string): Promise<void> {
   const schemas: string[] = [];
 
   if (tenantSlug) {

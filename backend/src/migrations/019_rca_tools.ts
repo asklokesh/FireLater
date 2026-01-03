@@ -1,6 +1,10 @@
 import { Pool } from 'pg';
 
-export async function up(pool: Pool, tenantSlug?: string): Promise<void> {
+export async function migration019RcaTools(pool: Pool): Promise<void> {
+  await up(pool);
+}
+
+async function up(pool: Pool, tenantSlug?: string): Promise<void> {
   // If tenantSlug is provided, only apply to that tenant's schema
   // Otherwise, apply to all tenant schemas
 
@@ -30,7 +34,7 @@ export async function up(pool: Pool, tenantSlug?: string): Promise<void> {
   }
 }
 
-export async function down(pool: Pool, tenantSlug?: string): Promise<void> {
+async function down(pool: Pool, tenantSlug?: string): Promise<void> {
   const schemas: string[] = [];
 
   if (tenantSlug) {

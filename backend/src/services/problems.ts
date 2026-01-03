@@ -406,9 +406,9 @@ export class ProblemService {
 
     // Require root cause before resolution or closure
     if (newStatus === 'resolved' || newStatus === 'closed') {
-      if (!problem.root_cause_identified) {
+      if (!problem.root_cause_identified_at) {
         throw new BadRequestError(
-          'Cannot resolve or close problem without identifying root cause. Please set root_cause_identified to true first.'
+          'Cannot resolve or close problem without identifying root cause. Please set root_cause_identified_at first.'
         );
       }
 

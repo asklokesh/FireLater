@@ -10,12 +10,17 @@ const pool = new Pool({
   statement_timeout: parseInt(process.env.DB_STATEMENT_TIMEOUT || '30000'),
 });
 
-export async function testConnection(): Promise<void> {
-  const client = await pool.connect();
+export async function testConnection(): Promise<boolean> {
   try {
-    await client.query('SELECT 1');
-  } finally {
-    client.release();
+    const client = await pool.connect();
+    try {
+      await client.query('SELECT 1');
+      return true;
+    } finally {
+      client.release();
+    }
+  } catch (error) {
+    return false;
   }
 }
 

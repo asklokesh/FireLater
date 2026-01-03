@@ -32,11 +32,13 @@ export const integrationSyncWorker = new Worker(
       await integrationsService.syncIntegration(tenantSlug, integrationId);
       logger.info(`Completed integration sync for ${integrationId} in tenant ${tenantSlug}`);
     } catch (error) {
-      logger.error(`Integration sync failed for ${integrationId} in tenant ${tenantSlug}`, {
+      logger.error({
+        integrationId,
+        tenantSlug,
         error: error instanceof Error ? error.message : String(error),
         stack: error instanceof Error ? error.stack : undefined
-      });
-      
+      }, `Integration sync failed for ${integrationId} in tenant ${tenantSlug}`);
+
       // Re-throw to trigger retry mechanism
       throw error;
     }
@@ -52,24 +54,25 @@ export const integrationSyncWorker = new Worker(
 // Handle worker errors
 integrationSyncWorker.on('failed', (job: Job | undefined, error: Error) => {
   if (job) {
-    logger.error(`Job ${job.id} failed after all retries`, {
+    logger.error({
+      jobId: job.id,
       integrationId: job.data.integrationId,
       tenantSlug: job.data.tenantSlug,
       error: error.message,
       stack: error.stack
-    });
-    
+    }, `Job ${job.id} failed after all retries`);
+
     // Send notification about persistent failure
     integrationsService.handleSyncFailure(
-      job.data.tenantSlug, 
-      job.data.integrationId, 
+      job.data.tenantSlug,
+      job.data.integrationId,
       error
-    ).catch(err => {
-      logger.error('Failed to handle sync failure notification', err);
+    ).catch((err: Error) => {
+      logger.error({ error: err.message, stack: err.stack }, 'Failed to handle sync failure notification');
     });
   }
 });
 
-integrationSyncWorker.on('error', (error) => {
-  logger.error('Integration sync worker error', error);
+integrationSyncWorker.on('error', (error: Error) => {
+  logger.error({ error: error.message, stack: error.stack }, 'Integration sync worker error');
 });
