@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import ForgotPasswordPage from '../page';
 import { authApi } from '@/lib/api';
+import { AxiosError } from 'axios';
 
 // Mock Next.js Link component
 vi.mock('next/link', () => ({
@@ -16,6 +17,7 @@ vi.mock('lucide-react', () => ({
   AlertCircle: () => <div data-testid="alert-circle-icon" />,
   CheckCircle: () => <div data-testid="check-circle-icon" />,
   ArrowLeft: () => <div data-testid="arrow-left-icon" />,
+  Loader2: () => <div data-testid="loader-icon" />,
 }));
 
 // Mock auth API
@@ -86,8 +88,8 @@ describe('ForgotPasswordPage', () => {
       const emailInput = screen.getByLabelText('Email address');
       fireEvent.change(emailInput, { target: { value: 'test@example.com' } });
 
-      const submitButton = screen.getByRole('button', { name: /Send Reset Link/i });
-      fireEvent.click(submitButton);
+      const form = screen.getByRole('button', { name: /Send Reset Link/i }).closest('form');
+      fireEvent.submit(form!);
 
       await waitFor(() => {
         expect(screen.getByText('Organization slug is required')).toBeInTheDocument();
@@ -102,8 +104,8 @@ describe('ForgotPasswordPage', () => {
       const tenantInput = screen.getByLabelText('Organization slug');
       fireEvent.change(tenantInput, { target: { value: 'test-org' } });
 
-      const submitButton = screen.getByRole('button', { name: /Send Reset Link/i });
-      fireEvent.click(submitButton);
+      const form = screen.getByRole('button', { name: /Send Reset Link/i }).closest('form');
+      fireEvent.submit(form!);
 
       await waitFor(() => {
         expect(screen.getByText('Email is required')).toBeInTheDocument();
@@ -121,8 +123,8 @@ describe('ForgotPasswordPage', () => {
       const emailInput = screen.getByLabelText('Email address');
       fireEvent.change(emailInput, { target: { value: 'invalid-email' } });
 
-      const submitButton = screen.getByRole('button', { name: /Send Reset Link/i });
-      fireEvent.click(submitButton);
+      const form = screen.getByRole('button', { name: /Send Reset Link/i }).closest('form');
+      fireEvent.submit(form!);
 
       await waitFor(() => {
         expect(screen.getByText('Please enter a valid email address')).toBeInTheDocument();
@@ -137,8 +139,8 @@ describe('ForgotPasswordPage', () => {
       const tenantInput = screen.getByLabelText('Organization slug');
       fireEvent.change(tenantInput, { target: { value: '   ' } });
 
-      const submitButton = screen.getByRole('button', { name: /Send Reset Link/i });
-      fireEvent.click(submitButton);
+      const form = screen.getByRole('button', { name: /Send Reset Link/i }).closest('form');
+      fireEvent.submit(form!);
 
       await waitFor(() => {
         expect(screen.getByText('Organization slug is required')).toBeInTheDocument();
@@ -261,14 +263,20 @@ describe('ForgotPasswordPage', () => {
   describe('Error Handling', () => {
     it('displays error message from API response', async () => {
       const errorMessage = 'User not found';
-      vi.mocked(authApi.forgotPassword).mockRejectedValue({
-        response: {
-          data: {
-            message: errorMessage,
-          },
-        },
-        isAxiosError: true,
-      });
+      const axiosError = new AxiosError(
+        errorMessage,
+        'ERR_BAD_REQUEST',
+        undefined,
+        undefined,
+        {
+          status: 404,
+          statusText: 'Not Found',
+          data: { message: errorMessage },
+          headers: {},
+          config: {} as any,
+        }
+      );
+      vi.mocked(authApi.forgotPassword).mockRejectedValue(axiosError);
 
       render(<ForgotPasswordPage />);
 
@@ -327,14 +335,21 @@ describe('ForgotPasswordPage', () => {
     });
 
     it('clears error when resubmitting form', async () => {
-      vi.mocked(authApi.forgotPassword).mockRejectedValueOnce({
-        response: {
-          data: {
-            message: 'User not found',
-          },
-        },
-        isAxiosError: true,
-      }).mockResolvedValueOnce(undefined);
+      const errorMessage = 'User not found';
+      const axiosError = new AxiosError(
+        errorMessage,
+        'ERR_BAD_REQUEST',
+        undefined,
+        undefined,
+        {
+          status: 404,
+          statusText: 'Not Found',
+          data: { message: errorMessage },
+          headers: {},
+          config: {} as any,
+        }
+      );
+      vi.mocked(authApi.forgotPassword).mockRejectedValueOnce(axiosError).mockResolvedValueOnce(undefined);
 
       render(<ForgotPasswordPage />);
 
