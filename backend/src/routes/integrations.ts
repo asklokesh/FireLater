@@ -13,7 +13,7 @@ import {
 // ============================================
 
 // API Key Schemas
-const createApiKeySchema = z.object({
+export const createApiKeySchema = z.object({
   name: z.string().min(1).max(100),
   description: z.string().max(500).optional(),
   permissions: z.array(z.string()).optional(),
@@ -33,7 +33,7 @@ const updateApiKeySchema = z.object({
 });
 
 // Webhook Schemas
-const createWebhookSchema = z.object({
+export const createWebhookSchema = z.object({
   name: z.string().min(1).max(100),
   description: z.string().max(500).optional(),
   url: z.string().url().max(2048),

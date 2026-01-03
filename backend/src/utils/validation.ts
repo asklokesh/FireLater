@@ -23,7 +23,7 @@ export function validateDate(dateString: string | undefined, fieldName: string):
   const trimmed = dateString.trim();
 
   // Check for SQL injection patterns
-  const sqlPattern = /['";\\-\\-\\/\\*\\*\\/\\\\]/;
+  const sqlPattern = /['";]|--|\*\/|\/\*/;
   if (sqlPattern.test(trimmed)) {
     logger.warn({ dateString: trimmed, fieldName }, 'Potential SQL injection attempt in date field');
     throw new BadRequestError(`Invalid ${fieldName}: contains illegal characters`);
@@ -148,6 +148,13 @@ export function validateLimit(limit: string | number | undefined, maxLimit: numb
     return 50; // default
   }
 
+  // For strings, check if it's a valid integer pattern before parsing
+  if (typeof limit === 'string') {
+    if (!/^\d+$/.test(limit.trim())) {
+      throw new BadRequestError('Limit must be a positive integer');
+    }
+  }
+
   const parsed = typeof limit === 'string' ? parseInt(limit, 10) : limit;
 
   if (isNaN(parsed) || parsed < 1) {
@@ -169,6 +176,13 @@ export function validateLimit(limit: string | number | undefined, maxLimit: numb
 export function validateOffset(offset: string | number | undefined): number {
   if (offset === undefined || offset === null) {
     return 0; // default
+  }
+
+  // For strings, check if it's a valid non-negative integer pattern before parsing
+  if (typeof offset === 'string') {
+    if (!/^\d+$/.test(offset.trim())) {
+      throw new BadRequestError('Offset must be a non-negative integer');
+    }
   }
 
   const parsed = typeof offset === 'string' ? parseInt(offset, 10) : offset;

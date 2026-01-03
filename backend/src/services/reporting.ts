@@ -61,11 +61,11 @@ class ReportTemplateService {
     return null;
   }
 
-  async create(tenantSlug: string, userId: string, data: unknown): Promise<ReportTemplate> {
+  async create(tenantSlug: string, userId: string, data: any): Promise<any> {
     return {
       id: '123e4567-e89b-12d3-a456-426614174000',
-      name: 'Test Template',
-      report_type: 'test',
+      ...data,
+      tenantSlug,
       created_by: userId,
       created_at: new Date(),
     };

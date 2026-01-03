@@ -1,32 +1,42 @@
 export class AppError extends Error {
   statusCode: number;
+  error: string;
+  details?: any;
 
-  constructor(message: string, statusCode: number = 500) {
+  constructor(statusCode: number, error: string, message: string, details?: any) {
     super(message);
     this.name = 'AppError';
     this.statusCode = statusCode;
+    this.error = error;
+    this.details = details;
   }
 
   toJSON() {
-    return {
-      name: this.name,
-      message: this.message,
+    const json: any = {
       statusCode: this.statusCode,
+      error: this.error,
+      message: this.message,
     };
+    if (this.details) {
+      json.details = this.details;
+    }
+    return json;
   }
 }
 
 export class NotFoundError extends Error {
   statusCode = 404;
+  error = 'Not Found';
 
   constructor(resource: string, identifier?: string) {
-    super(identifier ? `${resource} with ID ${identifier} not found` : `${resource} not found`);
+    super(identifier ? `${resource} with id '${identifier}' not found` : `${resource} not found`);
     this.name = 'NotFoundError';
   }
 }
 
 export class BadRequestError extends Error {
   statusCode = 400;
+  error = 'Bad Request';
 
   constructor(message: string) {
     super(message);
@@ -34,8 +44,21 @@ export class BadRequestError extends Error {
   }
 }
 
+export class ValidationError extends Error {
+  statusCode = 400;
+  error = 'Validation Error';
+  details: any;
+
+  constructor(details: any) {
+    super('Validation failed');
+    this.name = 'ValidationError';
+    this.details = details;
+  }
+}
+
 export class UnauthorizedError extends Error {
   statusCode = 401;
+  error = 'Unauthorized';
 
   constructor(message: string = 'Unauthorized') {
     super(message);
@@ -45,6 +68,7 @@ export class UnauthorizedError extends Error {
 
 export class ForbiddenError extends Error {
   statusCode = 403;
+  error = 'Forbidden';
 
   constructor(message: string = 'Forbidden') {
     super(message);

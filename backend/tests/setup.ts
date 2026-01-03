@@ -11,12 +11,55 @@ process.env.PORT = '3002';
 process.env.HOST = '0.0.0.0';
 
 // Mock external services
+const mockRedisData = new Map<string, string>();
+
 vi.mock('../src/config/redis.js', () => ({
   redis: {
-    get: vi.fn(),
-    set: vi.fn(),
-    del: vi.fn(),
-    quit: vi.fn(),
+    get: vi.fn((key: string) => Promise.resolve(mockRedisData.get(key) || null)),
+    set: vi.fn((key: string, value: string, ...args: any[]) => {
+      // Handle both SET key value and SET key value EX seconds
+      mockRedisData.set(key, value);
+      return Promise.resolve('OK');
+    }),
+    setex: vi.fn((key: string, ttl: number, value: string) => {
+      mockRedisData.set(key, value);
+      return Promise.resolve('OK');
+    }),
+    del: vi.fn((...keys: string[]) => {
+      const flatKeys = keys.flat();
+      flatKeys.forEach(k => mockRedisData.delete(k));
+      return Promise.resolve(flatKeys.length);
+    }),
+    keys: vi.fn((pattern: string) => {
+      const regex = new RegExp('^' + pattern.replace(/\*/g, '.*') + '$');
+      return Promise.resolve(Array.from(mockRedisData.keys()).filter(k => regex.test(k)));
+    }),
+    scan: vi.fn((cursor: string, ...args: any[]) => {
+      // SCAN cursor MATCH pattern COUNT count
+      const matchIdx = args.indexOf('MATCH');
+      const pattern = matchIdx >= 0 ? args[matchIdx + 1] : '*';
+      const regex = new RegExp('^' + pattern.replace(/\*/g, '.*') + '$');
+      const matchedKeys = Array.from(mockRedisData.keys()).filter(k => regex.test(k));
+      // Return all keys at once with cursor '0' to indicate completion
+      return Promise.resolve(['0', matchedKeys]);
+    }),
+    flushdb: vi.fn(() => {
+      mockRedisData.clear();
+      return Promise.resolve('OK');
+    }),
+    info: vi.fn((section?: string) => {
+      if (section === 'keyspace') {
+        const keyCount = mockRedisData.size;
+        return Promise.resolve(`# Keyspace\ndb0:keys=${keyCount},expires=0,avg_ttl=0`);
+      } else if (section === 'memory') {
+        return Promise.resolve('# Memory\nused_memory:1000000\nused_memory_human:976.56K');
+      } else if (section === 'stats') {
+        return Promise.resolve('# Stats\nkeyspace_hits:100\nkeyspace_misses:20');
+      }
+      return Promise.resolve('redis_version:7.0.0\nused_memory:1000\nconnected_clients:1');
+    }),
+    dbsize: vi.fn(() => Promise.resolve(mockRedisData.size)),
+    quit: vi.fn(() => Promise.resolve('OK')),
   },
   testRedisConnection: vi.fn().mockResolvedValue(true),
   closeRedis: vi.fn().mockResolvedValue(undefined),

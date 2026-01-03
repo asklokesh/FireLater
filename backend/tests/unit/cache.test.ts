@@ -119,19 +119,19 @@ describe('Cache Service', () => {
     });
 
     it('should invalidate specific category for a tenant', async () => {
-      await redis.set('cache:tenant1:dashboard:issues:by-priority', '{}', 'EX', 10);
-      await redis.set('cache:tenant1:dashboard:issues:by-status', '{}', 'EX', 10);
-      await redis.set('cache:tenant1:dashboard:changes:upcoming', '{}', 'EX', 10);
+      await redis.set('cache:tenant1:issues:by-priority', '{}', 'EX', 10);
+      await redis.set('cache:tenant1:issues:by-status', '{}', 'EX', 10);
+      await redis.set('cache:tenant1:changes:upcoming', '{}', 'EX', 10);
 
       const deleted = await cacheService.invalidateTenant('tenant1', 'issues');
       expect(deleted).toBeGreaterThanOrEqual(2);
 
       // Verify issues keys are gone
-      const issuesData = await redis.get('cache:tenant1:dashboard:issues:by-priority');
+      const issuesData = await redis.get('cache:tenant1:issues:by-priority');
       expect(issuesData).toBeNull();
 
       // Verify changes keys still exist
-      const changesData = await redis.get('cache:tenant1:dashboard:changes:upcoming');
+      const changesData = await redis.get('cache:tenant1:changes:upcoming');
       expect(changesData).not.toBeNull();
     });
   });
