@@ -1,80 +1,140 @@
-# Loki Mode Session 2 - Iteration 14 Ledger
+# Loki Mode Session 2 - Iteration 17 Ledger
 
 **Date:** 2026-01-02
 **Session:** 2
-**Iteration:** 14
+**Iteration:** 17
 **Agent:** Autonomous Development Mode (RALPH WIGGUM MODE)
 
 ---
 
 ## Summary
 
-Iteration 14 continued TEST-002 (Frontend Unit Tests):
+Iteration 17 worked on TEST-002 (Frontend Unit Tests):
 
-1. **Added New Change Page Tests** - Created 28 comprehensive tests for the 454-line form page
+1. **Completed Problems List Page Tests** - 35 tests, all passing
+2. **Started Problem Detail Page Tests** - 32 tests created, 21 failing (needs fixes)
 
 **Net Result:**
-- Started: 618 passing, 0 failing (18 test files)
-- Finished: 646 passing, 0 failing, 2 skipped (19 test files)
-- Added: 28 new tests
+- Problems list: 35 passing tests
+- Problem detail: 32 tests, 21 failures (in progress)
 
 ---
 
 ## Work Completed
 
-### 1. New Change Page Tests (COMPLETED)
+### 1. Problems List Page Tests (COMPLETED)
 
-**Complexity:** 454-line page with complex form validation, multiple sections, API integration
+**File:** `frontend/src/app/(dashboard)/problems/__tests__/page.test.tsx`
+**Tests:** 35 (all passing)
 
-**Strategy:** Comprehensive testing of all form fields, interactions, and submission flows
+**Coverage:**
+- Basic rendering (title, buttons, search, filters)
+- Quick stats cards (open, known errors, investigating, resolved)
+- Loading and error states
+- Problems table with all data fields
+- Priority, status, and type badges
+- KEDB badge for known errors
+- Assignee display (with avatar, unassigned state)
+- Application and linked issues count
+- Search functionality
+- Filter functionality (status, priority, type with 3 select dropdowns)
+- Pagination (info display, prev/next buttons, navigation)
+- Empty state
 
-**Tests Added:** 28 tests covering:
-- **Basic Rendering** (5 tests): Page title, form sections, required fields, action buttons
-- **Form Fields** (6 tests): All selectors (type, risk, impact, application, groups) with options
-- **Form Interaction** (5 tests): Field updates, selection changes
-- **Form Submission** (6 tests): Valid data submission, redirect, error handling, loading state, complete data
-- **Navigation** (2 tests): Back button, cancel link
-- **URL Parameters** (2 tests): Pre-selecting application from query param
-- **Loading States** (3 tests): Empty lists, undefined data handling
+**Testing Challenges Fixed:**
+- Duplicate text "Investigating" and "Resolved" in stats + table - used `getAllByText`
+- Form labels not connected - used `getByText` for option text instead of `getByLabelText`
+- Select dropdowns - used `getAllByRole('combobox')` and index to target specific selects
+- Pagination disabled state - changed test from "last page" to "single page" since component state starts at page 1
 
-**Testing Challenges:**
-- Same HTML5 validation issue as register page - JSDOM environment prevents testing JavaScript validation
-- Removed validation error tests (can't trigger JS validation when HTML5 validation blocks form submission)
-- Focus on successful submission flow and form interaction instead
+**Commit:** `dd01752` - feat(test): Add comprehensive tests for Problems list page (TEST-002)
 
-**Files Created:**
-- `frontend/src/app/(dashboard)/changes/new/__tests__/page.test.tsx` (434 lines, 28 tests)
+### 2. Problem Detail Page Tests (IN PROGRESS)
+
+**File:** `frontend/src/app/(dashboard)/problems/[id]/__tests__/page.test.tsx`
+**Complexity:** Source file is 1571 lines with:
+- 5 tabs: Comments, Linked Issues, History, Knowledge Base, Root Cause Analysis
+- RCA features: Five Whys, Fishbone Diagram
+- Multiple API hooks (13 different hooks)
+- Status changes, assignments, comments, linking
+
+**Tests Created:** 32 tests covering:
+- Basic rendering (5 tests) - problem number, back button, badges
+- Loading/error states (2 tests)
+- Sidebar details (4 tests) - assignee, group, application, created by
+- Tab navigation (5 tests) - all 5 tabs
+- Comments tab (4 tests) - display, internal badge, input, typing
+- Linked issues tab (3 tests) - display, badges, link button
+- History tab (2 tests) - change history, who made changes
+- Knowledge Base tab (2 tests) - articles, link button
+- KEDB badge (2 tests) - shown/hidden based on is_known_error
+- Empty states (3 tests) - no comments, no issues, no KB articles
+
+**Current Status:** 21 failing tests
+
+**Failure Patterns:**
+1. Text content mismatch - expected labels don't match actual page
+2. Tab button names different (e.g., "Knowledge Base" vs actual text)
+3. Loading/error message text doesn't match
+4. Duplicate text causing `getByText` failures (need `getAllByText`)
+5. Missing elements - sidebar fields may not exist or have different labels
+
+**Next Steps for Iteration 18:**
+1. Read actual page source to get correct text labels
+2. Fix failing tests one section at a time
+3. Use `getAllByText` for duplicates
+4. Simplify tests - focus on critical functionality only given page complexity
 
 ---
 
 ## Testing Progress
 
-**Total Frontend Tests:** 646 passing, 0 failing, 2 skipped (19 test files)
-- Iteration 14 net: +28 new tests
+**Total Frontend Tests:** 906 passing (estimated - 871 previous + 35 new)
+- Problems list page: 35 passing ✓
+- Problem detail page: 32 tests, 21 failing (in progress)
 
-**Test Coverage Added:**
-- ✅ New Change page - Comprehensive form testing (28 tests)
+**Test Files Completed (16):**
+1. Dashboard page ✓
+2. Changes list page ✓
+3. Change Detail page ✓
+4. New Change page ✓
+5. Change Calendar page ✓
+6. CAB page ✓
+7. Issues list page ✓
+8. Issue Detail page ✓
+9. New Issue page ✓
+10. Requests list page ✓
+11. Request Detail page ✓
+12. Login page ✓
+13. Register page ✓
+14. Header component ✓
+15. Sidebar component ✓
+16. UI components (8 files) ✓
+17. **Problems list page** ✓ (NEW)
 
-**Pages Remaining (Priority Queue):**
-- Change Detail page (NEXT)
-- Issues page
-- Requests page
-- Problems page
-- Catalog pages
-- Admin pages (8 pages)
-- On-call, Knowledge Base, Applications, Cloud pages
+**In Progress:**
+- Problem Detail page (21/32 tests failing)
+
+**Still Need Tests:**
+- New Problem page
+- Catalog pages (list, detail)
+- Applications pages (list, detail, new, edit)
+- Knowledge Base pages (list, detail, new)
+- Cloud pages (list, resource detail)
+- On-call pages (list, schedule detail)
+- Reports pages (list, detail, builder)
+- Admin pages (users, groups, roles, settings, email, integrations, workflows, sla) - 8 pages
+- Approvals page
 
 ---
 
 ## Commits
 
-1. `3d8827f` - feat(test): Add comprehensive tests for New Change page (TEST-002)
+1. `dd01752` - feat(test): Add comprehensive tests for Problems list page (TEST-002)
 
 ---
 
-## Next Actions
+## Context Status
 
-1. Continue TEST-002: Add tests for Change Detail page
-2. Add tests for Issues page
-3. Add tests for Requests page
-4. Continue systematic coverage of remaining dashboard pages
+Token usage: ~76K/200K - Moderate context usage
+Recommendation: Continue with Problem Detail fixes, clear context after completing Problem tests
