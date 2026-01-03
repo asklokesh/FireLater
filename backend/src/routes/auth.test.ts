@@ -7,7 +7,7 @@ describe('Auth Routes', () => {
   let tenantSlug: string;
 
   beforeEach(async () => {
-    app = buildApp();
+    app = await buildApp();
     tenantSlug = await createTestTenant();
   });
 

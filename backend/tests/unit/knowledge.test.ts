@@ -13,9 +13,12 @@ describe('KnowledgeService - N+1 Query Optimization', () => {
   const mockTenantSlug = 'test-tenant';
   const mockSchema = 'tenant_test_tenant';
 
-  beforeEach(() => {
+  beforeEach(async () => {
     vi.clearAllMocks();
     (tenantService.getSchemaName as any) = vi.fn().mockReturnValue(mockSchema);
+    // Clear Redis cache between tests
+    const { redis } = await import('../../src/config/redis.js');
+    await redis.flushdb();
   });
 
   afterEach(() => {

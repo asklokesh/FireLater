@@ -6,14 +6,14 @@ import { authenticate } from '../middleware/auth.js';
 import { BadRequestError } from '../utils/errors.js';
 
 const loginSchema = z.object({
-  tenant: z.string().min(1),
   email: z.string().email(),
   password: z.string().min(1),
+  tenant: z.string().min(1).optional(), // Optional - can come from header
 });
 
 const refreshSchema = z.object({
-  refreshToken: z.string().min(1),
-  tenant: z.string().min(1),
+  refreshToken: z.string().min(1).optional(), // Optional - can come from cookie
+  tenant: z.string().min(1).optional(), // Optional - can come from header
 });
 
 const changePasswordSchema = z.object({
@@ -50,46 +50,115 @@ const registerTenantSchema = z.object({
   adminPassword: z.string().min(8),
 });
 
+const registerUserSchema = z.object({
+  email: z.string().email(),
+  password: z.string().min(8),
+  name: z.string().min(2).max(255),
+});
+
 export default async function authRoutes(app: FastifyInstance) {
-  // Register a new tenant
+  // Register endpoint - handles both tenant creation and user registration
   app.post('/register', async (request: FastifyRequest, reply: FastifyReply) => {
-    const body = registerTenantSchema.parse(request.body);
+    const tenantSlug = request.headers['x-tenant-slug'] as string | undefined;
 
-    const tenant = await tenantService.create({
-      name: body.tenantName,
-      slug: body.tenantSlug,
-      adminEmail: body.adminEmail,
-      adminName: body.adminName,
-      adminPassword: body.adminPassword,
-    });
+    // If tenant slug in header, this is user registration in existing tenant
+    if (tenantSlug) {
+      const body = registerUserSchema.parse(request.body);
+      const schema = tenantService.getSchemaName(tenantSlug);
 
-    // Auto-login after registration
-    const loginResult = await authService.login(
-      {
-        tenantSlug: body.tenantSlug,
-        email: body.adminEmail,
-        password: body.adminPassword,
-      },
-      (payload) => app.jwt.sign(payload)
-    );
+      // Register user in tenant
+      const { pool } = await import('../config/database.js');
+      const bcrypt = await import('bcrypt');
+      const hashedPassword = await bcrypt.hash(body.password, 10);
 
-    reply.status(201).send({
-      tenant: {
-        id: tenant.id,
-        name: tenant.name,
-        slug: tenant.slug,
-      },
-      ...loginResult,
-    });
+      // Check if user already exists
+      const existingUser = await pool.query(
+        `SELECT id FROM ${schema}.users WHERE email = $1`,
+        [body.email]
+      );
+
+      if (existingUser.rows.length > 0) {
+        reply.status(409).send({
+          statusCode: 409,
+          error: 'Conflict',
+          message: 'User with this email already exists',
+        });
+        return;
+      }
+
+      // Create user
+      const result = await pool.query(
+        `INSERT INTO ${schema}.users (email, password_hash, name, status)
+         VALUES ($1, $2, $3, 'active')
+         RETURNING id, email, name, created_at`,
+        [body.email, hashedPassword, body.name]
+      );
+
+      const user = result.rows[0];
+
+      // Auto-login after registration
+      const loginResult = await authService.login(
+        {
+          tenantSlug,
+          email: body.email,
+          password: body.password,
+        },
+        (payload) => app.jwt.sign(payload)
+      );
+
+      reply.status(201).send({
+        user: {
+          id: user.id,
+          email: user.email,
+          name: user.name,
+        },
+        ...loginResult,
+      });
+    } else {
+      // No tenant slug - this is tenant registration
+      const body = registerTenantSchema.parse(request.body);
+
+      const tenant = await tenantService.create({
+        name: body.tenantName,
+        slug: body.tenantSlug,
+        adminEmail: body.adminEmail,
+        adminName: body.adminName,
+        adminPassword: body.adminPassword,
+      });
+
+      // Auto-login after registration
+      const loginResult = await authService.login(
+        {
+          tenantSlug: body.tenantSlug,
+          email: body.adminEmail,
+          password: body.adminPassword,
+        },
+        (payload) => app.jwt.sign(payload)
+      );
+
+      reply.status(201).send({
+        tenant: {
+          id: tenant.id,
+          name: tenant.name,
+          slug: tenant.slug,
+        },
+        ...loginResult,
+      });
+    }
   });
 
   // Login
   app.post('/login', async (request: FastifyRequest, reply: FastifyReply) => {
     const body = loginSchema.parse(request.body);
+    const tenantSlug = (request.headers['x-tenant-slug'] as string) || body.tenant;
+
+    if (!tenantSlug) {
+      throw new BadRequestError('Tenant is required (provide x-tenant-slug header or tenant in body)');
+    }
 
     const result = await authService.login(
       {
-        tenantSlug: body.tenant,
+        tenantSlug,
         email: body.email,
         password: body.password,
       },
@@ -129,14 +198,19 @@ export default async function authRoutes(app: FastifyInstance) {
   app.post('/refresh', async (request: FastifyRequest, reply: FastifyReply) => {
     const body = refreshSchema.parse(request.body);
     const refreshToken = body.refreshToken || request.cookies.refreshToken;
+    const tenantSlug = (request.headers['x-tenant-slug'] as string) || body.tenant;
 
     if (!refreshToken) {
       throw new BadRequestError('Refresh token is required');
     }
 
+    if (!tenantSlug) {
+      throw new BadRequestError('Tenant is required (provide x-tenant-slug header or tenant in body)');
+    }
+
     const result = await authService.refresh(
       refreshToken,
-      body.tenant,
+      tenantSlug,
       (payload) => app.jwt.sign(payload)
     );
 
@@ -153,10 +227,8 @@ export default async function authRoutes(app: FastifyInstance) {
     });
   });
 
-  // Get current user
-  app.get('/me', {
-    preHandler: [authenticate],
-  }, async (request: FastifyRequest, reply: FastifyReply) => {
+  // Handler for getting current user profile
+  const getCurrentUser = async (request: FastifyRequest, reply: FastifyReply) => {
     const { userId, tenantSlug, roles } = request.user;
     const schema = tenantService.getSchemaName(tenantSlug);
 
@@ -180,7 +252,17 @@ export default async function authRoutes(app: FastifyInstance) {
       roles,
       permissions,
     });
-  });
+  };
+
+  // Get current user - primary endpoint
+  app.get('/me', {
+    preHandler: [authenticate],
+  }, getCurrentUser);
+
+  // Get current user - alias for /me
+  app.get('/profile', {
+    preHandler: [authenticate],
+  }, getCurrentUser);
 
   // Change password
   app.put('/password', {
