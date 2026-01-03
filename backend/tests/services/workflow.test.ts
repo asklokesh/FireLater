@@ -53,7 +53,7 @@ describe('Workflow Service', () => {
       });
 
       (pool.query as vi.Mock).mockResolvedValueOnce({
-        rows: [{ id: 'approver-1', id: 'user-1' }]
+        rows: [{ id: 'approver-1', user_id: 'user-1' }]
       }); // Approvers available
 
       const result = await workflowService.executeWorkflow(workflowId, requestId);

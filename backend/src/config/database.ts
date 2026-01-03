@@ -1,4 +1,4 @@
-import { Pool, QueryResult, QueryResultRow } from 'pg';
+import { Pool, QueryResult } from 'pg';
 import { logger } from '../utils/logger.js';
 
 const originalPool = new Pool({
@@ -69,7 +69,7 @@ export async function testConnection(): Promise<boolean> {
     } finally {
       client.release();
     }
-  } catch (error) {
+  } catch (_error) {
     return false;
   }
 }

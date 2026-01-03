@@ -366,7 +366,7 @@ async function processNotification(job: Job<NotificationJobData>): Promise<unkno
 
   // If all deliveries failed and we have recipients, throw error to trigger retry
   const totalSent = results.inApp + results.email + results.slack;
-  const totalExpected = recipients.length * (channel === 'all' ? 2 : 1); // Rough estimate
+  const _totalExpected = recipients.length * (channel === 'all' ? 2 : 1); // Rough estimate
 
   if (totalSent === 0 && recipients.length > 0 && results.errors.length > 0) {
     logger.error({ jobId: job.id, results }, 'All notification deliveries failed, will retry');

@@ -1,5 +1,5 @@
 // Add indexes for common filters in requests table
-// @ts-ignore - Knex migration file uses CommonJS exports
+// @ts-expect-error - Knex migration file uses CommonJS exports
 exports.up = async (knex: any) => {
   // Index for status filtering
   await knex.schema.table('requests', (table: any) => {
@@ -22,7 +22,7 @@ exports.up = async (knex: any) => {
   });
 };
 
-// @ts-ignore - Knex migration file uses CommonJS exports
+// @ts-expect-error - Knex migration file uses CommonJS exports
 exports.down = async (knex: any) => {
   await knex.schema.table('requests', (table: any) => {
     table.dropIndex(['status']);

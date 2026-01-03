@@ -735,7 +735,7 @@ export const integrationsService = {
       try {
         const decryptedJson = decrypt(row.credentials);
         row.credentials = JSON.parse(decryptedJson);
-      } catch (error) {
+      } catch (_error) {
         // If decryption fails, credentials might be unencrypted (migration scenario)
         try {
           row.credentials = JSON.parse(row.credentials);

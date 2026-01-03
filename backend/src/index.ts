@@ -110,7 +110,7 @@ async function registerPlugins() {
       if (!hasJWT && request.csrfProtection) {
         try {
           await request.csrfProtection();
-        } catch (error) {
+        } catch (_error) {
           reply.code(403).send({
             statusCode: 403,
             error: 'Forbidden',

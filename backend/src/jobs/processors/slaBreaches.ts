@@ -168,7 +168,7 @@ async function markIssuesAsBreached(schema: string, issueIds: string[]): Promise
   );
 }
 
-async function getIssueAssigneeAndManager(
+async function _getIssueAssigneeAndManager(
   schema: string,
   issueId: string
 ): Promise<{ assigneeId?: string; managerId?: string; assigneeEmail?: string; managerEmail?: string }> {

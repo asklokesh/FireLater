@@ -1,4 +1,4 @@
-import { FastifyInstance, FastifyRequest } from 'fastify';
+import { FastifyInstance } from 'fastify';
 import { z } from 'zod';
 import { knowledgeService } from '../services/knowledge.js';
 import { requirePermission } from '../middleware/auth.js';
