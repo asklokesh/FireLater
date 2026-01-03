@@ -120,7 +120,7 @@ export async function migration016Assets(pool: Pool): Promise<void> {
     CREATE TABLE IF NOT EXISTS asset_change_links (
         id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
         asset_id    UUID REFERENCES assets(id) ON DELETE CASCADE,
-        change_id   UUID REFERENCES changes(id) ON DELETE CASCADE,
+        change_id   UUID REFERENCES change_requests(id) ON DELETE CASCADE,
         created_at  TIMESTAMPTZ DEFAULT NOW(),
         CONSTRAINT unique_asset_change UNIQUE (asset_id, change_id)
     );
@@ -288,7 +288,7 @@ export async function migration016Assets(pool: Pool): Promise<void> {
         CREATE TABLE IF NOT EXISTS asset_change_links (
             id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
             asset_id    UUID REFERENCES assets(id) ON DELETE CASCADE,
-            change_id   UUID REFERENCES changes(id) ON DELETE CASCADE,
+            change_id   UUID REFERENCES change_requests(id) ON DELETE CASCADE,
             created_at  TIMESTAMPTZ DEFAULT NOW(),
             CONSTRAINT unique_asset_change UNIQUE (asset_id, change_id)
         );

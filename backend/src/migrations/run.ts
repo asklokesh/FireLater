@@ -59,7 +59,7 @@ const migrations: Migration[] = [
 
 async function ensureMigrationsTable() {
   await pool.query(`
-    CREATE TABLE IF NOT EXISTS migrations (
+    CREATE TABLE IF NOT EXISTS public.migrations (
       id SERIAL PRIMARY KEY,
       name VARCHAR(255) NOT NULL UNIQUE,
       executed_at TIMESTAMPTZ DEFAULT NOW()
@@ -68,12 +68,12 @@ async function ensureMigrationsTable() {
 }
 
 async function getExecutedMigrations(): Promise<string[]> {
-  const result = await pool.query('SELECT name FROM migrations ORDER BY id');
+  const result = await pool.query('SELECT name FROM public.migrations ORDER BY id');
   return result.rows.map((row) => row.name);
 }
 
 async function recordMigration(name: string) {
-  await pool.query('INSERT INTO migrations (name) VALUES ($1)', [name]);
+  await pool.query('INSERT INTO public.migrations (name) VALUES ($1)', [name]);
 }
 
 async function runMigrations() {
