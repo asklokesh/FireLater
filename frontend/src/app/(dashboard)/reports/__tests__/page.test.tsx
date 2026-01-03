@@ -225,10 +225,12 @@ describe('ReportsPage', () => {
       expect(screen.getByText('3')).toBeInTheDocument();
     });
 
-    it('displays active schedule count badge', () => {
+    it('displays active schedule count badge', async () => {
       render(<ReportsPage />);
       // 2 out of 3 schedules are active (sched-1 and sched-3)
-      expect(screen.getByText(/2 active/i)).toBeInTheDocument();
+      await waitFor(() => {
+        expect(screen.getByText(/2 active/i)).toBeInTheDocument();
+      });
     });
   });
 
@@ -328,9 +330,12 @@ describe('ReportsPage', () => {
   });
 
   describe('History Tab', () => {
-    beforeEach(() => {
+    beforeEach(async () => {
       render(<ReportsPage />);
       fireEvent.click(screen.getByText('Report History'));
+      await waitFor(() => {
+        expect(screen.getByText('Incident Report')).toBeInTheDocument();
+      });
     });
 
     it('displays all executions', () => {
@@ -388,113 +393,143 @@ describe('ReportsPage', () => {
   });
 
   describe('Scheduled Tab', () => {
-    it('displays all schedules', () => {
+    it('displays all schedules', async () => {
       render(<ReportsPage />);
       fireEvent.click(screen.getByText('Scheduled Reports'));
-      expect(screen.getByText('Monthly Incident Report')).toBeInTheDocument();
+      await waitFor(() => {
+        expect(screen.getByText('Monthly Incident Report')).toBeInTheDocument();
+      });
       expect(screen.getByText('Weekly Change Report')).toBeInTheDocument();
       expect(screen.getByText('Daily SLA Report')).toBeInTheDocument();
     });
 
-    it('displays template names for schedules', () => {
+    it('displays template names for schedules', async () => {
       render(<ReportsPage />);
       fireEvent.click(screen.getByText('Scheduled Reports'));
-      expect(screen.getByText('Incident Report')).toBeInTheDocument();
+      await waitFor(() => {
+        expect(screen.getByText('Incident Report')).toBeInTheDocument();
+      });
       expect(screen.getByText('Change Success Report')).toBeInTheDocument();
     });
 
-    it('displays schedule types', () => {
+    it('displays schedule types', async () => {
       render(<ReportsPage />);
       fireEvent.click(screen.getByText('Scheduled Reports'));
-      expect(screen.getByText('Monthly')).toBeInTheDocument();
+      await waitFor(() => {
+        expect(screen.getByText('Monthly')).toBeInTheDocument();
+      });
       expect(screen.getByText('Weekly')).toBeInTheDocument();
       expect(screen.getByText('Daily')).toBeInTheDocument();
     });
 
-    it('displays cron expressions when available', () => {
+    it('displays cron expressions when available', async () => {
       render(<ReportsPage />);
       fireEvent.click(screen.getByText('Scheduled Reports'));
-      expect(screen.getByText('0 0 1 * *')).toBeInTheDocument();
+      await waitFor(() => {
+        expect(screen.getByText('0 0 1 * *')).toBeInTheDocument();
+      });
     });
 
-    it('displays delivery methods', () => {
+    it('displays delivery methods', async () => {
       render(<ReportsPage />);
       fireEvent.click(screen.getByText('Scheduled Reports'));
-      expect(screen.getByText(/email/i)).toBeInTheDocument();
+      await waitFor(() => {
+        expect(screen.getByText(/email/i)).toBeInTheDocument();
+      });
       expect(screen.getByText(/slack/i)).toBeInTheDocument();
       expect(screen.getByText(/webhook/i)).toBeInTheDocument();
     });
 
-    it('displays recipients', () => {
+    it('displays recipients', async () => {
       render(<ReportsPage />);
       fireEvent.click(screen.getByText('Scheduled Reports'));
-      expect(screen.getByText('admin@example.com, team@example.com')).toBeInTheDocument();
+      await waitFor(() => {
+        expect(screen.getByText('admin@example.com, team@example.com')).toBeInTheDocument();
+      });
       expect(screen.getByText('#engineering')).toBeInTheDocument();
       expect(screen.getByText('https://api.example.com/webhook')).toBeInTheDocument();
     });
 
-    it('displays next run time when available', () => {
+    it('displays next run time when available', async () => {
       render(<ReportsPage />);
       fireEvent.click(screen.getByText('Scheduled Reports'));
-      expect(screen.getByText(/Feb 1, 2024/)).toBeInTheDocument();
+      await waitFor(() => {
+        expect(screen.getByText(/Feb 1, 2024/)).toBeInTheDocument();
+      });
       expect(screen.getByText(/Jan 21, 2024/)).toBeInTheDocument();
     });
 
-    it('displays dash for schedules without next run', () => {
+    it('displays dash for schedules without next run', async () => {
       render(<ReportsPage />);
       fireEvent.click(screen.getByText('Scheduled Reports'));
-      const cells = screen.getAllByText('-');
-      expect(cells.length).toBeGreaterThan(0);
-    });
-
-    it('displays active status badge', () => {
-      render(<ReportsPage />);
-      fireEvent.click(screen.getByText('Scheduled Reports'));
-      const activeBadges = screen.getAllByText('Active');
-      expect(activeBadges).toHaveLength(2);
-    });
-
-    it('displays paused status badge', () => {
-      render(<ReportsPage />);
-      fireEvent.click(screen.getByText('Scheduled Reports'));
-      expect(screen.getByText('Paused')).toBeInTheDocument();
-    });
-
-    it('active schedules have green badge', () => {
-      render(<ReportsPage />);
-      fireEvent.click(screen.getByText('Scheduled Reports'));
-      const activeBadges = screen.getAllByText('Active');
-      activeBadges.forEach((badge) => {
-        expect(badge).toHaveClass('bg-green-100', 'text-green-800');
+      await waitFor(() => {
+        const cells = screen.getAllByText('-');
+        expect(cells.length).toBeGreaterThan(0);
       });
     });
 
-    it('paused schedules have gray badge', () => {
+    it('displays active status badge', async () => {
       render(<ReportsPage />);
       fireEvent.click(screen.getByText('Scheduled Reports'));
-      const pausedBadge = screen.getByText('Paused');
-      expect(pausedBadge).toHaveClass('bg-gray-100', 'text-gray-800');
+      await waitFor(() => {
+        const activeBadges = screen.getAllByText('Active');
+        expect(activeBadges).toHaveLength(2);
+      });
     });
 
-    it('displays pause button for active schedules', () => {
+    it('displays paused status badge', async () => {
       render(<ReportsPage />);
       fireEvent.click(screen.getByText('Scheduled Reports'));
-      // Check for pause buttons (active schedules)
-      const buttons = document.querySelectorAll('[title="Pause"]');
-      expect(buttons.length).toBe(2);
+      await waitFor(() => {
+        expect(screen.getByText('Paused')).toBeInTheDocument();
+      });
     });
 
-    it('displays play button for paused schedules', () => {
+    it('active schedules have green badge', async () => {
       render(<ReportsPage />);
       fireEvent.click(screen.getByText('Scheduled Reports'));
-      const buttons = document.querySelectorAll('[title="Activate"]');
-      expect(buttons.length).toBe(1);
+      await waitFor(() => {
+        const activeBadges = screen.getAllByText('Active');
+        activeBadges.forEach((badge) => {
+          expect(badge).toHaveClass('bg-green-100', 'text-green-800');
+        });
+      });
+    });
+
+    it('paused schedules have gray badge', async () => {
+      render(<ReportsPage />);
+      fireEvent.click(screen.getByText('Scheduled Reports'));
+      await waitFor(() => {
+        const pausedBadge = screen.getByText('Paused');
+        expect(pausedBadge).toHaveClass('bg-gray-100', 'text-gray-800');
+      });
+    });
+
+    it('displays pause button for active schedules', async () => {
+      render(<ReportsPage />);
+      fireEvent.click(screen.getByText('Scheduled Reports'));
+      await waitFor(() => {
+        const buttons = document.querySelectorAll('[title="Pause"]');
+        expect(buttons.length).toBe(2);
+      });
+    });
+
+    it('displays play button for paused schedules', async () => {
+      render(<ReportsPage />);
+      fireEvent.click(screen.getByText('Scheduled Reports'));
+      await waitFor(() => {
+        const buttons = document.querySelectorAll('[title="Activate"]');
+        expect(buttons.length).toBe(1);
+      });
     });
 
     it('calls toggle schedule when pause clicked', async () => {
       mockUpdateSchedule.mockResolvedValue({});
       render(<ReportsPage />);
       fireEvent.click(screen.getByText('Scheduled Reports'));
+      await waitFor(() => {
+        expect(screen.getByText('Monthly Incident Report')).toBeInTheDocument();
+      });
       const pauseButton = document.querySelector('[title="Pause"]') as HTMLElement;
       fireEvent.click(pauseButton);
       await waitFor(() => {
@@ -509,6 +544,9 @@ describe('ReportsPage', () => {
       mockUpdateSchedule.mockResolvedValue({});
       render(<ReportsPage />);
       fireEvent.click(screen.getByText('Scheduled Reports'));
+      await waitFor(() => {
+        expect(screen.getByText('Weekly Change Report')).toBeInTheDocument();
+      });
       const activateButton = document.querySelector('[title="Activate"]') as HTMLElement;
       fireEvent.click(activateButton);
       await waitFor(() => {
@@ -519,9 +557,12 @@ describe('ReportsPage', () => {
       });
     });
 
-    it('truncates long recipient lists', () => {
+    it('truncates long recipient lists', async () => {
       render(<ReportsPage />);
       fireEvent.click(screen.getByText('Scheduled Reports'));
+      await waitFor(() => {
+        expect(screen.getByText('Monthly Incident Report')).toBeInTheDocument();
+      });
       // This test verifies the +N display for schedules with more than 2 recipients
       // Currently no schedule has >2 recipients, but the code supports it
       expect(screen.queryByText(/\+\d+/)).not.toBeInTheDocument();
@@ -702,22 +743,26 @@ describe('ReportsPage', () => {
   });
 
   describe('Schedule Actions', () => {
-    it('displays settings button for schedules', () => {
+    it('displays settings button for schedules', async () => {
       render(<ReportsPage />);
       fireEvent.click(screen.getByText('Scheduled Reports'));
-      const settingsLinks = screen.getAllByRole('link').filter((link) =>
-        link.getAttribute('href')?.includes('/schedule/')
-      );
-      expect(settingsLinks.length).toBe(3);
+      await waitFor(() => {
+        const settingsLinks = screen.getAllByRole('link').filter((link) =>
+          link.getAttribute('href')?.includes('/schedule/')
+        );
+        expect(settingsLinks.length).toBe(3);
+      });
     });
 
-    it('settings button links to correct schedule', () => {
+    it('settings button links to correct schedule', async () => {
       render(<ReportsPage />);
       fireEvent.click(screen.getByText('Scheduled Reports'));
-      const settingsLinks = screen.getAllByRole('link').filter((link) =>
-        link.getAttribute('href')?.includes('/schedule/')
-      );
-      expect(settingsLinks[0]).toHaveAttribute('href', '/reports/tpl-1/schedule/sched-1');
+      await waitFor(() => {
+        const settingsLinks = screen.getAllByRole('link').filter((link) =>
+          link.getAttribute('href')?.includes('/schedule/')
+        );
+        expect(settingsLinks[0]).toHaveAttribute('href', '/reports/tpl-1/schedule/sched-1');
+      });
     });
   });
 
@@ -734,18 +779,20 @@ describe('ReportsPage', () => {
       expect(screen.getByText('Unknown Report')).toBeInTheDocument();
     });
 
-    it('handles schedule without template_name', () => {
+    it('handles schedule without template_name', async () => {
       render(<ReportsPage />);
       fireEvent.click(screen.getByText('Scheduled Reports'));
-      // Daily SLA Report exists
-      expect(screen.getByText('Daily SLA Report')).toBeInTheDocument();
+      await waitFor(() => {
+        expect(screen.getByText('Daily SLA Report')).toBeInTheDocument();
+      });
     });
 
-    it('handles schedule without next_run_at', () => {
+    it('handles schedule without next_run_at', async () => {
       render(<ReportsPage />);
       fireEvent.click(screen.getByText('Scheduled Reports'));
-      // Weekly Change Report doesn't have next_run_at, shows dash
-      expect(screen.getByText('Weekly Change Report')).toBeInTheDocument();
+      await waitFor(() => {
+        expect(screen.getByText('Weekly Change Report')).toBeInTheDocument();
+      });
     });
 
     it('handles unknown report type with fallback icon', () => {

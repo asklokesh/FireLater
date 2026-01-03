@@ -422,7 +422,7 @@ describe('IntegrationsPage', () => {
       expect(screen.getByText('No webhooks configured yet')).toBeInTheDocument();
     });
 
-    it('displays webhooks list', () => {
+    it('displays webhooks list', async () => {
       const mockWebhooks = [
         {
           id: '1',
@@ -447,7 +447,9 @@ describe('IntegrationsPage', () => {
       if (webhooksButton) fireEvent.click(webhooksButton);
       rerender(<IntegrationsPage />);
 
-      expect(screen.getByText('Slack Notifications')).toBeInTheDocument();
+      await waitFor(() => {
+        expect(screen.getByText('Slack Notifications')).toBeInTheDocument();
+      });
       expect(screen.getByText('https://hooks.slack.com/test')).toBeInTheDocument();
       expect(screen.getByText('issue.created')).toBeInTheDocument();
       expect(screen.getByText('issue.updated')).toBeInTheDocument();
@@ -529,9 +531,13 @@ describe('IntegrationsPage', () => {
       if (webhooksButton) fireEvent.click(webhooksButton);
       rerender(<IntegrationsPage />);
 
+      await waitFor(() => {
+        expect(screen.getByText('Test Webhook')).toBeInTheDocument();
+      });
+
       const sendButtons = screen.getAllByTestId('send-icon');
       fireEvent.click(sendButtons[0].closest('button')!);
-      
+
       await waitFor(() => {
         expect(mockTest).toHaveBeenCalledWith('1');
         expect(global.alert).toHaveBeenCalledWith('Test webhook sent successfully!');
@@ -566,7 +572,7 @@ describe('IntegrationsPage', () => {
       expect(screen.getByText('No integrations configured yet')).toBeInTheDocument();
     });
 
-    it('displays integrations grid', () => {
+    it('displays integrations grid', async () => {
       const mockIntegrations = [
         {
           id: '1',
@@ -600,7 +606,9 @@ describe('IntegrationsPage', () => {
       if (integrationsButton) fireEvent.click(integrationsButton);
       rerender(<IntegrationsPage />);
 
-      expect(screen.getByText('Production Slack')).toBeInTheDocument();
+      await waitFor(() => {
+        expect(screen.getByText('Production Slack')).toBeInTheDocument();
+      });
       expect(screen.getByText('Main Slack workspace')).toBeInTheDocument();
       expect(screen.getByText('connected')).toBeInTheDocument();
     });
@@ -645,9 +653,13 @@ describe('IntegrationsPage', () => {
       if (integrationsButton) fireEvent.click(integrationsButton);
       rerender(<IntegrationsPage />);
 
+      await waitFor(() => {
+        expect(screen.getByText('Test Integration')).toBeInTheDocument();
+      });
+
       const testButton = screen.getByText('Test Connection');
       fireEvent.click(testButton);
-      
+
       await waitFor(() => {
         expect(mockTest).toHaveBeenCalledWith('1');
         expect(global.alert).toHaveBeenCalledWith('Connection successful!');
@@ -687,14 +699,18 @@ describe('IntegrationsPage', () => {
       if (integrationsButton) fireEvent.click(integrationsButton);
       rerender(<IntegrationsPage />);
 
+      await waitFor(() => {
+        expect(screen.getByText('Test Integration')).toBeInTheDocument();
+      });
+
       const deleteButtons = screen.getAllByTestId('trash2-icon');
-      const integrationDeleteButton = deleteButtons.find(btn => 
+      const integrationDeleteButton = deleteButtons.find(btn =>
         btn.closest('.grid')?.querySelector('button')
       );
-      
+
       if (integrationDeleteButton) {
         fireEvent.click(integrationDeleteButton.closest('button')!);
-        
+
         await waitFor(() => {
           expect(global.confirm).toHaveBeenCalled();
           expect(mockDelete).toHaveBeenCalledWith('1');
