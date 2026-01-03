@@ -385,19 +385,20 @@ function registerErrorHandler() {
       return reply.status(error.statusCode).send(error.toJSON());
     }
 
-    if (error.validation) {
+    if (error instanceof Error && 'validation' in error) {
       return reply.status(400).send({
         statusCode: 400,
         error: 'Validation Error',
         message: 'Request validation failed',
-        details: error.validation,
+        details: (error as { validation: unknown }).validation,
       });
     }
 
+    const errorMessage = error instanceof Error ? error.message : 'An unexpected error occurred';
     return reply.status(500).send({
       statusCode: 500,
       error: 'Internal Server Error',
-      message: config.isDev ? error.message : 'An unexpected error occurred',
+      message: config.isDev ? errorMessage : 'An unexpected error occurred',
     });
   });
 }
