@@ -40,7 +40,7 @@ export async function fetchCsrfToken(): Promise<string> {
   try {
     const response = await axios.get(`${API_URL}/csrf-token`, { withCredentials: true });
     csrfToken = response.data.csrfToken;
-    return csrfToken;
+    return csrfToken || '';
   } catch (error) {
     console.error('[FireLater] Failed to fetch CSRF token:', error);
     return '';
