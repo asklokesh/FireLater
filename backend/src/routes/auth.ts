@@ -107,12 +107,12 @@ export default async function authRoutes(app: FastifyInstance) {
       );
 
       reply.status(201).send({
+        ...loginResult,
         user: {
           id: user.id,
           email: user.email,
           name: user.name,
         },
-        ...loginResult,
       });
     } else {
       // No tenant slug - this is tenant registration

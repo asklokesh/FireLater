@@ -86,7 +86,7 @@ const updateIntegrationSchema = z.object({
 });
 
 // Export schemas for testing
-export { createWebhookSchema, updateWebhookSchema, createConnectionSchema, updateConnectionSchema };
+export { updateWebhookSchema, createIntegrationSchema, updateIntegrationSchema };
 
 export default async function integrationsRoutes(fastify: FastifyInstance) {
   // Require authentication for all routes
