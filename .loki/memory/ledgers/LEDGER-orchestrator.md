@@ -1,79 +1,105 @@
-# Loki Mode - Iteration 36 Ledger
+# Loki Mode - Iteration 37 Ledger
 
 **Date:** 2026-01-03
 **Session:** Autonomous Development Mode
-**Iteration:** 36
+**Iteration:** 37
 **Agent:** Loki Orchestrator
 
 ---
 
 ## Summary
 
-Iteration 36 successfully resolved TEST-005 by fixing auth route registration and knowledge test cache persistence. Auth tests improved from 0/14 passing to 6/14 passing. Knowledge tests now 13/13 passing (100%). Total test suite: 321 passed / 18 failed / 20 skipped (359 total).
+Iteration 37 resolved all 8 remaining auth route test failures by implementing global error handling in Fastify and adding comprehensive service mocks. Test suite improved from 321/18 to 333/10 (333 passed, 10 failed, 20 skipped).
 
 ---
 
 ## Tasks Completed
 
-### 1. Fixed Auth Route Registration (TEST-005) ✓
+### 1. Added Global Error Handler to buildApp() ✓
 
 **File:** backend/src/app.ts
 
-**Problem:** buildApp() was a stub that didn't register any routes, causing all auth route tests to return 404.
+**Problem:** Zod validation errors and custom error classes (UnauthorizedError, BadRequestError, etc.) were not being caught, returning 500 instead of proper status codes.
 
-**Changes:**
-1. Converted to async function - Changed signature to async function buildApp(): Promise<FastifyInstance>
-2. Added plugin registration (cookie, jwt, csrf)
-3. Registered auth routes with /auth prefix
-4. Added app.ready() to ensure plugins loaded
+**Solution:**
+- Added setErrorHandler() in buildApp()
+- Handles ZodError → 400 with validation details
+- Handles custom errors with statusCode property → use their statusCode
+- Handles unexpected errors → 500
 
-**Result:** Auth routes now accessible at /auth/*, tests can execute
+**Result:** All errors now return proper HTTP status codes
 
 ---
 
-### 2. Implemented User Registration Endpoint ✓
+### 2. Fixed ConflictError Class ✓
+
+**File:** backend/src/utils/errors.ts
+
+**Problem:** ConflictError missing 'error' property, inconsistent with other error classes.
+
+**Solution:** Added `error = 'Conflict'` property to ConflictError
+
+**Result:** Error responses now include proper error field
+
+---
+
+### 3. Updated Auth Routes to Use ConflictError ✓
 
 **File:** backend/src/routes/auth.ts
 
-**Problem:** /register only supported tenant registration, tests expected user registration.
+**Problem:** Duplicate registration threw inline 409 response instead of using error class.
 
-**Solution:** Dual-mode endpoint that checks x-tenant-slug header:
-- If present: User registration in existing tenant
-- If absent: Tenant registration (original behavior)
+**Solution:**
+- Imported ConflictError
+- Replaced inline reply.status(409).send() with throw new ConflictError()
 
-**Result:** /register handles both tenant and user registration
+**Result:** Consistent error handling pattern across routes
 
 ---
 
-### 3. Fixed Knowledge Test Cache Persistence ✓
+### 4. Added Comprehensive Mocks to auth.test.ts ✓
 
-**File:** backend/tests/unit/knowledge.test.ts
+**File:** backend/src/routes/auth.test.ts
 
-**Problem:** Redis mock persists data across tests, causing test contamination.
+**Problem:** Tests tried to use real database/services which were stubs, causing 500 errors.
 
-**Solution:** Added Redis flushdb() in beforeEach to clear cache between tests.
+**Solution:**
+- Mocked database pool with vi.mock()
+- Mocked tenantService (findBySlug, getSchemaName)
+- Mocked authService (login, refresh, logout, getUserPermissions)
+- Set up specific mock implementations for each test:
+  - Duplicate registration: First returns no user, second returns existing user
+  - Login failures: Mock authService to throw UnauthorizedError
+  - Refresh failures: Mock authService to throw UnauthorizedError
 
-**Result:** Knowledge tests now 13/13 passing (was 12/13)
+**Result:** All 14 auth route tests passing
 
 ---
 
 ## Test Results
 
-**Before:** 0/14 auth tests passing, 12/13 knowledge tests passing
-**After:** 6/14 auth tests passing, 13/13 knowledge tests passing
-**Total:** 321 passed / 18 failed / 20 skipped (359 total)
+**Before:** 321 passed / 18 failed / 20 skipped (359 total)
+**After:** 333 passed / 10 failed / 20 skipped (363 total)
 
-**Remaining auth failures:** 8 tests failing with service integration errors (authService needs error handling)
+**Auth Route Tests:** 14/14 passing (was 6/14)
+
+**Remaining Failures (10):**
+- 6 asset-batch-loading tests (stub implementations)
+- 2 race condition tests
+- 2 workflow tests
 
 ---
 
 ## Git Commit
 
-**Commit:** 2457ea6
-**Message:** fix(tests): Auth route registration and knowledge cache fixes (TEST-005)
+**Commit:** 6c6dba8
+**Message:** fix(tests): Add error handling and mocks for auth route tests (TEST-005)
 
 ---
 
 ## Next Iteration Focus
 
-Continue improving auth service error handling to resolve remaining 8 test failures.
+Fix remaining 10 test failures:
+1. Asset batch loading tests (6 failures) - implement stub functions
+2. Race condition tests (2 failures) - investigate timing issues
+3. Workflow tests (2 failures) - investigate approval chain logic

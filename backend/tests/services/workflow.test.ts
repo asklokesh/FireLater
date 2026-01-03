@@ -1,10 +1,9 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { workflowService } from '../../src/services/workflow.js';
-import { db } from '../../src/utils/db.js';
 
-// Mock database
-vi.mock('../../src/utils/db.js', () => ({
-  db: {
+// Mock database pool
+vi.mock('../../src/config/database.js', () => ({
+  pool: {
     query: vi.fn(),
   },
 }));
@@ -18,9 +17,11 @@ describe('Workflow Service', () => {
     it('should handle approval chain failure when approver is unavailable', async () => {
       const workflowId = 'test-workflow';
       const requestId = 'test-request';
-      
+
+      const { pool } = await import('../../src/config/database.js');
+
       // Mock database responses for unavailable approver
-      (db.query as vi.Mock).mockResolvedValueOnce({
+      (pool.query as vi.Mock).mockResolvedValueOnce({
         rows: [{
           id: 'step-1',
           type: 'approval',
@@ -28,8 +29,8 @@ describe('Workflow Service', () => {
           nextStepId: 'step-2'
         }]
       });
-      
-      (db.query as vi.Mock).mockResolvedValueOnce({
+
+      (pool.query as vi.Mock).mockResolvedValueOnce({
         rows: []
       }); // No available approver
 
@@ -40,22 +41,20 @@ describe('Workflow Service', () => {
     it('should handle workflow completion with all steps successful', async () => {
       const workflowId = 'test-workflow';
       const requestId = 'test-request';
-      
+
+      const { pool } = await import('../../src/config/database.js');
+
       // Mock successful workflow steps
-      (db.query as vi.Mock).mockResolvedValueOnce({
+      (pool.query as vi.Mock).mockResolvedValueOnce({
         rows: [
           { id: 'step-1', type: 'notification', nextStepId: 'step-2' },
           { id: 'step-2', type: 'approval', nextStepId: null }
         ]
       });
-      
-      (db.query as vi.Mock).mockResolvedValueOnce({
-        rows: [{ id: 'step-1', status: 'completed' }]
-      });
-      
-      (db.query as vi.Mock).mockResolvedValueOnce({
-        rows: [{ id: 'step-2', status: 'completed' }]
-      });
+
+      (pool.query as vi.Mock).mockResolvedValueOnce({
+        rows: [{ id: 'approver-1', id: 'user-1' }]
+      }); // Approvers available
 
       const result = await workflowService.executeWorkflow(workflowId, requestId);
       expect(result.status).toBe('completed');
