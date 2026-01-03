@@ -10,4 +10,17 @@ const pool = new Pool({
   statement_timeout: parseInt(process.env.DB_STATEMENT_TIMEOUT || '30000'),
 });
 
+export async function testConnection(): Promise<void> {
+  const client = await pool.connect();
+  try {
+    await client.query('SELECT 1');
+  } finally {
+    client.release();
+  }
+}
+
+export async function closeDatabase(): Promise<void> {
+  await pool.end();
+}
+
 export { pool };
