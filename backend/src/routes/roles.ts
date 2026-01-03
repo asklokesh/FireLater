@@ -88,15 +88,20 @@ export default async function roleRoutes(app: FastifyInstance) {
 
       const role = roleResult.rows[0];
 
-      // Assign permissions
+      // Assign permissions (batch insert - N+1 fix)
       if (body.permissionIds && body.permissionIds.length > 0) {
-        for (const permissionId of body.permissionIds) {
-          await client.query(
-            `INSERT INTO ${schema}.role_permissions (role_id, permission_id)
-             VALUES ($1, $2)`,
-            [role.id, permissionId]
-          );
-        }
+        const permissionIds = body.permissionIds; // Type narrowing
+        const values: unknown[] = [role.id];
+        const valuePlaceholders = permissionIds.map((_, idx) => {
+          values.push(permissionIds[idx]);
+          return `($1, $${idx + 2})`;
+        }).join(', ');
+
+        await client.query(
+          `INSERT INTO ${schema}.role_permissions (role_id, permission_id)
+           VALUES ${valuePlaceholders}`,
+          values
+        );
       }
 
       // Log audit
@@ -174,11 +179,19 @@ export default async function roleRoutes(app: FastifyInstance) {
           [request.params.id]
         );
 
-        for (const permissionId of body.permissionIds) {
+        // Batch insert permissions (N+1 fix)
+        if (body.permissionIds.length > 0) {
+          const permissionIds = body.permissionIds; // Type narrowing
+          const values: unknown[] = [request.params.id];
+          const valuePlaceholders = permissionIds.map((_, idx) => {
+            values.push(permissionIds[idx]);
+            return `($1, $${idx + 2})`;
+          }).join(', ');
+
           await client.query(
             `INSERT INTO ${schema}.role_permissions (role_id, permission_id)
-             VALUES ($1, $2)`,
-            [request.params.id, permissionId]
+             VALUES ${valuePlaceholders}`,
+            values
           );
         }
       }

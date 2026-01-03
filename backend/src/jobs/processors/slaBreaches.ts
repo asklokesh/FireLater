@@ -197,9 +197,37 @@ async function queueBreachNotifications(
   schema: string,
   breaches: SlaBreachResult[]
 ): Promise<void> {
+  // Batch fetch all assignee/manager info in one query (N+1 fix)
+  const issueIds = breaches.map(b => b.issueId);
+  const notifyInfoMap = new Map<string, { assigneeId?: string; managerId?: string }>();
+
+  if (issueIds.length > 0) {
+    const result = await pool.query(
+      format(
+        `SELECT
+          i.id as issue_id,
+          i.assigned_to as assignee_id,
+          g.manager_id
+        FROM %I.issues i
+        LEFT JOIN %I.groups g ON i.assigned_group = g.id
+        WHERE i.id = ANY($1)`,
+        schema,
+        schema
+      ),
+      [issueIds]
+    );
+
+    for (const row of result.rows) {
+      notifyInfoMap.set(row.issue_id, {
+        assigneeId: row.assignee_id,
+        managerId: row.manager_id,
+      });
+    }
+  }
+
   for (const breach of breaches) {
-    // Get assignee and manager info for notifications
-    const notifyInfo = await getIssueAssigneeAndManager(schema, breach.issueId);
+    // Get assignee and manager info from batch-fetched map
+    const notifyInfo = notifyInfoMap.get(breach.issueId) || {};
     const recipientIds: string[] = [];
 
     if (notifyInfo.assigneeId) {

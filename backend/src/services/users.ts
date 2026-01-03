@@ -174,13 +174,19 @@ export class UserService {
           throw new BadRequestError(`Invalid role IDs: ${invalidRoles.join(', ')}`);
         }
 
-        for (const roleId of params.roleIds) {
-          await client.query(
-            `INSERT INTO ${schema}.user_roles (user_id, role_id, granted_by)
-             VALUES ($1, $2, $3)`,
-            [user.id, roleId, createdBy]
-          );
-        }
+        // Batch insert user roles (N+1 fix)
+        const roleIds = params.roleIds; // Type narrowing
+        const values: unknown[] = [user.id, createdBy];
+        const valuePlaceholders = roleIds.map((_, idx) => {
+          values.push(roleIds[idx]);
+          return `($1, $${idx + 3}, $2)`;
+        }).join(', ');
+
+        await client.query(
+          `INSERT INTO ${schema}.user_roles (user_id, role_id, granted_by)
+           VALUES ${valuePlaceholders}`,
+          values
+        );
       } else {
         // Assign default 'requester' role
         await client.query(
