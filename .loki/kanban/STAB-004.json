@@ -1,0 +1,29 @@
+{
+  "id": "STAB-004",
+  "category": "STABILITY",
+  "severity": "CRITICAL",
+  "title": "Backend build failures preventing E2E test execution",
+  "description": "Multiple backend source files are corrupted or incomplete, causing TypeScript build failures and preventing the development server from starting. This blocks E2E test execution. Affected files include: backend/src/services/reporting.ts (incomplete fragment), backend/src/services/assets.ts (empty), backend/src/routes/requests.ts (duplicate declarations), backend/src/routes/notifications.ts, backend/src/routes/reporting.ts, backend/src/routes/workflow.ts, backend/src/routes/integrations.ts (not tracked in git). Build errors include missing exports, top-level await issues, and duplicate symbol declarations. Root cause appears to be corruption from previous automated refactoring commits.",
+  "file": "backend/src/",
+  "priority": "P0",
+  "estimatedEffort": "1-2 days",
+  "dependencies": [],
+  "status": "todo",
+  "agent": "unassigned",
+  "tags": ["stability", "build", "backend", "blocking-e2e"],
+  "createdAt": "2026-01-03T03:30:00Z",
+  "metadata": {
+    "blockedTasks": ["TEST-003 execution"],
+    "errorCount": 20,
+    "affectedFiles": [
+      "backend/src/services/reporting.ts",
+      "backend/src/services/assets.ts",
+      "backend/src/routes/requests.ts",
+      "backend/src/routes/notifications.ts",
+      "backend/src/routes/reporting.ts",
+      "backend/src/routes/workflow.ts",
+      "backend/src/routes/integrations.ts",
+      "backend/src/routes/auth.ts"
+    ]
+  }
+}

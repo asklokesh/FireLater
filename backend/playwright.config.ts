@@ -42,11 +42,11 @@ export default defineConfig({
     },
   ],
 
-  // Run local server before starting tests (optional)
-  // webServer: {
-  //   command: 'npm run dev',
-  //   port: 3001,
-  //   timeout: 120 * 1000,
-  //   reuseExistingServer: !process.env.CI,
-  // },
+  // Run local server before starting tests
+  webServer: {
+    command: 'npm run dev',
+    port: 3001,
+    timeout: 120 * 1000,
+    reuseExistingServer: !process.env.CI,
+  },
 });

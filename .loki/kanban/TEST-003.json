@@ -2,14 +2,14 @@
   "id": "loki-TEST-003",
   "title": "[general] Task",
   "description": "{}",
-  "status": "todo",
+  "status": "done",
   "agent": "unassigned",
   "tags": [
     "general",
     "phase-bootstrap",
-    "priority-P1"
+    "priority-5"
   ],
-  "createdAt": "2026-01-03T02:43:50.293781Z",
+  "createdAt": "2026-01-03T03:24:29.669829Z",
   "metadata": {
     "lokiId": "TEST-003",
     "lokiPhase": "BOOTSTRAP",
