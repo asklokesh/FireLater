@@ -90,14 +90,18 @@ async function vacuumTables(schema: string): Promise<void> {
     'analytics_cache',
   ];
 
-  for (const table of tables) {
+  // Run vacuum operations in parallel for better performance
+  const vacuumPromises = tables.map(async (table) => {
     try {
       await pool.query(`VACUUM ANALYZE ${schema}.${table}`);
+      logger.debug({ table, schema }, 'Vacuum completed');
     } catch (error) {
       // Table might not exist, ignore
       logger.debug({ table, error }, 'Vacuum skipped');
     }
-  }
+  });
+
+  await Promise.allSettled(vacuumPromises);
 }
 
 // ============================================
@@ -113,29 +117,47 @@ async function processCleanup(job: Job<CleanupJobData>): Promise<CleanupResult[]
   const results: CleanupResult[] = [];
 
   try {
-    if (cleanupType === 'notifications' || cleanupType === 'all') {
-      const count = await cleanupOldNotifications(schema, retentionDays);
-      results.push({ type: 'notifications', deletedCount: count });
-    }
-
-    if (cleanupType === 'sessions' || cleanupType === 'all') {
-      const count = await cleanupExpiredSessions(retentionDays);
-      results.push({ type: 'sessions', deletedCount: count });
-    }
-
-    if (cleanupType === 'analytics_cache' || cleanupType === 'all') {
-      const count = await cleanupAnalyticsCache(schema, 7); // Cache only 7 days
-      results.push({ type: 'analytics_cache', deletedCount: count });
-    }
-
-    if (cleanupType === 'report_executions' || cleanupType === 'all') {
-      const count = await cleanupOldReportExecutions(schema, retentionDays);
-      results.push({ type: 'report_executions', deletedCount: count });
-    }
-
-    // Run vacuum after cleanup
+    // For 'all' cleanup type, run all operations in parallel for better performance
     if (cleanupType === 'all') {
+      const cleanupPromises = await Promise.allSettled([
+        cleanupOldNotifications(schema, retentionDays).then(count => ({ type: 'notifications', deletedCount: count })),
+        cleanupExpiredSessions(retentionDays).then(count => ({ type: 'sessions', deletedCount: count })),
+        cleanupAnalyticsCache(schema, 7).then(count => ({ type: 'analytics_cache', deletedCount: count })), // Cache only 7 days
+        cleanupOldReportExecutions(schema, retentionDays).then(count => ({ type: 'report_executions', deletedCount: count })),
+      ]);
+
+      // Collect successful results
+      for (const result of cleanupPromises) {
+        if (result.status === 'fulfilled') {
+          results.push(result.value);
+        } else {
+          logger.error({ err: result.reason }, 'Cleanup operation failed');
+        }
+      }
+
+      // Run vacuum after cleanup
       await vacuumTables(schema);
+    } else {
+      // Single cleanup type - run individually
+      if (cleanupType === 'notifications') {
+        const count = await cleanupOldNotifications(schema, retentionDays);
+        results.push({ type: 'notifications', deletedCount: count });
+      }
+
+      if (cleanupType === 'sessions') {
+        const count = await cleanupExpiredSessions(retentionDays);
+        results.push({ type: 'sessions', deletedCount: count });
+      }
+
+      if (cleanupType === 'analytics_cache') {
+        const count = await cleanupAnalyticsCache(schema, 7); // Cache only 7 days
+        results.push({ type: 'analytics_cache', deletedCount: count });
+      }
+
+      if (cleanupType === 'report_executions') {
+        const count = await cleanupOldReportExecutions(schema, retentionDays);
+        results.push({ type: 'report_executions', deletedCount: count });
+      }
     }
 
     const totalDeleted = results.reduce((sum, r) => sum + r.deletedCount, 0);
