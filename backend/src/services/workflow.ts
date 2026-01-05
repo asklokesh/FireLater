@@ -2,6 +2,7 @@ import { pool } from '../config/database.js';
 import { tenantService } from './tenant.js';
 import { logger } from '../utils/logger.js';
 import { sanitizeMarkdown } from '../utils/contentSanitization.js';
+import { cacheService } from '../utils/cache.js';
 
 // ============================================
 // TYPES
@@ -94,6 +95,9 @@ export interface UpdateWorkflowRuleData {
 // WORKFLOW RULE MANAGEMENT
 // ============================================
 
+// Cache TTL for workflow rules (15 minutes - workflows change infrequently)
+const WORKFLOW_CACHE_TTL = 900;
+
 export async function listWorkflowRules(
   tenantSlug: string,
   filters?: {
@@ -102,79 +106,97 @@ export async function listWorkflowRules(
     isActive?: boolean;
   }
 ): Promise<WorkflowRule[]> {
-  const schema = tenantService.getSchemaName(tenantSlug);
+  // Create cache key from tenant and filters
+  const filterKey = JSON.stringify(filters || {});
+  const cacheKey = `${tenantSlug}:workflows:list:${filterKey}`;
 
-  let query = `
-    SELECT
-      wr.id,
-      wr.name,
-      wr.description,
-      wr.entity_type,
-      wr.trigger_type,
-      wr.is_active,
-      wr.conditions,
-      wr.actions,
-      wr.execution_order,
-      wr.stop_on_match,
-      wr.created_by,
-      u.name as created_by_name,
-      wr.created_at,
-      wr.updated_at
-    FROM ${schema}.workflow_rules wr
-    LEFT JOIN ${schema}.users u ON wr.created_by = u.id
-    WHERE 1=1
-  `;
-  const params: unknown[] = [];
+  return cacheService.getOrSet(
+    cacheKey,
+    async () => {
+      const schema = tenantService.getSchemaName(tenantSlug);
 
-  if (filters?.entityType) {
-    params.push(filters.entityType);
-    query += ` AND wr.entity_type = $${params.length}`;
-  }
+      let query = `
+        SELECT
+          wr.id,
+          wr.name,
+          wr.description,
+          wr.entity_type,
+          wr.trigger_type,
+          wr.is_active,
+          wr.conditions,
+          wr.actions,
+          wr.execution_order,
+          wr.stop_on_match,
+          wr.created_by,
+          u.name as created_by_name,
+          wr.created_at,
+          wr.updated_at
+        FROM ${schema}.workflow_rules wr
+        LEFT JOIN ${schema}.users u ON wr.created_by = u.id
+        WHERE 1=1
+      `;
+      const params: unknown[] = [];
 
-  if (filters?.triggerType) {
-    params.push(filters.triggerType);
-    query += ` AND wr.trigger_type = $${params.length}`;
-  }
+      if (filters?.entityType) {
+        params.push(filters.entityType);
+        query += ` AND wr.entity_type = $${params.length}`;
+      }
 
-  if (filters?.isActive !== undefined) {
-    params.push(filters.isActive);
-    query += ` AND wr.is_active = $${params.length}`;
-  }
+      if (filters?.triggerType) {
+        params.push(filters.triggerType);
+        query += ` AND wr.trigger_type = $${params.length}`;
+      }
 
-  query += ' ORDER BY wr.execution_order ASC, wr.created_at DESC';
+      if (filters?.isActive !== undefined) {
+        params.push(filters.isActive);
+        query += ` AND wr.is_active = $${params.length}`;
+      }
 
-  const result = await pool.query(query, params);
-  return result.rows;
+      query += ' ORDER BY wr.execution_order ASC, wr.created_at DESC';
+
+      const result = await pool.query(query, params);
+      return result.rows;
+    },
+    { ttl: WORKFLOW_CACHE_TTL }
+  );
 }
 
 export async function getWorkflowRule(
   tenantSlug: string,
   ruleId: string
 ): Promise<WorkflowRule | null> {
-  const schema = tenantService.getSchemaName(tenantSlug);
+  const cacheKey = `${tenantSlug}:workflows:rule:${ruleId}`;
 
-  const result = await pool.query(`
-    SELECT
-      wr.id,
-      wr.name,
-      wr.description,
-      wr.entity_type,
-      wr.trigger_type,
-      wr.is_active,
-      wr.conditions,
-      wr.actions,
-      wr.execution_order,
-      wr.stop_on_match,
-      wr.created_by,
-      u.name as created_by_name,
-      wr.created_at,
-      wr.updated_at
-    FROM ${schema}.workflow_rules wr
-    LEFT JOIN ${schema}.users u ON wr.created_by = u.id
-    WHERE wr.id = $1
-  `, [ruleId]);
+  return cacheService.getOrSet(
+    cacheKey,
+    async () => {
+      const schema = tenantService.getSchemaName(tenantSlug);
 
-  return result.rows[0] || null;
+      const result = await pool.query(`
+        SELECT
+          wr.id,
+          wr.name,
+          wr.description,
+          wr.entity_type,
+          wr.trigger_type,
+          wr.is_active,
+          wr.conditions,
+          wr.actions,
+          wr.execution_order,
+          wr.stop_on_match,
+          wr.created_by,
+          u.name as created_by_name,
+          wr.created_at,
+          wr.updated_at
+        FROM ${schema}.workflow_rules wr
+        LEFT JOIN ${schema}.users u ON wr.created_by = u.id
+        WHERE wr.id = $1
+      `, [ruleId]);
+
+      return result.rows[0] || null;
+    },
+    { ttl: WORKFLOW_CACHE_TTL }
+  );
 }
 
 export async function createWorkflowRule(
@@ -203,6 +225,9 @@ export async function createWorkflowRule(
     data.stopOnMatch ?? false,
     createdBy,
   ]);
+
+  // Invalidate workflow cache
+  await cacheService.invalidateTenant(tenantSlug, 'workflows');
 
   logger.info({ tenantSlug, ruleId: result.rows[0].id, name: data.name }, 'Workflow rule created');
 
@@ -270,6 +295,9 @@ export async function updateWorkflowRule(
     return null;
   }
 
+  // Invalidate workflow cache
+  await cacheService.invalidateTenant(tenantSlug, 'workflows');
+
   logger.info({ tenantSlug, ruleId }, 'Workflow rule updated');
 
   return result.rows[0];
@@ -286,6 +314,9 @@ export async function deleteWorkflowRule(
   `, [ruleId]);
 
   if (result.rowCount && result.rowCount > 0) {
+    // Invalidate workflow cache
+    await cacheService.invalidateTenant(tenantSlug, 'workflows');
+
     logger.info({ tenantSlug, ruleId }, 'Workflow rule deleted');
     return true;
   }
