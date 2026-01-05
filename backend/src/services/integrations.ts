@@ -3,6 +3,7 @@ import { pool } from '../config/database.js';
 import { logger } from '../utils/logger.js';
 import { encrypt, decrypt } from '../utils/encryption.js';
 import { validateUrlForSSRF } from '../utils/ssrf.js';
+import { cacheService } from '../utils/cache.js';
 
 // ============================================
 // TYPES
@@ -85,25 +86,41 @@ function generateApiKey(): { key: string; prefix: string; hash: string } {
 
 export const apiKeysService = {
   async list(tenantSlug: string): Promise<ApiKey[]> {
-    const schema = getSchema(tenantSlug);
-    const result = await pool.query(`
-      SELECT ak.*, u.name as created_by_name
-      FROM ${schema}.api_keys ak
-      LEFT JOIN ${schema}.users u ON ak.created_by = u.id
-      ORDER BY ak.created_at DESC
-    `);
-    return result.rows;
+    const cacheKey = `${tenantSlug}:integrations:api_keys:list`;
+
+    return cacheService.getOrSet(
+      cacheKey,
+      async () => {
+        const schema = getSchema(tenantSlug);
+        const result = await pool.query(`
+          SELECT ak.*, u.name as created_by_name
+          FROM ${schema}.api_keys ak
+          LEFT JOIN ${schema}.users u ON ak.created_by = u.id
+          ORDER BY ak.created_at DESC
+        `);
+        return result.rows;
+      },
+      { ttl: 900 } // 15 minutes - API keys change very infrequently
+    );
   },
 
   async findById(tenantSlug: string, id: string): Promise<ApiKey | null> {
-    const schema = getSchema(tenantSlug);
-    const result = await pool.query(`
-      SELECT ak.*, u.name as created_by_name
-      FROM ${schema}.api_keys ak
-      LEFT JOIN ${schema}.users u ON ak.created_by = u.id
-      WHERE ak.id = $1
-    `, [id]);
-    return result.rows[0] || null;
+    const cacheKey = `${tenantSlug}:integrations:api_key:${id}`;
+
+    return cacheService.getOrSet(
+      cacheKey,
+      async () => {
+        const schema = getSchema(tenantSlug);
+        const result = await pool.query(`
+          SELECT ak.*, u.name as created_by_name
+          FROM ${schema}.api_keys ak
+          LEFT JOIN ${schema}.users u ON ak.created_by = u.id
+          WHERE ak.id = $1
+        `, [id]);
+        return result.rows[0] || null;
+      },
+      { ttl: 900 } // 15 minutes
+    );
   },
 
   async create(tenantSlug: string, userId: string, data: {
@@ -134,6 +151,9 @@ export const apiKeysService = {
       JSON.stringify(data.ipWhitelist || []),
       userId,
     ]);
+
+    // Invalidate cache
+    await cacheService.invalidateTenant(tenantSlug, 'integrations');
 
     return { apiKey: result.rows[0], key };
   },
@@ -193,6 +213,9 @@ export const apiKeysService = {
       RETURNING *
     `, values);
 
+    // Invalidate cache
+    await cacheService.invalidateTenant(tenantSlug, 'integrations');
+
     return result.rows[0] || null;
   },
 
@@ -201,6 +224,10 @@ export const apiKeysService = {
     const result = await pool.query(`
       DELETE FROM ${schema}.api_keys WHERE id = $1
     `, [id]);
+
+    // Invalidate cache
+    await cacheService.invalidateTenant(tenantSlug, 'integrations');
+
     return (result.rowCount ?? 0) > 0;
   },
 
@@ -234,34 +261,58 @@ export const apiKeysService = {
 
 export const webhooksService = {
   async list(tenantSlug: string): Promise<Webhook[]> {
-    const schema = getSchema(tenantSlug);
-    const result = await pool.query(`
-      SELECT w.*, u.name as created_by_name
-      FROM ${schema}.webhooks w
-      LEFT JOIN ${schema}.users u ON w.created_by = u.id
-      ORDER BY w.created_at DESC
-    `);
-    return result.rows;
+    const cacheKey = `${tenantSlug}:integrations:webhooks:list`;
+
+    return cacheService.getOrSet(
+      cacheKey,
+      async () => {
+        const schema = getSchema(tenantSlug);
+        const result = await pool.query(`
+          SELECT w.*, u.name as created_by_name
+          FROM ${schema}.webhooks w
+          LEFT JOIN ${schema}.users u ON w.created_by = u.id
+          ORDER BY w.created_at DESC
+        `);
+        return result.rows;
+      },
+      { ttl: 900 } // 15 minutes - webhooks change very infrequently
+    );
   },
 
   async findById(tenantSlug: string, id: string): Promise<Webhook | null> {
-    const schema = getSchema(tenantSlug);
-    const result = await pool.query(`
-      SELECT w.*, u.name as created_by_name
-      FROM ${schema}.webhooks w
-      LEFT JOIN ${schema}.users u ON w.created_by = u.id
-      WHERE w.id = $1
-    `, [id]);
-    return result.rows[0] || null;
+    const cacheKey = `${tenantSlug}:integrations:webhook:${id}`;
+
+    return cacheService.getOrSet(
+      cacheKey,
+      async () => {
+        const schema = getSchema(tenantSlug);
+        const result = await pool.query(`
+          SELECT w.*, u.name as created_by_name
+          FROM ${schema}.webhooks w
+          LEFT JOIN ${schema}.users u ON w.created_by = u.id
+          WHERE w.id = $1
+        `, [id]);
+        return result.rows[0] || null;
+      },
+      { ttl: 900 } // 15 minutes
+    );
   },
 
   async findByEvent(tenantSlug: string, event: string): Promise<Webhook[]> {
-    const schema = getSchema(tenantSlug);
-    const result = await pool.query(`
-      SELECT * FROM ${schema}.webhooks
-      WHERE is_active = true AND events @> $1::jsonb
-    `, [JSON.stringify([event])]);
-    return result.rows;
+    const cacheKey = `${tenantSlug}:integrations:webhooks:event:${event}`;
+
+    return cacheService.getOrSet(
+      cacheKey,
+      async () => {
+        const schema = getSchema(tenantSlug);
+        const result = await pool.query(`
+          SELECT * FROM ${schema}.webhooks
+          WHERE is_active = true AND events @> $1::jsonb
+        `, [JSON.stringify([event])]);
+        return result.rows;
+      },
+      { ttl: 900 } // 15 minutes - critical for webhook triggers
+    );
   },
 
   async create(tenantSlug: string, userId: string, data: {
@@ -302,6 +353,9 @@ export const webhooksService = {
       JSON.stringify(data.customHeaders || {}),
       userId,
     ]);
+
+    // Invalidate cache
+    await cacheService.invalidateTenant(tenantSlug, 'integrations');
 
     return result.rows[0];
   },
@@ -382,6 +436,9 @@ export const webhooksService = {
       RETURNING *
     `, values);
 
+    // Invalidate cache
+    await cacheService.invalidateTenant(tenantSlug, 'integrations');
+
     return result.rows[0] || null;
   },
 
@@ -390,6 +447,10 @@ export const webhooksService = {
     const result = await pool.query(`
       DELETE FROM ${schema}.webhooks WHERE id = $1
     `, [id]);
+
+    // Invalidate cache
+    await cacheService.invalidateTenant(tenantSlug, 'integrations');
+
     return (result.rowCount ?? 0) > 0;
   },
 
@@ -567,28 +628,44 @@ export const webhooksService = {
 
 export const integrationsService = {
   async list(tenantSlug: string): Promise<Integration[]> {
-    const schema = getSchema(tenantSlug);
-    const result = await pool.query(`
-      SELECT i.*
-      FROM ${schema}.integrations i
-      ORDER BY i.created_at DESC
-    `);
-    // Don't return credentials
-    return result.rows.map((row) => ({ ...row, credentials: undefined }));
+    const cacheKey = `${tenantSlug}:integrations:list`;
+
+    return cacheService.getOrSet(
+      cacheKey,
+      async () => {
+        const schema = getSchema(tenantSlug);
+        const result = await pool.query(`
+          SELECT i.*
+          FROM ${schema}.integrations i
+          ORDER BY i.created_at DESC
+        `);
+        // Don't return credentials
+        return result.rows.map((row) => ({ ...row, credentials: undefined }));
+      },
+      { ttl: 900 } // 15 minutes - integrations change very infrequently
+    );
   },
 
   async findById(tenantSlug: string, id: string): Promise<Integration | null> {
-    const schema = getSchema(tenantSlug);
-    const result = await pool.query(`
-      SELECT i.*
-      FROM ${schema}.integrations i
-      WHERE i.id = $1
-    `, [id]);
-    const row = result.rows[0];
-    if (row) {
-      row.credentials = undefined; // Don't return credentials
-    }
-    return row || null;
+    const cacheKey = `${tenantSlug}:integrations:integration:${id}`;
+
+    return cacheService.getOrSet(
+      cacheKey,
+      async () => {
+        const schema = getSchema(tenantSlug);
+        const result = await pool.query(`
+          SELECT i.*
+          FROM ${schema}.integrations i
+          WHERE i.id = $1
+        `, [id]);
+        const row = result.rows[0];
+        if (row) {
+          row.credentials = undefined; // Don't return credentials
+        }
+        return row || null;
+      },
+      { ttl: 900 } // 15 minutes
+    );
   },
 
   async create(tenantSlug: string, userId: string, data: {
@@ -629,6 +706,10 @@ export const integrationsService = {
 
     const row = result.rows[0];
     row.credentials = undefined;
+
+    // Invalidate cache
+    await cacheService.invalidateTenant(tenantSlug, 'integrations');
+
     return row;
   },
 
@@ -704,6 +785,10 @@ export const integrationsService = {
     if (row) {
       row.credentials = undefined;
     }
+
+    // Invalidate cache
+    await cacheService.invalidateTenant(tenantSlug, 'integrations');
+
     return row || null;
   },
 
@@ -712,6 +797,10 @@ export const integrationsService = {
     const result = await pool.query(`
       DELETE FROM ${schema}.integrations WHERE id = $1
     `, [id]);
+
+    // Invalidate cache
+    await cacheService.invalidateTenant(tenantSlug, 'integrations');
+
     return (result.rowCount ?? 0) > 0;
   },
 

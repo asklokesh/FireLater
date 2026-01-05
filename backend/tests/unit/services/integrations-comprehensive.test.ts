@@ -4,6 +4,7 @@ import { pool } from '../../../src/config/database.js';
 import * as encryption from '../../../src/utils/encryption.js';
 import * as ssrf from '../../../src/utils/ssrf.js';
 import crypto from 'crypto';
+import { redis } from '../../../src/config/redis.js';
 
 // Mock dependencies
 vi.mock('../../../src/config/database.js');
@@ -15,8 +16,10 @@ describe('Integrations Service - Comprehensive Tests', () => {
   const mockTenantSlug = 'test-org';
   const mockUserId = 'user-123';
 
-  beforeEach(() => {
+  beforeEach(async () => {
     vi.clearAllMocks();
+    // Clear cache to prevent test pollution
+    await redis.flushdb();
   });
 
   afterEach(() => {
