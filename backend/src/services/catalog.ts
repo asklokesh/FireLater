@@ -307,72 +307,88 @@ export class CatalogItemService {
     isActive?: boolean;
     tags?: string[];
   }): Promise<{ items: CatalogItem[]; total: number }> {
-    const schema = tenantService.getSchemaName(tenantSlug);
-    const offset = getOffset(params);
+    const cacheKey = `${tenantSlug}:catalog:items:list:${JSON.stringify({ params, filters })}`;
 
-    let whereClause = 'WHERE 1=1';
-    const values: unknown[] = [];
-    let paramIndex = 1;
+    return cacheService.getOrSet(
+      cacheKey,
+      async () => {
+        const schema = tenantService.getSchemaName(tenantSlug);
+        const offset = getOffset(params);
 
-    if (filters?.categoryId) {
-      whereClause += ` AND i.category_id = $${paramIndex++}`;
-      values.push(filters.categoryId);
-    }
-    if (filters?.isActive !== undefined) {
-      whereClause += ` AND i.is_active = $${paramIndex++}`;
-      values.push(filters.isActive);
-    }
-    if (filters?.search) {
-      whereClause += ` AND (i.name ILIKE $${paramIndex} OR i.short_description ILIKE $${paramIndex} OR i.description ILIKE $${paramIndex})`;
-      values.push(`%${filters.search}%`);
-      paramIndex++;
-    }
-    if (filters?.tags && filters.tags.length > 0) {
-      whereClause += ` AND i.tags && $${paramIndex++}`;
-      values.push(filters.tags);
-    }
+        let whereClause = 'WHERE 1=1';
+        const values: unknown[] = [];
+        let paramIndex = 1;
 
-    const countResult = await pool.query(
-      `SELECT COUNT(*) FROM ${schema}.catalog_items i ${whereClause}`,
-      values
+        if (filters?.categoryId) {
+          whereClause += ` AND i.category_id = $${paramIndex++}`;
+          values.push(filters.categoryId);
+        }
+        if (filters?.isActive !== undefined) {
+          whereClause += ` AND i.is_active = $${paramIndex++}`;
+          values.push(filters.isActive);
+        }
+        if (filters?.search) {
+          whereClause += ` AND (i.name ILIKE $${paramIndex} OR i.short_description ILIKE $${paramIndex} OR i.description ILIKE $${paramIndex})`;
+          values.push(`%${filters.search}%`);
+          paramIndex++;
+        }
+        if (filters?.tags && filters.tags.length > 0) {
+          whereClause += ` AND i.tags && $${paramIndex++}`;
+          values.push(filters.tags);
+        }
+
+        const countResult = await pool.query(
+          `SELECT COUNT(*) FROM ${schema}.catalog_items i ${whereClause}`,
+          values
+        );
+        const total = parseInt(countResult.rows[0].count, 10);
+
+        const result = await pool.query(
+          `SELECT i.*,
+                  c.name as category_name,
+                  fg.name as fulfillment_group_name,
+                  ag.name as approval_group_name
+           FROM ${schema}.catalog_items i
+           LEFT JOIN ${schema}.catalog_categories c ON i.category_id = c.id
+           LEFT JOIN ${schema}.groups fg ON i.fulfillment_group_id = fg.id
+           LEFT JOIN ${schema}.groups ag ON i.approval_group_id = ag.id
+           ${whereClause}
+           ORDER BY i.sort_order, i.name
+           LIMIT $${paramIndex++} OFFSET $${paramIndex}`,
+          [...values, params.perPage, offset]
+        );
+
+        return { items: result.rows, total };
+      },
+      { ttl: CATALOG_CACHE_TTL } // 10 minutes
     );
-    const total = parseInt(countResult.rows[0].count, 10);
-
-    const result = await pool.query(
-      `SELECT i.*,
-              c.name as category_name,
-              fg.name as fulfillment_group_name,
-              ag.name as approval_group_name
-       FROM ${schema}.catalog_items i
-       LEFT JOIN ${schema}.catalog_categories c ON i.category_id = c.id
-       LEFT JOIN ${schema}.groups fg ON i.fulfillment_group_id = fg.id
-       LEFT JOIN ${schema}.groups ag ON i.approval_group_id = ag.id
-       ${whereClause}
-       ORDER BY i.sort_order, i.name
-       LIMIT $${paramIndex++} OFFSET $${paramIndex}`,
-      [...values, params.perPage, offset]
-    );
-
-    return { items: result.rows, total };
   }
 
   async findById(tenantSlug: string, itemId: string): Promise<CatalogItem | null> {
-    const schema = tenantService.getSchemaName(tenantSlug);
+    const cacheKey = `${tenantSlug}:catalog:items:item:${itemId}`;
 
-    const result = await pool.query(
-      `SELECT i.*,
-              c.name as category_name,
-              fg.name as fulfillment_group_name,
-              ag.name as approval_group_name
-       FROM ${schema}.catalog_items i
-       LEFT JOIN ${schema}.catalog_categories c ON i.category_id = c.id
-       LEFT JOIN ${schema}.groups fg ON i.fulfillment_group_id = fg.id
-       LEFT JOIN ${schema}.groups ag ON i.approval_group_id = ag.id
-       WHERE i.id = $1`,
-      [itemId]
+    return cacheService.getOrSet(
+      cacheKey,
+      async () => {
+        const schema = tenantService.getSchemaName(tenantSlug);
+
+        const result = await pool.query(
+          `SELECT i.*,
+                  c.name as category_name,
+                  fg.name as fulfillment_group_name,
+                  ag.name as approval_group_name
+           FROM ${schema}.catalog_items i
+           LEFT JOIN ${schema}.catalog_categories c ON i.category_id = c.id
+           LEFT JOIN ${schema}.groups fg ON i.fulfillment_group_id = fg.id
+           LEFT JOIN ${schema}.groups ag ON i.approval_group_id = ag.id
+           WHERE i.id = $1`,
+          [itemId]
+        );
+
+        return result.rows[0] || null;
+      },
+      { ttl: CATALOG_CACHE_TTL } // 10 minutes
     );
-
-    return result.rows[0] || null;
   }
 
   async create(tenantSlug: string, params: CreateItemParams, createdBy: string): Promise<CatalogItem> {
@@ -411,6 +427,9 @@ export class CatalogItemService {
        VALUES ($1, 'create', 'catalog_item', $2, $3)`,
       [createdBy, item.id, JSON.stringify({ name: params.name })]
     );
+
+    // Invalidate catalog cache (items and categories - item counts change)
+    await cacheService.invalidateTenant(tenantSlug, 'catalog');
 
     logger.info({ itemId: item.id }, 'Catalog item created');
     return this.findById(tenantSlug, item.id) as Promise<CatalogItem>;
@@ -509,6 +528,9 @@ export class CatalogItemService {
       values
     );
 
+    // Invalidate catalog cache
+    await cacheService.invalidateTenant(tenantSlug, 'catalog');
+
     logger.info({ itemId }, 'Catalog item updated');
     return this.findById(tenantSlug, itemId) as Promise<CatalogItem>;
   }
@@ -526,6 +548,9 @@ export class CatalogItemService {
       `UPDATE ${schema}.catalog_items SET is_active = false, updated_at = NOW() WHERE id = $1`,
       [itemId]
     );
+
+    // Invalidate catalog cache (items and categories - item counts change)
+    await cacheService.invalidateTenant(tenantSlug, 'catalog');
 
     logger.info({ itemId }, 'Catalog item deleted');
   }
