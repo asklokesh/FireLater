@@ -73,7 +73,7 @@ export async function listSlaPolicies(
   const schema = tenantService.getSchemaName(tenantSlug);
 
   let query = `
-    SELECT id, name, description, entity_type, is_default, is_active, created_at, updated_at
+    SELECT id, name, description, entity_type, is_default, created_at, updated_at
     FROM ${schema}.sla_policies
     WHERE 1=1
   `;
@@ -84,10 +84,7 @@ export async function listSlaPolicies(
     query += ` AND entity_type = $${params.length}`;
   }
 
-  if (filters?.isActive !== undefined) {
-    params.push(filters.isActive);
-    query += ` AND is_active = $${params.length}`;
-  }
+  // Note: is_active filter removed as column doesn't exist in database schema
 
   query += ' ORDER BY entity_type, is_default DESC, name';
 
@@ -132,7 +129,7 @@ export async function getSlaPolicy(
 
   // Get policy
   const policyResult = await pool.query(`
-    SELECT id, name, description, entity_type, is_default, is_active, created_at, updated_at
+    SELECT id, name, description, entity_type, is_default, created_at, updated_at
     FROM ${schema}.sla_policies
     WHERE id = $1
   `, [policyId]);

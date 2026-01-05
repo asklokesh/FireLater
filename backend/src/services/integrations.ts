@@ -569,9 +569,8 @@ export const integrationsService = {
   async list(tenantSlug: string): Promise<Integration[]> {
     const schema = getSchema(tenantSlug);
     const result = await pool.query(`
-      SELECT i.*, u.name as created_by_name
+      SELECT i.*
       FROM ${schema}.integrations i
-      LEFT JOIN ${schema}.users u ON i.created_by = u.id
       ORDER BY i.created_at DESC
     `);
     // Don't return credentials
@@ -581,9 +580,8 @@ export const integrationsService = {
   async findById(tenantSlug: string, id: string): Promise<Integration | null> {
     const schema = getSchema(tenantSlug);
     const result = await pool.query(`
-      SELECT i.*, u.name as created_by_name
+      SELECT i.*
       FROM ${schema}.integrations i
-      LEFT JOIN ${schema}.users u ON i.created_by = u.id
       WHERE i.id = $1
     `, [id]);
     const row = result.rows[0];
@@ -721,9 +719,8 @@ export const integrationsService = {
   async getWithCredentials(tenantSlug: string, id: string): Promise<(Integration & { credentials?: Record<string, unknown> }) | null> {
     const schema = getSchema(tenantSlug);
     const result = await pool.query(`
-      SELECT i.*, u.name as created_by_name
+      SELECT i.*
       FROM ${schema}.integrations i
-      LEFT JOIN ${schema}.users u ON i.created_by = u.id
       WHERE i.id = $1
     `, [id]);
 

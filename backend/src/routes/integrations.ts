@@ -7,6 +7,7 @@ import {
   WEBHOOK_EVENTS,
   INTEGRATION_TYPES,
 } from '../services/integrations.js';
+import { authenticate } from '../middleware/auth.js';
 
 // ============================================
 // INTEGRATIONS, WEBHOOKS & API KEYS ROUTES
@@ -89,25 +90,17 @@ const updateIntegrationSchema = z.object({
 export { updateWebhookSchema, createIntegrationSchema, updateIntegrationSchema };
 
 export default async function integrationsRoutes(fastify: FastifyInstance) {
-  // Require authentication for all routes
-  fastify.addHook('onRequest', async (request, reply) => {
-    const tenant = (request as any).tenant;
-    if (!tenant) {
-      return reply.code(401).send({ error: 'Unauthorized' });
-    }
-  });
-
   // ============================================
   // METADATA ENDPOINTS
   // ============================================
 
-  // Get available webhook events
+  // Get available webhook events (no auth required)
   fastify.get('/webhooks/events', async () => {
     return { data: WEBHOOK_EVENTS };
   });
 
-  // Get available integration types
-  fastify.get('/integrations/types', async () => {
+  // Get available integration types (no auth required)
+  fastify.get('/types', async () => {
     return { data: INTEGRATION_TYPES };
   });
 
@@ -116,18 +109,18 @@ export default async function integrationsRoutes(fastify: FastifyInstance) {
   // ============================================
 
   // List API keys
-  fastify.get('/api-keys', async (request) => {
-    const tenant = (request as any).tenant;
-    const keys = await apiKeysService.list(tenant.slug);
+  fastify.get('/api-keys', { preHandler: [authenticate] }, async (request) => {
+    const { tenantSlug } = request.user;
+    const keys = await apiKeysService.list(tenantSlug);
     return { data: keys };
   });
 
   // Get single API key
-  fastify.get('/api-keys/:id', async (request, reply) => {
-    const tenant = (request as any).tenant;
+  fastify.get('/api-keys/:id', { preHandler: [authenticate] }, async (request, reply) => {
+    const { tenantSlug } = request.user;
     const { id } = request.params as { id: string };
 
-    const key = await apiKeysService.findById(tenant.slug, id);
+    const key = await apiKeysService.findById(tenantSlug, id);
 
     if (!key) {
       return reply.code(404).send({ error: 'API key not found' });
@@ -137,13 +130,12 @@ export default async function integrationsRoutes(fastify: FastifyInstance) {
   });
 
   // Create API key
-  fastify.post('/api-keys', async (request, reply) => {
-    const tenant = (request as any).tenant;
-    const user = (request as any).user;
+  fastify.post('/api-keys', { preHandler: [authenticate] }, async (request, reply) => {
+    const { tenantSlug, userId } = request.user;
     const body = createApiKeySchema.parse(request.body);
 
     try {
-      const result = await apiKeysService.create(tenant.slug, user?.id || '', {
+      const result = await apiKeysService.create(tenantSlug, userId, {
         name: body.name,
         description: body.description,
         permissions: body.permissions,
@@ -165,13 +157,13 @@ export default async function integrationsRoutes(fastify: FastifyInstance) {
   });
 
   // Update API key
-  fastify.patch('/api-keys/:id', async (request, reply) => {
-    const tenant = (request as any).tenant;
+  fastify.patch('/api-keys/:id', { preHandler: [authenticate] }, async (request, reply) => {
+    const { tenantSlug } = request.user;
     const { id } = request.params as { id: string };
     const body = updateApiKeySchema.parse(request.body);
 
     try {
-      const key = await apiKeysService.update(tenant.slug, id, {
+      const key = await apiKeysService.update(tenantSlug, id, {
         name: body.name,
         description: body.description ?? undefined,
         permissions: body.permissions,
@@ -193,12 +185,12 @@ export default async function integrationsRoutes(fastify: FastifyInstance) {
   });
 
   // Delete API key
-  fastify.delete('/api-keys/:id', async (request, reply) => {
-    const tenant = (request as any).tenant;
+  fastify.delete('/api-keys/:id', { preHandler: [authenticate] }, async (request, reply) => {
+    const { tenantSlug } = request.user;
     const { id } = request.params as { id: string };
 
     try {
-      const deleted = await apiKeysService.delete(tenant.slug, id);
+      const deleted = await apiKeysService.delete(tenantSlug, id);
 
       if (!deleted) {
         return reply.code(404).send({ error: 'API key not found' });
@@ -212,15 +204,15 @@ export default async function integrationsRoutes(fastify: FastifyInstance) {
   });
 
   // Validate API key (for testing)
-  fastify.post('/api-keys/validate', async (request, reply) => {
-    const tenant = (request as any).tenant;
+  fastify.post('/api-keys/validate', { preHandler: [authenticate] }, async (request, reply) => {
+    const { tenantSlug } = request.user;
     const body = request.body as { key: string };
 
     if (!body.key) {
       return reply.code(400).send({ error: 'API key is required' });
     }
 
-    const apiKey = await apiKeysService.validateKey(tenant.slug, body.key);
+    const apiKey = await apiKeysService.validateKey(tenantSlug, body.key);
 
     return { data: { valid: !!apiKey, apiKey } };
   });
@@ -230,18 +222,18 @@ export default async function integrationsRoutes(fastify: FastifyInstance) {
   // ============================================
 
   // List webhooks
-  fastify.get('/webhooks', async (request) => {
-    const tenant = (request as any).tenant;
-    const webhooks = await webhooksService.list(tenant.slug);
+  fastify.get('/webhooks', { preHandler: [authenticate] }, async (request) => {
+    const { tenantSlug } = request.user;
+    const webhooks = await webhooksService.list(tenantSlug);
     return { data: webhooks };
   });
 
   // Get single webhook
-  fastify.get('/webhooks/:id', async (request, reply) => {
-    const tenant = (request as any).tenant;
+  fastify.get('/webhooks/:id', { preHandler: [authenticate] }, async (request, reply) => {
+    const { tenantSlug } = request.user;
     const { id } = request.params as { id: string };
 
-    const webhook = await webhooksService.findById(tenant.slug, id);
+    const webhook = await webhooksService.findById(tenantSlug, id);
 
     if (!webhook) {
       return reply.code(404).send({ error: 'Webhook not found' });
@@ -251,13 +243,12 @@ export default async function integrationsRoutes(fastify: FastifyInstance) {
   });
 
   // Create webhook
-  fastify.post('/webhooks', async (request, reply) => {
-    const tenant = (request as any).tenant;
-    const user = (request as any).user;
+  fastify.post('/webhooks', { preHandler: [authenticate] }, async (request, reply) => {
+    const { tenantSlug, userId } = request.user;
     const body = createWebhookSchema.parse(request.body);
 
     try {
-      const webhook = await webhooksService.create(tenant.slug, user?.id || '', {
+      const webhook = await webhooksService.create(tenantSlug, userId, {
         name: body.name,
         description: body.description,
         url: body.url,
@@ -278,13 +269,13 @@ export default async function integrationsRoutes(fastify: FastifyInstance) {
   });
 
   // Update webhook
-  fastify.patch('/webhooks/:id', async (request, reply) => {
-    const tenant = (request as any).tenant;
+  fastify.patch('/webhooks/:id', { preHandler: [authenticate] }, async (request, reply) => {
+    const { tenantSlug } = request.user;
     const { id } = request.params as { id: string };
     const body = updateWebhookSchema.parse(request.body);
 
     try {
-      const webhook = await webhooksService.update(tenant.slug, id, {
+      const webhook = await webhooksService.update(tenantSlug, id, {
         name: body.name,
         description: body.description ?? undefined,
         url: body.url,
@@ -309,12 +300,12 @@ export default async function integrationsRoutes(fastify: FastifyInstance) {
   });
 
   // Delete webhook
-  fastify.delete('/webhooks/:id', async (request, reply) => {
-    const tenant = (request as any).tenant;
+  fastify.delete('/webhooks/:id', { preHandler: [authenticate] }, async (request, reply) => {
+    const { tenantSlug } = request.user;
     const { id } = request.params as { id: string };
 
     try {
-      const deleted = await webhooksService.delete(tenant.slug, id);
+      const deleted = await webhooksService.delete(tenantSlug, id);
 
       if (!deleted) {
         return reply.code(404).send({ error: 'Webhook not found' });
@@ -328,12 +319,12 @@ export default async function integrationsRoutes(fastify: FastifyInstance) {
   });
 
   // Test webhook
-  fastify.post('/webhooks/:id/test', async (request, reply) => {
-    const tenant = (request as any).tenant;
+  fastify.post('/webhooks/:id/test', { preHandler: [authenticate] }, async (request, reply) => {
+    const { tenantSlug } = request.user;
     const { id } = request.params as { id: string };
 
     try {
-      const result = await webhooksService.testWebhook(tenant.slug, id);
+      const result = await webhooksService.testWebhook(tenantSlug, id);
       return { data: result };
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to test webhook';
@@ -342,8 +333,8 @@ export default async function integrationsRoutes(fastify: FastifyInstance) {
   });
 
   // Get webhook deliveries
-  fastify.get('/webhooks/:id/deliveries', async (request, reply) => {
-    const tenant = (request as any).tenant;
+  fastify.get('/webhooks/:id/deliveries', { preHandler: [authenticate] }, async (request, reply) => {
+    const { tenantSlug } = request.user;
     const { id } = request.params as { id: string };
     const query = request.query as {
       status?: string;
@@ -351,7 +342,7 @@ export default async function integrationsRoutes(fastify: FastifyInstance) {
       limit?: string;
     };
 
-    const webhook = await webhooksService.findById(tenant.slug, id);
+    const webhook = await webhooksService.findById(tenantSlug, id);
 
     if (!webhook) {
       return reply.code(404).send({ error: 'Webhook not found' });
@@ -359,7 +350,7 @@ export default async function integrationsRoutes(fastify: FastifyInstance) {
 
     const limit = query.limit ? parseInt(query.limit) : 50;
 
-    const deliveries = await webhooksService.getDeliveries(tenant.slug, id, limit);
+    const deliveries = await webhooksService.getDeliveries(tenantSlug, id, limit);
 
     return {
       data: deliveries,
@@ -375,20 +366,20 @@ export default async function integrationsRoutes(fastify: FastifyInstance) {
   // ============================================
 
   // List integrations
-  fastify.get('/integrations', async (request) => {
-    const tenant = (request as any).tenant;
+  fastify.get('/', { preHandler: [authenticate] }, async (request) => {
+    const { tenantSlug } = request.user;
 
-    const integrations = await integrationsService.list(tenant.slug);
+    const integrations = await integrationsService.list(tenantSlug);
 
     return { data: integrations };
   });
 
   // Get single integration
-  fastify.get('/integrations/:id', async (request, reply) => {
-    const tenant = (request as any).tenant;
+  fastify.get('/:id', { preHandler: [authenticate] }, async (request, reply) => {
+    const { tenantSlug } = request.user;
     const { id } = request.params as { id: string };
 
-    const integration = await integrationsService.findById(tenant.slug, id);
+    const integration = await integrationsService.findById(tenantSlug, id);
 
     if (!integration) {
       return reply.code(404).send({ error: 'Integration not found' });
@@ -398,13 +389,12 @@ export default async function integrationsRoutes(fastify: FastifyInstance) {
   });
 
   // Create integration
-  fastify.post('/integrations', async (request, reply) => {
-    const tenant = (request as any).tenant;
-    const user = (request as any).user;
+  fastify.post('/', { preHandler: [authenticate] }, async (request, reply) => {
+    const { tenantSlug, userId } = request.user;
     const body = createIntegrationSchema.parse(request.body);
 
     try {
-      const integration = await integrationsService.create(tenant.slug, user?.id || '', {
+      const integration = await integrationsService.create(tenantSlug, userId, {
         name: body.name,
         type: body.type,
         description: body.description,
@@ -424,13 +414,13 @@ export default async function integrationsRoutes(fastify: FastifyInstance) {
   });
 
   // Update integration
-  fastify.patch('/integrations/:id', async (request, reply) => {
-    const tenant = (request as any).tenant;
+  fastify.patch('/:id', { preHandler: [authenticate] }, async (request, reply) => {
+    const { tenantSlug } = request.user;
     const { id } = request.params as { id: string };
     const body = updateIntegrationSchema.parse(request.body);
 
     try {
-      const integration = await integrationsService.update(tenant.slug, id, {
+      const integration = await integrationsService.update(tenantSlug, id, {
         name: body.name,
         description: body.description ?? undefined,
         config: body.config,
@@ -454,12 +444,12 @@ export default async function integrationsRoutes(fastify: FastifyInstance) {
   });
 
   // Delete integration
-  fastify.delete('/integrations/:id', async (request, reply) => {
-    const tenant = (request as any).tenant;
+  fastify.delete('/:id', { preHandler: [authenticate] }, async (request, reply) => {
+    const { tenantSlug } = request.user;
     const { id } = request.params as { id: string };
 
     try {
-      const deleted = await integrationsService.delete(tenant.slug, id);
+      const deleted = await integrationsService.delete(tenantSlug, id);
 
       if (!deleted) {
         return reply.code(404).send({ error: 'Integration not found' });
@@ -473,12 +463,12 @@ export default async function integrationsRoutes(fastify: FastifyInstance) {
   });
 
   // Test integration connection
-  fastify.post('/integrations/:id/test', async (request, reply) => {
-    const tenant = (request as any).tenant;
+  fastify.post('/:id/test', { preHandler: [authenticate] }, async (request, reply) => {
+    const { tenantSlug } = request.user;
     const { id } = request.params as { id: string };
 
     try {
-      const result = await integrationsService.testConnection(tenant.slug, id);
+      const result = await integrationsService.testConnection(tenantSlug, id);
       return { data: result };
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to test integration';
@@ -487,8 +477,8 @@ export default async function integrationsRoutes(fastify: FastifyInstance) {
   });
 
   // Get integration sync logs
-  fastify.get('/integrations/:id/logs', async (request, reply) => {
-    const tenant = (request as any).tenant;
+  fastify.get('/:id/logs', { preHandler: [authenticate] }, async (request, reply) => {
+    const { tenantSlug } = request.user;
     const { id } = request.params as { id: string };
     const query = request.query as {
       direction?: string;
@@ -497,7 +487,7 @@ export default async function integrationsRoutes(fastify: FastifyInstance) {
       limit?: string;
     };
 
-    const integration = await integrationsService.findById(tenant.slug, id);
+    const integration = await integrationsService.findById(tenantSlug, id);
 
     if (!integration) {
       return reply.code(404).send({ error: 'Integration not found' });
@@ -505,7 +495,7 @@ export default async function integrationsRoutes(fastify: FastifyInstance) {
 
     const limit = query.limit ? parseInt(query.limit) : 50;
 
-    const logs = await integrationsService.getSyncLogs(tenant.slug, id, limit);
+    const logs = await integrationsService.getSyncLogs(tenantSlug, id, limit);
 
     return {
       data: logs,

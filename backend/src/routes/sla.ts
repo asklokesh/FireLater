@@ -2,6 +2,7 @@ import { FastifyInstance } from 'fastify';
 import { z } from 'zod';
 import { slaService } from '../services/sla.js';
 import { validateDate, validateDateRange } from '../utils/validation.js';
+import { authenticate } from '../middleware/auth.js';
 
 // ============================================
 // SCHEMAS
@@ -44,22 +45,16 @@ const updateSlaTargetSchema = z.object({
 // ============================================
 
 export default async function slaRoutes(fastify: FastifyInstance) {
-  // Require authentication for all routes
-  fastify.addHook('onRequest', async (request, reply) => {
-    const tenant = (request as any).tenant;
-    if (!tenant) {
-      return reply.code(401).send({ error: 'Unauthorized' });
-    }
-  });
-
   // ----------------------------------------
   // LIST SLA POLICIES
   // ----------------------------------------
-  fastify.get('/policies', async (request, _reply) => {
-    const tenant = (request as any).tenant;
+  fastify.get('/policies', {
+    preHandler: [authenticate],
+  }, async (request, _reply) => {
+    const { tenantSlug } = request.user;
     const query = request.query as { entityType?: string; isActive?: string };
 
-    const policies = await slaService.listSlaPolicies(tenant.slug, {
+    const policies = await slaService.listSlaPolicies(tenantSlug, {
       entityType: query.entityType,
       isActive: query.isActive === 'true' ? true : query.isActive === 'false' ? false : undefined,
     });
@@ -70,11 +65,13 @@ export default async function slaRoutes(fastify: FastifyInstance) {
   // ----------------------------------------
   // GET SLA POLICY BY ID
   // ----------------------------------------
-  fastify.get('/policies/:id', async (request, reply) => {
-    const tenant = (request as any).tenant;
+  fastify.get('/policies/:id', {
+    preHandler: [authenticate],
+  }, async (request, reply) => {
+    const { tenantSlug } = request.user;
     const { id } = request.params as { id: string };
 
-    const policy = await slaService.getSlaPolicy(tenant.slug, id);
+    const policy = await slaService.getSlaPolicy(tenantSlug, id);
 
     if (!policy) {
       return reply.code(404).send({ error: 'SLA policy not found' });
@@ -86,12 +83,14 @@ export default async function slaRoutes(fastify: FastifyInstance) {
   // ----------------------------------------
   // CREATE SLA POLICY
   // ----------------------------------------
-  fastify.post('/policies', async (request, reply) => {
-    const tenant = (request as any).tenant;
+  fastify.post('/policies', {
+    preHandler: [authenticate],
+  }, async (request, reply) => {
+    const { tenantSlug } = request.user;
     const body = slaPolicySchema.parse(request.body);
 
     try {
-      const policy = await slaService.createSlaPolicy(tenant.slug, body);
+      const policy = await slaService.createSlaPolicy(tenantSlug, body);
       return reply.code(201).send({ data: policy });
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to create policy';
@@ -102,13 +101,15 @@ export default async function slaRoutes(fastify: FastifyInstance) {
   // ----------------------------------------
   // UPDATE SLA POLICY
   // ----------------------------------------
-  fastify.patch('/policies/:id', async (request, reply) => {
-    const tenant = (request as any).tenant;
+  fastify.patch('/policies/:id', {
+    preHandler: [authenticate],
+  }, async (request, reply) => {
+    const { tenantSlug } = request.user;
     const { id } = request.params as { id: string };
     const body = updateSlaPolicySchema.parse(request.body);
 
     try {
-      const policy = await slaService.updateSlaPolicy(tenant.slug, id, body);
+      const policy = await slaService.updateSlaPolicy(tenantSlug, id, body);
 
       if (!policy) {
         return reply.code(404).send({ error: 'SLA policy not found' });
@@ -124,12 +125,14 @@ export default async function slaRoutes(fastify: FastifyInstance) {
   // ----------------------------------------
   // DELETE SLA POLICY
   // ----------------------------------------
-  fastify.delete('/policies/:id', async (request, reply) => {
-    const tenant = (request as any).tenant;
+  fastify.delete('/policies/:id', {
+    preHandler: [authenticate],
+  }, async (request, reply) => {
+    const { tenantSlug } = request.user;
     const { id } = request.params as { id: string };
 
     try {
-      const deleted = await slaService.deleteSlaPolicy(tenant.slug, id);
+      const deleted = await slaService.deleteSlaPolicy(tenantSlug, id);
 
       if (!deleted) {
         return reply.code(404).send({ error: 'SLA policy not found or is default' });
@@ -145,13 +148,15 @@ export default async function slaRoutes(fastify: FastifyInstance) {
   // ----------------------------------------
   // CREATE SLA TARGET
   // ----------------------------------------
-  fastify.post('/policies/:policyId/targets', async (request, reply) => {
-    const tenant = (request as any).tenant;
+  fastify.post('/policies/:policyId/targets', {
+    preHandler: [authenticate],
+  }, async (request, reply) => {
+    const { tenantSlug } = request.user;
     const { policyId } = request.params as { policyId: string };
     const body = slaTargetSchema.parse(request.body);
 
     try {
-      const target = await slaService.createSlaTarget(tenant.slug, policyId, body);
+      const target = await slaService.createSlaTarget(tenantSlug, policyId, body);
       return reply.code(201).send({ data: target });
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to create target';
@@ -162,12 +167,14 @@ export default async function slaRoutes(fastify: FastifyInstance) {
   // ----------------------------------------
   // UPDATE SLA TARGET
   // ----------------------------------------
-  fastify.patch('/targets/:id', async (request, reply) => {
-    const tenant = (request as any).tenant;
+  fastify.patch('/targets/:id', {
+    preHandler: [authenticate],
+  }, async (request, reply) => {
+    const { tenantSlug } = request.user;
     const { id } = request.params as { id: string };
     const body = updateSlaTargetSchema.parse(request.body);
 
-    const target = await slaService.updateSlaTarget(tenant.slug, id, body);
+    const target = await slaService.updateSlaTarget(tenantSlug, id, body);
 
     if (!target) {
       return reply.code(404).send({ error: 'SLA target not found' });
@@ -179,11 +186,13 @@ export default async function slaRoutes(fastify: FastifyInstance) {
   // ----------------------------------------
   // DELETE SLA TARGET
   // ----------------------------------------
-  fastify.delete('/targets/:id', async (request, reply) => {
-    const tenant = (request as any).tenant;
+  fastify.delete('/targets/:id', {
+    preHandler: [authenticate],
+  }, async (request, reply) => {
+    const { tenantSlug } = request.user;
     const { id } = request.params as { id: string };
 
-    const deleted = await slaService.deleteSlaTarget(tenant.slug, id);
+    const deleted = await slaService.deleteSlaTarget(tenantSlug, id);
 
     if (!deleted) {
       return reply.code(404).send({ error: 'SLA target not found' });
@@ -195,8 +204,10 @@ export default async function slaRoutes(fastify: FastifyInstance) {
   // ----------------------------------------
   // GET SLA STATISTICS
   // ----------------------------------------
-  fastify.get('/stats', async (request, _reply) => {
-    const tenant = (request as any).tenant;
+  fastify.get('/stats', {
+    preHandler: [authenticate],
+  }, async (request, _reply) => {
+    const { tenantSlug } = request.user;
     const query = request.query as {
       entityType?: 'issue' | 'problem';
       startDate?: string;
@@ -219,7 +230,7 @@ export default async function slaRoutes(fastify: FastifyInstance) {
     }
 
     const stats = await slaService.getSlaStats(
-      tenant.slug,
+      tenantSlug,
       query.entityType || 'issue',
       dateRange
     );
@@ -230,12 +241,14 @@ export default async function slaRoutes(fastify: FastifyInstance) {
   // ----------------------------------------
   // GET DEFAULT SLA CONFIG (for display)
   // ----------------------------------------
-  fastify.get('/config', async (request, _reply) => {
-    const tenant = (request as any).tenant;
+  fastify.get('/config', {
+    preHandler: [authenticate],
+  }, async (request, _reply) => {
+    const { tenantSlug } = request.user;
     const query = request.query as { entityType?: 'issue' | 'problem' };
 
     const config = await slaService.getSlaConfigFromDb(
-      tenant.slug,
+      tenantSlug,
       query.entityType || 'issue'
     );
 

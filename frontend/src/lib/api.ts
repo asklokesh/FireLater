@@ -2194,7 +2194,7 @@ export const integrationsApi = {
   },
 
   getIntegrationTypes: async () => {
-    const response = await api.get('/v1/integrations/integrations/types');
+    const response = await api.get('/v1/integrations/types');
     return response.data;
   },
 
@@ -2303,12 +2303,12 @@ export const integrationsApi = {
 
   // Integrations (Third-party)
   listIntegrations: async (params?: { type?: string; includeInactive?: boolean }) => {
-    const response = await api.get('/v1/integrations/integrations', { params });
+    const response = await api.get('/v1/integrations', { params });
     return response.data;
   },
 
   getIntegration: async (id: string) => {
-    const response = await api.get(`/v1/integrations/integrations/${id}`);
+    const response = await api.get(`/v1/integrations/${id}`);
     return response.data;
   },
 
@@ -2323,7 +2323,7 @@ export const integrationsApi = {
     syncDirection?: 'inbound' | 'outbound' | 'both';
     fieldMappings?: Record<string, unknown>;
   }) => {
-    const response = await api.post('/v1/integrations/integrations', data);
+    const response = await api.post('/v1/integrations', data);
     return response.data;
   },
 
@@ -2338,21 +2338,21 @@ export const integrationsApi = {
     syncDirection?: 'inbound' | 'outbound' | 'both';
     fieldMappings?: Record<string, unknown>;
   }) => {
-    const response = await api.patch(`/v1/integrations/integrations/${id}`, data);
+    const response = await api.patch(`/v1/integrations/${id}`, data);
     return response.data;
   },
 
   deleteIntegration: async (id: string) => {
-    await api.delete(`/v1/integrations/integrations/${id}`);
+    await api.delete(`/v1/integrations/${id}`);
   },
 
   testIntegration: async (id: string) => {
-    const response = await api.post(`/v1/integrations/integrations/${id}/test`);
+    const response = await api.post(`/v1/integrations/${id}/test`);
     return response.data;
   },
 
   getIntegrationLogs: async (id: string, params?: { direction?: string; status?: string; page?: number; limit?: number }) => {
-    const response = await api.get(`/v1/integrations/integrations/${id}/logs`, { params });
+    const response = await api.get(`/v1/integrations/${id}/logs`, { params });
     return response.data;
   },
 };

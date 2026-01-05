@@ -24,6 +24,9 @@ FROM node:20-alpine AS production
 
 WORKDIR /app
 
+# Install wget for health checks
+RUN apk add --no-cache wget
+
 # Create non-root user
 RUN addgroup -g 1001 -S nodejs
 RUN adduser -S nextjs -u 1001

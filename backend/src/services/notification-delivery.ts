@@ -88,6 +88,8 @@ class NotificationDeliveryService {
         return this.deliverSlack(channel.config, notification);
       case 'teams':
         return this.deliverTeams(channel.config, notification);
+      case 'pagerduty':
+        return this.deliverPagerDuty(channel.config, notification);
       case 'webhook':
         return this.deliverWebhook(channel.config, notification);
       case 'sms':
@@ -359,6 +361,91 @@ class NotificationDeliveryService {
       const message = error instanceof Error ? error.message : 'Teams API error';
       logger.error({ error }, 'Teams delivery failed');
       return { success: false, channelType: 'teams', error: message };
+    }
+  }
+
+  // ============================================
+  // PAGERDUTY DELIVERY
+  // ============================================
+
+  private async deliverPagerDuty(
+    config: Record<string, unknown>,
+    notification: NotificationPayload
+  ): Promise<DeliveryResult> {
+    const integrationKey = config.integrationKey as string;
+    const severity = config.defaultSeverity as string || 'info';
+
+    if (!integrationKey) {
+      return { success: false, channelType: 'pagerduty', error: 'PagerDuty integration key not configured' };
+    }
+
+    try {
+      // Determine severity based on event type
+      let eventSeverity = severity;
+      if (notification.eventType.includes('critical') || notification.eventType.includes('sla.breached')) {
+        eventSeverity = 'critical';
+      } else if (notification.eventType.includes('error') || notification.eventType.includes('failed')) {
+        eventSeverity = 'error';
+      } else if (notification.eventType.includes('warning')) {
+        eventSeverity = 'warning';
+      }
+
+      // Build PagerDuty Events API v2 payload
+      const payload = {
+        routing_key: integrationKey,
+        event_action: 'trigger',
+        dedup_key: notification.entityId ? `${notification.entityType}_${notification.entityId}` : undefined,
+        payload: {
+          summary: notification.title,
+          severity: eventSeverity,
+          source: 'FireLater ITSM',
+          component: notification.entityType || 'notification',
+          group: notification.eventType,
+          class: notification.metadata?.category || 'notification',
+          custom_details: {
+            event_type: notification.eventType,
+            entity_type: notification.entityType,
+            entity_id: notification.entityId,
+            body: notification.body,
+            user_name: notification.user.name,
+            user_email: notification.user.email,
+            ...notification.metadata,
+          },
+        },
+        links: notification.metadata?.url ? [{
+          href: notification.metadata.url,
+          text: 'View in FireLater',
+        }] : undefined,
+      };
+
+      const response = await fetch('https://events.pagerduty.com/v2/enqueue', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`PagerDuty API returned ${response.status}: ${errorText}`);
+      }
+
+      const result = await response.json() as { status: string; message: string; dedup_key?: string };
+
+      logger.info({
+        eventType: notification.eventType,
+        severity: eventSeverity,
+        dedupKey: result.dedup_key,
+      }, 'PagerDuty notification sent');
+
+      return {
+        success: true,
+        channelType: 'pagerduty',
+        metadata: { severity: eventSeverity, dedupKey: result.dedup_key },
+      };
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'PagerDuty API error';
+      logger.error({ error }, 'PagerDuty delivery failed');
+      return { success: false, channelType: 'pagerduty', error: message };
     }
   }
 

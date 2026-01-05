@@ -163,9 +163,9 @@ export default async function authRoutes(app: FastifyInstance) {
     // Set refresh token as httpOnly cookie
     reply.setCookie('refreshToken', result.refreshToken, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
+      secure: process.env.NODE_ENV === 'production' && process.env.DISABLE_SECURE_COOKIES !== 'true',
       sameSite: 'strict',
-      path: '/v1/auth',
+      path: '/',
       maxAge: 7 * 24 * 60 * 60, // 7 days
     });
 
@@ -185,7 +185,7 @@ export default async function authRoutes(app: FastifyInstance) {
       await authService.logout(refreshToken, request.user.tenantSlug);
     }
 
-    reply.clearCookie('refreshToken', { path: '/v1/auth' });
+    reply.clearCookie('refreshToken', { path: '/' });
     reply.send({ message: 'Logged out successfully' });
   });
 
@@ -211,9 +211,9 @@ export default async function authRoutes(app: FastifyInstance) {
 
     reply.setCookie('refreshToken', result.refreshToken, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
+      secure: process.env.NODE_ENV === 'production' && process.env.DISABLE_SECURE_COOKIES !== 'true',
       sameSite: 'strict',
-      path: '/v1/auth',
+      path: '/',
       maxAge: 7 * 24 * 60 * 60,
     });
 

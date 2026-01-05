@@ -29,6 +29,8 @@ const envSchema = z.object({
   S3_ACCESS_KEY: z.string().optional(),
   S3_SECRET_KEY: z.string().optional(),
   S3_FORCE_PATH_STYLE: z.string().default('false'),
+  // CORS configuration
+  CORS_ORIGIN: z.string().default('http://localhost:3000'),
 });
 
 const parsed = envSchema.safeParse(process.env);
@@ -79,5 +81,8 @@ export const config = {
     accessKey: parsed.data.S3_ACCESS_KEY,
     secretKey: parsed.data.S3_SECRET_KEY,
     forcePathStyle: parsed.data.S3_FORCE_PATH_STYLE === 'true',
+  },
+  cors: {
+    origin: parsed.data.CORS_ORIGIN,
   },
 } as const;

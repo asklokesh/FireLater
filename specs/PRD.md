@@ -65,6 +65,8 @@ FireLater addresses these challenges with:
 | Multi-tenancy | Schema isolation | Database per tenant |
 | Pricing | Flat rate per tenant | Per agent/user |
 | Cloud Integration | Native multi-cloud | Add-on modules |
+| **Data Migration** | **Automated with ServiceNow/Jira/Remedy parsers** | **Manual or consulting services** |
+| **SSO & Identity** | **SAML 2.0, OIDC, Azure AD native** | **SAML only, limited providers** |
 | API-First | Complete REST API | Limited API coverage |
 | Modern Stack | Next.js + Fastify | Legacy frameworks |
 
@@ -386,6 +388,8 @@ Enable IT teams to:
 | Asset Management | Hardware/software inventory | Asset Managers |
 | Workflow Automation | Rule-based automation | Admins |
 | Integrations | Third-party connectivity | Admins |
+| **Data Migration** | **Automated ITSM data import from legacy systems** | **Admins, Migration Specialists** |
+| **SSO & Authentication** | **Enterprise SSO with SAML 2.0, OIDC, and Azure AD** | **Admins, Security Teams** |
 | Administration | Platform configuration | Admins |
 
 ## 5.2 Feature Matrix by Plan
@@ -404,6 +408,8 @@ Enable IT teams to:
 | Reports | Basic | Advanced | Custom + BI |
 | Asset Management | 100 assets | 1000 assets | Unlimited |
 | Workflow Rules | 5 | 25 | Unlimited |
+| **Data Migration** | **1 migration job** | **5 migration jobs** | **Unlimited** |
+| **SSO (SAML/OIDC)** | **-** | **Yes** | **Yes + Azure AD** |
 | API Access | Limited | Full | Full + Premium |
 | Users | 10 | 50 | Unlimited |
 | Support | Email | Priority | Dedicated |
@@ -2185,6 +2191,376 @@ Administration provides platform configuration, user management, and system sett
 - Export user data (GDPR)
 - Delete user data (GDPR)
 - Audit report generation
+
+---
+
+## 6.15 Data Migration Module
+
+### 6.15.1 Overview
+
+The Data Migration module provides automated tools for importing ITSM data from legacy systems such as ServiceNow, BMC Remedy, Jira Service Management, and generic CSV files. It enables organizations to migrate historical data while maintaining data integrity and minimizing downtime during platform transitions.
+
+### 6.15.2 Key Capabilities
+
+**Supported Source Systems**
+- ServiceNow (XML, JSON, REST API)
+- BMC Remedy (CSV export)
+- Jira Service Management (JSON export)
+- Generic CSV files (configurable mappings)
+
+**Entity Types**
+- Incidents
+- Service Requests
+- Changes
+- Users and Groups
+- Applications
+- Problems (roadmap)
+
+**Migration Features**
+- Upload and parse data files (CSV, XML, JSON)
+- Preview data with field mapping visualization
+- Intelligent field mapping with transformation rules
+- Duplicate detection and conflict resolution
+- Batch processing with progress tracking
+- Rollback capability for failed migrations
+- Migration history and audit trail
+
+### 6.15.3 Migration Workflow
+
+**Phase 1: Upload & Parse**
+1. Upload source system export file
+2. Automatic format detection (CSV/XML/JSON)
+3. Parse and validate file structure
+4. Extract records with metadata
+
+**Phase 2: Field Mapping**
+1. Auto-detect field mappings based on source system
+2. Preview mapping suggestions
+3. Customize field transformations
+4. Map user emails and group names
+5. Define status and priority mappings
+6. Save mapping as reusable template
+
+**Phase 3: Preview & Validate**
+1. Generate preview with sample records
+2. Identify unmapped fields
+3. Validate required field mappings
+4. Display recommendations and warnings
+5. Estimate import duration
+
+**Phase 4: Execute Migration**
+1. Create migration job
+2. Process records in configurable batches
+3. Apply field transformations
+4. Handle duplicates per configuration
+5. Track imported records for rollback
+6. Generate detailed migration report
+
+**Phase 5: Review & Rollback**
+1. View migration status and statistics
+2. Review errors and warnings
+3. Export migration report
+4. Rollback if needed (deletes imported records)
+
+### 6.15.4 Field Mapping Engine
+
+**Built-in Transformations**
+- `uppercase` - Convert to uppercase
+- `lowercase` - Convert to lowercase
+- `trim` - Remove whitespace
+- `date` - Parse various date formats
+- `boolean` - Convert to true/false
+- Custom JavaScript functions (Enterprise plan)
+
+**Default Mappings**
+
+ServiceNow Incident:
+```
+number → external_id
+short_description → title
+description → description
+priority → priority (1-4 scale)
+state → status
+assigned_to → assigned_to_email
+assignment_group → assigned_group
+opened_at → created_at
+```
+
+BMC Remedy Incident:
+```
+Incident Number → external_id
+Description → title
+Detailed Description → description
+Priority → priority
+Status → status
+Assigned To → assigned_to_email
+```
+
+Jira Issue:
+```
+key → external_id
+fields.summary → title
+fields.description → description
+fields.priority.id → priority
+fields.status.name → status
+fields.assignee.emailAddress → assigned_to_email
+```
+
+### 6.15.5 API Endpoints
+
+```
+POST   /v1/migration/upload           Upload file and create migration job
+GET    /v1/migration/:jobId           Get migration job status
+POST   /v1/migration/:jobId/execute   Execute migration job
+GET    /v1/migration                  List migration jobs for tenant
+POST   /v1/migration/templates        Save field mapping template
+GET    /v1/migration/templates        List mapping templates
+DELETE /v1/migration/:jobId/rollback  Rollback migration
+```
+
+### 6.15.6 Database Schema
+
+**migration_jobs** (public schema)
+- Tracks migration job status and metadata
+- Stores mapping configuration
+- Records processing statistics
+- Maintains error logs
+
+**migration_mappings** (public schema)
+- Reusable field mapping templates
+- Source system configurations
+- Custom transformation rules
+
+**migration_imported_records** (public schema)
+- Tracks imported records by source ID
+- Enables rollback functionality
+- Prevents duplicate imports
+- Audit trail for data lineage
+
+### 6.15.7 Performance Characteristics
+
+- Parse rate: 10,000 records/minute (CSV)
+- Import rate: 5,000 records/minute (with validation)
+- Max file size: 100 MB (Professional), 500 MB (Enterprise)
+- Batch size: Configurable (default 100 records)
+- Concurrent migrations: 1 (Professional), 5 (Enterprise)
+
+### 6.15.8 Security & Compliance
+
+- File upload validation and sanitization
+- Encrypted storage of uploaded files
+- Access control by tenant isolation
+- Audit logging of all migration operations
+- Data retention policy compliance
+- Rollback capability for data governance
+
+---
+
+## 6.16 SSO & Authentication Module
+
+### 6.16.1 Overview
+
+The SSO & Authentication module provides enterprise-grade single sign-on capabilities using industry-standard protocols (SAML 2.0 and OIDC). It enables organizations to integrate FireLater with their existing identity providers for centralized authentication and user management.
+
+### 6.16.2 Supported Protocols
+
+**SAML 2.0 (Security Assertion Markup Language)**
+- Industry standard for enterprise SSO
+- Supports Identity Provider (IdP) initiated and Service Provider (SP) initiated flows
+- XML-based assertions with digital signatures
+- Single Logout (SLO) support
+
+**OIDC (OpenID Connect)**
+- Modern authentication protocol built on OAuth 2.0
+- JSON-based tokens (JWT)
+- UserInfo endpoint integration
+- Authorization code flow with PKCE
+
+### 6.16.3 Supported Identity Providers
+
+**Native Integrations**
+- **Azure AD / Entra ID** (Microsoft 365, Office 365)
+- Okta
+- Google Workspace
+- Auth0
+- Generic SAML 2.0 providers
+- Generic OIDC providers
+
+**Azure AD Specific Features**
+- Microsoft Graph API integration
+- Automatic user sync from Azure AD
+- Group membership synchronization
+- Conditional Access Policy support
+- Multi-factor authentication (MFA) passthrough
+
+### 6.16.4 Key Capabilities
+
+**SSO Provider Management**
+- Configure multiple SSO providers per tenant
+- Set default provider for automatic redirects
+- Enable/disable providers without deletion
+- Test SSO configuration before activation
+
+**Just-In-Time (JIT) Provisioning**
+- Automatically create users on first SSO login
+- Update user attributes from IdP
+- Assign default role to new users
+- Map IdP groups to FireLater roles
+
+**Attribute Mapping**
+- Map IdP attributes to user fields:
+  - Email (required)
+  - First Name / Last Name
+  - Display Name
+  - Department
+  - Job Title
+  - Phone Number
+  - Groups / Roles
+
+**Session Management**
+- Track active SSO sessions
+- Support for Single Logout (SLO)
+- Session timeout configuration
+- Force logout on role/group changes
+
+### 6.16.5 Configuration Options
+
+**SAML 2.0 Configuration**
+```yaml
+Entry Point URL: IdP SSO endpoint
+Issuer/Entity ID: Unique identifier
+Certificate: X.509 public certificate
+Callback URL: SP assertion consumer service
+Logout URL: IdP single logout endpoint
+Signature Algorithm: RSA-SHA256 (default)
+Name ID Format: Email address (default)
+```
+
+**OIDC Configuration**
+```yaml
+Issuer: IdP base URL
+Authorization URL: OAuth 2.0 auth endpoint
+Token URL: OAuth 2.0 token endpoint
+UserInfo URL: OIDC userinfo endpoint
+Client ID: Application identifier
+Client Secret: Application secret
+Callback URL: Redirect URI
+Scope: openid profile email
+```
+
+**Azure AD Configuration**
+```yaml
+Tenant ID: Azure AD tenant identifier
+Client ID: Application (client) ID
+Client Secret: Client secret value
+Directory ID: Optional directory filter
+Graph Endpoint: Microsoft Graph API URL
+Sync Schedule: hourly/daily/weekly/manual
+```
+
+### 6.16.6 Security Features
+
+**Authentication Security**
+- Encrypted credential storage (AES-256)
+- Certificate validation for SAML
+- Token signature verification
+- CSRF protection on callbacks
+- Replay attack prevention
+
+**Access Control**
+- Require verified email addresses
+- Enforce MFA from IdP
+- Conditional access based on user attributes
+- IP whitelist/blacklist (Enterprise)
+- Device trust verification (Enterprise)
+
+**Audit & Compliance**
+- Log all SSO authentication attempts
+- Track session creation and termination
+- Record attribute changes from IdP
+- Export audit logs for compliance
+- SAML assertion archiving (Enterprise)
+
+### 6.16.7 API Endpoints
+
+```
+# SSO Provider Management
+POST   /v1/sso/providers              Create SSO provider
+GET    /v1/sso/providers              List SSO providers
+GET    /v1/sso/providers/:id          Get provider details
+PUT    /v1/sso/providers/:id          Update provider
+DELETE /v1/sso/providers/:id          Delete provider
+
+# SSO Authentication Flow
+GET    /v1/sso/:tenant/login          Initiate SSO login
+POST   /v1/sso/:tenant/callback       SSO callback handler
+GET    /v1/sso/:tenant/logout         Initiate single logout
+POST   /v1/sso/:tenant/logout/callback Logout callback
+
+# Azure AD Sync
+POST   /v1/sso/azure/sync             Trigger Azure AD sync
+GET    /v1/sso/azure/sync/history     Get sync history
+GET    /v1/sso/azure/sync/status      Get current sync status
+```
+
+### 6.16.8 Database Schema
+
+**sso_providers** (tenant schema)
+- SSO provider configurations
+- SAML/OIDC settings
+- Attribute mappings
+- JIT provisioning rules
+
+**sso_sessions** (tenant schema)
+- Active SSO sessions
+- Session metadata and expiry
+- Single logout correlation
+
+**azure_ad_integration** (tenant schema)
+- Azure AD specific configuration
+- Sync schedule and filters
+- Graph API credentials
+
+**azure_ad_sync_history** (tenant schema)
+- Sync execution logs
+- User/group sync statistics
+- Error tracking
+
+### 6.16.9 User Experience
+
+**End User Login Flow**
+1. User visits FireLater login page
+2. Enters tenant slug or email
+3. Automatically redirected to configured IdP
+4. Authenticates with corporate credentials
+5. Redirected back to FireLater with SSO token
+6. Session created, user logged in
+7. (Optional) User created if JIT provisioning enabled
+
+**Admin Configuration Flow**
+1. Navigate to SSO settings
+2. Select provider type (SAML/OIDC/Azure AD)
+3. Enter provider configuration details
+4. Configure attribute mappings
+5. Enable JIT provisioning (optional)
+6. Test SSO flow
+7. Activate provider
+
+### 6.16.10 Limitations & Considerations
+
+**Professional Plan**
+- Up to 2 SSO providers per tenant
+- SAML 2.0 and OIDC support
+- Basic attribute mapping
+- Email-only support
+
+**Enterprise Plan**
+- Unlimited SSO providers
+- Azure AD native integration with sync
+- Advanced attribute mapping
+- Phone and email support
+- Conditional access policies
+- Custom claim transformations
 
 ---
 

@@ -69,6 +69,7 @@ services:
     restart: unless-stopped
     environment:
       NODE_ENV: production
+      DISABLE_SECURE_COOKIES: "true"
       PORT: 3001
       HOST: 0.0.0.0
       DATABASE_URL: postgres://firelater:firelater_password@postgres:5432/firelater
@@ -107,7 +108,7 @@ services:
       context: ./frontend
       dockerfile: Dockerfile
       args:
-        NEXT_PUBLIC_API_URL: http://backend:3001
+        NEXT_PUBLIC_API_URL: http://localhost:3001
     container_name: firelater-frontend
     restart: unless-stopped
     environment:

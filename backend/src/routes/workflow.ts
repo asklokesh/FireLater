@@ -1,6 +1,7 @@
 import { FastifyInstance } from 'fastify';
 import { z } from 'zod';
 import { workflowService } from '../services/workflow.js';
+import { requirePermission } from '../middleware/auth.js';
 
 // ============================================
 // SCHEMAS
@@ -71,26 +72,20 @@ const updateWorkflowRuleSchema = z.object({
 // ============================================
 
 export default async function workflowRoutes(fastify: FastifyInstance) {
-  // Require authentication for all routes
-  fastify.addHook('onRequest', async (request, reply) => {
-    const tenant = (request as any).tenant;
-    if (!tenant) {
-      return reply.code(401).send({ error: 'Unauthorized' });
-    }
-  });
-
   // ----------------------------------------
   // LIST WORKFLOW RULES
   // ----------------------------------------
-  fastify.get('/rules', async (request, _reply) => {
-    const tenant = (request as any).tenant;
+  fastify.get('/rules', {
+    preHandler: [requirePermission('workflows:read')],
+  }, async (request, _reply) => {
+    const { tenantSlug } = request.user;
     const query = request.query as {
       entityType?: 'issue' | 'problem' | 'change' | 'request';
       triggerType?: 'on_create' | 'on_update' | 'on_status_change' | 'on_assignment' | 'scheduled';
       isActive?: string;
     };
 
-    const rules = await workflowService.listWorkflowRules(tenant.slug, {
+    const rules = await workflowService.listWorkflowRules(tenantSlug, {
       entityType: query.entityType,
       triggerType: query.triggerType,
       isActive: query.isActive === 'true' ? true : query.isActive === 'false' ? false : undefined,
@@ -102,11 +97,13 @@ export default async function workflowRoutes(fastify: FastifyInstance) {
   // ----------------------------------------
   // GET WORKFLOW RULE BY ID
   // ----------------------------------------
-  fastify.get('/rules/:id', async (request, reply) => {
-    const tenant = (request as any).tenant;
+  fastify.get('/rules/:id', {
+    preHandler: [requirePermission('workflows:read')],
+  }, async (request, reply) => {
+    const { tenantSlug } = request.user;
     const { id } = request.params as { id: string };
 
-    const rule = await workflowService.getWorkflowRule(tenant.slug, id);
+    const rule = await workflowService.getWorkflowRule(tenantSlug, id);
 
     if (!rule) {
       return reply.code(404).send({ error: 'Workflow rule not found' });
@@ -118,16 +115,17 @@ export default async function workflowRoutes(fastify: FastifyInstance) {
   // ----------------------------------------
   // CREATE WORKFLOW RULE
   // ----------------------------------------
-  fastify.post('/rules', async (request, reply) => {
-    const tenant = (request as any).tenant;
-    const user = (request as any).user;
+  fastify.post('/rules', {
+    preHandler: [requirePermission('workflows:write')],
+  }, async (request, reply) => {
+    const { tenantSlug, userId } = request.user;
     const body = createWorkflowRuleSchema.parse(request.body);
 
     try {
       const rule = await workflowService.createWorkflowRule(
-        tenant.slug,
+        tenantSlug,
         body,
-        user?.id
+        userId
       );
       return reply.code(201).send({ data: rule });
     } catch (err) {
@@ -139,13 +137,15 @@ export default async function workflowRoutes(fastify: FastifyInstance) {
   // ----------------------------------------
   // UPDATE WORKFLOW RULE
   // ----------------------------------------
-  fastify.patch('/rules/:id', async (request, reply) => {
-    const tenant = (request as any).tenant;
+  fastify.patch('/rules/:id', {
+    preHandler: [requirePermission('workflows:write')],
+  }, async (request, reply) => {
+    const { tenantSlug } = request.user;
     const { id } = request.params as { id: string };
     const body = updateWorkflowRuleSchema.parse(request.body);
 
     try {
-      const rule = await workflowService.updateWorkflowRule(tenant.slug, id, body);
+      const rule = await workflowService.updateWorkflowRule(tenantSlug, id, body);
 
       if (!rule) {
         return reply.code(404).send({ error: 'Workflow rule not found' });
@@ -161,12 +161,14 @@ export default async function workflowRoutes(fastify: FastifyInstance) {
   // ----------------------------------------
   // DELETE WORKFLOW RULE
   // ----------------------------------------
-  fastify.delete('/rules/:id', async (request, reply) => {
-    const tenant = (request as any).tenant;
+  fastify.delete('/rules/:id', {
+    preHandler: [requirePermission('workflows:write')],
+  }, async (request, reply) => {
+    const { tenantSlug } = request.user;
     const { id } = request.params as { id: string };
 
     try {
-      const deleted = await workflowService.deleteWorkflowRule(tenant.slug, id);
+      const deleted = await workflowService.deleteWorkflowRule(tenantSlug, id);
 
       if (!deleted) {
         return reply.code(404).send({ error: 'Workflow rule not found' });
@@ -182,16 +184,18 @@ export default async function workflowRoutes(fastify: FastifyInstance) {
   // ----------------------------------------
   // TOGGLE WORKFLOW RULE ACTIVE STATUS
   // ----------------------------------------
-  fastify.post('/rules/:id/toggle', async (request, reply) => {
-    const tenant = (request as any).tenant;
+  fastify.post('/rules/:id/toggle', {
+    preHandler: [requirePermission('workflows:write')],
+  }, async (request, reply) => {
+    const { tenantSlug } = request.user;
     const { id } = request.params as { id: string };
 
-    const rule = await workflowService.getWorkflowRule(tenant.slug, id);
+    const rule = await workflowService.getWorkflowRule(tenantSlug, id);
     if (!rule) {
       return reply.code(404).send({ error: 'Workflow rule not found' });
     }
 
-    const updated = await workflowService.updateWorkflowRule(tenant.slug, id, {
+    const updated = await workflowService.updateWorkflowRule(tenantSlug, id, {
       isActive: !rule.is_active,
     });
 
@@ -201,8 +205,10 @@ export default async function workflowRoutes(fastify: FastifyInstance) {
   // ----------------------------------------
   // GET WORKFLOW EXECUTION LOGS
   // ----------------------------------------
-  fastify.get('/logs', async (request, _reply) => {
-    const tenant = (request as any).tenant;
+  fastify.get('/logs', {
+    preHandler: [requirePermission('workflows:read')],
+  }, async (request, _reply) => {
+    const { tenantSlug } = request.user;
     const query = request.query as {
       ruleId?: string;
       entityType?: 'issue' | 'problem' | 'change' | 'request';
@@ -211,7 +217,7 @@ export default async function workflowRoutes(fastify: FastifyInstance) {
       limit?: number;
     };
 
-    const result = await workflowService.getWorkflowExecutionLogs(tenant.slug, {
+    const result = await workflowService.getWorkflowExecutionLogs(tenantSlug, {
       ruleId: query.ruleId,
       entityType: query.entityType,
       entityId: query.entityId,
@@ -232,12 +238,14 @@ export default async function workflowRoutes(fastify: FastifyInstance) {
   // ----------------------------------------
   // TEST WORKFLOW RULE (DRY RUN)
   // ----------------------------------------
-  fastify.post('/rules/:id/test', async (request, reply) => {
-    const tenant = (request as any).tenant;
+  fastify.post('/rules/:id/test', {
+    preHandler: [requirePermission('workflows:write')],
+  }, async (request, reply) => {
+    const { tenantSlug } = request.user;
     const { id } = request.params as { id: string };
     const { entityData } = request.body as { entityData: Record<string, unknown> };
 
-    const rule = await workflowService.getWorkflowRule(tenant.slug, id);
+    const rule = await workflowService.getWorkflowRule(tenantSlug, id);
     if (!rule) {
       return reply.code(404).send({ error: 'Workflow rule not found' });
     }
@@ -261,7 +269,9 @@ export default async function workflowRoutes(fastify: FastifyInstance) {
   // ----------------------------------------
   // GET AVAILABLE FIELDS FOR ENTITY TYPE
   // ----------------------------------------
-  fastify.get('/fields/:entityType', async (request, _reply) => {
+  fastify.get('/fields/:entityType', {
+    preHandler: [requirePermission('workflows:read')],
+  }, async (request, _reply) => {
     const { entityType } = request.params as { entityType: string };
 
     const fieldsByEntityType: Record<string, Array<{ field: string; label: string; type: string }>> = {
@@ -314,7 +324,9 @@ export default async function workflowRoutes(fastify: FastifyInstance) {
   // ----------------------------------------
   // GET AVAILABLE ACTIONS FOR ENTITY TYPE
   // ----------------------------------------
-  fastify.get('/actions/:entityType', async (request, _reply) => {
+  fastify.get('/actions/:entityType', {
+    preHandler: [requirePermission('workflows:read')],
+  }, async (request, _reply) => {
     const { entityType } = request.params as { entityType: string };
 
     const actions = [

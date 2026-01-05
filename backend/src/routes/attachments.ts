@@ -1,4 +1,5 @@
 import { FastifyPluginAsync } from 'fastify';
+import multipart from '@fastify/multipart';
 import { requirePermission } from '../middleware/auth.js';
 import { storageService, EntityType } from '../services/storage.js';
 
@@ -7,6 +8,12 @@ import { storageService, EntityType } from '../services/storage.js';
 // ============================================
 
 const attachmentsRoutes: FastifyPluginAsync = async (app) => {
+  // Register multipart for file uploads in this route only
+  await app.register(multipart, {
+    limits: {
+      fileSize: 50 * 1024 * 1024, // 50 MB
+    },
+  });
   // Get presigned URL for direct upload
   app.post<{
     Body: {

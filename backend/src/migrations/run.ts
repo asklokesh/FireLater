@@ -24,6 +24,8 @@ import { migration021ShiftSwaps } from './021_shift_swaps.js';
 import { migration022FinancialImpact } from './022_financial_impact.js';
 import { migration023IcalSubscriptions } from './023_ical_subscriptions.js';
 import { migration024PerformanceIndexes } from './024_performance_indexes.js';
+import { migration025UserSecurityColumns } from './025_user_security_columns.js';
+import { migration026MigrationSystem } from './026_migration_system.js';
 
 interface Migration {
   name: string;
@@ -55,6 +57,8 @@ const migrations: Migration[] = [
   { name: '022_financial_impact', up: migration022FinancialImpact },
   { name: '023_ical_subscriptions', up: migration023IcalSubscriptions },
   { name: '024_performance_indexes', up: migration024PerformanceIndexes },
+  { name: '025_user_security_columns', up: migration025UserSecurityColumns },
+  { name: '026_migration_system', up: migration026MigrationSystem },
 ];
 
 async function ensureMigrationsTable() {

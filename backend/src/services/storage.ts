@@ -540,6 +540,106 @@ class StorageService {
       expiresAt: new Date(Date.now() + expiresIn * 1000),
     };
   }
+
+  /**
+   * Upload migration file (simplified, no database record)
+   * Used for temporary migration files that are deleted after import
+   */
+  async uploadMigrationFile(
+    tenantSlug: string,
+    filename: string,
+    content: Buffer,
+    metadata?: Record<string, string>
+  ): Promise<string> {
+    const fileExtension = this.getExtension(filename);
+    const uniqueId = nanoid(12);
+    const storedFilename = `${uniqueId}${fileExtension}`;
+    const storageKey = `${tenantSlug}/migrations/${storedFilename}`;
+
+    if (s3Client) {
+      await s3Client.send(
+        new PutObjectCommand({
+          Bucket: this.bucket,
+          Key: storageKey,
+          Body: content,
+          ContentType: lookup(filename) || 'application/octet-stream',
+          Metadata: {
+            originalFilename: filename,
+            tenantSlug,
+            uploadedAt: new Date().toISOString(),
+            ...metadata,
+          },
+        })
+      );
+    } else {
+      // Fall back to local storage
+      const localPath = join(LOCAL_STORAGE_DIR, storageKey);
+      await fs.mkdir(dirname(localPath), { recursive: true });
+      await fs.writeFile(localPath, content);
+      logger.info({ storageKey, fileSize: content.length, localPath }, 'Migration file uploaded to local storage');
+    }
+
+    logger.info({ storageKey, fileSize: content.length }, 'Migration file uploaded successfully');
+
+    return storageKey;
+  }
+
+  /**
+   * Download migration file as buffer
+   */
+  async downloadMigrationFile(storageKey: string): Promise<Buffer> {
+    if (s3Client) {
+      const response = await s3Client.send(
+        new GetObjectCommand({
+          Bucket: this.bucket,
+          Key: storageKey,
+        })
+      );
+
+      if (!response.Body) {
+        throw new NotFoundError('Migration file', storageKey);
+      }
+
+      return Buffer.from(await response.Body.transformToByteArray());
+    } else {
+      // Read from local storage
+      const localPath = join(LOCAL_STORAGE_DIR, storageKey);
+      try {
+        return await fs.readFile(localPath);
+      } catch (error) {
+        logger.error({ error, localPath, storageKey }, 'Failed to read migration file from local storage');
+        throw new NotFoundError('Migration file', storageKey);
+      }
+    }
+  }
+
+  /**
+   * Delete migration file
+   */
+  async deleteMigrationFile(storageKey: string): Promise<void> {
+    if (s3Client) {
+      try {
+        await s3Client.send(
+          new DeleteObjectCommand({
+            Bucket: this.bucket,
+            Key: storageKey,
+          })
+        );
+        logger.info({ storageKey }, 'Migration file deleted from storage');
+      } catch (error) {
+        logger.warn({ err: error, storageKey }, 'Failed to delete migration file from S3');
+      }
+    } else {
+      // Delete from local storage
+      const localPath = join(LOCAL_STORAGE_DIR, storageKey);
+      try {
+        await fs.unlink(localPath);
+        logger.info({ storageKey, localPath }, 'Migration file deleted from local storage');
+      } catch (error) {
+        logger.warn({ err: error, localPath }, 'Failed to delete migration file from local storage');
+      }
+    }
+  }
 }
 
 export const storageService = new StorageService();

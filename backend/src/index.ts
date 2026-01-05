@@ -4,7 +4,6 @@ import helmet from '@fastify/helmet';
 import jwt from '@fastify/jwt';
 import cookie from '@fastify/cookie';
 import rateLimit from '@fastify/rate-limit';
-import multipart from '@fastify/multipart';
 import csrf from '@fastify/csrf-protection';
 import { config } from './config/index.js';
 import { testConnection, closeDatabase } from './config/database.js';
@@ -38,6 +37,8 @@ import workflowRoutes from './routes/workflow.js';
 import assetRoutes from './routes/assets.js';
 import emailRoutes from './routes/email.js';
 import integrationsRoutes from './routes/integrations.js';
+import migrationRoutes from './routes/migration.js';
+import ssoRoutes from './routes/sso.js';
 import { initializeJobs, shutdownJobs } from './jobs/index.js';
 import { setupSwagger } from './docs/swagger.js';
 
@@ -55,6 +56,7 @@ const app = Fastify({
         }
       : undefined,
   },
+  bodyLimit: 10 * 1024 * 1024, // 10 MB limit for request bodies
 });
 
 async function registerPlugins() {
@@ -62,7 +64,7 @@ async function registerPlugins() {
   await setupSwagger(app);
 
   await app.register(cors, {
-    origin: config.isDev ? true : ['https://firelater.io'],
+    origin: config.isDev ? true : config.cors.origin,
     credentials: true,
   });
 
@@ -97,7 +99,11 @@ async function registerPlugins() {
                           request.url.startsWith('/v1/auth/register') ||
                           request.url.startsWith('/v1/auth/refresh') ||
                           request.url.startsWith('/v1/auth/forgot-password') ||
-                          request.url.startsWith('/v1/auth/reset-password');
+                          request.url.startsWith('/v1/auth/reset-password') ||
+                          request.url.startsWith('/v1/sso/login') ||
+                          request.url.startsWith('/v1/sso/callback') ||
+                          request.url.startsWith('/v1/sso/logout') ||
+                          request.url.startsWith('/v1/sso/metadata');
 
     // Apply CSRF protection to state-changing operations on protected routes
     if (isStateChanging && !isPublicRoute) {
@@ -135,11 +141,9 @@ async function registerPlugins() {
     redis,
   });
 
-  await app.register(multipart, {
-    limits: {
-      fileSize: 50 * 1024 * 1024, // 50 MB
-    },
-  });
+  // Register multipart only for file upload routes
+  // Note: We don't register this globally to avoid interfering with JSON body parsing
+  // Individual routes that need file uploads will handle multipart parsing
 }
 
 async function registerRoutes() {
@@ -375,6 +379,8 @@ async function registerRoutes() {
   await app.register(assetRoutes, { prefix: '/v1/assets' });
   await app.register(emailRoutes, { prefix: '/v1/email' });
   await app.register(integrationsRoutes, { prefix: '/v1/integrations' });
+  await app.register(migrationRoutes, { prefix: '/v1/migration' });
+  await app.register(ssoRoutes, { prefix: '/v1/sso' });
 }
 
 function registerErrorHandler() {
@@ -385,12 +391,34 @@ function registerErrorHandler() {
       return reply.status(error.statusCode).send(error.toJSON());
     }
 
+    // Handle Fastify validation errors
     if (error instanceof Error && 'validation' in error) {
       return reply.status(400).send({
         statusCode: 400,
         error: 'Validation Error',
         message: 'Request validation failed',
         details: (error as { validation: unknown }).validation,
+      });
+    }
+
+    // Handle Zod validation errors
+    if (error && typeof error === 'object' && 'name' in error && error.name === 'ZodError') {
+      const zodError = error as { issues?: unknown[] };
+      return reply.status(400).send({
+        statusCode: 400,
+        error: 'Validation Error',
+        message: 'Request validation failed',
+        details: zodError.issues,
+      });
+    }
+
+    // Check if error has statusCode property (for custom error classes)
+    if (error && typeof error === 'object' && 'statusCode' in error && typeof error.statusCode === 'number') {
+      const customError = error as { statusCode: number; error?: string; message?: string };
+      return reply.status(customError.statusCode).send({
+        statusCode: customError.statusCode,
+        error: customError.error || 'Error',
+        message: customError.message || 'An error occurred',
       });
     }
 
