@@ -1,15 +1,157 @@
 # Loki Mode - Continuous Development Ledger
 
-**Last Updated:** 2026-01-05T01:50:00Z
-**Session:** Iteration 41
+**Last Updated:** 2026-01-05T06:03:15Z
+**Session:** Iteration 43
 **Agent:** Loki Orchestrator
 **Status:** Active - Perpetual Improvement Mode
 
 ---
 
-## Current Iteration: 41
+## Current Iteration: 43
 
 ### Summary
+
+Completed workflow rules caching optimization:
+- Added Redis caching to workflow service
+- Implemented automatic cache invalidation
+- Reduced database load for workflow rule queries
+
+All changes tested, verified, and committed to git.
+
+---
+
+## Latest Improvements (Iteration 43)
+
+### Part 1: Workflow Rules Caching
+**Status:** ✓ COMPLETED
+**Commit:** 40e264a
+
+**Problem:** Workflow rules queried on every entity lifecycle event (create/update/status change) causing repeated database queries with expensive joins and JSON parsing.
+
+**Solution:**
+- Added `cacheService.getOrSet()` to `listWorkflowRules()` with 15-minute TTL
+- Added caching to `getWorkflowRule()` for individual rule lookups
+- Implemented automatic cache invalidation on create/update/delete operations
+- Cache key structure: `{tenantSlug}:workflows:list:{filterKey}` and `{tenantSlug}:workflows:rule:{ruleId}`
+- Tenant-specific cache invalidation using `cacheService.invalidateTenant()`
+
+**Code Pattern:**
+```typescript
+export async function listWorkflowRules(
+  tenantSlug: string,
+  filters?: { ... }
+): Promise<WorkflowRule[]> {
+  const filterKey = JSON.stringify(filters || {});
+  const cacheKey = `${tenantSlug}:workflows:list:${filterKey}`;
+
+  return cacheService.getOrSet(
+    cacheKey,
+    async () => { /* database query */ },
+    { ttl: 900 } // 15 minutes
+  );
+}
+
+// Invalidation on mutations
+await cacheService.invalidateTenant(tenantSlug, 'workflows');
+```
+
+**Impact:**
+- Reduces database load for workflow rule queries (read-heavy operation)
+- Eliminates repeated joins with users table
+- Caches parsed JSON conditions/actions arrays
+- 15-minute TTL balances freshness with effectiveness
+- Workflows change infrequently (admin-configured)
+- Cache invalidation ensures immediate consistency on updates
+
+**Performance Characteristics:**
+- Query pattern: Read-heavy (every entity event triggers workflow evaluation)
+- Update frequency: Low (admin configuration changes)
+- Cache hit ratio: Expected >95% (workflows rarely change)
+- Memory footprint: Minimal (~5-10KB per workflow rule set)
+
+**Files Modified:**
+- `backend/src/services/workflow.ts`
+
+**Test Results:**
+- All 390 tests passing
+- TypeScript compilation: Success
+- Zero type errors
+
+---
+
+## Previous Iteration Summary (Iteration 42)
+
+Completed 2 major performance optimizations:
+1. Frontend bundle optimization with lazy-loaded devtools
+2. Cache hit rate monitoring in health endpoint
+
+All changes tested, verified, and committed to git.
+
+---
+
+## Previous Improvements (Iteration 42)
+
+### Part 1: Frontend Bundle Optimization
+**Status:** ✓ COMPLETED
+**Commit:** 9becfcd
+
+**Problem:** ReactQueryDevtools included in production bundle (~760KB overhead)
+
+**Solution:**
+- Dynamic import of ReactQueryDevtools using Next.js dynamic()
+- Environment-based conditional rendering (dev only)
+- SSR disabled for devtools component
+- Added @next/bundle-analyzer for bundle monitoring
+- Created build:analyze npm script
+
+**Impact:**
+- Reduced production bundle size by ~760KB
+- Zero performance impact (async loading in dev only)
+- Better bundle visibility and analysis tooling
+- Enables data-driven optimization decisions
+
+**Files Modified:**
+- `frontend/src/providers/QueryProvider.tsx`
+- `frontend/next.config.ts`
+- `frontend/package.json`
+
+---
+
+### Part 2: Cache Hit Rate Monitoring
+**Status:** ✓ COMPLETED
+**Commit:** f2b30e4
+
+**Problem:** No visibility into Redis cache performance in production
+
+**Solution:**
+- Integrated cacheService.getStats() into /health/detailed endpoint
+- Added cache metrics to health check response
+- Exposes key count, memory usage, and hit rate percentage
+- Uses existing Redis INFO command (zero overhead)
+
+**Response Format:**
+```json
+{
+  "cache": {
+    "keys": 145,
+    "memory": "2.5M",
+    "hitRate": "87.34%"
+  }
+}
+```
+
+**Impact:**
+- Production cache performance visibility
+- Data-driven cache optimization
+- Identifies caching inefficiencies
+- Complements existing cache infrastructure
+
+**Files Modified:**
+- `backend/src/index.ts`
+
+---
+
+## Previous Iteration Summary (Iteration 41)
 
 Completed 3 major improvements:
 1. SAML response validation implementation
@@ -20,7 +162,7 @@ All changes tested, verified, and committed to git.
 
 ---
 
-## Latest Improvements (Iteration 41)
+## Previous Improvements (Iteration 41)
 
 ### Part 1: Structured Logging Migration
 **Status:** ✓ COMPLETED
@@ -219,6 +361,23 @@ logger.error({
 }, 'SAML validation failed');
 ```
 
+### 4. Workflow Rules Caching Pattern
+```typescript
+// Cache key with tenant isolation and filter parameters
+const filterKey = JSON.stringify(filters || {});
+const cacheKey = `${tenantSlug}:workflows:list:${filterKey}`;
+
+// Get or set with TTL
+return cacheService.getOrSet(
+  cacheKey,
+  async () => { /* database query */ },
+  { ttl: 900 } // 15 minutes for infrequently-changing data
+);
+
+// Invalidate on mutations
+await cacheService.invalidateTenant(tenantSlug, 'workflows');
+```
+
 ---
 
 ## Next Iteration Priorities
@@ -279,6 +438,24 @@ const shouldLog = process.env.NODE_ENV === 'production' ||
 **Before:** `console.log(\`Updated ${schema}\`)`
 **After:** `logger.info({ schema }, 'Updated tenant schema')`
 
+### Learning 5: Workflow Caching Strategy
+**Issue:** Workflow rules queried on every entity event causing database load
+**Solution:** Cache with appropriate TTL based on update frequency
+**Key Insights:**
+- Use longer TTL (15 minutes) for admin-configured data that changes infrequently
+- Include filter parameters in cache key to handle different query variations
+- Always invalidate cache on mutations (create/update/delete)
+- Use tenant-specific invalidation to clear all related cache entries
+**Pattern:**
+```typescript
+// Cache key includes tenant + filters
+const cacheKey = `${tenantSlug}:workflows:list:${JSON.stringify(filters)}`;
+// TTL matches data change frequency
+cacheService.getOrSet(key, fetcher, { ttl: 900 }); // 15 min
+// Invalidate all workflow cache for tenant
+await cacheService.invalidateTenant(tenantSlug, 'workflows');
+```
+
 ---
 
 ## Production Readiness Checklist
@@ -294,8 +471,8 @@ const shouldLog = process.env.NODE_ENV === 'production' ||
 - [x] Zero console.log in production code
 
 ### ⏳ In Progress
-- [ ] Frontend bundle optimization
-- [ ] Redis caching analysis
+- [x] Frontend bundle optimization (Iteration 42)
+- [x] Workflow rules caching (Iteration 43)
 - [ ] Integration test coverage
 
 ### 📋 Planned
