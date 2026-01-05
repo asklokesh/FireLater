@@ -4,6 +4,10 @@ import { NotFoundError, ConflictError } from '../utils/errors.js';
 import { logger } from '../utils/logger.js';
 import type { PaginationParams } from '../types/index.js';
 import { getOffset } from '../utils/pagination.js';
+import { cacheService } from '../utils/cache.js';
+
+// Cache TTL for groups (10 minutes - admin-configured, moderate change frequency)
+const GROUPS_CACHE_TTL = 600;
 
 interface CreateGroupParams {
   name: string;
@@ -41,66 +45,82 @@ interface Group {
 
 export class GroupService {
   async list(tenantSlug: string, params: PaginationParams, filters?: { type?: string; search?: string }): Promise<{ groups: Group[]; total: number }> {
-    const schema = tenantService.getSchemaName(tenantSlug);
-    const offset = getOffset(params);
+    const cacheKey = `${tenantSlug}:groups:list:${JSON.stringify({ params, filters })}`;
 
-    let whereClause = 'WHERE 1=1';
-    const values: unknown[] = [];
-    let paramIndex = 1;
+    return cacheService.getOrSet(
+      cacheKey,
+      async () => {
+        const schema = tenantService.getSchemaName(tenantSlug);
+        const offset = getOffset(params);
 
-    if (filters?.type) {
-      whereClause += ` AND g.type = $${paramIndex++}`;
-      values.push(filters.type);
-    }
+        let whereClause = 'WHERE 1=1';
+        const values: unknown[] = [];
+        let paramIndex = 1;
 
-    if (filters?.search) {
-      whereClause += ` AND (g.name ILIKE $${paramIndex} OR g.description ILIKE $${paramIndex})`;
-      values.push(`%${filters.search}%`);
-      paramIndex++;
-    }
+        if (filters?.type) {
+          whereClause += ` AND g.type = $${paramIndex++}`;
+          values.push(filters.type);
+        }
 
-    // Validate sort column against allowed columns to prevent SQL injection
-    const allowedSortColumns = ['name', 'type', 'created_at', 'updated_at'];
-    const sortColumn = allowedSortColumns.includes(params.sort || '') ? params.sort : 'name';
-    const sortOrder = params.order === 'desc' ? 'desc' : 'asc';
+        if (filters?.search) {
+          whereClause += ` AND (g.name ILIKE $${paramIndex} OR g.description ILIKE $${paramIndex})`;
+          values.push(`%${filters.search}%`);
+          paramIndex++;
+        }
 
-    const countResult = await pool.query(
-      `SELECT COUNT(*) FROM ${schema}.groups g ${whereClause}`,
-      values
+        // Validate sort column against allowed columns to prevent SQL injection
+        const allowedSortColumns = ['name', 'type', 'created_at', 'updated_at'];
+        const sortColumn = allowedSortColumns.includes(params.sort || '') ? params.sort : 'name';
+        const sortOrder = params.order === 'desc' ? 'desc' : 'asc';
+
+        const countResult = await pool.query(
+          `SELECT COUNT(*) FROM ${schema}.groups g ${whereClause}`,
+          values
+        );
+        const total = parseInt(countResult.rows[0].count, 10);
+
+        const result = await pool.query(
+          `SELECT g.*,
+                  (SELECT COUNT(*) FROM ${schema}.group_members WHERE group_id = g.id) as member_count,
+                  u.name as manager_name
+           FROM ${schema}.groups g
+           LEFT JOIN ${schema}.users u ON g.manager_id = u.id
+           ${whereClause}
+           ORDER BY g.${sortColumn} ${sortOrder}
+           LIMIT $${paramIndex++} OFFSET $${paramIndex}`,
+          [...values, params.perPage, offset]
+        );
+
+        return { groups: result.rows, total };
+      },
+      { ttl: GROUPS_CACHE_TTL }
     );
-    const total = parseInt(countResult.rows[0].count, 10);
-
-    const result = await pool.query(
-      `SELECT g.*,
-              (SELECT COUNT(*) FROM ${schema}.group_members WHERE group_id = g.id) as member_count,
-              u.name as manager_name
-       FROM ${schema}.groups g
-       LEFT JOIN ${schema}.users u ON g.manager_id = u.id
-       ${whereClause}
-       ORDER BY g.${sortColumn} ${sortOrder}
-       LIMIT $${paramIndex++} OFFSET $${paramIndex}`,
-      [...values, params.perPage, offset]
-    );
-
-    return { groups: result.rows, total };
   }
 
   async findById(tenantSlug: string, groupId: string): Promise<Group | null> {
-    const schema = tenantService.getSchemaName(tenantSlug);
+    const cacheKey = `${tenantSlug}:groups:group:${groupId}`;
 
-    const result = await pool.query(
-      `SELECT g.*,
-              (SELECT COUNT(*) FROM ${schema}.group_members WHERE group_id = g.id) as member_count,
-              u.name as manager_name,
-              p.name as parent_name
-       FROM ${schema}.groups g
-       LEFT JOIN ${schema}.users u ON g.manager_id = u.id
-       LEFT JOIN ${schema}.groups p ON g.parent_id = p.id
-       WHERE g.id = $1`,
-      [groupId]
+    return cacheService.getOrSet(
+      cacheKey,
+      async () => {
+        const schema = tenantService.getSchemaName(tenantSlug);
+
+        const result = await pool.query(
+          `SELECT g.*,
+                  (SELECT COUNT(*) FROM ${schema}.group_members WHERE group_id = g.id) as member_count,
+                  u.name as manager_name,
+                  p.name as parent_name
+           FROM ${schema}.groups g
+           LEFT JOIN ${schema}.users u ON g.manager_id = u.id
+           LEFT JOIN ${schema}.groups p ON g.parent_id = p.id
+           WHERE g.id = $1`,
+          [groupId]
+        );
+
+        return result.rows[0] || null;
+      },
+      { ttl: GROUPS_CACHE_TTL }
     );
-
-    return result.rows[0] || null;
   }
 
   async create(tenantSlug: string, params: CreateGroupParams, createdBy: string): Promise<Group> {
@@ -129,6 +149,9 @@ export class GroupService {
        VALUES ($1, 'create', 'group', $2, $3)`,
       [createdBy, group.id, JSON.stringify({ name: params.name })]
     );
+
+    // Invalidate groups cache
+    await cacheService.invalidateTenant(tenantSlug, 'groups');
 
     logger.info({ groupId: group.id, name: params.name }, 'Group created');
     return this.findById(tenantSlug, group.id) as Promise<Group>;
@@ -194,6 +217,9 @@ export class GroupService {
       [updatedBy, groupId, JSON.stringify(params)]
     );
 
+    // Invalidate groups cache
+    await cacheService.invalidateTenant(tenantSlug, 'groups');
+
     logger.info({ groupId }, 'Group updated');
     return this.findById(tenantSlug, groupId) as Promise<Group>;
   }
@@ -214,6 +240,9 @@ export class GroupService {
        VALUES ($1, 'delete', 'group', $2)`,
       [deletedBy, groupId]
     );
+
+    // Invalidate groups cache
+    await cacheService.invalidateTenant(tenantSlug, 'groups');
 
     logger.info({ groupId }, 'Group deleted');
   }
@@ -259,6 +288,9 @@ export class GroupService {
       [addedBy, groupId, JSON.stringify({ userId, role })]
     );
 
+    // Invalidate groups cache (member count changes)
+    await cacheService.invalidateTenant(tenantSlug, 'groups');
+
     logger.info({ groupId, userId, role }, 'Member added to group');
   }
 
@@ -280,6 +312,9 @@ export class GroupService {
        VALUES ($1, 'remove_member', 'group', $2, $3)`,
       [removedBy, groupId, JSON.stringify({ userId })]
     );
+
+    // Invalidate groups cache (member count changes)
+    await cacheService.invalidateTenant(tenantSlug, 'groups');
 
     logger.info({ groupId, userId }, 'Member removed from group');
   }
