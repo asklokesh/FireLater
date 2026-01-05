@@ -4,6 +4,7 @@ import { NotFoundError, BadRequestError } from '../utils/errors.js';
 import { getOffset } from '../utils/pagination.js';
 import type { PaginationParams } from '../types/index.js';
 import { sanitizeMarkdown } from '../utils/contentSanitization.js';
+import { cacheService } from '../utils/cache.js';
 
 interface ChangeWindowFilters {
   type?: string;
@@ -47,46 +48,62 @@ class ChangeWindowService {
     pagination: PaginationParams,
     filters: ChangeWindowFilters = {}
   ): Promise<{ windows: unknown[]; total: number }> {
-    const schema = tenantService.getSchemaName(tenantSlug);
-    const offset = getOffset(pagination);
+    const cacheKey = `${tenantSlug}:changes:windows:list:${JSON.stringify({ pagination, filters })}`;
 
-    let whereClause = 'WHERE 1=1';
-    const params: unknown[] = [];
-    let paramIndex = 1;
+    return cacheService.getOrSet(
+      cacheKey,
+      async () => {
+        const schema = tenantService.getSchemaName(tenantSlug);
+        const offset = getOffset(pagination);
 
-    if (filters.type) {
-      whereClause += ` AND type = $${paramIndex++}`;
-      params.push(filters.type);
-    }
+        let whereClause = 'WHERE 1=1';
+        const params: unknown[] = [];
+        let paramIndex = 1;
 
-    if (filters.status) {
-      whereClause += ` AND status = $${paramIndex++}`;
-      params.push(filters.status);
-    }
+        if (filters.type) {
+          whereClause += ` AND type = $${paramIndex++}`;
+          params.push(filters.type);
+        }
 
-    const countQuery = `SELECT COUNT(*) FROM ${schema}.change_windows ${whereClause}`;
-    const countResult = await pool.query(countQuery, params);
-    const total = parseInt(countResult.rows[0].count, 10);
+        if (filters.status) {
+          whereClause += ` AND status = $${paramIndex++}`;
+          params.push(filters.status);
+        }
 
-    const query = `
-      SELECT * FROM ${schema}.change_windows
-      ${whereClause}
-      ORDER BY created_at DESC
-      LIMIT $${paramIndex++} OFFSET $${paramIndex++}
-    `;
-    params.push(pagination.perPage, offset);
+        const countQuery = `SELECT COUNT(*) FROM ${schema}.change_windows ${whereClause}`;
+        const countResult = await pool.query(countQuery, params);
+        const total = parseInt(countResult.rows[0].count, 10);
 
-    const result = await pool.query(query, params);
-    return { windows: result.rows, total };
+        const query = `
+          SELECT * FROM ${schema}.change_windows
+          ${whereClause}
+          ORDER BY created_at DESC
+          LIMIT $${paramIndex++} OFFSET $${paramIndex++}
+        `;
+        params.push(pagination.perPage, offset);
+
+        const result = await pool.query(query, params);
+        return { windows: result.rows, total };
+      },
+      { ttl: 600 } // 10 minutes - admin-configured data, accessed frequently
+    );
   }
 
   async findById(tenantSlug: string, id: string): Promise<unknown | null> {
-    const schema = tenantService.getSchemaName(tenantSlug);
-    const result = await pool.query(
-      `SELECT * FROM ${schema}.change_windows WHERE id = $1`,
-      [id]
+    const cacheKey = `${tenantSlug}:changes:windows:window:${id}`;
+
+    return cacheService.getOrSet(
+      cacheKey,
+      async () => {
+        const schema = tenantService.getSchemaName(tenantSlug);
+        const result = await pool.query(
+          `SELECT * FROM ${schema}.change_windows WHERE id = $1`,
+          [id]
+        );
+        return result.rows[0] || null;
+      },
+      { ttl: 600 } // 10 minutes
     );
-    return result.rows[0] || null;
   }
 
   async create(
@@ -134,6 +151,9 @@ class ChangeWindowService {
         data.notifyBeforeMinutes || 60,
       ]
     );
+
+    // Invalidate cache
+    await cacheService.invalidateTenant(tenantSlug, 'changes');
 
     return result.rows[0];
   }
@@ -207,6 +227,9 @@ class ChangeWindowService {
       values
     );
 
+    // Invalidate cache
+    await cacheService.invalidateTenant(tenantSlug, 'changes');
+
     return result.rows[0];
   }
 
@@ -219,26 +242,37 @@ class ChangeWindowService {
     }
 
     await pool.query(`DELETE FROM ${schema}.change_windows WHERE id = $1`, [id]);
+
+    // Invalidate cache
+    await cacheService.invalidateTenant(tenantSlug, 'changes');
   }
 
   async getUpcoming(
     tenantSlug: string,
     days: number = 30
   ): Promise<unknown[]> {
-    const schema = tenantService.getSchemaName(tenantSlug);
+    const cacheKey = `${tenantSlug}:changes:windows:upcoming:${days}`;
 
-    const result = await pool.query(
-      `SELECT * FROM ${schema}.change_windows
-       WHERE status = 'active'
-       AND (
-         (recurrence = 'one_time' AND start_date >= CURRENT_DATE AND start_date <= CURRENT_DATE + $1 * INTERVAL '1 day')
-         OR recurrence != 'one_time'
-       )
-       ORDER BY start_date, start_time`,
-      [days]
+    return cacheService.getOrSet(
+      cacheKey,
+      async () => {
+        const schema = tenantService.getSchemaName(tenantSlug);
+
+        const result = await pool.query(
+          `SELECT * FROM ${schema}.change_windows
+           WHERE status = 'active'
+           AND (
+             (recurrence = 'one_time' AND start_date >= CURRENT_DATE AND start_date <= CURRENT_DATE + $1 * INTERVAL '1 day')
+             OR recurrence != 'one_time'
+           )
+           ORDER BY start_date, start_time`,
+          [days]
+        );
+
+        return result.rows;
+      },
+      { ttl: 300 } // 5 minutes - time-sensitive data
     );
-
-    return result.rows;
   }
 }
 
@@ -248,32 +282,48 @@ class ChangeWindowService {
 
 class ChangeTemplateService {
   async list(tenantSlug: string, pagination: PaginationParams): Promise<{ templates: unknown[]; total: number }> {
-    const schema = tenantService.getSchemaName(tenantSlug);
-    const offset = getOffset(pagination);
+    const cacheKey = `${tenantSlug}:changes:templates:list:${JSON.stringify(pagination)}`;
 
-    const countResult = await pool.query(
-      `SELECT COUNT(*) FROM ${schema}.change_templates WHERE is_active = true`
+    return cacheService.getOrSet(
+      cacheKey,
+      async () => {
+        const schema = tenantService.getSchemaName(tenantSlug);
+        const offset = getOffset(pagination);
+
+        const countResult = await pool.query(
+          `SELECT COUNT(*) FROM ${schema}.change_templates WHERE is_active = true`
+        );
+        const total = parseInt(countResult.rows[0].count, 10);
+
+        const result = await pool.query(
+          `SELECT * FROM ${schema}.change_templates
+           WHERE is_active = true
+           ORDER BY name
+           LIMIT $1 OFFSET $2`,
+          [pagination.perPage, offset]
+        );
+
+        return { templates: result.rows, total };
+      },
+      { ttl: 900 } // 15 minutes - template data rarely changes
     );
-    const total = parseInt(countResult.rows[0].count, 10);
-
-    const result = await pool.query(
-      `SELECT * FROM ${schema}.change_templates
-       WHERE is_active = true
-       ORDER BY name
-       LIMIT $1 OFFSET $2`,
-      [pagination.perPage, offset]
-    );
-
-    return { templates: result.rows, total };
   }
 
   async findById(tenantSlug: string, id: string): Promise<unknown | null> {
-    const schema = tenantService.getSchemaName(tenantSlug);
-    const result = await pool.query(
-      `SELECT * FROM ${schema}.change_templates WHERE id = $1`,
-      [id]
+    const cacheKey = `${tenantSlug}:changes:templates:template:${id}`;
+
+    return cacheService.getOrSet(
+      cacheKey,
+      async () => {
+        const schema = tenantService.getSchemaName(tenantSlug);
+        const result = await pool.query(
+          `SELECT * FROM ${schema}.change_templates WHERE id = $1`,
+          [id]
+        );
+        return result.rows[0] || null;
+      },
+      { ttl: 900 } // 15 minutes
     );
-    return result.rows[0] || null;
   }
 
   async create(
@@ -315,6 +365,9 @@ class ChangeTemplateService {
         data.approvalGroups || null,
       ]
     );
+
+    // Invalidate cache
+    await cacheService.invalidateTenant(tenantSlug, 'changes');
 
     return result.rows[0];
   }
@@ -386,6 +439,9 @@ class ChangeTemplateService {
       values
     );
 
+    // Invalidate cache
+    await cacheService.invalidateTenant(tenantSlug, 'changes');
+
     return result.rows[0];
   }
 
@@ -402,6 +458,9 @@ class ChangeTemplateService {
       `UPDATE ${schema}.change_templates SET is_active = false, updated_at = NOW() WHERE id = $1`,
       [id]
     );
+
+    // Invalidate cache
+    await cacheService.invalidateTenant(tenantSlug, 'changes');
   }
 }
 
@@ -415,98 +474,114 @@ class ChangeRequestService {
     pagination: PaginationParams,
     filters: ChangeFilters = {}
   ): Promise<{ changes: unknown[]; total: number }> {
-    const schema = tenantService.getSchemaName(tenantSlug);
-    const offset = getOffset(pagination);
+    const cacheKey = `${tenantSlug}:changes:requests:list:${JSON.stringify({ pagination, filters })}`;
 
-    let whereClause = 'WHERE 1=1';
-    const params: unknown[] = [];
-    let paramIndex = 1;
+    return cacheService.getOrSet(
+      cacheKey,
+      async () => {
+        const schema = tenantService.getSchemaName(tenantSlug);
+        const offset = getOffset(pagination);
 
-    if (filters.status) {
-      whereClause += ` AND c.status = $${paramIndex++}`;
-      params.push(filters.status);
-    }
+        let whereClause = 'WHERE 1=1';
+        const params: unknown[] = [];
+        let paramIndex = 1;
 
-    if (filters.type) {
-      whereClause += ` AND c.type = $${paramIndex++}`;
-      params.push(filters.type);
-    }
+        if (filters.status) {
+          whereClause += ` AND c.status = $${paramIndex++}`;
+          params.push(filters.status);
+        }
 
-    if (filters.applicationId) {
-      whereClause += ` AND c.application_id = $${paramIndex++}`;
-      params.push(filters.applicationId);
-    }
+        if (filters.type) {
+          whereClause += ` AND c.type = $${paramIndex++}`;
+          params.push(filters.type);
+        }
 
-    if (filters.requesterId) {
-      whereClause += ` AND c.requester_id = $${paramIndex++}`;
-      params.push(filters.requesterId);
-    }
+        if (filters.applicationId) {
+          whereClause += ` AND c.application_id = $${paramIndex++}`;
+          params.push(filters.applicationId);
+        }
 
-    if (filters.implementerId) {
-      whereClause += ` AND c.implementer_id = $${paramIndex++}`;
-      params.push(filters.implementerId);
-    }
+        if (filters.requesterId) {
+          whereClause += ` AND c.requester_id = $${paramIndex++}`;
+          params.push(filters.requesterId);
+        }
 
-    if (filters.riskLevel) {
-      whereClause += ` AND c.risk_level = $${paramIndex++}`;
-      params.push(filters.riskLevel);
-    }
+        if (filters.implementerId) {
+          whereClause += ` AND c.implementer_id = $${paramIndex++}`;
+          params.push(filters.implementerId);
+        }
 
-    const countQuery = `SELECT COUNT(*) FROM ${schema}.change_requests c ${whereClause}`;
-    const countResult = await pool.query(countQuery, params);
-    const total = parseInt(countResult.rows[0].count, 10);
+        if (filters.riskLevel) {
+          whereClause += ` AND c.risk_level = $${paramIndex++}`;
+          params.push(filters.riskLevel);
+        }
 
-    const query = `
-      SELECT c.*,
-             a.name as application_name,
-             req.name as requester_name,
-             impl.name as implementer_name,
-             g.name as assigned_group_name,
-             t.name as template_name
-      FROM ${schema}.change_requests c
-      LEFT JOIN ${schema}.applications a ON c.application_id = a.id
-      LEFT JOIN ${schema}.users req ON c.requester_id = req.id
-      LEFT JOIN ${schema}.users impl ON c.implementer_id = impl.id
-      LEFT JOIN ${schema}.groups g ON c.assigned_group = g.id
-      LEFT JOIN ${schema}.change_templates t ON c.template_id = t.id
-      ${whereClause}
-      ORDER BY c.created_at DESC
-      LIMIT $${paramIndex++} OFFSET $${paramIndex++}
-    `;
-    params.push(pagination.perPage, offset);
+        const countQuery = `SELECT COUNT(*) FROM ${schema}.change_requests c ${whereClause}`;
+        const countResult = await pool.query(countQuery, params);
+        const total = parseInt(countResult.rows[0].count, 10);
 
-    const result = await pool.query(query, params);
-    return { changes: result.rows, total };
+        const query = `
+          SELECT c.*,
+                 a.name as application_name,
+                 req.name as requester_name,
+                 impl.name as implementer_name,
+                 g.name as assigned_group_name,
+                 t.name as template_name
+          FROM ${schema}.change_requests c
+          LEFT JOIN ${schema}.applications a ON c.application_id = a.id
+          LEFT JOIN ${schema}.users req ON c.requester_id = req.id
+          LEFT JOIN ${schema}.users impl ON c.implementer_id = impl.id
+          LEFT JOIN ${schema}.groups g ON c.assigned_group = g.id
+          LEFT JOIN ${schema}.change_templates t ON c.template_id = t.id
+          ${whereClause}
+          ORDER BY c.created_at DESC
+          LIMIT $${paramIndex++} OFFSET $${paramIndex++}
+        `;
+        params.push(pagination.perPage, offset);
+
+        const result = await pool.query(query, params);
+        return { changes: result.rows, total };
+      },
+      { ttl: 300 } // 5 minutes - change requests update frequently during lifecycle
+    );
   }
 
   async findById(tenantSlug: string, id: string): Promise<unknown | null> {
-    const schema = tenantService.getSchemaName(tenantSlug);
+    const cacheKey = `${tenantSlug}:changes:requests:change:${id}`;
 
-    // Support both UUID and change_number
-    const idColumn = id.startsWith('CHG-') ? 'change_number' : 'id';
+    return cacheService.getOrSet(
+      cacheKey,
+      async () => {
+        const schema = tenantService.getSchemaName(tenantSlug);
 
-    const result = await pool.query(
-      `SELECT c.*,
-              a.name as application_name,
-              req.name as requester_name, req.email as requester_email,
-              impl.name as implementer_name, impl.email as implementer_email,
-              g.name as assigned_group_name,
-              t.name as template_name,
-              e.name as environment_name,
-              cw.name as change_window_name
-       FROM ${schema}.change_requests c
-       LEFT JOIN ${schema}.applications a ON c.application_id = a.id
-       LEFT JOIN ${schema}.users req ON c.requester_id = req.id
-       LEFT JOIN ${schema}.users impl ON c.implementer_id = impl.id
-       LEFT JOIN ${schema}.groups g ON c.assigned_group = g.id
-       LEFT JOIN ${schema}.change_templates t ON c.template_id = t.id
-       LEFT JOIN ${schema}.environments e ON c.environment_id = e.id
-       LEFT JOIN ${schema}.change_windows cw ON c.change_window_id = cw.id
-       WHERE c.${idColumn} = $1`,
-      [id]
+        // Support both UUID and change_number
+        const idColumn = id.startsWith('CHG-') ? 'change_number' : 'id';
+
+        const result = await pool.query(
+          `SELECT c.*,
+                  a.name as application_name,
+                  req.name as requester_name, req.email as requester_email,
+                  impl.name as implementer_name, impl.email as implementer_email,
+                  g.name as assigned_group_name,
+                  t.name as template_name,
+                  e.name as environment_name,
+                  cw.name as change_window_name
+           FROM ${schema}.change_requests c
+           LEFT JOIN ${schema}.applications a ON c.application_id = a.id
+           LEFT JOIN ${schema}.users req ON c.requester_id = req.id
+           LEFT JOIN ${schema}.users impl ON c.implementer_id = impl.id
+           LEFT JOIN ${schema}.groups g ON c.assigned_group = g.id
+           LEFT JOIN ${schema}.change_templates t ON c.template_id = t.id
+           LEFT JOIN ${schema}.environments e ON c.environment_id = e.id
+           LEFT JOIN ${schema}.change_windows cw ON c.change_window_id = cw.id
+           WHERE c.${idColumn} = $1`,
+          [id]
+        );
+
+        return result.rows[0] || null;
+      },
+      { ttl: 300 } // 5 minutes - 8 joins eliminated per cached lookup
     );
-
-    return result.rows[0] || null;
   }
 
   async create(
@@ -602,6 +677,9 @@ class ChangeRequestService {
 
     // Record initial status
     await this.recordStatusHistory(tenantSlug, result.rows[0].id, null, 'draft', requesterId);
+
+    // Invalidate cache
+    await cacheService.invalidateTenant(tenantSlug, 'changes');
 
     return result.rows[0];
   }
@@ -712,6 +790,9 @@ class ChangeRequestService {
       `UPDATE ${schema}.change_requests SET ${fields.join(', ')} WHERE id = $${paramIndex} RETURNING *`,
       values
     );
+
+    // Invalidate cache
+    await cacheService.invalidateTenant(tenantSlug, 'changes');
 
     return result.rows[0];
   }
@@ -974,6 +1055,9 @@ class ChangeRequestService {
 
     await this.recordStatusHistory(tenantSlug, change.id as string, fromStatus, toStatus, userId, reason);
 
+    // Invalidate cache on all status changes
+    await cacheService.invalidateTenant(tenantSlug, 'changes');
+
     return this.findById(tenantSlug, id);
   }
 
@@ -1104,6 +1188,9 @@ class ChangeRequestService {
       ]
     );
 
+    // Invalidate cache
+    await cacheService.invalidateTenant(tenantSlug, 'changes');
+
     return result.rows[0];
   }
 
@@ -1189,6 +1276,9 @@ class ChangeRequestService {
       throw new NotFoundError('Change task', taskId);
     }
 
+    // Invalidate cache
+    await cacheService.invalidateTenant(tenantSlug, 'changes');
+
     return result.rows[0];
   }
 
@@ -1223,6 +1313,9 @@ class ChangeRequestService {
     if (result.rowCount === 0) {
       throw new NotFoundError('Change task', taskId);
     }
+
+    // Invalidate cache
+    await cacheService.invalidateTenant(tenantSlug, 'changes');
   }
 
   // ==================
@@ -1272,6 +1365,9 @@ class ChangeRequestService {
        RETURNING *`,
       [change.id, userId, sanitizedContent, isInternal]
     );
+
+    // Invalidate cache
+    await cacheService.invalidateTenant(tenantSlug, 'changes');
 
     return result.rows[0];
   }
