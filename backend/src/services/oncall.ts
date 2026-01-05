@@ -564,36 +564,52 @@ interface UpdateStepParams {
 
 export class EscalationPolicyService {
   async list(tenantSlug: string, params: PaginationParams): Promise<{ policies: EscalationPolicy[]; total: number }> {
-    const schema = tenantService.getSchemaName(tenantSlug);
-    const offset = getOffset(params);
+    const cacheKey = `${tenantSlug}:oncall:escalation:list:${JSON.stringify(params)}`;
 
-    const countResult = await pool.query(
-      `SELECT COUNT(*) FROM ${schema}.oncall_escalation_policies WHERE is_active = true`
+    return cacheService.getOrSet(
+      cacheKey,
+      async () => {
+        const schema = tenantService.getSchemaName(tenantSlug);
+        const offset = getOffset(params);
+
+        const countResult = await pool.query(
+          `SELECT COUNT(*) FROM ${schema}.oncall_escalation_policies WHERE is_active = true`
+        );
+        const total = parseInt(countResult.rows[0].count, 10);
+
+        const result = await pool.query(
+          `SELECT ep.*,
+                  (SELECT COUNT(*) FROM ${schema}.oncall_escalation_steps es WHERE es.policy_id = ep.id) as step_count
+           FROM ${schema}.oncall_escalation_policies ep
+           WHERE ep.is_active = true
+           ORDER BY ep.is_default DESC, ep.name
+           LIMIT $1 OFFSET $2`,
+          [params.perPage, offset]
+        );
+
+        return { policies: result.rows, total };
+      },
+      { ttl: 900 } // 15 minutes - escalation policies change very infrequently
     );
-    const total = parseInt(countResult.rows[0].count, 10);
-
-    const result = await pool.query(
-      `SELECT ep.*,
-              (SELECT COUNT(*) FROM ${schema}.oncall_escalation_steps es WHERE es.policy_id = ep.id) as step_count
-       FROM ${schema}.oncall_escalation_policies ep
-       WHERE ep.is_active = true
-       ORDER BY ep.is_default DESC, ep.name
-       LIMIT $1 OFFSET $2`,
-      [params.perPage, offset]
-    );
-
-    return { policies: result.rows, total };
   }
 
   async findById(tenantSlug: string, policyId: string): Promise<EscalationPolicy | null> {
-    const schema = tenantService.getSchemaName(tenantSlug);
+    const cacheKey = `${tenantSlug}:oncall:escalation:policy:${policyId}`;
 
-    const result = await pool.query(
-      `SELECT * FROM ${schema}.oncall_escalation_policies WHERE id = $1`,
-      [policyId]
+    return cacheService.getOrSet(
+      cacheKey,
+      async () => {
+        const schema = tenantService.getSchemaName(tenantSlug);
+
+        const result = await pool.query(
+          `SELECT * FROM ${schema}.oncall_escalation_policies WHERE id = $1`,
+          [policyId]
+        );
+
+        return result.rows[0] || null;
+      },
+      { ttl: 900 } // 15 minutes
     );
-
-    return result.rows[0] || null;
   }
 
   async create(tenantSlug: string, params: CreatePolicyParams, _createdBy: string): Promise<EscalationPolicy> {
@@ -620,6 +636,9 @@ export class EscalationPolicyService {
         JSON.stringify(params.metadata || {}),
       ]
     );
+
+    // Invalidate all oncall escalation caches for this tenant
+    await cacheService.invalidateTenant(tenantSlug, 'oncall');
 
     logger.info({ policyId: result.rows[0].id }, 'Escalation policy created');
     return result.rows[0];
@@ -686,6 +705,9 @@ export class EscalationPolicyService {
       values
     );
 
+    // Invalidate all oncall escalation caches for this tenant
+    await cacheService.invalidateTenant(tenantSlug, 'oncall');
+
     logger.info({ policyId }, 'Escalation policy updated');
     return this.findById(tenantSlug, policyId) as Promise<EscalationPolicy>;
   }
@@ -702,6 +724,9 @@ export class EscalationPolicyService {
       `UPDATE ${schema}.oncall_escalation_policies SET is_active = false, updated_at = NOW() WHERE id = $1`,
       [policyId]
     );
+
+    // Invalidate all oncall escalation caches for this tenant
+    await cacheService.invalidateTenant(tenantSlug, 'oncall');
 
     logger.info({ policyId }, 'Escalation policy deleted');
   }
@@ -756,6 +781,9 @@ export class EscalationPolicyService {
         params.notificationChannels || ['email'],
       ]
     );
+
+    // Invalidate oncall caches (step_count changed)
+    await cacheService.invalidateTenant(tenantSlug, 'oncall');
 
     logger.info({ policyId, stepNumber }, 'Escalation step added');
     return result.rows[0];
@@ -812,6 +840,9 @@ export class EscalationPolicyService {
       throw new NotFoundError('Escalation step', stepId);
     }
 
+    // Invalidate oncall caches (step details changed)
+    await cacheService.invalidateTenant(tenantSlug, 'oncall');
+
     return result.rows[0];
   }
 
@@ -822,6 +853,9 @@ export class EscalationPolicyService {
       `DELETE FROM ${schema}.oncall_escalation_steps WHERE id = $1 AND policy_id = $2`,
       [stepId, policyId]
     );
+
+    // Invalidate oncall caches (step_count changed)
+    await cacheService.invalidateTenant(tenantSlug, 'oncall');
 
     logger.info({ policyId, stepId }, 'Escalation step deleted');
   }
