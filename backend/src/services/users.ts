@@ -3,6 +3,7 @@ import { pool } from '../config/database.js';
 import { tenantService } from './tenant.js';
 import { NotFoundError, ConflictError, BadRequestError } from '../utils/errors.js';
 import { logger } from '../utils/logger.js';
+import { cacheService } from '../utils/cache.js';
 import type { PaginationParams } from '../types/index.js';
 import { getOffset } from '../utils/pagination.js';
 
@@ -45,68 +46,84 @@ interface User {
 
 export class UserService {
   async list(tenantSlug: string, params: PaginationParams, filters?: { status?: string; search?: string }): Promise<{ users: User[]; total: number }> {
-    const schema = tenantService.getSchemaName(tenantSlug);
-    const offset = getOffset(params);
+    const cacheKey = `${tenantSlug}:users:list:${JSON.stringify({ params, filters })}`;
 
-    let whereClause = 'WHERE 1=1';
-    const values: unknown[] = [];
-    let paramIndex = 1;
+    return cacheService.getOrSet(
+      cacheKey,
+      async () => {
+        const schema = tenantService.getSchemaName(tenantSlug);
+        const offset = getOffset(params);
 
-    if (filters?.status) {
-      whereClause += ` AND u.status = $${paramIndex++}`;
-      values.push(filters.status);
-    }
+        let whereClause = 'WHERE 1=1';
+        const values: unknown[] = [];
+        let paramIndex = 1;
 
-    if (filters?.search) {
-      whereClause += ` AND (u.email ILIKE $${paramIndex} OR u.name ILIKE $${paramIndex})`;
-      values.push(`%${filters.search}%`);
-      paramIndex++;
-    }
+        if (filters?.status) {
+          whereClause += ` AND u.status = $${paramIndex++}`;
+          values.push(filters.status);
+        }
 
-    // Validate sort column against allowed columns to prevent SQL injection
-    const allowedSortColumns = ['name', 'email', 'created_at', 'updated_at', 'status', 'last_login_at'];
-    const sortColumn = allowedSortColumns.includes(params.sort || '') ? params.sort : 'created_at';
-    const sortOrder = params.order === 'asc' ? 'asc' : 'desc';
+        if (filters?.search) {
+          whereClause += ` AND (u.email ILIKE $${paramIndex} OR u.name ILIKE $${paramIndex})`;
+          values.push(`%${filters.search}%`);
+          paramIndex++;
+        }
 
-    const countResult = await pool.query(
-      `SELECT COUNT(*) FROM ${schema}.users u ${whereClause}`,
-      values
+        // Validate sort column against allowed columns to prevent SQL injection
+        const allowedSortColumns = ['name', 'email', 'created_at', 'updated_at', 'status', 'last_login_at'];
+        const sortColumn = allowedSortColumns.includes(params.sort || '') ? params.sort : 'created_at';
+        const sortOrder = params.order === 'asc' ? 'asc' : 'desc';
+
+        const countResult = await pool.query(
+          `SELECT COUNT(*) FROM ${schema}.users u ${whereClause}`,
+          values
+        );
+        const total = parseInt(countResult.rows[0].count, 10);
+
+        const result = await pool.query(
+          `SELECT u.id, u.email, u.name, u.avatar_url, u.phone, u.timezone, u.status,
+                  u.auth_provider, u.last_login_at, u.settings, u.created_at, u.updated_at,
+                  array_agg(r.name) FILTER (WHERE r.name IS NOT NULL) as roles
+           FROM ${schema}.users u
+           LEFT JOIN ${schema}.user_roles ur ON u.id = ur.user_id
+           LEFT JOIN ${schema}.roles r ON ur.role_id = r.id
+           ${whereClause}
+           GROUP BY u.id
+           ORDER BY u.${sortColumn} ${sortOrder}
+           LIMIT $${paramIndex++} OFFSET $${paramIndex}`,
+          [...values, params.perPage, offset]
+        );
+
+        return { users: result.rows, total };
+      },
+      { ttl: 600 } // 10 minutes - balances read frequency with user/role changes
     );
-    const total = parseInt(countResult.rows[0].count, 10);
-
-    const result = await pool.query(
-      `SELECT u.id, u.email, u.name, u.avatar_url, u.phone, u.timezone, u.status,
-              u.auth_provider, u.last_login_at, u.settings, u.created_at, u.updated_at,
-              array_agg(r.name) FILTER (WHERE r.name IS NOT NULL) as roles
-       FROM ${schema}.users u
-       LEFT JOIN ${schema}.user_roles ur ON u.id = ur.user_id
-       LEFT JOIN ${schema}.roles r ON ur.role_id = r.id
-       ${whereClause}
-       GROUP BY u.id
-       ORDER BY u.${sortColumn} ${sortOrder}
-       LIMIT $${paramIndex++} OFFSET $${paramIndex}`,
-      [...values, params.perPage, offset]
-    );
-
-    return { users: result.rows, total };
   }
 
   async findById(tenantSlug: string, userId: string): Promise<User | null> {
-    const schema = tenantService.getSchemaName(tenantSlug);
+    const cacheKey = `${tenantSlug}:users:user:${userId}`;
 
-    const result = await pool.query(
-      `SELECT u.id, u.email, u.name, u.avatar_url, u.phone, u.timezone, u.status,
-              u.auth_provider, u.last_login_at, u.settings, u.created_at, u.updated_at,
-              array_agg(r.name) FILTER (WHERE r.name IS NOT NULL) as roles
-       FROM ${schema}.users u
-       LEFT JOIN ${schema}.user_roles ur ON u.id = ur.user_id
-       LEFT JOIN ${schema}.roles r ON ur.role_id = r.id
-       WHERE u.id = $1
-       GROUP BY u.id`,
-      [userId]
+    return cacheService.getOrSet(
+      cacheKey,
+      async () => {
+        const schema = tenantService.getSchemaName(tenantSlug);
+
+        const result = await pool.query(
+          `SELECT u.id, u.email, u.name, u.avatar_url, u.phone, u.timezone, u.status,
+                  u.auth_provider, u.last_login_at, u.settings, u.created_at, u.updated_at,
+                  array_agg(r.name) FILTER (WHERE r.name IS NOT NULL) as roles
+           FROM ${schema}.users u
+           LEFT JOIN ${schema}.user_roles ur ON u.id = ur.user_id
+           LEFT JOIN ${schema}.roles r ON ur.role_id = r.id
+           WHERE u.id = $1
+           GROUP BY u.id`,
+          [userId]
+        );
+
+        return result.rows[0] || null;
+      },
+      { ttl: 600 } // 10 minutes - individual user lookups for assignments, profiles
     );
-
-    return result.rows[0] || null;
   }
 
   async findByEmail(tenantSlug: string, email: string): Promise<User | null> {
@@ -205,6 +222,9 @@ export class UserService {
 
       await client.query('COMMIT');
 
+      // Invalidate user cache
+      await cacheService.invalidateTenant(tenantSlug, 'users');
+
       logger.info({ userId: user.id, email: params.email }, 'User created');
       return this.findById(tenantSlug, user.id) as Promise<User>;
     } catch (error) {
@@ -271,6 +291,9 @@ export class UserService {
       [updatedBy, userId, JSON.stringify(params)]
     );
 
+    // Invalidate user cache
+    await cacheService.invalidateTenant(tenantSlug, 'users');
+
     logger.info({ userId }, 'User updated');
     return this.findById(tenantSlug, userId) as Promise<User>;
   }
@@ -295,6 +318,9 @@ export class UserService {
        VALUES ($1, 'delete', 'user', $2)`,
       [deletedBy, userId]
     );
+
+    // Invalidate user cache
+    await cacheService.invalidateTenant(tenantSlug, 'users');
 
     logger.info({ userId }, 'User deleted');
   }
@@ -322,6 +348,10 @@ export class UserService {
       }
 
       await client.query('COMMIT');
+
+      // Invalidate user cache (roles affect cached user data)
+      await cacheService.invalidateTenant(tenantSlug, 'users');
+
       logger.info({ userId, roleIds }, 'User roles updated');
     } catch (error) {
       await client.query('ROLLBACK');
