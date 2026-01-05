@@ -1,6 +1,7 @@
 import { pool } from '../config/database.js';
 import { tenantService } from './tenant.js';
 import { logger } from '../utils/logger.js';
+import { cacheService } from '../utils/cache.js';
 
 // ============================================
 // TYPES
@@ -202,6 +203,9 @@ class AuditService {
         'Audit log created'
       );
 
+      // Invalidate audit cache - audit logs are append-only, so invalidate relevant caches
+      await cacheService.invalidateTenant(tenantSlug, 'audit');
+
       return result.rows[0].id;
     } catch (error) {
       logger.error({ err: error, entry }, 'Failed to create audit log');
@@ -213,73 +217,81 @@ class AuditService {
     tenantSlug: string,
     options: AuditQueryOptions
   ): Promise<{ logs: AuditLogRecord[]; total: number }> {
-    const schema = tenantService.getSchemaName(tenantSlug);
-    const conditions: string[] = [];
-    const params: unknown[] = [];
-    let paramIndex = 1;
+    const cacheKey = `${tenantSlug}:audit:query:${JSON.stringify(options)}`;
 
-    if (options.userId) {
-      conditions.push(`user_id = $${paramIndex++}`);
-      params.push(options.userId);
-    }
+    return cacheService.getOrSet(
+      cacheKey,
+      async () => {
+        const schema = tenantService.getSchemaName(tenantSlug);
+        const conditions: string[] = [];
+        const params: unknown[] = [];
+        let paramIndex = 1;
 
-    if (options.action) {
-      if (Array.isArray(options.action)) {
-        conditions.push(`action = ANY($${paramIndex++})`);
-        params.push(options.action);
-      } else {
-        conditions.push(`action = $${paramIndex++}`);
-        params.push(options.action);
-      }
-    }
+        if (options.userId) {
+          conditions.push(`user_id = $${paramIndex++}`);
+          params.push(options.userId);
+        }
 
-    if (options.entityType) {
-      conditions.push(`entity_type = $${paramIndex++}`);
-      params.push(options.entityType);
-    }
+        if (options.action) {
+          if (Array.isArray(options.action)) {
+            conditions.push(`action = ANY($${paramIndex++})`);
+            params.push(options.action);
+          } else {
+            conditions.push(`action = $${paramIndex++}`);
+            params.push(options.action);
+          }
+        }
 
-    if (options.entityId) {
-      conditions.push(`entity_id = $${paramIndex++}`);
-      params.push(options.entityId);
-    }
+        if (options.entityType) {
+          conditions.push(`entity_type = $${paramIndex++}`);
+          params.push(options.entityType);
+        }
 
-    if (options.ipAddress) {
-      conditions.push(`ip_address = $${paramIndex++}`);
-      params.push(options.ipAddress);
-    }
+        if (options.entityId) {
+          conditions.push(`entity_id = $${paramIndex++}`);
+          params.push(options.entityId);
+        }
 
-    if (options.startDate) {
-      conditions.push(`created_at >= $${paramIndex++}`);
-      params.push(options.startDate);
-    }
+        if (options.ipAddress) {
+          conditions.push(`ip_address = $${paramIndex++}`);
+          params.push(options.ipAddress);
+        }
 
-    if (options.endDate) {
-      conditions.push(`created_at <= $${paramIndex++}`);
-      params.push(options.endDate);
-    }
+        if (options.startDate) {
+          conditions.push(`created_at >= $${paramIndex++}`);
+          params.push(options.startDate);
+        }
 
-    const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
+        if (options.endDate) {
+          conditions.push(`created_at <= $${paramIndex++}`);
+          params.push(options.endDate);
+        }
 
-    // Get total count
-    const countResult = await pool.query(
-      `SELECT COUNT(*) FROM ${schema}.audit_logs ${whereClause}`,
-      params
+        const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
+
+        // Get total count
+        const countResult = await pool.query(
+          `SELECT COUNT(*) FROM ${schema}.audit_logs ${whereClause}`,
+          params
+        );
+        const total = parseInt(countResult.rows[0].count, 10);
+
+        // Get logs with pagination
+        const limit = options.limit || 50;
+        const offset = options.offset || 0;
+
+        const result = await pool.query(
+          `SELECT * FROM ${schema}.audit_logs
+           ${whereClause}
+           ORDER BY created_at DESC
+           LIMIT $${paramIndex++} OFFSET $${paramIndex}`,
+          [...params, limit, offset]
+        );
+
+        return { logs: result.rows, total };
+      },
+      { ttl: 600 } // 10 minutes - audit logs are append-only, rarely change
     );
-    const total = parseInt(countResult.rows[0].count, 10);
-
-    // Get logs with pagination
-    const limit = options.limit || 50;
-    const offset = options.offset || 0;
-
-    const result = await pool.query(
-      `SELECT * FROM ${schema}.audit_logs
-       ${whereClause}
-       ORDER BY created_at DESC
-       LIMIT $${paramIndex++} OFFSET $${paramIndex}`,
-      [...params, limit, offset]
-    );
-
-    return { logs: result.rows, total };
   }
 
   async getEntityHistory(
@@ -287,18 +299,45 @@ class AuditService {
     entityType: string,
     entityId: string
   ): Promise<AuditLogRecord[]> {
-    const schema = tenantService.getSchemaName(tenantSlug);
+    const cacheKey = `${tenantSlug}:audit:entity:${entityType}:${entityId}`;
 
-    const result = await pool.query(
-      `SELECT al.*, u.name as user_display_name
-       FROM ${schema}.audit_logs al
-       LEFT JOIN ${schema}.users u ON al.user_id = u.id
-       WHERE al.entity_type = $1 AND al.entity_id = $2
-       ORDER BY al.created_at DESC`,
-      [entityType, entityId]
+    return cacheService.getOrSet(
+      cacheKey,
+      async () => {
+        const schema = tenantService.getSchemaName(tenantSlug);
+
+        const result = await pool.query(
+          `SELECT al.*, u.name as user_display_name
+           FROM ${schema}.audit_logs al
+           LEFT JOIN ${schema}.users u ON al.user_id = u.id
+           WHERE al.entity_type = $1 AND al.entity_id = $2
+           ORDER BY al.created_at DESC`,
+          [entityType, entityId]
+        );
+
+        return result.rows;
+      },
+      { ttl: 600 } // 10 minutes - entity history accessed frequently, changes only on new audit entries
     );
+  }
 
-    return result.rows;
+  async getById(tenantSlug: string, id: string): Promise<AuditLogRecord | null> {
+    const cacheKey = `${tenantSlug}:audit:log:${id}`;
+
+    return cacheService.getOrSet(
+      cacheKey,
+      async () => {
+        const schema = tenantService.getSchemaName(tenantSlug);
+
+        const result = await pool.query(
+          `SELECT * FROM ${schema}.audit_logs WHERE id = $1`,
+          [id]
+        );
+
+        return result.rows[0] || null;
+      },
+      { ttl: 1800 } // 30 minutes - individual audit logs never change (immutable)
+    );
   }
 
   async getUserActivity(
