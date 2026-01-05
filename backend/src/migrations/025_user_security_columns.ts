@@ -1,4 +1,5 @@
 import { Pool } from 'pg';
+import { logger } from '../utils/logger.js';
 
 export async function migration025UserSecurityColumns(pool: Pool): Promise<void> {
   await pool.query(`
@@ -12,7 +13,7 @@ export async function migration025UserSecurityColumns(pool: Pool): Promise<void>
     WHERE locked_until IS NOT NULL;
   `);
 
-  console.log('  ✓ Added failed_login_attempts and locked_until columns to users table');
+  logger.info('Added failed_login_attempts and locked_until columns to users table');
 
   // Add columns to all existing tenant schemas
   const tenantSchemas = await pool.query(`
@@ -33,6 +34,6 @@ export async function migration025UserSecurityColumns(pool: Pool): Promise<void>
       ON ${schema}.users(locked_until)
       WHERE locked_until IS NOT NULL;
     `);
-    console.log(`  ✓ Updated ${schema}`);
+    logger.info({ schema }, 'Updated tenant schema with security columns');
   }
 }

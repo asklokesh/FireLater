@@ -1,4 +1,5 @@
 import { Pool } from 'pg';
+import { logger } from '../utils/logger.js';
 
 export async function migration026MigrationSystem(pool: Pool): Promise<void> {
   await pool.query(`
@@ -180,7 +181,7 @@ export async function migration026MigrationSystem(pool: Pool): Promise<void> {
     CREATE INDEX idx_azure_sync_history_started ON tenant_template.azure_ad_sync_history(started_at DESC);
   `);
 
-  console.log('  ✓ Created migration system tables (migration_jobs, migration_mappings, migration_imported_records)');
-  console.log('  ✓ Created SSO provider tables (sso_providers, sso_sessions)');
-  console.log('  ✓ Created Azure AD integration tables (azure_ad_integration, azure_ad_sync_history)');
+  logger.info('Created migration system tables (migration_jobs, migration_mappings, migration_imported_records)');
+  logger.info('Created SSO provider tables (sso_providers, sso_sessions)');
+  logger.info('Created Azure AD integration tables (azure_ad_integration, azure_ad_sync_history)');
 }

@@ -7,6 +7,7 @@
  */
 
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
+import { SAML } from '@node-saml/node-saml';
 import { ssoService } from '../services/sso/index.js';
 import { pool } from '../config/database.js';
 import { tenantService } from '../services/tenant.js';
@@ -197,7 +198,7 @@ async function handleSAMLLogin(
 
 /**
  * Handle SAML callback
- * Note: Full implementation would use @node-saml/node-saml to validate SAMLResponse
+ * Validates SAML response and creates/updates user session
  */
 async function handleSAMLCallback(
   request: FastifyRequest,
@@ -207,16 +208,131 @@ async function handleSAMLCallback(
   samlResponse: string,
   relayState?: string
 ): Promise<any> {
-  // TODO: Implement SAML response validation using @node-saml/node-saml
-  // For now, this is a placeholder that would need proper SAML assertion parsing
+  const samlConfig = provider.configuration as SAMLConfig;
 
-  logger.warn({ providerId: provider.id }, 'SAML callback received - full validation not yet implemented');
+  try {
+    // Initialize SAML service provider
+    const saml = new SAML({
+      callbackUrl: samlConfig.callbackUrl,
+      entryPoint: samlConfig.entryPoint,
+      issuer: samlConfig.issuer,
+      // @ts-ignore - cert is valid but type definitions incomplete
+      cert: samlConfig.cert,
+      acceptedClockSkewMs: 60000, // 1 minute clock skew tolerance
+      wantAssertionsSigned: samlConfig.wantAssertionsSigned ?? true,
+      // @ts-ignore - wantAuthnResponseSigned is valid but type definitions incomplete
+      wantAuthnResponseSigned: samlConfig.wantAuthnResponseSigned ?? true,
+    });
 
-  // This would parse and validate the SAML assertion
-  // const profile = await validateSAMLResponse(samlResponse, provider.configuration);
+    // Validate SAML response
+    const { profile } = await saml.validatePostResponseAsync({
+      SAMLResponse: samlResponse,
+    });
 
-  // Placeholder response
-  throw new Error('SAML callback validation not yet fully implemented. Use SSO provider management endpoints to configure providers.');
+    if (!profile) {
+      throw new UnauthorizedError('Invalid SAML response: no profile found');
+    }
+
+    logger.info({
+      providerId: provider.id,
+      tenantSlug,
+      nameId: profile.nameID,
+      sessionIndex: profile.sessionIndex
+    }, 'SAML response validated successfully');
+
+    // Extract user attributes from SAML assertion
+    const attributeMap = provider.attributeMappings || {};
+    const email = profile.email || profile[attributeMap.email as string] || profile.nameID;
+    const firstName = profile.firstName || profile[attributeMap.firstName as string] || '';
+    const lastName = profile.lastName || profile[attributeMap.lastName as string] || '';
+    const displayName = profile.displayName || profile[attributeMap.displayName as string] || `${firstName} ${lastName}`.trim();
+
+    if (!email) {
+      throw new UnauthorizedError('Email not found in SAML assertion');
+    }
+
+    // Get tenant schema
+    const tenantResult = await pool.query(
+      'SELECT id FROM public.tenants WHERE slug = $1',
+      [tenantSlug]
+    );
+
+    if (tenantResult.rows.length === 0) {
+      throw new NotFoundError('Tenant', tenantSlug);
+    }
+
+    const schema = `tenant_${tenantResult.rows[0].id.replace(/-/g, '_')}`;
+
+    // Check if user exists
+    let userResult = await pool.query(
+      `SELECT * FROM ${schema}.users WHERE email = $1 LIMIT 1`,
+      [email]
+    );
+
+    let userId: string;
+
+    if (userResult.rows.length === 0 && provider.autoCreateUsers) {
+      // JIT provision new user
+      const insertResult = await pool.query(
+        `INSERT INTO ${schema}.users (email, name, role, is_active, email_verified)
+         VALUES ($1, $2, $3, true, $4)
+         RETURNING id`,
+        [email, displayName || email, provider.defaultRole || 'requester', !provider.requireVerifiedEmail]
+      );
+      userId = insertResult.rows[0].id;
+
+      logger.info({ userId, email, tenantSlug }, 'JIT provisioned new user from SAML');
+    } else if (userResult.rows.length === 0) {
+      throw new UnauthorizedError('User not found and auto-provisioning is disabled');
+    } else {
+      userId = userResult.rows[0].id;
+    }
+
+    // Create SSO session
+    await pool.query(
+      `INSERT INTO ${schema}.sso_sessions (user_id, provider_id, session_index, name_id, login_time, last_activity)
+       VALUES ($1, $2, $3, $4, NOW(), NOW())
+       ON CONFLICT (user_id, provider_id, session_index) DO UPDATE
+       SET last_activity = NOW()`,
+      [userId, provider.id, profile.sessionIndex, profile.nameID]
+    );
+
+    // Generate JWT token for application
+    const token = await reply.jwtSign({
+      userId,
+      tenantSlug,
+      roles: [userResult.rows[0]?.role || provider.defaultRole],
+      // @ts-ignore - ssoProvider is custom payload field
+      ssoProvider: provider.id
+    } as any);
+
+    // Set token in HTTP-only cookie
+    reply.setCookie('token', token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict',
+      maxAge: 15 * 60, // 15 minutes
+    });
+
+    logger.info({ userId, tenantSlug, providerId: provider.id }, 'SSO login successful');
+
+    // Redirect to application (or RelayState if provided)
+    const redirectUrl = relayState || `/${tenantSlug}/dashboard`;
+    return reply.redirect(redirectUrl);
+
+  } catch (error) {
+    logger.error({
+      err: error,
+      providerId: provider.id,
+      tenantSlug
+    }, 'SAML validation failed');
+
+    if (error instanceof UnauthorizedError || error instanceof BadRequestError) {
+      throw error;
+    }
+
+    throw new UnauthorizedError('SAML authentication failed: Invalid response');
+  }
 }
 
 /**
