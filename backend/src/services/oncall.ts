@@ -5,6 +5,7 @@ import { logger } from '../utils/logger.js';
 import type { PaginationParams } from '../types/index.js';
 import { getOffset } from '../utils/pagination.js';
 import { randomBytes } from 'crypto';
+import { cacheService } from '../utils/cache.js';
 
 // ============================================
 // SCHEDULES
@@ -79,54 +80,70 @@ interface CreateOverrideParams {
 
 export class OnCallScheduleService {
   async list(tenantSlug: string, params: PaginationParams, filters?: ScheduleFilters): Promise<{ schedules: Schedule[]; total: number }> {
-    const schema = tenantService.getSchemaName(tenantSlug);
-    const offset = getOffset(params);
+    const cacheKey = `${tenantSlug}:oncall:schedules:list:${JSON.stringify({ params, filters })}`;
 
-    let whereClause = 'WHERE 1=1';
-    const values: unknown[] = [];
-    let paramIndex = 1;
+    return cacheService.getOrSet(
+      cacheKey,
+      async () => {
+        const schema = tenantService.getSchemaName(tenantSlug);
+        const offset = getOffset(params);
 
-    if (filters?.groupId) {
-      whereClause += ` AND s.group_id = $${paramIndex++}`;
-      values.push(filters.groupId);
-    }
-    if (filters?.isActive !== undefined) {
-      whereClause += ` AND s.is_active = $${paramIndex++}`;
-      values.push(filters.isActive);
-    }
+        let whereClause = 'WHERE 1=1';
+        const values: unknown[] = [];
+        let paramIndex = 1;
 
-    const countResult = await pool.query(
-      `SELECT COUNT(*) FROM ${schema}.oncall_schedules s ${whereClause}`,
-      values
+        if (filters?.groupId) {
+          whereClause += ` AND s.group_id = $${paramIndex++}`;
+          values.push(filters.groupId);
+        }
+        if (filters?.isActive !== undefined) {
+          whereClause += ` AND s.is_active = $${paramIndex++}`;
+          values.push(filters.isActive);
+        }
+
+        const countResult = await pool.query(
+          `SELECT COUNT(*) FROM ${schema}.oncall_schedules s ${whereClause}`,
+          values
+        );
+        const total = parseInt(countResult.rows[0].count, 10);
+
+        const result = await pool.query(
+          `SELECT s.*, g.name as group_name,
+                  (SELECT COUNT(*) FROM ${schema}.oncall_rotations r WHERE r.schedule_id = s.id AND r.is_active = true) as member_count
+           FROM ${schema}.oncall_schedules s
+           LEFT JOIN ${schema}.groups g ON s.group_id = g.id
+           ${whereClause}
+           ORDER BY s.name
+           LIMIT $${paramIndex++} OFFSET $${paramIndex}`,
+          [...values, params.perPage, offset]
+        );
+
+        return { schedules: result.rows, total };
+      },
+      { ttl: 600 } // 10 minutes - balances read frequency with schedule changes
     );
-    const total = parseInt(countResult.rows[0].count, 10);
-
-    const result = await pool.query(
-      `SELECT s.*, g.name as group_name,
-              (SELECT COUNT(*) FROM ${schema}.oncall_rotations r WHERE r.schedule_id = s.id AND r.is_active = true) as member_count
-       FROM ${schema}.oncall_schedules s
-       LEFT JOIN ${schema}.groups g ON s.group_id = g.id
-       ${whereClause}
-       ORDER BY s.name
-       LIMIT $${paramIndex++} OFFSET $${paramIndex}`,
-      [...values, params.perPage, offset]
-    );
-
-    return { schedules: result.rows, total };
   }
 
   async findById(tenantSlug: string, scheduleId: string): Promise<Schedule | null> {
-    const schema = tenantService.getSchemaName(tenantSlug);
+    const cacheKey = `${tenantSlug}:oncall:schedules:schedule:${scheduleId}`;
 
-    const result = await pool.query(
-      `SELECT s.*, g.name as group_name
-       FROM ${schema}.oncall_schedules s
-       LEFT JOIN ${schema}.groups g ON s.group_id = g.id
-       WHERE s.id = $1`,
-      [scheduleId]
+    return cacheService.getOrSet(
+      cacheKey,
+      async () => {
+        const schema = tenantService.getSchemaName(tenantSlug);
+
+        const result = await pool.query(
+          `SELECT s.*, g.name as group_name
+           FROM ${schema}.oncall_schedules s
+           LEFT JOIN ${schema}.groups g ON s.group_id = g.id
+           WHERE s.id = $1`,
+          [scheduleId]
+        );
+
+        return result.rows[0] || null;
+      },
+      { ttl: 600 } // 10 minutes
     );
-
-    return result.rows[0] || null;
   }
 
   async create(tenantSlug: string, params: CreateScheduleParams, createdBy: string): Promise<Schedule> {
@@ -156,6 +173,9 @@ export class OnCallScheduleService {
        VALUES ($1, 'create', 'oncall_schedule', $2, $3)`,
       [createdBy, result.rows[0].id, JSON.stringify({ name: params.name })]
     );
+
+    // Invalidate all oncall schedule caches for this tenant
+    await cacheService.invalidateTenant(tenantSlug, 'oncall');
 
     logger.info({ scheduleId: result.rows[0].id }, 'On-call schedule created');
     return this.findById(tenantSlug, result.rows[0].id) as Promise<Schedule>;
@@ -230,6 +250,9 @@ export class OnCallScheduleService {
       values
     );
 
+    // Invalidate all oncall schedule caches for this tenant
+    await cacheService.invalidateTenant(tenantSlug, 'oncall');
+
     logger.info({ scheduleId }, 'On-call schedule updated');
     return this.findById(tenantSlug, scheduleId) as Promise<Schedule>;
   }
@@ -246,6 +269,9 @@ export class OnCallScheduleService {
       `DELETE FROM ${schema}.oncall_schedules WHERE id = $1`,
       [scheduleId]
     );
+
+    // Invalidate all oncall schedule caches for this tenant
+    await cacheService.invalidateTenant(tenantSlug, 'oncall');
 
     logger.info({ scheduleId }, 'On-call schedule deleted');
   }
@@ -296,6 +322,9 @@ export class OnCallScheduleService {
       [scheduleId, userId, position]
     );
 
+    // Invalidate oncall caches (member_count changed)
+    await cacheService.invalidateTenant(tenantSlug, 'oncall');
+
     logger.info({ scheduleId, userId }, 'User added to on-call rotation');
     return result.rows[0];
   }
@@ -322,6 +351,9 @@ export class OnCallScheduleService {
       `UPDATE ${schema}.oncall_rotations SET is_active = false WHERE id = $1 AND schedule_id = $2`,
       [rotationId, scheduleId]
     );
+
+    // Invalidate oncall caches (member_count changed)
+    await cacheService.invalidateTenant(tenantSlug, 'oncall');
 
     logger.info({ scheduleId, rotationId }, 'User removed from on-call rotation');
   }
