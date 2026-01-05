@@ -5,6 +5,7 @@ import { logger } from '../utils/logger.js';
 import type { PaginationParams, ProblemStatus, ProblemType, ProblemPriority, IssueImpact, IssueUrgency } from '../types/index.js';
 import { getOffset } from '../utils/pagination.js';
 import { sanitizeMarkdown, sanitizePlainText } from '../utils/contentSanitization.js';
+import { cacheService } from '../utils/cache.js';
 
 interface CreateProblemParams {
   title: string;
@@ -149,106 +150,122 @@ export class ProblemService {
     isKnownError?: boolean;
     problemType?: string;
   }): Promise<{ problems: Problem[]; total: number }> {
-    const schema = tenantService.getSchemaName(tenantSlug);
-    const offset = getOffset(params);
+    const cacheKey = `${tenantSlug}:problems:list:${JSON.stringify({ params, filters })}`;
 
-    let whereClause = 'WHERE 1=1';
-    const values: unknown[] = [];
-    let paramIndex = 1;
+    return cacheService.getOrSet(
+      cacheKey,
+      async () => {
+        const schema = tenantService.getSchemaName(tenantSlug);
+        const offset = getOffset(params);
 
-    if (filters?.status) {
-      whereClause += ` AND p.status = $${paramIndex++}`;
-      values.push(filters.status);
-    }
-    if (filters?.priority) {
-      whereClause += ` AND p.priority = $${paramIndex++}`;
-      values.push(filters.priority);
-    }
-    if (filters?.assignedTo) {
-      whereClause += ` AND p.assigned_to = $${paramIndex++}`;
-      values.push(filters.assignedTo);
-    }
-    if (filters?.assignedGroup) {
-      whereClause += ` AND p.assigned_group = $${paramIndex++}`;
-      values.push(filters.assignedGroup);
-    }
-    if (filters?.applicationId) {
-      whereClause += ` AND p.application_id = $${paramIndex++}`;
-      values.push(filters.applicationId);
-    }
-    if (filters?.reporterId) {
-      whereClause += ` AND p.reporter_id = $${paramIndex++}`;
-      values.push(filters.reporterId);
-    }
-    if (filters?.isKnownError !== undefined) {
-      whereClause += ` AND p.is_known_error = $${paramIndex++}`;
-      values.push(filters.isKnownError);
-    }
-    if (filters?.problemType) {
-      whereClause += ` AND p.problem_type = $${paramIndex++}`;
-      values.push(filters.problemType);
-    }
-    if (filters?.search) {
-      whereClause += ` AND (p.title ILIKE $${paramIndex} OR p.problem_number ILIKE $${paramIndex} OR p.description ILIKE $${paramIndex})`;
-      values.push(`%${filters.search}%`);
-      paramIndex++;
-    }
+        let whereClause = 'WHERE 1=1';
+        const values: unknown[] = [];
+        let paramIndex = 1;
 
-    const allowedSortColumns = ['created_at', 'updated_at', 'title', 'priority', 'status', 'problem_number'];
-    const sortColumn = allowedSortColumns.includes(params.sort || '') ? params.sort : 'created_at';
-    const sortOrder = params.order === 'asc' ? 'asc' : 'desc';
+        if (filters?.status) {
+          whereClause += ` AND p.status = $${paramIndex++}`;
+          values.push(filters.status);
+        }
+        if (filters?.priority) {
+          whereClause += ` AND p.priority = $${paramIndex++}`;
+          values.push(filters.priority);
+        }
+        if (filters?.assignedTo) {
+          whereClause += ` AND p.assigned_to = $${paramIndex++}`;
+          values.push(filters.assignedTo);
+        }
+        if (filters?.assignedGroup) {
+          whereClause += ` AND p.assigned_group = $${paramIndex++}`;
+          values.push(filters.assignedGroup);
+        }
+        if (filters?.applicationId) {
+          whereClause += ` AND p.application_id = $${paramIndex++}`;
+          values.push(filters.applicationId);
+        }
+        if (filters?.reporterId) {
+          whereClause += ` AND p.reporter_id = $${paramIndex++}`;
+          values.push(filters.reporterId);
+        }
+        if (filters?.isKnownError !== undefined) {
+          whereClause += ` AND p.is_known_error = $${paramIndex++}`;
+          values.push(filters.isKnownError);
+        }
+        if (filters?.problemType) {
+          whereClause += ` AND p.problem_type = $${paramIndex++}`;
+          values.push(filters.problemType);
+        }
+        if (filters?.search) {
+          whereClause += ` AND (p.title ILIKE $${paramIndex} OR p.problem_number ILIKE $${paramIndex} OR p.description ILIKE $${paramIndex})`;
+          values.push(`%${filters.search}%`);
+          paramIndex++;
+        }
 
-    const countResult = await pool.query(
-      `SELECT COUNT(*) FROM ${schema}.problems p ${whereClause}`,
-      values
+        const allowedSortColumns = ['created_at', 'updated_at', 'title', 'priority', 'status', 'problem_number'];
+        const sortColumn = allowedSortColumns.includes(params.sort || '') ? params.sort : 'created_at';
+        const sortOrder = params.order === 'asc' ? 'asc' : 'desc';
+
+        const countResult = await pool.query(
+          `SELECT COUNT(*) FROM ${schema}.problems p ${whereClause}`,
+          values
+        );
+        const total = parseInt(countResult.rows[0].count, 10);
+
+        const result = await pool.query(
+          `SELECT p.*,
+                  r.name as reporter_name, r.email as reporter_email,
+                  a.name as assignee_name, a.email as assignee_email,
+                  g.name as assigned_group_name,
+                  app.name as application_name, app.app_id as application_app_id
+           FROM ${schema}.problems p
+           LEFT JOIN ${schema}.users r ON p.reporter_id = r.id
+           LEFT JOIN ${schema}.users a ON p.assigned_to = a.id
+           LEFT JOIN ${schema}.groups g ON p.assigned_group = g.id
+           LEFT JOIN ${schema}.applications app ON p.application_id = app.id
+           ${whereClause}
+           ORDER BY p.${sortColumn} ${sortOrder}
+           LIMIT $${paramIndex++} OFFSET $${paramIndex}`,
+          [...values, params.perPage, offset]
+        );
+
+        return { problems: result.rows, total };
+      },
+      { ttl: 300 } // 5 minutes - problems change moderately frequently
     );
-    const total = parseInt(countResult.rows[0].count, 10);
-
-    const result = await pool.query(
-      `SELECT p.*,
-              r.name as reporter_name, r.email as reporter_email,
-              a.name as assignee_name, a.email as assignee_email,
-              g.name as assigned_group_name,
-              app.name as application_name, app.app_id as application_app_id
-       FROM ${schema}.problems p
-       LEFT JOIN ${schema}.users r ON p.reporter_id = r.id
-       LEFT JOIN ${schema}.users a ON p.assigned_to = a.id
-       LEFT JOIN ${schema}.groups g ON p.assigned_group = g.id
-       LEFT JOIN ${schema}.applications app ON p.application_id = app.id
-       ${whereClause}
-       ORDER BY p.${sortColumn} ${sortOrder}
-       LIMIT $${paramIndex++} OFFSET $${paramIndex}`,
-      [...values, params.perPage, offset]
-    );
-
-    return { problems: result.rows, total };
   }
 
   async getById(tenantSlug: string, problemId: string): Promise<Problem> {
-    const schema = tenantService.getSchemaName(tenantSlug);
+    const cacheKey = `${tenantSlug}:problems:problem:${problemId}`;
 
-    const result = await pool.query(
-      `SELECT p.*,
-              r.name as reporter_name, r.email as reporter_email,
-              a.name as assignee_name, a.email as assignee_email,
-              g.name as assigned_group_name,
-              app.name as application_name, app.app_id as application_app_id,
-              rca.name as root_cause_identified_by_name
-       FROM ${schema}.problems p
-       LEFT JOIN ${schema}.users r ON p.reporter_id = r.id
-       LEFT JOIN ${schema}.users a ON p.assigned_to = a.id
-       LEFT JOIN ${schema}.groups g ON p.assigned_group = g.id
-       LEFT JOIN ${schema}.applications app ON p.application_id = app.id
-       LEFT JOIN ${schema}.users rca ON p.root_cause_identified_by = rca.id
-       WHERE p.id = $1`,
-      [problemId]
+    return cacheService.getOrSet(
+      cacheKey,
+      async () => {
+        const schema = tenantService.getSchemaName(tenantSlug);
+
+        const result = await pool.query(
+          `SELECT p.*,
+                  r.name as reporter_name, r.email as reporter_email,
+                  a.name as assignee_name, a.email as assignee_email,
+                  g.name as assigned_group_name,
+                  app.name as application_name, app.app_id as application_app_id,
+                  rca.name as root_cause_identified_by_name
+           FROM ${schema}.problems p
+           LEFT JOIN ${schema}.users r ON p.reporter_id = r.id
+           LEFT JOIN ${schema}.users a ON p.assigned_to = a.id
+           LEFT JOIN ${schema}.groups g ON p.assigned_group = g.id
+           LEFT JOIN ${schema}.applications app ON p.application_id = app.id
+           LEFT JOIN ${schema}.users rca ON p.root_cause_identified_by = rca.id
+           WHERE p.id = $1`,
+          [problemId]
+        );
+
+        if (result.rows.length === 0) {
+          throw new NotFoundError('Problem', problemId);
+        }
+
+        return result.rows[0];
+      },
+      { ttl: 300 } // 5 minutes - problem details accessed frequently
     );
-
-    if (result.rows.length === 0) {
-      throw new NotFoundError('Problem', problemId);
-    }
-
-    return result.rows[0];
   }
 
   async create(tenantSlug: string, reporterId: string, params: CreateProblemParams): Promise<Problem> {
@@ -288,6 +305,11 @@ export class ProblemService {
     await this.recordStatusChange(schema, problem.id, null, 'new', reporterId);
 
     logger.info({ problemId: problem.id, problemNumber }, 'Problem created');
+
+    // Invalidate cache (non-blocking)
+    cacheService.invalidateTenant(tenantSlug, 'problems').catch((err) => {
+      logger.warn({ err, tenantSlug }, 'Failed to invalidate cache after problem creation');
+    });
 
     return problem;
   }
@@ -388,6 +410,11 @@ export class ProblemService {
       [...values, problemId]
     );
 
+    // Invalidate cache (non-blocking)
+    cacheService.invalidateTenant(tenantSlug, 'problems').catch((err) => {
+      logger.warn({ err, tenantSlug }, 'Failed to invalidate cache after problem update');
+    });
+
     return result.rows[0];
   }
 
@@ -443,6 +470,11 @@ export class ProblemService {
 
     await this.recordStatusChange(schema, problemId, currentStatus, newStatus, userId, reason);
 
+    // Invalidate cache (non-blocking)
+    cacheService.invalidateTenant(tenantSlug, 'problems').catch((err) => {
+      logger.warn({ err, tenantSlug }, 'Failed to invalidate cache after status update');
+    });
+
     return result.rows[0];
   }
 
@@ -460,6 +492,11 @@ export class ProblemService {
       await this.updateStatus(tenantSlug, problemId, 'assigned', userId);
     }
 
+    // Invalidate cache (non-blocking)
+    cacheService.invalidateTenant(tenantSlug, 'problems').catch((err) => {
+      logger.warn({ err, tenantSlug }, 'Failed to invalidate cache after assignment');
+    });
+
     return result.rows[0];
   }
 
@@ -474,6 +511,11 @@ export class ProblemService {
     if (result.rowCount === 0) {
       throw new NotFoundError('Problem', problemId);
     }
+
+    // Invalidate cache (non-blocking)
+    cacheService.invalidateTenant(tenantSlug, 'problems').catch((err) => {
+      logger.warn({ err, tenantSlug }, 'Failed to invalidate cache after deletion');
+    });
   }
 
   async addComment(tenantSlug: string, problemId: string, userId: string, content: string, isInternal = false): Promise<{ id: string }> {
@@ -704,6 +746,11 @@ export class ProblemService {
     );
 
     logger.info({ problemId, financialImpact: params }, 'Financial impact updated');
+
+    // Invalidate cache (non-blocking)
+    cacheService.invalidateTenant(tenantSlug, 'problems').catch((err) => {
+      logger.warn({ err, tenantSlug }, 'Failed to invalidate cache after financial impact update');
+    });
 
     return result.rows[0];
   }
