@@ -1,6 +1,7 @@
 import { pool } from '../config/database.js';
 import { tenantService } from './tenant.js';
 import { logger } from '../utils/logger.js';
+import { cacheService } from '../utils/cache.js';
 
 // ============================================
 // TYPES
@@ -179,151 +180,167 @@ export async function listAssets(
     limit?: number;
   }
 ): Promise<{ assets: Asset[]; total: number }> {
-  const schema = tenantService.getSchemaName(tenantSlug);
-  const page = filters?.page || 1;
-  const limit = filters?.limit || 50;
-  const offset = (page - 1) * limit;
+  const cacheKey = `${tenantSlug}:assets:list:${JSON.stringify(filters || {})}`;
 
-  let whereClause = '1=1';
-  const params: unknown[] = [];
+  return cacheService.getOrSet(
+    cacheKey,
+    async () => {
+      const schema = tenantService.getSchemaName(tenantSlug);
+      const page = filters?.page || 1;
+      const limit = filters?.limit || 50;
+      const offset = (page - 1) * limit;
 
-  if (filters?.assetType) {
-    params.push(filters.assetType);
-    whereClause += ` AND a.asset_type = $${params.length}`;
-  }
+      let whereClause = '1=1';
+      const params: unknown[] = [];
 
-  if (filters?.category) {
-    params.push(filters.category);
-    whereClause += ` AND a.category = $${params.length}`;
-  }
+      if (filters?.assetType) {
+        params.push(filters.assetType);
+        whereClause += ` AND a.asset_type = $${params.length}`;
+      }
 
-  if (filters?.status) {
-    params.push(filters.status);
-    whereClause += ` AND a.status = $${params.length}`;
-  }
+      if (filters?.category) {
+        params.push(filters.category);
+        whereClause += ` AND a.category = $${params.length}`;
+      }
 
-  if (filters?.ownerId) {
-    params.push(filters.ownerId);
-    whereClause += ` AND a.owner_id = $${params.length}`;
-  }
+      if (filters?.status) {
+        params.push(filters.status);
+        whereClause += ` AND a.status = $${params.length}`;
+      }
 
-  if (filters?.assignedToId) {
-    params.push(filters.assignedToId);
-    whereClause += ` AND a.assigned_to_id = $${params.length}`;
-  }
+      if (filters?.ownerId) {
+        params.push(filters.ownerId);
+        whereClause += ` AND a.owner_id = $${params.length}`;
+      }
 
-  if (filters?.department) {
-    params.push(filters.department);
-    whereClause += ` AND a.department = $${params.length}`;
-  }
+      if (filters?.assignedToId) {
+        params.push(filters.assignedToId);
+        whereClause += ` AND a.assigned_to_id = $${params.length}`;
+      }
 
-  if (filters?.search) {
-    params.push(`%${filters.search}%`);
-    whereClause += ` AND (
-      a.name ILIKE $${params.length} OR
-      a.asset_tag ILIKE $${params.length} OR
-      a.serial_number ILIKE $${params.length} OR
-      a.hostname ILIKE $${params.length}
-    )`;
-  }
+      if (filters?.department) {
+        params.push(filters.department);
+        whereClause += ` AND a.department = $${params.length}`;
+      }
 
-  // PERF-005: Use window function to combine count + data query
-  // This reduces 2 sequential queries to 1, improving latency by 30-40%
-  params.push(limit, offset);
-  const assetsResult = await pool.query(`
-    SELECT
-      COUNT(*) OVER () as total,
-      a.id,
-      a.asset_tag,
-      a.name,
-      a.description,
-      a.asset_type,
-      a.category,
-      a.status,
-      a.location,
-      a.department,
-      a.owner_id,
-      owner.name as owner_name,
-      a.assigned_to_id,
-      assigned.name as assigned_to_name,
-      a.manufacturer,
-      a.model,
-      a.serial_number,
-      a.version,
-      a.license_type,
-      a.license_count,
-      a.license_expiry,
-      a.purchase_date,
-      a.purchase_cost,
-      a.warranty_expiry,
-      a.vendor,
-      a.po_number,
-      a.ip_address,
-      a.mac_address,
-      a.hostname,
-      a.attributes,
-      a.created_at,
-      a.updated_at
-    FROM ${schema}.assets a
-    LEFT JOIN ${schema}.users owner ON a.owner_id = owner.id
-    LEFT JOIN ${schema}.users assigned ON a.assigned_to_id = assigned.id
-    WHERE ${whereClause}
-    ORDER BY a.created_at DESC
-    LIMIT $${params.length - 1} OFFSET $${params.length}
-  `, params);
+      if (filters?.search) {
+        params.push(`%${filters.search}%`);
+        whereClause += ` AND (
+          a.name ILIKE $${params.length} OR
+          a.asset_tag ILIKE $${params.length} OR
+          a.serial_number ILIKE $${params.length} OR
+          a.hostname ILIKE $${params.length}
+        )`;
+      }
 
-  return {
-    assets: assetsResult.rows,
-    total: assetsResult.rows.length > 0 ? parseInt(assetsResult.rows[0].total) : 0,
-  };
+      // PERF-005: Use window function to combine count + data query
+      // This reduces 2 sequential queries to 1, improving latency by 30-40%
+      params.push(limit, offset);
+      const assetsResult = await pool.query(`
+        SELECT
+          COUNT(*) OVER () as total,
+          a.id,
+          a.asset_tag,
+          a.name,
+          a.description,
+          a.asset_type,
+          a.category,
+          a.status,
+          a.location,
+          a.department,
+          a.owner_id,
+          owner.name as owner_name,
+          a.assigned_to_id,
+          assigned.name as assigned_to_name,
+          a.manufacturer,
+          a.model,
+          a.serial_number,
+          a.version,
+          a.license_type,
+          a.license_count,
+          a.license_expiry,
+          a.purchase_date,
+          a.purchase_cost,
+          a.warranty_expiry,
+          a.vendor,
+          a.po_number,
+          a.ip_address,
+          a.mac_address,
+          a.hostname,
+          a.attributes,
+          a.created_at,
+          a.updated_at
+        FROM ${schema}.assets a
+        LEFT JOIN ${schema}.users owner ON a.owner_id = owner.id
+        LEFT JOIN ${schema}.users assigned ON a.assigned_to_id = assigned.id
+        WHERE ${whereClause}
+        ORDER BY a.created_at DESC
+        LIMIT $${params.length - 1} OFFSET $${params.length}
+      `, params);
+
+      return {
+        assets: assetsResult.rows,
+        total: assetsResult.rows.length > 0 ? parseInt(assetsResult.rows[0].total) : 0,
+      };
+    },
+    { ttl: 600 } // 10 minutes - CMDB data accessed frequently, changes moderately
+  );
 }
 
 export async function getAsset(
   tenantSlug: string,
   assetId: string
 ): Promise<Asset | null> {
-  const schema = tenantService.getSchemaName(tenantSlug);
+  const cacheKey = `${tenantSlug}:assets:asset:${assetId}`;
 
-  const result = await pool.query(`
-    SELECT
-      a.id,
-      a.asset_tag,
-      a.name,
-      a.description,
-      a.asset_type,
-      a.category,
-      a.status,
-      a.location,
-      a.department,
-      a.owner_id,
-      owner.name as owner_name,
-      a.assigned_to_id,
-      assigned.name as assigned_to_name,
-      a.manufacturer,
-      a.model,
-      a.serial_number,
-      a.version,
-      a.license_type,
-      a.license_count,
-      a.license_expiry,
-      a.purchase_date,
-      a.purchase_cost,
-      a.warranty_expiry,
-      a.vendor,
-      a.po_number,
-      a.ip_address,
-      a.mac_address,
-      a.hostname,
-      a.attributes,
-      a.created_at,
-      a.updated_at
-    FROM ${schema}.assets a
-    LEFT JOIN ${schema}.users owner ON a.owner_id = owner.id
-    LEFT JOIN ${schema}.users assigned ON a.assigned_to_id = assigned.id
-    WHERE a.id = $1
-  `, [assetId]);
+  return cacheService.getOrSet(
+    cacheKey,
+    async () => {
+      const schema = tenantService.getSchemaName(tenantSlug);
 
-  return result.rows[0] || null;
+      const result = await pool.query(`
+        SELECT
+          a.id,
+          a.asset_tag,
+          a.name,
+          a.description,
+          a.asset_type,
+          a.category,
+          a.status,
+          a.location,
+          a.department,
+          a.owner_id,
+          owner.name as owner_name,
+          a.assigned_to_id,
+          assigned.name as assigned_to_name,
+          a.manufacturer,
+          a.model,
+          a.serial_number,
+          a.version,
+          a.license_type,
+          a.license_count,
+          a.license_expiry,
+          a.purchase_date,
+          a.purchase_cost,
+          a.warranty_expiry,
+          a.vendor,
+          a.po_number,
+          a.ip_address,
+          a.mac_address,
+          a.hostname,
+          a.attributes,
+          a.created_at,
+          a.updated_at
+        FROM ${schema}.assets a
+        LEFT JOIN ${schema}.users owner ON a.owner_id = owner.id
+        LEFT JOIN ${schema}.users assigned ON a.assigned_to_id = assigned.id
+        WHERE a.id = $1
+      `, [assetId]);
+
+      return result.rows[0] || null;
+    },
+    { ttl: 600 } // 10 minutes
+  );
 }
 
 export async function createAsset(
@@ -374,6 +391,9 @@ export async function createAsset(
     JSON.stringify(data.attributes || {}),
     createdBy,
   ]);
+
+  // Invalidate assets cache
+  await cacheService.invalidateTenant(tenantSlug, 'assets');
 
   logger.info({ tenantSlug, assetId: result.rows[0].id, assetTag }, 'Asset created');
 
@@ -443,6 +463,9 @@ export async function updateAsset(
     return null;
   }
 
+  // Invalidate assets cache
+  await cacheService.invalidateTenant(tenantSlug, 'assets');
+
   logger.info({ tenantSlug, assetId }, 'Asset updated');
 
   return result.rows[0];
@@ -459,6 +482,9 @@ export async function deleteAsset(
   `, [assetId]);
 
   if (result.rowCount && result.rowCount > 0) {
+    // Invalidate assets cache
+    await cacheService.invalidateTenant(tenantSlug, 'assets');
+
     logger.info({ tenantSlug, assetId }, 'Asset deleted');
     return true;
   }
