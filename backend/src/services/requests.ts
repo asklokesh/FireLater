@@ -6,6 +6,7 @@ import type { PaginationParams } from '../types/index.js';
 import { getOffset } from '../utils/pagination.js';
 import { dashboardService } from './dashboard.js';
 import { sanitizeMarkdown } from '../utils/contentSanitization.js';
+import { cacheService } from '../utils/cache.js';
 
 type RequestStatus = 'submitted' | 'pending_approval' | 'approved' | 'rejected' | 'in_progress' | 'completed' | 'cancelled';
 
@@ -71,97 +72,113 @@ export class RequestService {
     catalogItemId?: string;
     search?: string;
   }): Promise<{ requests: ServiceRequest[]; total: number }> {
-    const schema = tenantService.getSchemaName(tenantSlug);
-    const offset = getOffset(params);
+    const cacheKey = `${tenantSlug}:requests:list:${JSON.stringify({ params, filters })}`;
 
-    let whereClause = 'WHERE 1=1';
-    const values: unknown[] = [];
-    let paramIndex = 1;
+    return cacheService.getOrSet(
+      cacheKey,
+      async () => {
+        const schema = tenantService.getSchemaName(tenantSlug);
+        const offset = getOffset(params);
 
-    if (filters?.status) {
-      whereClause += ` AND r.status = $${paramIndex++}`;
-      values.push(filters.status);
-    }
-    if (filters?.priority) {
-      whereClause += ` AND r.priority = $${paramIndex++}`;
-      values.push(filters.priority);
-    }
-    if (filters?.requesterId) {
-      whereClause += ` AND r.requester_id = $${paramIndex++}`;
-      values.push(filters.requesterId);
-    }
-    if (filters?.requestedForId) {
-      whereClause += ` AND r.requested_for_id = $${paramIndex++}`;
-      values.push(filters.requestedForId);
-    }
-    if (filters?.assignedTo) {
-      whereClause += ` AND r.assigned_to = $${paramIndex++}`;
-      values.push(filters.assignedTo);
-    }
-    if (filters?.catalogItemId) {
-      whereClause += ` AND r.catalog_item_id = $${paramIndex++}`;
-      values.push(filters.catalogItemId);
-    }
-    if (filters?.search) {
-      whereClause += ` AND (r.request_number ILIKE $${paramIndex} OR r.notes ILIKE $${paramIndex})`;
-      values.push(`%${filters.search}%`);
-      paramIndex++;
-    }
+        let whereClause = 'WHERE 1=1';
+        const values: unknown[] = [];
+        let paramIndex = 1;
 
-    const countResult = await pool.query(
-      `SELECT COUNT(*) FROM ${schema}.service_requests r ${whereClause}`,
-      values
+        if (filters?.status) {
+          whereClause += ` AND r.status = $${paramIndex++}`;
+          values.push(filters.status);
+        }
+        if (filters?.priority) {
+          whereClause += ` AND r.priority = $${paramIndex++}`;
+          values.push(filters.priority);
+        }
+        if (filters?.requesterId) {
+          whereClause += ` AND r.requester_id = $${paramIndex++}`;
+          values.push(filters.requesterId);
+        }
+        if (filters?.requestedForId) {
+          whereClause += ` AND r.requested_for_id = $${paramIndex++}`;
+          values.push(filters.requestedForId);
+        }
+        if (filters?.assignedTo) {
+          whereClause += ` AND r.assigned_to = $${paramIndex++}`;
+          values.push(filters.assignedTo);
+        }
+        if (filters?.catalogItemId) {
+          whereClause += ` AND r.catalog_item_id = $${paramIndex++}`;
+          values.push(filters.catalogItemId);
+        }
+        if (filters?.search) {
+          whereClause += ` AND (r.request_number ILIKE $${paramIndex} OR r.notes ILIKE $${paramIndex})`;
+          values.push(`%${filters.search}%`);
+          paramIndex++;
+        }
+
+        const countResult = await pool.query(
+          `SELECT COUNT(*) FROM ${schema}.service_requests r ${whereClause}`,
+          values
+        );
+        const total = parseInt(countResult.rows[0].count, 10);
+
+        const result = await pool.query(
+          `SELECT r.*,
+                  req.name as requester_name, req.email as requester_email,
+                  rf.name as requested_for_name, rf.email as requested_for_email,
+                  a.name as assignee_name, a.email as assignee_email,
+                  ci.name as catalog_item_name,
+                  fg.name as fulfillment_group_name
+           FROM ${schema}.service_requests r
+           LEFT JOIN ${schema}.users req ON r.requester_id = req.id
+           LEFT JOIN ${schema}.users rf ON r.requested_for_id = rf.id
+           LEFT JOIN ${schema}.users a ON r.assigned_to = a.id
+           LEFT JOIN ${schema}.catalog_items ci ON r.catalog_item_id = ci.id
+           LEFT JOIN ${schema}.groups fg ON r.fulfillment_group_id = fg.id
+           ${whereClause}
+           ORDER BY r.created_at DESC
+           LIMIT $${paramIndex++} OFFSET $${paramIndex}`,
+          [...values, params.perPage, offset]
+        );
+
+        return { requests: result.rows, total };
+      },
+      { ttl: 300 } // 5 minutes - request data changes frequently with lifecycle updates
     );
-    const total = parseInt(countResult.rows[0].count, 10);
-
-    const result = await pool.query(
-      `SELECT r.*,
-              req.name as requester_name, req.email as requester_email,
-              rf.name as requested_for_name, rf.email as requested_for_email,
-              a.name as assignee_name, a.email as assignee_email,
-              ci.name as catalog_item_name,
-              fg.name as fulfillment_group_name
-       FROM ${schema}.service_requests r
-       LEFT JOIN ${schema}.users req ON r.requester_id = req.id
-       LEFT JOIN ${schema}.users rf ON r.requested_for_id = rf.id
-       LEFT JOIN ${schema}.users a ON r.assigned_to = a.id
-       LEFT JOIN ${schema}.catalog_items ci ON r.catalog_item_id = ci.id
-       LEFT JOIN ${schema}.groups fg ON r.fulfillment_group_id = fg.id
-       ${whereClause}
-       ORDER BY r.created_at DESC
-       LIMIT $${paramIndex++} OFFSET $${paramIndex}`,
-      [...values, params.perPage, offset]
-    );
-
-    return { requests: result.rows, total };
   }
 
   async findById(tenantSlug: string, requestId: string): Promise<ServiceRequest | null> {
-    const schema = tenantService.getSchemaName(tenantSlug);
+    const cacheKey = `${tenantSlug}:requests:request:${requestId}`;
 
-    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(requestId);
-    const whereClause = isUuid ? 'WHERE r.id = $1' : 'WHERE r.request_number = $1';
+    return cacheService.getOrSet(
+      cacheKey,
+      async () => {
+        const schema = tenantService.getSchemaName(tenantSlug);
 
-    const result = await pool.query(
-      `SELECT r.*,
-              req.name as requester_name, req.email as requester_email,
-              rf.name as requested_for_name, rf.email as requested_for_email,
-              a.name as assignee_name, a.email as assignee_email,
-              ci.name as catalog_item_name, ci.form_schema,
-              fg.name as fulfillment_group_name,
-              cb.name as completed_by_name
-       FROM ${schema}.service_requests r
-       LEFT JOIN ${schema}.users req ON r.requester_id = req.id
-       LEFT JOIN ${schema}.users rf ON r.requested_for_id = rf.id
-       LEFT JOIN ${schema}.users a ON r.assigned_to = a.id
-       LEFT JOIN ${schema}.catalog_items ci ON r.catalog_item_id = ci.id
-       LEFT JOIN ${schema}.groups fg ON r.fulfillment_group_id = fg.id
-       LEFT JOIN ${schema}.users cb ON r.completed_by = cb.id
-       ${whereClause}`,
-      [requestId]
+        const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(requestId);
+        const whereClause = isUuid ? 'WHERE r.id = $1' : 'WHERE r.request_number = $1';
+
+        const result = await pool.query(
+          `SELECT r.*,
+                  req.name as requester_name, req.email as requester_email,
+                  rf.name as requested_for_name, rf.email as requested_for_email,
+                  a.name as assignee_name, a.email as assignee_email,
+                  ci.name as catalog_item_name, ci.form_schema,
+                  fg.name as fulfillment_group_name,
+                  cb.name as completed_by_name
+           FROM ${schema}.service_requests r
+           LEFT JOIN ${schema}.users req ON r.requester_id = req.id
+           LEFT JOIN ${schema}.users rf ON r.requested_for_id = rf.id
+           LEFT JOIN ${schema}.users a ON r.assigned_to = a.id
+           LEFT JOIN ${schema}.catalog_items ci ON r.catalog_item_id = ci.id
+           LEFT JOIN ${schema}.groups fg ON r.fulfillment_group_id = fg.id
+           LEFT JOIN ${schema}.users cb ON r.completed_by = cb.id
+           ${whereClause}`,
+          [requestId]
+        );
+
+        return result.rows[0] || null;
+      },
+      { ttl: 300 } // 5 minutes - individual request details accessed frequently
     );
-
-    return result.rows[0] || null;
   }
 
   async create(tenantSlug: string, params: CreateRequestParams, requesterId: string): Promise<ServiceRequest> {
@@ -254,7 +271,8 @@ export class RequestService {
 
       logger.info({ requestId: request.id, requestNumber }, 'Service request created');
 
-      // Invalidate dashboard cache (non-blocking)
+      // Invalidate caches (non-blocking)
+      await cacheService.invalidateTenant(tenantSlug, 'requests');
       dashboardService.invalidateCache(tenantSlug, 'requests').catch((err) => {
         logger.warn({ err, tenantSlug }, 'Failed to invalidate dashboard cache after request creation');
       });
@@ -315,7 +333,8 @@ export class RequestService {
 
     logger.info({ requestId: existing.id }, 'Service request updated');
 
-    // Invalidate dashboard cache (non-blocking)
+    // Invalidate caches (non-blocking)
+    await cacheService.invalidateTenant(tenantSlug, 'requests');
     dashboardService.invalidateCache(tenantSlug, 'requests').catch((err) => {
       logger.warn({ err, tenantSlug }, 'Failed to invalidate dashboard cache after request update');
     });
@@ -337,6 +356,7 @@ export class RequestService {
     );
 
     logger.info({ requestId: existing.id, assignedTo }, 'Service request assigned');
+    await cacheService.invalidateTenant(tenantSlug, 'requests');
     return this.findById(tenantSlug, existing.id) as Promise<ServiceRequest>;
   }
 
@@ -415,6 +435,7 @@ export class RequestService {
       await client.query('COMMIT');
 
       logger.info({ requestId: existing.id, newStatus }, 'Service request approved');
+      await cacheService.invalidateTenant(tenantSlug, 'requests');
       return this.findById(tenantSlug, existing.id) as Promise<ServiceRequest>;
     } catch (error) {
       await client.query('ROLLBACK');
@@ -485,6 +506,7 @@ export class RequestService {
       await client.query('COMMIT');
 
       logger.info({ requestId: existing.id }, 'Service request rejected');
+      await cacheService.invalidateTenant(tenantSlug, 'requests');
       return this.findById(tenantSlug, existing.id) as Promise<ServiceRequest>;
     } catch (error) {
       await client.query('ROLLBACK');
@@ -518,6 +540,7 @@ export class RequestService {
     );
 
     logger.info({ requestId: existing.id }, 'Service request work started');
+    await cacheService.invalidateTenant(tenantSlug, 'requests');
     return this.findById(tenantSlug, existing.id) as Promise<ServiceRequest>;
   }
 
@@ -547,6 +570,7 @@ export class RequestService {
     );
 
     logger.info({ requestId: existing.id }, 'Service request completed');
+    await cacheService.invalidateTenant(tenantSlug, 'requests');
     return this.findById(tenantSlug, existing.id) as Promise<ServiceRequest>;
   }
 
@@ -576,6 +600,7 @@ export class RequestService {
     );
 
     logger.info({ requestId: existing.id }, 'Service request cancelled');
+    await cacheService.invalidateTenant(tenantSlug, 'requests');
     return this.findById(tenantSlug, existing.id) as Promise<ServiceRequest>;
   }
 
