@@ -4,10 +4,14 @@ import { NotFoundError } from '../utils/errors.js';
 import { logger } from '../utils/logger.js';
 import type { PaginationParams } from '../types/index.js';
 import { getOffset } from '../utils/pagination.js';
+import { cacheService } from '../utils/cache.js';
 
 // ============================================
 // CATEGORIES
 // ============================================
+
+// Cache TTL for catalog categories (10 minutes - admin-configured, moderate change frequency)
+const CATALOG_CACHE_TTL = 600;
 
 interface CreateCategoryParams {
   name: string;
@@ -43,37 +47,53 @@ interface Category {
 
 export class CatalogCategoryService {
   async list(tenantSlug: string, includeInactive: boolean = false): Promise<Category[]> {
-    const schema = tenantService.getSchemaName(tenantSlug);
+    const cacheKey = `${tenantSlug}:catalog:categories:${includeInactive}`;
 
-    const whereClause = includeInactive ? '' : 'WHERE is_active = true';
+    return cacheService.getOrSet(
+      cacheKey,
+      async () => {
+        const schema = tenantService.getSchemaName(tenantSlug);
 
-    const result = await pool.query(
-      `SELECT c.*,
-              (SELECT COUNT(*) FROM ${schema}.catalog_items WHERE category_id = c.id AND is_active = true) as item_count,
-              p.name as parent_name
-       FROM ${schema}.catalog_categories c
-       LEFT JOIN ${schema}.catalog_categories p ON c.parent_id = p.id
-       ${whereClause}
-       ORDER BY c.sort_order, c.name`
+        const whereClause = includeInactive ? '' : 'WHERE is_active = true';
+
+        const result = await pool.query(
+          `SELECT c.*,
+                  (SELECT COUNT(*) FROM ${schema}.catalog_items WHERE category_id = c.id AND is_active = true) as item_count,
+                  p.name as parent_name
+           FROM ${schema}.catalog_categories c
+           LEFT JOIN ${schema}.catalog_categories p ON c.parent_id = p.id
+           ${whereClause}
+           ORDER BY c.sort_order, c.name`
+        );
+
+        return result.rows;
+      },
+      { ttl: CATALOG_CACHE_TTL }
     );
-
-    return result.rows;
   }
 
   async findById(tenantSlug: string, categoryId: string): Promise<Category | null> {
-    const schema = tenantService.getSchemaName(tenantSlug);
+    const cacheKey = `${tenantSlug}:catalog:category:${categoryId}`;
 
-    const result = await pool.query(
-      `SELECT c.*,
-              (SELECT COUNT(*) FROM ${schema}.catalog_items WHERE category_id = c.id) as item_count,
-              p.name as parent_name
-       FROM ${schema}.catalog_categories c
-       LEFT JOIN ${schema}.catalog_categories p ON c.parent_id = p.id
-       WHERE c.id = $1`,
-      [categoryId]
+    return cacheService.getOrSet(
+      cacheKey,
+      async () => {
+        const schema = tenantService.getSchemaName(tenantSlug);
+
+        const result = await pool.query(
+          `SELECT c.*,
+                  (SELECT COUNT(*) FROM ${schema}.catalog_items WHERE category_id = c.id) as item_count,
+                  p.name as parent_name
+           FROM ${schema}.catalog_categories c
+           LEFT JOIN ${schema}.catalog_categories p ON c.parent_id = p.id
+           WHERE c.id = $1`,
+          [categoryId]
+        );
+
+        return result.rows[0] || null;
+      },
+      { ttl: CATALOG_CACHE_TTL }
     );
-
-    return result.rows[0] || null;
   }
 
   async create(tenantSlug: string, params: CreateCategoryParams, createdBy: string): Promise<Category> {
@@ -100,6 +120,9 @@ export class CatalogCategoryService {
        VALUES ($1, 'create', 'catalog_category', $2, $3)`,
       [createdBy, category.id, JSON.stringify({ name: params.name })]
     );
+
+    // Invalidate catalog cache
+    await cacheService.invalidateTenant(tenantSlug, 'catalog');
 
     logger.info({ categoryId: category.id }, 'Catalog category created');
     return this.findById(tenantSlug, category.id) as Promise<Category>;
@@ -158,6 +181,9 @@ export class CatalogCategoryService {
       values
     );
 
+    // Invalidate catalog cache
+    await cacheService.invalidateTenant(tenantSlug, 'catalog');
+
     logger.info({ categoryId }, 'Catalog category updated');
     return this.findById(tenantSlug, categoryId) as Promise<Category>;
   }
@@ -175,6 +201,9 @@ export class CatalogCategoryService {
       `UPDATE ${schema}.catalog_categories SET is_active = false, updated_at = NOW() WHERE id = $1`,
       [categoryId]
     );
+
+    // Invalidate catalog cache
+    await cacheService.invalidateTenant(tenantSlug, 'catalog');
 
     logger.info({ categoryId }, 'Catalog category deleted');
   }
