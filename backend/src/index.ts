@@ -228,10 +228,11 @@ async function registerRoutes() {
       dbStatus = 'unhealthy';
     }
 
-    // Redis check with latency
+    // Redis check with latency and cache stats
     let redisStatus = 'unhealthy';
     let redisLatency = 0;
     let redisInfo = '';
+    let cacheStats: { keys: number; memory: string; hitRate?: number } | undefined;
     try {
       const redisStart = Date.now();
       const redisOk = await testRedisConnection();
@@ -242,6 +243,10 @@ async function registerRoutes() {
         const info = await redis.info('server');
         const versionMatch = info.match(/redis_version:(\S+)/);
         redisInfo = versionMatch ? `Redis ${versionMatch[1]}` : 'Redis';
+
+        // Get cache statistics
+        const { cacheService } = await import('./utils/cache.js');
+        cacheStats = await cacheService.getStats();
       }
     } catch {
       redisStatus = 'unhealthy';
@@ -273,6 +278,15 @@ async function registerRoutes() {
           version: redisInfo,
         },
       },
+      cache: cacheStats
+        ? {
+            keys: cacheStats.keys,
+            memory: cacheStats.memory,
+            hitRate: cacheStats.hitRate
+              ? `${cacheStats.hitRate.toFixed(2)}%`
+              : 'N/A',
+          }
+        : undefined,
       memory: {
         heapUsed: `${Math.round(process.memoryUsage().heapUsed / 1024 / 1024)}MB`,
         heapTotal: `${Math.round(process.memoryUsage().heapTotal / 1024 / 1024)}MB`,
