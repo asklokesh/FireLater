@@ -2,6 +2,7 @@ import { pool } from '../config/database.js';
 import { tenantService } from './tenant.js';
 import { NotFoundError, ConflictError } from '../utils/errors.js';
 import { logger } from '../utils/logger.js';
+import { cacheService } from '../utils/cache.js';
 import type { PaginationParams, ApplicationTier, ApplicationStatus, LifecycleStage, Criticality } from '../types/index.js';
 import { getOffset } from '../utils/pagination.js';
 
@@ -75,87 +76,103 @@ export class ApplicationService {
     ownerId?: string;
     supportGroupId?: string;
   }): Promise<{ applications: Application[]; total: number }> {
-    const schema = tenantService.getSchemaName(tenantSlug);
-    const offset = getOffset(params);
+    const cacheKey = `${tenantSlug}:applications:list:${JSON.stringify({ params, filters })}`;
 
-    let whereClause = 'WHERE 1=1';
-    const values: unknown[] = [];
-    let paramIndex = 1;
+    return cacheService.getOrSet(
+      cacheKey,
+      async () => {
+        const schema = tenantService.getSchemaName(tenantSlug);
+        const offset = getOffset(params);
 
-    if (filters?.tier) {
-      whereClause += ` AND a.tier = $${paramIndex++}`;
-      values.push(filters.tier);
-    }
-    if (filters?.status) {
-      whereClause += ` AND a.status = $${paramIndex++}`;
-      values.push(filters.status);
-    }
-    if (filters?.ownerId) {
-      whereClause += ` AND (a.owner_user_id = $${paramIndex} OR a.owner_group_id = $${paramIndex})`;
-      values.push(filters.ownerId);
-      paramIndex++;
-    }
-    if (filters?.supportGroupId) {
-      whereClause += ` AND a.support_group_id = $${paramIndex++}`;
-      values.push(filters.supportGroupId);
-    }
-    if (filters?.search) {
-      whereClause += ` AND (a.name ILIKE $${paramIndex} OR a.app_id ILIKE $${paramIndex} OR a.description ILIKE $${paramIndex})`;
-      values.push(`%${filters.search}%`);
-      paramIndex++;
-    }
+        let whereClause = 'WHERE 1=1';
+        const values: unknown[] = [];
+        let paramIndex = 1;
 
-    // Validate sort column against allowed columns to prevent SQL injection
-    const allowedSortColumns = ['name', 'app_id', 'tier', 'status', 'created_at', 'updated_at', 'health_score'];
-    const sortColumn = allowedSortColumns.includes(params.sort || '') ? params.sort : 'name';
-    const sortOrder = params.order === 'desc' ? 'desc' : 'asc';
+        if (filters?.tier) {
+          whereClause += ` AND a.tier = $${paramIndex++}`;
+          values.push(filters.tier);
+        }
+        if (filters?.status) {
+          whereClause += ` AND a.status = $${paramIndex++}`;
+          values.push(filters.status);
+        }
+        if (filters?.ownerId) {
+          whereClause += ` AND (a.owner_user_id = $${paramIndex} OR a.owner_group_id = $${paramIndex})`;
+          values.push(filters.ownerId);
+          paramIndex++;
+        }
+        if (filters?.supportGroupId) {
+          whereClause += ` AND a.support_group_id = $${paramIndex++}`;
+          values.push(filters.supportGroupId);
+        }
+        if (filters?.search) {
+          whereClause += ` AND (a.name ILIKE $${paramIndex} OR a.app_id ILIKE $${paramIndex} OR a.description ILIKE $${paramIndex})`;
+          values.push(`%${filters.search}%`);
+          paramIndex++;
+        }
 
-    const countResult = await pool.query(
-      `SELECT COUNT(*) FROM ${schema}.applications a ${whereClause}`,
-      values
+        // Validate sort column against allowed columns to prevent SQL injection
+        const allowedSortColumns = ['name', 'app_id', 'tier', 'status', 'created_at', 'updated_at', 'health_score'];
+        const sortColumn = allowedSortColumns.includes(params.sort || '') ? params.sort : 'name';
+        const sortOrder = params.order === 'desc' ? 'desc' : 'asc';
+
+        const countResult = await pool.query(
+          `SELECT COUNT(*) FROM ${schema}.applications a ${whereClause}`,
+          values
+        );
+        const total = parseInt(countResult.rows[0].count, 10);
+
+        const result = await pool.query(
+          `SELECT a.*,
+                  ou.name as owner_user_name,
+                  og.name as owner_group_name,
+                  sg.name as support_group_name,
+                  (SELECT COUNT(*) FROM ${schema}.environments WHERE application_id = a.id) as environment_count
+           FROM ${schema}.applications a
+           LEFT JOIN ${schema}.users ou ON a.owner_user_id = ou.id
+           LEFT JOIN ${schema}.groups og ON a.owner_group_id = og.id
+           LEFT JOIN ${schema}.groups sg ON a.support_group_id = sg.id
+           ${whereClause}
+           ORDER BY a.${sortColumn} ${sortOrder}
+           LIMIT $${paramIndex++} OFFSET $${paramIndex}`,
+          [...values, params.perPage, offset]
+        );
+
+        return { applications: result.rows, total };
+      },
+      { ttl: 600 } // 10 minutes - CMDB data accessed frequently, changes moderately
     );
-    const total = parseInt(countResult.rows[0].count, 10);
-
-    const result = await pool.query(
-      `SELECT a.*,
-              ou.name as owner_user_name,
-              og.name as owner_group_name,
-              sg.name as support_group_name,
-              (SELECT COUNT(*) FROM ${schema}.environments WHERE application_id = a.id) as environment_count
-       FROM ${schema}.applications a
-       LEFT JOIN ${schema}.users ou ON a.owner_user_id = ou.id
-       LEFT JOIN ${schema}.groups og ON a.owner_group_id = og.id
-       LEFT JOIN ${schema}.groups sg ON a.support_group_id = sg.id
-       ${whereClause}
-       ORDER BY a.${sortColumn} ${sortOrder}
-       LIMIT $${paramIndex++} OFFSET $${paramIndex}`,
-      [...values, params.perPage, offset]
-    );
-
-    return { applications: result.rows, total };
   }
 
   async findById(tenantSlug: string, appId: string): Promise<Application | null> {
-    const schema = tenantService.getSchemaName(tenantSlug);
+    const cacheKey = `${tenantSlug}:applications:app:${appId}`;
 
-    // Check if it's a UUID or app_id format
-    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(appId);
-    const whereClause = isUuid ? 'WHERE a.id = $1' : 'WHERE a.app_id = $1';
+    return cacheService.getOrSet(
+      cacheKey,
+      async () => {
+        const schema = tenantService.getSchemaName(tenantSlug);
 
-    const result = await pool.query(
-      `SELECT a.*,
-              ou.name as owner_user_name, ou.email as owner_user_email,
-              og.name as owner_group_name,
-              sg.name as support_group_name
-       FROM ${schema}.applications a
-       LEFT JOIN ${schema}.users ou ON a.owner_user_id = ou.id
-       LEFT JOIN ${schema}.groups og ON a.owner_group_id = og.id
-       LEFT JOIN ${schema}.groups sg ON a.support_group_id = sg.id
-       ${whereClause}`,
-      [appId]
+        // Check if it's a UUID or app_id format
+        const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(appId);
+        const whereClause = isUuid ? 'WHERE a.id = $1' : 'WHERE a.app_id = $1';
+
+        const result = await pool.query(
+          `SELECT a.*,
+                  ou.name as owner_user_name, ou.email as owner_user_email,
+                  og.name as owner_group_name,
+                  sg.name as support_group_name
+           FROM ${schema}.applications a
+           LEFT JOIN ${schema}.users ou ON a.owner_user_id = ou.id
+           LEFT JOIN ${schema}.groups og ON a.owner_group_id = og.id
+           LEFT JOIN ${schema}.groups sg ON a.support_group_id = sg.id
+           ${whereClause}`,
+          [appId]
+        );
+
+        return result.rows[0] || null;
+      },
+      { ttl: 600 } // 10 minutes - individual app lookups for CMDB detail pages
     );
-
-    return result.rows[0] || null;
   }
 
   async create(tenantSlug: string, params: CreateApplicationParams, createdBy: string): Promise<Application> {
@@ -198,6 +215,9 @@ export class ApplicationService {
        VALUES ($1, 'create', 'application', $2, $3)`,
       [createdBy, app.id, JSON.stringify({ name: params.name, appId })]
     );
+
+    // Invalidate application cache
+    await cacheService.invalidateTenant(tenantSlug, 'applications');
 
     logger.info({ applicationId: app.id, appId }, 'Application created');
     return this.findById(tenantSlug, app.id) as Promise<Application>;
@@ -283,6 +303,9 @@ export class ApplicationService {
       [updatedBy, existing.id, JSON.stringify(params)]
     );
 
+    // Invalidate application cache
+    await cacheService.invalidateTenant(tenantSlug, 'applications');
+
     logger.info({ applicationId: existing.id }, 'Application updated');
     return this.findById(tenantSlug, existing.id) as Promise<Application>;
   }
@@ -307,6 +330,9 @@ export class ApplicationService {
        VALUES ($1, 'delete', 'application', $2)`,
       [deletedBy, existing.id]
     );
+
+    // Invalidate application cache
+    await cacheService.invalidateTenant(tenantSlug, 'applications');
 
     logger.info({ applicationId: existing.id }, 'Application deleted');
   }
@@ -363,6 +389,9 @@ export class ApplicationService {
         JSON.stringify(params.metadata || {}),
       ]
     );
+
+    // Invalidate application cache (environment_count changes)
+    await cacheService.invalidateTenant(tenantSlug, 'applications');
 
     logger.info({ applicationId: app.id, environmentId: result.rows[0].id }, 'Environment created');
     return result.rows[0];
@@ -455,6 +484,9 @@ export class ApplicationService {
     if (result.rowCount === 0) {
       throw new NotFoundError('Environment', envId);
     }
+
+    // Invalidate application cache (environment_count changes)
+    await cacheService.invalidateTenant(tenantSlug, 'applications');
 
     logger.info({ applicationId: app.id, environmentId: envId }, 'Environment deleted');
   }
