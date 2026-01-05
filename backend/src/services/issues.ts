@@ -6,6 +6,7 @@ import type { PaginationParams, IssuePriority, IssueStatus, IssueSeverity, Issue
 import { getOffset } from '../utils/pagination.js';
 import { dashboardService } from './dashboard.js';
 import { sanitizeMarkdown } from '../utils/contentSanitization.js';
+import { cacheService } from '../utils/cache.js';
 
 interface CreateIssueParams {
   title: string;
@@ -88,105 +89,121 @@ export class IssueService {
     search?: string;
     slaBreached?: boolean;
   }): Promise<{ issues: Issue[]; total: number }> {
-    const schema = tenantService.getSchemaName(tenantSlug);
-    const offset = getOffset(params);
+    const cacheKey = `${tenantSlug}:issues:list:${JSON.stringify({ params, filters })}`;
 
-    let whereClause = 'WHERE 1=1';
-    const values: unknown[] = [];
-    let paramIndex = 1;
+    return cacheService.getOrSet(
+      cacheKey,
+      async () => {
+        const schema = tenantService.getSchemaName(tenantSlug);
+        const offset = getOffset(params);
 
-    if (filters?.status) {
-      whereClause += ` AND i.status = $${paramIndex++}`;
-      values.push(filters.status);
-    }
-    if (filters?.priority) {
-      whereClause += ` AND i.priority = $${paramIndex++}`;
-      values.push(filters.priority);
-    }
-    if (filters?.assignedTo) {
-      whereClause += ` AND i.assigned_to = $${paramIndex++}`;
-      values.push(filters.assignedTo);
-    }
-    if (filters?.assignedGroup) {
-      whereClause += ` AND i.assigned_group = $${paramIndex++}`;
-      values.push(filters.assignedGroup);
-    }
-    if (filters?.applicationId) {
-      whereClause += ` AND i.application_id = $${paramIndex++}`;
-      values.push(filters.applicationId);
-    }
-    if (filters?.reporterId) {
-      whereClause += ` AND i.reporter_id = $${paramIndex++}`;
-      values.push(filters.reporterId);
-    }
-    if (filters?.slaBreached !== undefined) {
-      whereClause += ` AND i.sla_breached = $${paramIndex++}`;
-      values.push(filters.slaBreached);
-    }
-    if (filters?.search) {
-      whereClause += ` AND (i.title ILIKE $${paramIndex} OR i.issue_number ILIKE $${paramIndex} OR i.description ILIKE $${paramIndex})`;
-      values.push(`%${filters.search}%`);
-      paramIndex++;
-    }
+        let whereClause = 'WHERE 1=1';
+        const values: unknown[] = [];
+        let paramIndex = 1;
 
-    // Validate sort column against allowed columns to prevent SQL injection
-    const allowedSortColumns = ['created_at', 'updated_at', 'title', 'priority', 'status', 'severity', 'issue_number'];
-    const sortColumn = allowedSortColumns.includes(params.sort || '') ? params.sort : 'created_at';
-    const sortOrder = params.order === 'asc' ? 'asc' : 'desc';
+        if (filters?.status) {
+          whereClause += ` AND i.status = $${paramIndex++}`;
+          values.push(filters.status);
+        }
+        if (filters?.priority) {
+          whereClause += ` AND i.priority = $${paramIndex++}`;
+          values.push(filters.priority);
+        }
+        if (filters?.assignedTo) {
+          whereClause += ` AND i.assigned_to = $${paramIndex++}`;
+          values.push(filters.assignedTo);
+        }
+        if (filters?.assignedGroup) {
+          whereClause += ` AND i.assigned_group = $${paramIndex++}`;
+          values.push(filters.assignedGroup);
+        }
+        if (filters?.applicationId) {
+          whereClause += ` AND i.application_id = $${paramIndex++}`;
+          values.push(filters.applicationId);
+        }
+        if (filters?.reporterId) {
+          whereClause += ` AND i.reporter_id = $${paramIndex++}`;
+          values.push(filters.reporterId);
+        }
+        if (filters?.slaBreached !== undefined) {
+          whereClause += ` AND i.sla_breached = $${paramIndex++}`;
+          values.push(filters.slaBreached);
+        }
+        if (filters?.search) {
+          whereClause += ` AND (i.title ILIKE $${paramIndex} OR i.issue_number ILIKE $${paramIndex} OR i.description ILIKE $${paramIndex})`;
+          values.push(`%${filters.search}%`);
+          paramIndex++;
+        }
 
-    const countResult = await pool.query(
-      `SELECT COUNT(*) FROM ${schema}.issues i ${whereClause}`,
-      values
+        // Validate sort column against allowed columns to prevent SQL injection
+        const allowedSortColumns = ['created_at', 'updated_at', 'title', 'priority', 'status', 'severity', 'issue_number'];
+        const sortColumn = allowedSortColumns.includes(params.sort || '') ? params.sort : 'created_at';
+        const sortOrder = params.order === 'asc' ? 'asc' : 'desc';
+
+        const countResult = await pool.query(
+          `SELECT COUNT(*) FROM ${schema}.issues i ${whereClause}`,
+          values
+        );
+        const total = parseInt(countResult.rows[0].count, 10);
+
+        const result = await pool.query(
+          `SELECT i.*,
+                  r.name as reporter_name, r.email as reporter_email,
+                  a.name as assignee_name, a.email as assignee_email,
+                  g.name as assigned_group_name,
+                  app.name as application_name, app.app_id as application_app_id
+           FROM ${schema}.issues i
+           LEFT JOIN ${schema}.users r ON i.reporter_id = r.id
+           LEFT JOIN ${schema}.users a ON i.assigned_to = a.id
+           LEFT JOIN ${schema}.groups g ON i.assigned_group = g.id
+           LEFT JOIN ${schema}.applications app ON i.application_id = app.id
+           ${whereClause}
+           ORDER BY i.${sortColumn} ${sortOrder}
+           LIMIT $${paramIndex++} OFFSET $${paramIndex}`,
+          [...values, params.perPage, offset]
+        );
+
+        return { issues: result.rows, total };
+      },
+      { ttl: 300 } // 5 minutes - issues change moderately frequently
     );
-    const total = parseInt(countResult.rows[0].count, 10);
-
-    const result = await pool.query(
-      `SELECT i.*,
-              r.name as reporter_name, r.email as reporter_email,
-              a.name as assignee_name, a.email as assignee_email,
-              g.name as assigned_group_name,
-              app.name as application_name, app.app_id as application_app_id
-       FROM ${schema}.issues i
-       LEFT JOIN ${schema}.users r ON i.reporter_id = r.id
-       LEFT JOIN ${schema}.users a ON i.assigned_to = a.id
-       LEFT JOIN ${schema}.groups g ON i.assigned_group = g.id
-       LEFT JOIN ${schema}.applications app ON i.application_id = app.id
-       ${whereClause}
-       ORDER BY i.${sortColumn} ${sortOrder}
-       LIMIT $${paramIndex++} OFFSET $${paramIndex}`,
-      [...values, params.perPage, offset]
-    );
-
-    return { issues: result.rows, total };
   }
 
   async findById(tenantSlug: string, issueId: string): Promise<Issue | null> {
-    const schema = tenantService.getSchemaName(tenantSlug);
+    const cacheKey = `${tenantSlug}:issues:issue:${issueId}`;
 
-    // Check if it's a UUID or issue_number format
-    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(issueId);
-    const whereClause = isUuid ? 'WHERE i.id = $1' : 'WHERE i.issue_number = $1';
+    return cacheService.getOrSet(
+      cacheKey,
+      async () => {
+        const schema = tenantService.getSchemaName(tenantSlug);
 
-    const result = await pool.query(
-      `SELECT i.*,
-              r.name as reporter_name, r.email as reporter_email,
-              a.name as assignee_name, a.email as assignee_email,
-              g.name as assigned_group_name,
-              app.name as application_name, app.app_id as application_app_id,
-              env.name as environment_name,
-              res.name as resolver_name
-       FROM ${schema}.issues i
-       LEFT JOIN ${schema}.users r ON i.reporter_id = r.id
-       LEFT JOIN ${schema}.users a ON i.assigned_to = a.id
-       LEFT JOIN ${schema}.groups g ON i.assigned_group = g.id
-       LEFT JOIN ${schema}.applications app ON i.application_id = app.id
-       LEFT JOIN ${schema}.environments env ON i.environment_id = env.id
-       LEFT JOIN ${schema}.users res ON i.resolved_by = res.id
-       ${whereClause}`,
-      [issueId]
+        // Check if it's a UUID or issue_number format
+        const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(issueId);
+        const whereClause = isUuid ? 'WHERE i.id = $1' : 'WHERE i.issue_number = $1';
+
+        const result = await pool.query(
+          `SELECT i.*,
+                  r.name as reporter_name, r.email as reporter_email,
+                  a.name as assignee_name, a.email as assignee_email,
+                  g.name as assigned_group_name,
+                  app.name as application_name, app.app_id as application_app_id,
+                  env.name as environment_name,
+                  res.name as resolver_name
+           FROM ${schema}.issues i
+           LEFT JOIN ${schema}.users r ON i.reporter_id = r.id
+           LEFT JOIN ${schema}.users a ON i.assigned_to = a.id
+           LEFT JOIN ${schema}.groups g ON i.assigned_group = g.id
+           LEFT JOIN ${schema}.applications app ON i.application_id = app.id
+           LEFT JOIN ${schema}.environments env ON i.environment_id = env.id
+           LEFT JOIN ${schema}.users res ON i.resolved_by = res.id
+           ${whereClause}`,
+          [issueId]
+        );
+
+        return result.rows[0] || null;
+      },
+      { ttl: 300 } // 5 minutes - issue details accessed frequently
     );
-
-    return result.rows[0] || null;
   }
 
   async create(tenantSlug: string, params: CreateIssueParams, reporterId: string): Promise<Issue> {
@@ -278,9 +295,12 @@ export class IssueService {
 
       logger.info({ issueId: issue.id, issueNumber }, 'Issue created');
 
-      // Invalidate dashboard cache (non-blocking)
-      dashboardService.invalidateCache(tenantSlug, 'issues').catch((err) => {
-        logger.warn({ err, tenantSlug }, 'Failed to invalidate dashboard cache after issue creation');
+      // Invalidate caches (non-blocking)
+      Promise.all([
+        cacheService.invalidateTenant(tenantSlug, 'issues'),
+        dashboardService.invalidateCache(tenantSlug, 'issues')
+      ]).catch((err) => {
+        logger.warn({ err, tenantSlug }, 'Failed to invalidate cache after issue creation');
       });
 
       return this.findById(tenantSlug, issue.id) as Promise<Issue>;
@@ -370,9 +390,12 @@ export class IssueService {
 
     logger.info({ issueId: existing.id }, 'Issue updated');
 
-    // Invalidate dashboard cache (non-blocking)
-    dashboardService.invalidateCache(tenantSlug, 'issues').catch((err) => {
-      logger.warn({ err, tenantSlug }, 'Failed to invalidate dashboard cache after issue update');
+    // Invalidate caches (non-blocking)
+    Promise.all([
+      cacheService.invalidateTenant(tenantSlug, 'issues'),
+      dashboardService.invalidateCache(tenantSlug, 'issues')
+    ]).catch((err) => {
+      logger.warn({ err, tenantSlug }, 'Failed to invalidate cache after issue update');
     });
 
     return this.findById(tenantSlug, existing.id) as Promise<Issue>;
@@ -414,6 +437,12 @@ export class IssueService {
     }
 
     logger.info({ issueId: existing.id, assignedTo, assignedGroup }, 'Issue assigned');
+
+    // Invalidate cache (non-blocking)
+    cacheService.invalidateTenant(tenantSlug, 'issues').catch((err) => {
+      logger.warn({ err, tenantSlug }, 'Failed to invalidate cache after issue assignment');
+    });
+
     return this.findById(tenantSlug, existing.id) as Promise<Issue>;
   }
 
@@ -443,6 +472,12 @@ export class IssueService {
     );
 
     logger.info({ issueId: existing.id, from: existing.status, to: newStatus }, 'Issue status changed');
+
+    // Invalidate cache (non-blocking)
+    cacheService.invalidateTenant(tenantSlug, 'issues').catch((err) => {
+      logger.warn({ err, tenantSlug }, 'Failed to invalidate cache after status change');
+    });
+
     return this.findById(tenantSlug, existing.id) as Promise<Issue>;
   }
 
@@ -479,6 +514,12 @@ export class IssueService {
     );
 
     logger.info({ issueId: existing.id, resolutionCode }, 'Issue resolved');
+
+    // Invalidate cache (non-blocking)
+    cacheService.invalidateTenant(tenantSlug, 'issues').catch((err) => {
+      logger.warn({ err, tenantSlug }, 'Failed to invalidate cache after issue resolution');
+    });
+
     return this.findById(tenantSlug, existing.id) as Promise<Issue>;
   }
 
@@ -503,6 +544,12 @@ export class IssueService {
     );
 
     logger.info({ issueId: existing.id }, 'Issue closed');
+
+    // Invalidate cache (non-blocking)
+    cacheService.invalidateTenant(tenantSlug, 'issues').catch((err) => {
+      logger.warn({ err, tenantSlug }, 'Failed to invalidate cache after issue closure');
+    });
+
     return this.findById(tenantSlug, existing.id) as Promise<Issue>;
   }
 
@@ -524,6 +571,12 @@ export class IssueService {
     );
 
     logger.info({ issueId: existing.id, escalationLevel: existing.escalation_level + 1 }, 'Issue escalated');
+
+    // Invalidate cache (non-blocking)
+    cacheService.invalidateTenant(tenantSlug, 'issues').catch((err) => {
+      logger.warn({ err, tenantSlug }, 'Failed to invalidate cache after issue escalation');
+    });
+
     return this.findById(tenantSlug, existing.id) as Promise<Issue>;
   }
 
@@ -699,6 +752,11 @@ export class IssueService {
     );
 
     logger.info({ issueId, problemId, relationshipType }, 'Issue linked to problem');
+
+    // Invalidate cache (non-blocking)
+    cacheService.invalidateTenant(tenantSlug, 'issues').catch((err) => {
+      logger.warn({ err, tenantSlug }, 'Failed to invalidate cache after linking to problem');
+    });
   }
 
   // Unlink issue from problem
@@ -740,17 +798,30 @@ export class IssueService {
     );
 
     logger.info({ issueId, problemId }, 'Issue unlinked from problem');
+
+    // Invalidate cache (non-blocking)
+    cacheService.invalidateTenant(tenantSlug, 'issues').catch((err) => {
+      logger.warn({ err, tenantSlug }, 'Failed to invalidate cache after unlinking from problem');
+    });
   }
 
   // Categories
   async getCategories(tenantSlug: string): Promise<unknown[]> {
-    const schema = tenantService.getSchemaName(tenantSlug);
+    const cacheKey = `${tenantSlug}:issues:categories`;
 
-    const result = await pool.query(
-      `SELECT * FROM ${schema}.issue_categories WHERE is_active = true ORDER BY sort_order, name`
+    return cacheService.getOrSet(
+      cacheKey,
+      async () => {
+        const schema = tenantService.getSchemaName(tenantSlug);
+
+        const result = await pool.query(
+          `SELECT * FROM ${schema}.issue_categories WHERE is_active = true ORDER BY sort_order, name`
+        );
+
+        return result.rows;
+      },
+      { ttl: 900 } // 15 minutes - categories change very infrequently
     );
-
-    return result.rows;
   }
 }
 
