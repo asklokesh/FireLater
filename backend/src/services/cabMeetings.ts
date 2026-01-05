@@ -3,6 +3,7 @@ import { tenantService } from './tenant.js';
 import { NotFoundError, BadRequestError } from '../utils/errors.js';
 import { getOffset } from '../utils/pagination.js';
 import type { PaginationParams } from '../types/index.js';
+import { cacheService } from '../utils/cache.js';
 
 interface CabMeetingFilters {
   status?: string;
@@ -35,106 +36,122 @@ class CabMeetingService {
     pagination: PaginationParams,
     filters: CabMeetingFilters = {}
   ): Promise<{ meetings: unknown[]; total: number }> {
-    const schema = tenantService.getSchemaName(tenantSlug);
-    const offset = getOffset(pagination);
+    const cacheKey = `${tenantSlug}:cab:meetings:list:${JSON.stringify({ pagination, filters })}`;
 
-    let whereClause = 'WHERE 1=1';
-    const params: unknown[] = [];
-    let paramIndex = 1;
+    return cacheService.getOrSet(
+      cacheKey,
+      async () => {
+        const schema = tenantService.getSchemaName(tenantSlug);
+        const offset = getOffset(pagination);
 
-    if (filters.status) {
-      whereClause += ` AND m.status = $${paramIndex++}`;
-      params.push(filters.status);
-    }
+        let whereClause = 'WHERE 1=1';
+        const params: unknown[] = [];
+        let paramIndex = 1;
 
-    if (filters.organizerId) {
-      whereClause += ` AND m.organizer_id = $${paramIndex++}`;
-      params.push(filters.organizerId);
-    }
+        if (filters.status) {
+          whereClause += ` AND m.status = $${paramIndex++}`;
+          params.push(filters.status);
+        }
 
-    if (filters.fromDate) {
-      whereClause += ` AND m.meeting_date >= $${paramIndex++}`;
-      params.push(filters.fromDate);
-    }
+        if (filters.organizerId) {
+          whereClause += ` AND m.organizer_id = $${paramIndex++}`;
+          params.push(filters.organizerId);
+        }
 
-    if (filters.toDate) {
-      whereClause += ` AND m.meeting_date <= $${paramIndex++}`;
-      params.push(filters.toDate);
-    }
+        if (filters.fromDate) {
+          whereClause += ` AND m.meeting_date >= $${paramIndex++}`;
+          params.push(filters.fromDate);
+        }
 
-    const countQuery = `SELECT COUNT(*) FROM ${schema}.cab_meetings m ${whereClause}`;
-    const countResult = await pool.query(countQuery, params);
-    const total = parseInt(countResult.rows[0].count, 10);
+        if (filters.toDate) {
+          whereClause += ` AND m.meeting_date <= $${paramIndex++}`;
+          params.push(filters.toDate);
+        }
 
-    const query = `
-      SELECT m.*,
-             u.name as organizer_name,
-             u.email as organizer_email,
-             (SELECT COUNT(*) FROM ${schema}.cab_meeting_attendees WHERE meeting_id = m.id) as attendee_count,
-             (SELECT COUNT(*) FROM ${schema}.cab_meeting_changes WHERE meeting_id = m.id) as change_count
-      FROM ${schema}.cab_meetings m
-      LEFT JOIN ${schema}.users u ON m.organizer_id = u.id
-      ${whereClause}
-      ORDER BY m.meeting_date DESC
-      LIMIT $${paramIndex++} OFFSET $${paramIndex++}
-    `;
-    params.push(pagination.perPage, offset);
+        const countQuery = `SELECT COUNT(*) FROM ${schema}.cab_meetings m ${whereClause}`;
+        const countResult = await pool.query(countQuery, params);
+        const total = parseInt(countResult.rows[0].count, 10);
 
-    const result = await pool.query(query, params);
-    return { meetings: result.rows, total };
+        const query = `
+          SELECT m.*,
+                 u.name as organizer_name,
+                 u.email as organizer_email,
+                 (SELECT COUNT(*) FROM ${schema}.cab_meeting_attendees WHERE meeting_id = m.id) as attendee_count,
+                 (SELECT COUNT(*) FROM ${schema}.cab_meeting_changes WHERE meeting_id = m.id) as change_count
+          FROM ${schema}.cab_meetings m
+          LEFT JOIN ${schema}.users u ON m.organizer_id = u.id
+          ${whereClause}
+          ORDER BY m.meeting_date DESC
+          LIMIT $${paramIndex++} OFFSET $${paramIndex++}
+        `;
+        params.push(pagination.perPage, offset);
+
+        const result = await pool.query(query, params);
+        return { meetings: result.rows, total };
+      },
+      { ttl: 600 } // 10 minutes - meetings queried frequently, changed moderately
+    );
   }
 
   async getById(tenantSlug: string, meetingId: string): Promise<unknown> {
-    const schema = tenantService.getSchemaName(tenantSlug);
+    const cacheKey = `${tenantSlug}:cab:meeting:${meetingId}`;
 
-    // Support both UUID and meeting_number
-    const idColumn = meetingId.startsWith('CAB-') ? 'meeting_number' : 'id';
+    return cacheService.getOrSet(
+      cacheKey,
+      async () => {
+        const schema = tenantService.getSchemaName(tenantSlug);
 
-    const result = await pool.query(
-      `SELECT m.*,
-              u.name as organizer_name,
-              u.email as organizer_email
-       FROM ${schema}.cab_meetings m
-       LEFT JOIN ${schema}.users u ON m.organizer_id = u.id
-       WHERE m.${idColumn} = $1`,
-      [meetingId]
+        // Support both UUID and meeting_number
+        const idColumn = meetingId.startsWith('CAB-') ? 'meeting_number' : 'id';
+
+        const result = await pool.query(
+          `SELECT m.*,
+                  u.name as organizer_name,
+                  u.email as organizer_email
+           FROM ${schema}.cab_meetings m
+           LEFT JOIN ${schema}.users u ON m.organizer_id = u.id
+           WHERE m.${idColumn} = $1`,
+          [meetingId]
+        );
+
+        if (!result.rows[0]) {
+          throw new NotFoundError('CAB Meeting', meetingId);
+        }
+
+        const meeting = result.rows[0];
+
+        // Get attendees
+        const attendeesResult = await pool.query(
+          `SELECT a.*, u.name as user_name, u.email as user_email
+           FROM ${schema}.cab_meeting_attendees a
+           LEFT JOIN ${schema}.users u ON a.user_id = u.id
+           WHERE a.meeting_id = $1
+           ORDER BY a.role, u.name`,
+          [meeting.id]
+        );
+
+        // Get changes
+        const changesResult = await pool.query(
+          `SELECT mc.*,
+                  c.change_number, c.title as change_title, c.type as change_type,
+                  c.risk_level, c.status as change_status,
+                  req.name as requester_name
+           FROM ${schema}.cab_meeting_changes mc
+           LEFT JOIN ${schema}.change_requests c ON mc.change_id = c.id
+           LEFT JOIN ${schema}.users req ON c.requester_id = req.id
+           WHERE mc.meeting_id = $1
+           ORDER BY mc.sort_order`,
+          [meeting.id]
+        );
+
+        return {
+          ...meeting,
+          attendees: attendeesResult.rows,
+          changes: changesResult.rows,
+        };
+      },
+      { ttl: 600 } // 10 minutes
     );
-
-    if (!result.rows[0]) {
-      throw new NotFoundError('CAB Meeting', meetingId);
-    }
-
-    const meeting = result.rows[0];
-
-    // Get attendees
-    const attendeesResult = await pool.query(
-      `SELECT a.*, u.name as user_name, u.email as user_email
-       FROM ${schema}.cab_meeting_attendees a
-       LEFT JOIN ${schema}.users u ON a.user_id = u.id
-       WHERE a.meeting_id = $1
-       ORDER BY a.role, u.name`,
-      [meeting.id]
-    );
-
-    // Get changes
-    const changesResult = await pool.query(
-      `SELECT mc.*,
-              c.change_number, c.title as change_title, c.type as change_type,
-              c.risk_level, c.status as change_status,
-              req.name as requester_name
-       FROM ${schema}.cab_meeting_changes mc
-       LEFT JOIN ${schema}.change_requests c ON mc.change_id = c.id
-       LEFT JOIN ${schema}.users req ON c.requester_id = req.id
-       WHERE mc.meeting_id = $1
-       ORDER BY mc.sort_order`,
-      [meeting.id]
-    );
-
-    return {
-      ...meeting,
-      attendees: attendeesResult.rows,
-      changes: changesResult.rows,
-    };
   }
 
   async create(
@@ -178,6 +195,9 @@ class CabMeetingService {
        VALUES ($1, $2, 'chair', 'accepted')`,
       [result.rows[0].id, organizerId]
     );
+
+    // Invalidate cache
+    await cacheService.invalidateTenant(tenantSlug, 'cab');
 
     return result.rows[0];
   }
@@ -248,6 +268,9 @@ class CabMeetingService {
       values
     );
 
+    // Invalidate cache
+    await cacheService.invalidateTenant(tenantSlug, 'cab');
+
     return result.rows[0];
   }
 
@@ -262,6 +285,9 @@ class CabMeetingService {
     }
 
     await pool.query(`DELETE FROM ${schema}.cab_meetings WHERE id = $1`, [meeting.id]);
+
+    // Invalidate cache
+    await cacheService.invalidateTenant(tenantSlug, 'cab');
   }
 
   private async getMeetingById(tenantSlug: string, meetingId: string): Promise<{ id: string; status: string }> {
@@ -326,6 +352,9 @@ class CabMeetingService {
         [meeting.id, userId, role]
       );
 
+      // Invalidate cache (attendees included in getById)
+      await cacheService.invalidateTenant(tenantSlug, 'cab');
+
       return result.rows[0];
     } catch (error: unknown) {
       if ((error as { code?: string }).code === '23505') {
@@ -348,6 +377,9 @@ class CabMeetingService {
     if (result.rowCount === 0) {
       throw new NotFoundError('Attendee', userId);
     }
+
+    // Invalidate cache (attendees included in getById)
+    await cacheService.invalidateTenant(tenantSlug, 'cab');
   }
 
   async updateAttendeeStatus(
@@ -446,6 +478,9 @@ class CabMeetingService {
         [meeting.id, changeId, sortOrder, timeAllocated]
       );
 
+      // Invalidate cache (changes included in getById)
+      await cacheService.invalidateTenant(tenantSlug, 'cab');
+
       return result.rows[0];
     } catch (error: unknown) {
       if ((error as { code?: string }).code === '23505') {
@@ -468,6 +503,9 @@ class CabMeetingService {
     if (result.rowCount === 0) {
       throw new NotFoundError('Change in meeting agenda', changeId);
     }
+
+    // Invalidate cache (changes included in getById)
+    await cacheService.invalidateTenant(tenantSlug, 'cab');
   }
 
   async updateChange(
