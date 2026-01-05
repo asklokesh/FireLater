@@ -1,6 +1,7 @@
 import { pool } from '../config/database.js';
 import { tenantService } from './tenant.js';
 import { logger } from '../utils/logger.js';
+import { cacheService } from '../utils/cache.js';
 
 // ============================================
 // TYPES
@@ -66,92 +67,113 @@ export interface SlaStats {
 // POLICY MANAGEMENT
 // ============================================
 
+// Cache TTL for SLA policies (20 minutes - admin-configured, changes infrequently)
+const SLA_CACHE_TTL = 1200;
+
 export async function listSlaPolicies(
   tenantSlug: string,
   filters?: { entityType?: string; isActive?: boolean }
 ): Promise<SlaPolicyWithTargets[]> {
-  const schema = tenantService.getSchemaName(tenantSlug);
+  // Create cache key from tenant and filters
+  const filterKey = JSON.stringify(filters || {});
+  const cacheKey = `${tenantSlug}:sla:policies:${filterKey}`;
 
-  let query = `
-    SELECT id, name, description, entity_type, is_default, created_at, updated_at
-    FROM ${schema}.sla_policies
-    WHERE 1=1
-  `;
-  const params: any[] = [];
+  return cacheService.getOrSet(
+    cacheKey,
+    async () => {
+      const schema = tenantService.getSchemaName(tenantSlug);
 
-  if (filters?.entityType) {
-    params.push(filters.entityType);
-    query += ` AND entity_type = $${params.length}`;
-  }
+      let query = `
+        SELECT id, name, description, entity_type, is_default, created_at, updated_at
+        FROM ${schema}.sla_policies
+        WHERE 1=1
+      `;
+      const params: any[] = [];
 
-  // Note: is_active filter removed as column doesn't exist in database schema
-
-  query += ' ORDER BY entity_type, is_default DESC, name';
-
-  const result = await pool.query(query, params);
-  const policies = result.rows;
-
-  // Fetch targets for all policies
-  if (policies.length > 0) {
-    const policyIds = policies.map(p => p.id);
-    const targetsResult = await pool.query(`
-      SELECT id, policy_id, metric_type, priority, target_minutes, warning_threshold_percent, created_at, updated_at
-      FROM ${schema}.sla_targets
-      WHERE policy_id = ANY($1)
-      ORDER BY
-        CASE priority WHEN 'critical' THEN 1 WHEN 'high' THEN 2 WHEN 'medium' THEN 3 WHEN 'low' THEN 4 END,
-        metric_type
-    `, [policyIds]);
-
-    // Group targets by policy_id
-    const targetsByPolicy: Map<string, SlaTarget[]> = new Map();
-    for (const target of targetsResult.rows) {
-      if (!targetsByPolicy.has(target.policy_id)) {
-        targetsByPolicy.set(target.policy_id, []);
+      if (filters?.entityType) {
+        params.push(filters.entityType);
+        query += ` AND entity_type = $${params.length}`;
       }
-      targetsByPolicy.get(target.policy_id)!.push(target);
-    }
 
-    // Attach targets to policies
-    for (const policy of policies) {
-      policy.targets = targetsByPolicy.get(policy.id) || [];
-    }
-  }
+      // Note: is_active filter removed as column doesn't exist in database schema
 
-  return policies;
+      query += ' ORDER BY entity_type, is_default DESC, name';
+
+      const result = await pool.query(query, params);
+      const policies = result.rows;
+
+      // Fetch targets for all policies
+      if (policies.length > 0) {
+        const policyIds = policies.map(p => p.id);
+        const targetsResult = await pool.query(`
+          SELECT id, policy_id, metric_type, priority, target_minutes, warning_threshold_percent, created_at, updated_at
+          FROM ${schema}.sla_targets
+          WHERE policy_id = ANY($1)
+          ORDER BY
+            CASE priority WHEN 'critical' THEN 1 WHEN 'high' THEN 2 WHEN 'medium' THEN 3 WHEN 'low' THEN 4 END,
+            metric_type
+        `, [policyIds]);
+
+        // Group targets by policy_id
+        const targetsByPolicy: Map<string, SlaTarget[]> = new Map();
+        for (const target of targetsResult.rows) {
+          if (!targetsByPolicy.has(target.policy_id)) {
+            targetsByPolicy.set(target.policy_id, []);
+          }
+          targetsByPolicy.get(target.policy_id)!.push(target);
+        }
+
+        // Attach targets to policies
+        for (const policy of policies) {
+          policy.targets = targetsByPolicy.get(policy.id) || [];
+        }
+      }
+
+      return policies;
+    },
+    { ttl: SLA_CACHE_TTL }
+  );
 }
 
 export async function getSlaPolicy(
   tenantSlug: string,
   policyId: string
 ): Promise<SlaPolicyWithTargets | null> {
-  const schema = tenantService.getSchemaName(tenantSlug);
+  const cacheKey = `${tenantSlug}:sla:policy:${policyId}`;
 
-  // Get policy
-  const policyResult = await pool.query(`
-    SELECT id, name, description, entity_type, is_default, created_at, updated_at
-    FROM ${schema}.sla_policies
-    WHERE id = $1
-  `, [policyId]);
+  return cacheService.getOrSet(
+    cacheKey,
+    async () => {
+      const schema = tenantService.getSchemaName(tenantSlug);
 
-  if (policyResult.rows.length === 0) {
-    return null;
-  }
+      // Get policy
+      const policyResult = await pool.query(`
+        SELECT id, name, description, entity_type, is_default, created_at, updated_at
+        FROM ${schema}.sla_policies
+        WHERE id = $1
+      `, [policyId]);
 
-  // Get targets
-  const targetsResult = await pool.query(`
-    SELECT id, policy_id, metric_type, priority, target_minutes, warning_threshold_percent, created_at, updated_at
-    FROM ${schema}.sla_targets
-    WHERE policy_id = $1
-    ORDER BY
-      CASE priority WHEN 'critical' THEN 1 WHEN 'high' THEN 2 WHEN 'medium' THEN 3 WHEN 'low' THEN 4 END,
-      metric_type
-  `, [policyId]);
+      if (policyResult.rows.length === 0) {
+        return null;
+      }
 
-  return {
-    ...policyResult.rows[0],
-    targets: targetsResult.rows,
-  };
+      // Get targets
+      const targetsResult = await pool.query(`
+        SELECT id, policy_id, metric_type, priority, target_minutes, warning_threshold_percent, created_at, updated_at
+        FROM ${schema}.sla_targets
+        WHERE policy_id = $1
+        ORDER BY
+          CASE priority WHEN 'critical' THEN 1 WHEN 'high' THEN 2 WHEN 'medium' THEN 3 WHEN 'low' THEN 4 END,
+          metric_type
+      `, [policyId]);
+
+      return {
+        ...policyResult.rows[0],
+        targets: targetsResult.rows,
+      };
+    },
+    { ttl: SLA_CACHE_TTL }
+  );
 }
 
 export async function createSlaPolicy(
@@ -207,6 +229,9 @@ export async function createSlaPolicy(
     }
 
     await client.query('COMMIT');
+
+    // Invalidate SLA cache
+    await cacheService.invalidateTenant(tenantSlug, 'sla');
 
     logger.info({ tenantSlug, policyId: policy.id }, 'SLA policy created');
 
@@ -289,6 +314,9 @@ export async function updateSlaPolicy(
       return null;
     }
 
+    // Invalidate SLA cache
+    await cacheService.invalidateTenant(tenantSlug, 'sla');
+
     logger.info({ tenantSlug, policyId }, 'SLA policy updated');
 
     return result.rows[0];
@@ -320,6 +348,9 @@ export async function deleteSlaPolicy(
   `, [policyId]);
 
   if (result.rowCount && result.rowCount > 0) {
+    // Invalidate SLA cache
+    await cacheService.invalidateTenant(tenantSlug, 'sla');
+
     logger.info({ tenantSlug, policyId }, 'SLA policy deleted');
     return true;
   }
@@ -372,6 +403,9 @@ export async function updateSlaTarget(
     return null;
   }
 
+  // Invalidate SLA cache
+  await cacheService.invalidateTenant(tenantSlug, 'sla');
+
   logger.info({ tenantSlug, targetId }, 'SLA target updated');
 
   return result.rows[0];
@@ -395,6 +429,9 @@ export async function createSlaTarget(
     RETURNING *
   `, [policyId, data.metricType, data.priority, data.targetMinutes, data.warningThresholdPercent ?? 80]);
 
+  // Invalidate SLA cache
+  await cacheService.invalidateTenant(tenantSlug, 'sla');
+
   logger.info({ tenantSlug, policyId, targetId: result.rows[0].id }, 'SLA target created');
 
   return result.rows[0];
@@ -411,6 +448,9 @@ export async function deleteSlaTarget(
   `, [targetId]);
 
   if (result.rowCount && result.rowCount > 0) {
+    // Invalidate SLA cache
+    await cacheService.invalidateTenant(tenantSlug, 'sla');
+
     logger.info({ tenantSlug, targetId }, 'SLA target deleted');
     return true;
   }
@@ -532,43 +572,51 @@ export async function getSlaConfigFromDb(
   tenantSlug: string,
   entityType: 'issue' | 'problem' = 'issue'
 ): Promise<SlaConfigForBreachCheck[]> {
-  const schema = tenantService.getSchemaName(tenantSlug);
+  const cacheKey = `${tenantSlug}:sla:config:${entityType}`;
 
-  const result = await pool.query(`
-    SELECT
-      st.priority,
-      st.metric_type,
-      st.target_minutes,
-      st.warning_percent
-    FROM ${schema}.sla_targets st
-    JOIN ${schema}.sla_policies sp ON st.policy_id = sp.id
-    WHERE sp.entity_type = $1
-    AND sp.is_default = true
-    ORDER BY st.priority, st.metric_type
-  `, [entityType]);
+  return cacheService.getOrSet(
+    cacheKey,
+    async () => {
+      const schema = tenantService.getSchemaName(tenantSlug);
 
-  // Group by priority
-  const configMap: Map<string, SlaConfigForBreachCheck> = new Map();
+      const result = await pool.query(`
+        SELECT
+          st.priority,
+          st.metric_type,
+          st.target_minutes,
+          st.warning_percent
+        FROM ${schema}.sla_targets st
+        JOIN ${schema}.sla_policies sp ON st.policy_id = sp.id
+        WHERE sp.entity_type = $1
+        AND sp.is_default = true
+        ORDER BY st.priority, st.metric_type
+      `, [entityType]);
 
-  for (const row of result.rows) {
-    if (!configMap.has(row.priority)) {
-      configMap.set(row.priority, {
-        priority: row.priority,
-        responseTimeMinutes: 0,
-        resolutionTimeMinutes: 0,
-        warningThresholdPercent: row.warning_percent || 80,
-      });
-    }
+      // Group by priority
+      const configMap: Map<string, SlaConfigForBreachCheck> = new Map();
 
-    const config = configMap.get(row.priority)!;
-    if (row.metric_type === 'response_time') {
-      config.responseTimeMinutes = row.target_minutes;
-    } else if (row.metric_type === 'resolution_time') {
-      config.resolutionTimeMinutes = row.target_minutes;
-    }
-  }
+      for (const row of result.rows) {
+        if (!configMap.has(row.priority)) {
+          configMap.set(row.priority, {
+            priority: row.priority,
+            responseTimeMinutes: 0,
+            resolutionTimeMinutes: 0,
+            warningThresholdPercent: row.warning_percent || 80,
+          });
+        }
 
-  return Array.from(configMap.values());
+        const config = configMap.get(row.priority)!;
+        if (row.metric_type === 'response_time') {
+          config.responseTimeMinutes = row.target_minutes;
+        } else if (row.metric_type === 'resolution_time') {
+          config.resolutionTimeMinutes = row.target_minutes;
+        }
+      }
+
+      return Array.from(configMap.values());
+    },
+    { ttl: SLA_CACHE_TTL }
+  );
 }
 
 // Export service
