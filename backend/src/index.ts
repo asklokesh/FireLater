@@ -86,6 +86,32 @@ async function registerPlugins() {
     sessionPlugin: '@fastify/cookie',
   });
 
+  // API endpoint performance monitoring
+  const SLOW_ENDPOINT_THRESHOLD = parseInt(process.env.SLOW_ENDPOINT_THRESHOLD || '500', 10);
+
+  app.addHook('onRequest', async (request) => {
+    (request as any).startTime = Date.now();
+  });
+
+  app.addHook('onResponse', async (request, reply) => {
+    const startTime = (request as any).startTime;
+    if (!startTime) return;
+
+    const duration = Date.now() - startTime;
+    const shouldLog = process.env.NODE_ENV === 'production' || process.env.LOG_ENDPOINT_TIMINGS === 'true';
+
+    if (shouldLog && duration > SLOW_ENDPOINT_THRESHOLD) {
+      logger.warn({
+        method: request.method,
+        url: request.url,
+        statusCode: reply.statusCode,
+        duration,
+        ip: request.ip,
+        userAgent: request.headers['user-agent']
+      }, 'Slow endpoint detected');
+    }
+  });
+
   // CSRF protection hook for state-changing operations
   // Note: JWT bearer tokens already provide CSRF protection since browsers
   // cannot be forced to send custom Authorization headers cross-origin.
