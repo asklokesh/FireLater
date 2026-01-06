@@ -1,6 +1,7 @@
 import { pool } from '../config/database.js';
 import { NotFoundError, ConflictError } from '../utils/errors.js';
 import { logger } from '../utils/logger.js';
+import { cacheService } from '../utils/cache.js';
 import format from 'pg-format';
 
 interface CreateTenantParams {
@@ -27,20 +28,44 @@ interface Tenant {
 }
 
 export class TenantService {
+  /**
+   * Find tenant by slug
+   * Caches results for 10 minutes - called on virtually every API request
+   */
   async findBySlug(slug: string): Promise<Tenant | null> {
-    const result = await pool.query(
-      'SELECT * FROM tenants WHERE slug = $1',
-      [slug]
+    const cacheKey = `global:tenants:slug:${slug}`;
+
+    return cacheService.getOrSet(
+      cacheKey,
+      async () => {
+        const result = await pool.query(
+          'SELECT * FROM tenants WHERE slug = $1',
+          [slug]
+        );
+        return result.rows[0] || null;
+      },
+      { ttl: 600 } // 10 minutes - tenant data rarely changes
     );
-    return result.rows[0] || null;
   }
 
+  /**
+   * Find tenant by ID
+   * Caches results for 10 minutes
+   */
   async findById(id: string): Promise<Tenant | null> {
-    const result = await pool.query(
-      'SELECT * FROM tenants WHERE id = $1',
-      [id]
+    const cacheKey = `global:tenants:id:${id}`;
+
+    return cacheService.getOrSet(
+      cacheKey,
+      async () => {
+        const result = await pool.query(
+          'SELECT * FROM tenants WHERE id = $1',
+          [id]
+        );
+        return result.rows[0] || null;
+      },
+      { ttl: 600 } // 10 minutes - tenant data rarely changes
     );
-    return result.rows[0] || null;
   }
 
   async create(params: CreateTenantParams): Promise<Tenant> {
@@ -160,6 +185,9 @@ export class TenantService {
 
       await client.query('COMMIT');
 
+      // Invalidate tenant cache
+      await cacheService.invalidate('cache:global:tenants:*');
+
       logger.info({ tenantId: tenant.id, slug: params.slug }, 'Tenant created');
       return tenant;
     } catch (error) {
@@ -186,6 +214,12 @@ export class TenantService {
       await client.query('DELETE FROM tenants WHERE slug = $1', [slug]);
 
       await client.query('COMMIT');
+
+      // Invalidate tenant cache
+      await cacheService.invalidate('cache:global:tenants:*');
+      // Also invalidate any tenant-specific cache
+      await cacheService.invalidateTenant(slug);
+
       logger.info({ slug }, 'Tenant deleted');
     } catch (error) {
       await client.query('ROLLBACK');
@@ -302,6 +336,9 @@ export class TenantService {
       `UPDATE tenants SET ${setClauses.join(', ')} WHERE slug = $${paramIndex} RETURNING *`,
       values
     );
+
+    // Invalidate tenant cache
+    await cacheService.invalidate('cache:global:tenants:*');
 
     logger.info({ slug }, 'Tenant settings updated');
     return result.rows[0];
