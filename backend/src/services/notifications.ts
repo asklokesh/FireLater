@@ -2,6 +2,7 @@ import { pool } from '../config/database.js';
 import { tenantService } from './tenant.js';
 import { NotFoundError } from '../utils/errors.js';
 import { logger } from '../utils/logger.js';
+import { cacheService } from '../utils/cache.js';
 import type { PaginationParams } from '../types/index.js';
 import { getOffset } from '../utils/pagination.js';
 
@@ -165,14 +166,26 @@ export class NotificationService {
   }
 
   // Notification Channels
+  /**
+   * List notification channels
+   * Caches results for 15 minutes - channels are admin-configured and rarely change
+   */
   async listChannels(tenantSlug: string): Promise<NotificationChannel[]> {
-    const schema = tenantService.getSchemaName(tenantSlug);
+    const cacheKey = `${tenantSlug}:notifications:channels:list`;
 
-    const result = await pool.query(
-      `SELECT * FROM ${schema}.notification_channels WHERE is_active = true ORDER BY name`
+    return cacheService.getOrSet(
+      cacheKey,
+      async () => {
+        const schema = tenantService.getSchemaName(tenantSlug);
+
+        const result = await pool.query(
+          `SELECT * FROM ${schema}.notification_channels WHERE is_active = true ORDER BY name`
+        );
+
+        return result.rows;
+      },
+      { ttl: 900 } // 15 minutes - channels rarely change
     );
-
-    return result.rows;
   }
 
   async createChannel(tenantSlug: string, params: {
@@ -197,6 +210,9 @@ export class NotificationService {
         params.isDefault || false,
       ]
     );
+
+    // Invalidate cache
+    await cacheService.invalidateTenant(tenantSlug, 'notifications');
 
     return result.rows[0];
   }
@@ -249,6 +265,9 @@ export class NotificationService {
       throw new NotFoundError('Notification channel', channelId);
     }
 
+    // Invalidate cache
+    await cacheService.invalidateTenant(tenantSlug, 'notifications');
+
     return result.rows[0];
   }
 
@@ -281,26 +300,50 @@ export class NotificationService {
   }
 
   // Templates
+  /**
+   * List notification templates
+   * Caches results for 15 minutes - templates are admin-configured and rarely change
+   */
   async listTemplates(tenantSlug: string): Promise<NotificationTemplate[]> {
-    const schema = tenantService.getSchemaName(tenantSlug);
+    const cacheKey = `${tenantSlug}:notifications:templates:list`;
 
-    const result = await pool.query(
-      `SELECT * FROM ${schema}.notification_templates ORDER BY event_type, channel_type`
+    return cacheService.getOrSet(
+      cacheKey,
+      async () => {
+        const schema = tenantService.getSchemaName(tenantSlug);
+
+        const result = await pool.query(
+          `SELECT * FROM ${schema}.notification_templates ORDER BY event_type, channel_type`
+        );
+
+        return result.rows;
+      },
+      { ttl: 900 } // 15 minutes - templates rarely change
     );
-
-    return result.rows;
   }
 
+  /**
+   * Get notification template by event type and channel type
+   * Caches results for 15 minutes - called on every notification send
+   */
   async getTemplate(tenantSlug: string, eventType: string, channelType: string): Promise<NotificationTemplate | null> {
-    const schema = tenantService.getSchemaName(tenantSlug);
+    const cacheKey = `${tenantSlug}:notifications:template:${eventType}:${channelType}`;
 
-    const result = await pool.query(
-      `SELECT * FROM ${schema}.notification_templates
-       WHERE event_type = $1 AND channel_type = $2 AND is_active = true`,
-      [eventType, channelType]
+    return cacheService.getOrSet(
+      cacheKey,
+      async () => {
+        const schema = tenantService.getSchemaName(tenantSlug);
+
+        const result = await pool.query(
+          `SELECT * FROM ${schema}.notification_templates
+           WHERE event_type = $1 AND channel_type = $2 AND is_active = true`,
+          [eventType, channelType]
+        );
+
+        return result.rows[0] || null;
+      },
+      { ttl: 900 } // 15 minutes - templates rarely change
     );
-
-    return result.rows[0] || null;
   }
 
   async updateTemplate(tenantSlug: string, eventType: string, channelType: string, params: {
@@ -347,6 +390,9 @@ export class NotificationService {
     if (result.rows.length === 0) {
       throw new NotFoundError('Notification template', `${eventType}:${channelType}`);
     }
+
+    // Invalidate cache
+    await cacheService.invalidateTenant(tenantSlug, 'notifications');
 
     return result.rows[0];
   }
