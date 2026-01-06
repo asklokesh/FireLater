@@ -8,6 +8,7 @@ import { NotFoundError, BadRequestError } from '../utils/errors.js';
 import { getOffset } from '../utils/pagination.js';
 import { encryptCredentials, decryptCredentials } from '../jobs/processors/cloudSync.js';
 import { logger } from '../utils/logger.js';
+import { cacheService } from '../utils/cache.js';
 import type { PaginationParams } from '../types/index.js';
 
 // ============================================
@@ -32,52 +33,76 @@ interface CloudAccountData {
 }
 
 class CloudAccountService {
+  /**
+   * List cloud accounts
+   * Caches results for 10 minutes - cloud accounts are admin-configured
+   */
   async list(
     tenantSlug: string,
     pagination: PaginationParams,
     filters?: { provider?: string; status?: string }
   ): Promise<{ accounts: unknown[]; total: number }> {
-    const schema = tenantService.getSchemaName(tenantSlug);
-    const offset = getOffset(pagination);
+    const cacheKey = `${tenantSlug}:cloud:accounts:list:${JSON.stringify({ pagination, filters })}`;
 
-    let whereClause = '';
-    const values: unknown[] = [];
-    let paramIndex = 1;
+    return cacheService.getOrSet(
+      cacheKey,
+      async () => {
+        const schema = tenantService.getSchemaName(tenantSlug);
+        const offset = getOffset(pagination);
 
-    if (filters?.provider) {
-      whereClause += ` AND provider = $${paramIndex++}`;
-      values.push(filters.provider);
-    }
-    if (filters?.status) {
-      whereClause += ` AND status = $${paramIndex++}`;
-      values.push(filters.status);
-    }
+        let whereClause = '';
+        const values: unknown[] = [];
+        let paramIndex = 1;
 
-    const countResult = await pool.query(
-      `SELECT COUNT(*) FROM ${schema}.cloud_accounts WHERE 1=1 ${whereClause}`,
-      values
+        if (filters?.provider) {
+          whereClause += ` AND provider = $${paramIndex++}`;
+          values.push(filters.provider);
+        }
+        if (filters?.status) {
+          whereClause += ` AND status = $${paramIndex++}`;
+          values.push(filters.status);
+        }
+
+        const countResult = await pool.query(
+          `SELECT COUNT(*) FROM ${schema}.cloud_accounts WHERE 1=1 ${whereClause}`,
+          values
+        );
+        const total = parseInt(countResult.rows[0].count, 10);
+
+        values.push(pagination.perPage, offset);
+        const result = await pool.query(
+          `SELECT * FROM ${schema}.cloud_accounts
+           WHERE 1=1 ${whereClause}
+           ORDER BY created_at DESC
+           LIMIT $${paramIndex++} OFFSET $${paramIndex}`,
+          values
+        );
+
+        return { accounts: result.rows, total };
+      },
+      { ttl: 600 } // 10 minutes - cloud accounts rarely change
     );
-    const total = parseInt(countResult.rows[0].count, 10);
-
-    values.push(pagination.perPage, offset);
-    const result = await pool.query(
-      `SELECT * FROM ${schema}.cloud_accounts
-       WHERE 1=1 ${whereClause}
-       ORDER BY created_at DESC
-       LIMIT $${paramIndex++} OFFSET $${paramIndex}`,
-      values
-    );
-
-    return { accounts: result.rows, total };
   }
 
+  /**
+   * Find cloud account by ID
+   * Caches results for 10 minutes
+   */
   async findById(tenantSlug: string, id: string): Promise<unknown | null> {
-    const schema = tenantService.getSchemaName(tenantSlug);
-    const result = await pool.query(
-      `SELECT * FROM ${schema}.cloud_accounts WHERE id = $1`,
-      [id]
+    const cacheKey = `${tenantSlug}:cloud:account:${id}`;
+
+    return cacheService.getOrSet(
+      cacheKey,
+      async () => {
+        const schema = tenantService.getSchemaName(tenantSlug);
+        const result = await pool.query(
+          `SELECT * FROM ${schema}.cloud_accounts WHERE id = $1`,
+          [id]
+        );
+        return result.rows[0] || null;
+      },
+      { ttl: 600 } // 10 minutes
     );
-    return result.rows[0] || null;
   }
 
   async create(tenantSlug: string, data: CloudAccountData): Promise<unknown> {
@@ -123,6 +148,9 @@ class CloudAccountService {
         data.regions || null,
       ]
     );
+
+    // Invalidate cache
+    await cacheService.invalidateTenant(tenantSlug, 'cloud');
 
     // Remove encrypted credentials from response
     const account = result.rows[0];
@@ -186,6 +214,9 @@ class CloudAccountService {
       values
     );
 
+    // Invalidate cache
+    await cacheService.invalidateTenant(tenantSlug, 'cloud');
+
     return result.rows[0];
   }
 
@@ -198,6 +229,9 @@ class CloudAccountService {
     }
 
     await pool.query(`DELETE FROM ${schema}.cloud_accounts WHERE id = $1`, [id]);
+
+    // Invalidate cache
+    await cacheService.invalidateTenant(tenantSlug, 'cloud');
   }
 
   async updateSyncStatus(
@@ -691,15 +725,27 @@ class CloudCostService {
 // ============================================
 
 class CloudMappingRuleService {
+  /**
+   * List cloud mapping rules
+   * Caches results for 15 minutes - rules are admin-configured and rarely change
+   */
   async list(tenantSlug: string): Promise<unknown[]> {
-    const schema = tenantService.getSchemaName(tenantSlug);
-    const result = await pool.query(
-      `SELECT cmr.*, a.name as application_name
-       FROM ${schema}.cloud_resource_mapping_rules cmr
-       LEFT JOIN ${schema}.applications a ON cmr.application_id = a.id
-       ORDER BY priority ASC`
+    const cacheKey = `${tenantSlug}:cloud:mapping_rules:list`;
+
+    return cacheService.getOrSet(
+      cacheKey,
+      async () => {
+        const schema = tenantService.getSchemaName(tenantSlug);
+        const result = await pool.query(
+          `SELECT cmr.*, a.name as application_name
+           FROM ${schema}.cloud_resource_mapping_rules cmr
+           LEFT JOIN ${schema}.applications a ON cmr.application_id = a.id
+           ORDER BY priority ASC`
+        );
+        return result.rows;
+      },
+      { ttl: 900 } // 15 minutes - mapping rules rarely change
     );
-    return result.rows;
   }
 
   async create(
@@ -738,6 +784,9 @@ class CloudMappingRuleService {
       ]
     );
 
+    // Invalidate cache
+    await cacheService.invalidateTenant(tenantSlug, 'cloud');
+
     return result.rows[0];
   }
 
@@ -747,6 +796,9 @@ class CloudMappingRuleService {
       `DELETE FROM ${schema}.cloud_resource_mapping_rules WHERE id = $1`,
       [id]
     );
+
+    // Invalidate cache
+    await cacheService.invalidateTenant(tenantSlug, 'cloud');
   }
 
   async applyRules(tenantSlug: string): Promise<{ mapped: number }> {
