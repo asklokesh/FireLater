@@ -2,7 +2,15 @@ import { pool } from '../config/database.js';
 import { tenantService } from './tenant.js';
 import { NotFoundError } from '../utils/errors.js';
 import { getOffset } from '../utils/pagination.js';
+import { cacheService } from '../utils/cache.js';
 import type { PaginationParams } from '../types/index.js';
+
+// Cache TTLs (in seconds)
+const CACHE_TTL = {
+  config: 900, // 15 minutes - admin-configured, rarely changes
+  scores: 300, // 5 minutes - health scores update moderately
+  summary: 180, // 3 minutes - summary can be fresher for dashboards
+};
 
 interface HealthScoreConfig {
   tier: string;
@@ -26,20 +34,36 @@ interface HealthScoreConfig {
 
 class HealthScoreConfigService {
   async list(tenantSlug: string): Promise<unknown[]> {
-    const schema = tenantService.getSchemaName(tenantSlug);
-    const result = await pool.query(
-      `SELECT * FROM ${schema}.health_score_config ORDER BY tier_weight DESC`
+    const cacheKey = `${tenantSlug}:health:config:list`;
+
+    return cacheService.getOrSet(
+      cacheKey,
+      async () => {
+        const schema = tenantService.getSchemaName(tenantSlug);
+        const result = await pool.query(
+          `SELECT * FROM ${schema}.health_score_config ORDER BY tier_weight DESC`
+        );
+        return result.rows;
+      },
+      { ttl: CACHE_TTL.config }
     );
-    return result.rows;
   }
 
   async findByTier(tenantSlug: string, tier: string): Promise<HealthScoreConfig | null> {
-    const schema = tenantService.getSchemaName(tenantSlug);
-    const result = await pool.query(
-      `SELECT * FROM ${schema}.health_score_config WHERE tier = $1`,
-      [tier]
+    const cacheKey = `${tenantSlug}:health:config:tier:${tier}`;
+
+    return cacheService.getOrSet(
+      cacheKey,
+      async () => {
+        const schema = tenantService.getSchemaName(tenantSlug);
+        const result = await pool.query(
+          `SELECT * FROM ${schema}.health_score_config WHERE tier = $1`,
+          [tier]
+        );
+        return result.rows[0] as HealthScoreConfig || null;
+      },
+      { ttl: CACHE_TTL.config }
     );
-    return result.rows[0] as HealthScoreConfig || null;
   }
 
   async update(
@@ -61,7 +85,13 @@ class HealthScoreConfigService {
   ): Promise<unknown> {
     const schema = tenantService.getSchemaName(tenantSlug);
 
-    const existing = await this.findByTier(tenantSlug, tier);
+    // Bypass cache for existence check during update
+    const existResult = await pool.query(
+      `SELECT * FROM ${schema}.health_score_config WHERE tier = $1`,
+      [tier]
+    );
+    const existing = existResult.rows[0] as HealthScoreConfig || null;
+
     if (!existing) {
       throw new NotFoundError('Health score config', tier);
     }
@@ -102,6 +132,9 @@ class HealthScoreConfigService {
       `UPDATE ${schema}.health_score_config SET ${fields.join(', ')} WHERE tier = $${paramIndex} RETURNING *`,
       values
     );
+
+    // Invalidate health config cache
+    await cacheService.invalidateTenant(tenantSlug, 'health');
 
     return result.rows[0];
   }
@@ -234,6 +267,9 @@ class HealthScoreService {
         tier, tierWeight, scoreChange, trend,
       ]
     );
+
+    // Invalidate health scores cache after new score is calculated
+    await cacheService.invalidateTenant(tenantSlug, 'health');
 
     return result.rows[0];
   }
@@ -370,47 +406,63 @@ class HealthScoreService {
     tenantSlug: string,
     pagination: PaginationParams
   ): Promise<{ scores: unknown[]; total: number }> {
-    const schema = tenantService.getSchemaName(tenantSlug);
-    const offset = getOffset(pagination);
+    const cacheKey = `${tenantSlug}:health:scores:list:${JSON.stringify(pagination)}`;
 
-    // Get latest score per application
-    const countResult = await pool.query(
-      `SELECT COUNT(DISTINCT application_id) FROM ${schema}.app_health_scores`
+    return cacheService.getOrSet(
+      cacheKey,
+      async () => {
+        const schema = tenantService.getSchemaName(tenantSlug);
+        const offset = getOffset(pagination);
+
+        // Get latest score per application
+        const countResult = await pool.query(
+          `SELECT COUNT(DISTINCT application_id) FROM ${schema}.app_health_scores`
+        );
+        const total = parseInt(countResult.rows[0].count, 10);
+
+        const result = await pool.query(
+          `SELECT DISTINCT ON (h.application_id) h.*, a.name as application_name, a.tier
+           FROM ${schema}.app_health_scores h
+           JOIN ${schema}.applications a ON h.application_id = a.id
+           ORDER BY h.application_id, h.calculated_at DESC
+           LIMIT $1 OFFSET $2`,
+          [pagination.perPage, offset]
+        );
+
+        return { scores: result.rows, total };
+      },
+      { ttl: CACHE_TTL.scores }
     );
-    const total = parseInt(countResult.rows[0].count, 10);
-
-    const result = await pool.query(
-      `SELECT DISTINCT ON (h.application_id) h.*, a.name as application_name, a.tier
-       FROM ${schema}.app_health_scores h
-       JOIN ${schema}.applications a ON h.application_id = a.id
-       ORDER BY h.application_id, h.calculated_at DESC
-       LIMIT $1 OFFSET $2`,
-      [pagination.perPage, offset]
-    );
-
-    return { scores: result.rows, total };
   }
 
   async getSummary(tenantSlug: string): Promise<unknown> {
-    const schema = tenantService.getSchemaName(tenantSlug);
+    const cacheKey = `${tenantSlug}:health:summary`;
 
-    const result = await pool.query(
-      `WITH latest_scores AS (
-         SELECT DISTINCT ON (application_id) *
-         FROM ${schema}.app_health_scores
-         ORDER BY application_id, calculated_at DESC
-       )
-       SELECT
-         COUNT(*) as total_apps,
-         COUNT(*) FILTER (WHERE overall_score >= 90) as excellent,
-         COUNT(*) FILTER (WHERE overall_score >= 75 AND overall_score < 90) as good,
-         COUNT(*) FILTER (WHERE overall_score >= 50 AND overall_score < 75) as warning,
-         COUNT(*) FILTER (WHERE overall_score < 50) as critical,
-         AVG(overall_score) as average_score
-       FROM latest_scores`
+    return cacheService.getOrSet(
+      cacheKey,
+      async () => {
+        const schema = tenantService.getSchemaName(tenantSlug);
+
+        const result = await pool.query(
+          `WITH latest_scores AS (
+             SELECT DISTINCT ON (application_id) *
+             FROM ${schema}.app_health_scores
+             ORDER BY application_id, calculated_at DESC
+           )
+           SELECT
+             COUNT(*) as total_apps,
+             COUNT(*) FILTER (WHERE overall_score >= 90) as excellent,
+             COUNT(*) FILTER (WHERE overall_score >= 75 AND overall_score < 90) as good,
+             COUNT(*) FILTER (WHERE overall_score >= 50 AND overall_score < 75) as warning,
+             COUNT(*) FILTER (WHERE overall_score < 50) as critical,
+             AVG(overall_score) as average_score
+           FROM latest_scores`
+        );
+
+        return result.rows[0];
+      },
+      { ttl: CACHE_TTL.summary }
     );
-
-    return result.rows[0];
   }
 }
 
