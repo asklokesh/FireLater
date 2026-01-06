@@ -33,7 +33,7 @@ export class CacheService {
     const {
       ttl = DEFAULT_TTL,
       prefix = DEFAULT_PREFIX,
-      compress = false,
+      compress: _compress = false,
     } = options;
 
     const cacheKey = `${prefix}:${key}`;

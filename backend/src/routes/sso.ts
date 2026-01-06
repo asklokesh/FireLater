@@ -372,7 +372,7 @@ async function handleOIDCCallback(
   tenantSlug: string,
   provider: SSOProvider,
   code?: string,
-  state?: string
+  _state?: string
 ): Promise<any> {
   if (!code) {
     throw new BadRequestError('Authorization code not found');
@@ -570,8 +570,8 @@ async function createSSOSession(
  */
 function generateSAMLMetadata(
   config: SAMLConfig,
-  tenantSlug: string,
-  providerId: string
+  _tenantSlug: string,
+  _providerId: string
 ): string {
   const entityId = config.issuer;
   const acsUrl = config.callbackUrl;

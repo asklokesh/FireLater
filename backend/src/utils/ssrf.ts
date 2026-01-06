@@ -53,7 +53,7 @@ export async function validateUrlForSSRF(urlString: string): Promise<void> {
 
   try {
     parsedUrl = new URL(urlString);
-  } catch (error) {
+  } catch (_error) {
     throw new BadRequestError('Invalid URL format');
   }
 
@@ -116,7 +116,7 @@ export async function validateUrlForSSRF(urlString: string): Promise<void> {
           );
         }
       }
-    } catch (ipv6Error) {
+    } catch (_ipv6Error) {
       // Both IPv4 and IPv6 resolution failed
       if (error instanceof BadRequestError) {
         throw error;
@@ -148,7 +148,7 @@ export function validateUrlForSSRFSync(urlString: string): void {
 
   try {
     parsedUrl = new URL(urlString);
-  } catch (error) {
+  } catch (_error) {
     throw new BadRequestError('Invalid URL format');
   }
 

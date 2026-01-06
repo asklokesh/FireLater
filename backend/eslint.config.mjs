@@ -32,6 +32,10 @@ export default [
         caughtErrorsIgnorePattern: '^_',
       }],
       '@typescript-eslint/no-explicit-any': 'off', // Acceptable in backend APIs
+      '@typescript-eslint/ban-ts-comment': ['error', {
+        'ts-ignore': 'allow-with-description',
+        'ts-expect-error': 'allow-with-description',
+      }],
       'no-console': 'off',
       'no-undef': 'off', // TypeScript handles this better
     },

@@ -3,7 +3,7 @@ import { config } from '../config/index.js';
 
 const ALGORITHM = 'aes-256-gcm';
 const IV_LENGTH = 16;
-const AUTH_TAG_LENGTH = 16;
+const _AUTH_TAG_LENGTH = 16; // Used for documentation - auth tag is handled by crypto module
 
 function getEncryptionKey(): Buffer {
   const key = config.encryption?.key || process.env.ENCRYPTION_KEY;
@@ -64,7 +64,7 @@ export function decrypt(encryptedText: string): string {
     decrypted += decipher.final('utf8');
 
     return decrypted;
-  } catch (error) {
+  } catch (_error) {
     // If decryption fails, might be plain text - return as-is
     // In production, you might want to throw an error instead
     return encryptedText;
