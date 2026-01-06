@@ -5,6 +5,7 @@ import { notificationDeliveryService } from './notification-delivery.js';
 import { NotFoundError, BadRequestError, ForbiddenError } from '../utils/errors.js';
 import { logger } from '../utils/logger.js';
 import { getOffset } from '../utils/pagination.js';
+import { cacheService } from '../utils/cache.js';
 import type { PaginationParams } from '../types/index.js';
 
 // ============================================
@@ -67,113 +68,131 @@ interface ShiftSwapRequest {
 class ShiftSwapService {
   /**
    * List shift swap requests with filters
+   * Caches results for 5 minutes - shift swaps have moderate lifecycle changes
    */
   async list(
     tenantSlug: string,
     pagination: PaginationParams,
     filters: ShiftSwapFilters = {}
   ): Promise<{ swaps: unknown[]; total: number }> {
-    const schema = tenantService.getSchemaName(tenantSlug);
-    const offset = getOffset(pagination);
+    const cacheKey = `${tenantSlug}:shiftswaps:list:${JSON.stringify({ pagination, filters })}`;
 
-    let whereClause = 'WHERE 1=1';
-    const params: unknown[] = [];
-    let paramIndex = 1;
+    return cacheService.getOrSet(
+      cacheKey,
+      async () => {
+        const schema = tenantService.getSchemaName(tenantSlug);
+        const offset = getOffset(pagination);
 
-    if (filters.scheduleId) {
-      whereClause += ` AND s.schedule_id = $${paramIndex++}`;
-      params.push(filters.scheduleId);
-    }
+        let whereClause = 'WHERE 1=1';
+        const params: unknown[] = [];
+        let paramIndex = 1;
 
-    if (filters.status) {
-      whereClause += ` AND s.status = $${paramIndex++}`;
-      params.push(filters.status);
-    }
+        if (filters.scheduleId) {
+          whereClause += ` AND s.schedule_id = $${paramIndex++}`;
+          params.push(filters.scheduleId);
+        }
 
-    if (filters.requesterId) {
-      whereClause += ` AND s.requester_id = $${paramIndex++}`;
-      params.push(filters.requesterId);
-    }
+        if (filters.status) {
+          whereClause += ` AND s.status = $${paramIndex++}`;
+          params.push(filters.status);
+        }
 
-    if (filters.offeredToUserId) {
-      whereClause += ` AND s.offered_to_user_id = $${paramIndex++}`;
-      params.push(filters.offeredToUserId);
-    }
+        if (filters.requesterId) {
+          whereClause += ` AND s.requester_id = $${paramIndex++}`;
+          params.push(filters.requesterId);
+        }
 
-    if (filters.fromDate) {
-      whereClause += ` AND s.original_start >= $${paramIndex++}`;
-      params.push(filters.fromDate);
-    }
+        if (filters.offeredToUserId) {
+          whereClause += ` AND s.offered_to_user_id = $${paramIndex++}`;
+          params.push(filters.offeredToUserId);
+        }
 
-    if (filters.toDate) {
-      whereClause += ` AND s.original_end <= $${paramIndex++}`;
-      params.push(filters.toDate);
-    }
+        if (filters.fromDate) {
+          whereClause += ` AND s.original_start >= $${paramIndex++}`;
+          params.push(filters.fromDate);
+        }
 
-    const countQuery = `SELECT COUNT(*) FROM ${schema}.shift_swap_requests s ${whereClause}`;
-    const countResult = await pool.query(countQuery, params);
-    const total = parseInt(countResult.rows[0].count, 10);
+        if (filters.toDate) {
+          whereClause += ` AND s.original_end <= $${paramIndex++}`;
+          params.push(filters.toDate);
+        }
 
-    const query = `
-      SELECT s.*,
-             sched.name as schedule_name,
-             req.name as requester_name,
-             req.email as requester_email,
-             offered.name as offered_to_name,
-             offered.email as offered_to_email,
-             accepter.name as accepter_name,
-             accepter.email as accepter_email,
-             approver.name as approved_by_name
-      FROM ${schema}.shift_swap_requests s
-      LEFT JOIN ${schema}.oncall_schedules sched ON s.schedule_id = sched.id
-      LEFT JOIN ${schema}.users req ON s.requester_id = req.id
-      LEFT JOIN ${schema}.users offered ON s.offered_to_user_id = offered.id
-      LEFT JOIN ${schema}.users accepter ON s.accepter_id = accepter.id
-      LEFT JOIN ${schema}.users approver ON s.approved_by = approver.id
-      ${whereClause}
-      ORDER BY s.created_at DESC
-      LIMIT $${paramIndex++} OFFSET $${paramIndex++}
-    `;
-    params.push(pagination.perPage, offset);
+        const countQuery = `SELECT COUNT(*) FROM ${schema}.shift_swap_requests s ${whereClause}`;
+        const countResult = await pool.query(countQuery, params);
+        const total = parseInt(countResult.rows[0].count, 10);
 
-    const result = await pool.query(query, params);
-    return { swaps: result.rows, total };
+        const query = `
+          SELECT s.*,
+                 sched.name as schedule_name,
+                 req.name as requester_name,
+                 req.email as requester_email,
+                 offered.name as offered_to_name,
+                 offered.email as offered_to_email,
+                 accepter.name as accepter_name,
+                 accepter.email as accepter_email,
+                 approver.name as approved_by_name
+          FROM ${schema}.shift_swap_requests s
+          LEFT JOIN ${schema}.oncall_schedules sched ON s.schedule_id = sched.id
+          LEFT JOIN ${schema}.users req ON s.requester_id = req.id
+          LEFT JOIN ${schema}.users offered ON s.offered_to_user_id = offered.id
+          LEFT JOIN ${schema}.users accepter ON s.accepter_id = accepter.id
+          LEFT JOIN ${schema}.users approver ON s.approved_by = approver.id
+          ${whereClause}
+          ORDER BY s.created_at DESC
+          LIMIT $${paramIndex++} OFFSET $${paramIndex++}
+        `;
+        params.push(pagination.perPage, offset);
+
+        const result = await pool.query(query, params);
+        return { swaps: result.rows, total };
+      },
+      { ttl: 300 } // 5 minutes - shift swaps have moderate lifecycle changes
+    );
   }
 
   /**
    * Get a shift swap by ID
+   * Caches results for 5 minutes - individual swap detail pages
    */
   async getById(tenantSlug: string, swapId: string): Promise<unknown> {
-    const schema = tenantService.getSchemaName(tenantSlug);
+    const cacheKey = `${tenantSlug}:shiftswaps:swap:${swapId}`;
 
-    // Support both UUID and swap_number
-    const idColumn = swapId.startsWith('SWAP-') ? 'swap_number' : 'id';
+    return cacheService.getOrSet(
+      cacheKey,
+      async () => {
+        const schema = tenantService.getSchemaName(tenantSlug);
 
-    const result = await pool.query(
-      `SELECT s.*,
-              sched.name as schedule_name,
-              req.name as requester_name,
-              req.email as requester_email,
-              offered.name as offered_to_name,
-              offered.email as offered_to_email,
-              accepter.name as accepter_name,
-              accepter.email as accepter_email,
-              approver.name as approved_by_name
-       FROM ${schema}.shift_swap_requests s
-       LEFT JOIN ${schema}.oncall_schedules sched ON s.schedule_id = sched.id
-       LEFT JOIN ${schema}.users req ON s.requester_id = req.id
-       LEFT JOIN ${schema}.users offered ON s.offered_to_user_id = offered.id
-       LEFT JOIN ${schema}.users accepter ON s.accepter_id = accepter.id
-       LEFT JOIN ${schema}.users approver ON s.approved_by = approver.id
-       WHERE s.${idColumn} = $1`,
-      [swapId]
+        // Support both UUID and swap_number
+        const idColumn = swapId.startsWith('SWAP-') ? 'swap_number' : 'id';
+
+        const result = await pool.query(
+          `SELECT s.*,
+                  sched.name as schedule_name,
+                  req.name as requester_name,
+                  req.email as requester_email,
+                  offered.name as offered_to_name,
+                  offered.email as offered_to_email,
+                  accepter.name as accepter_name,
+                  accepter.email as accepter_email,
+                  approver.name as approved_by_name
+           FROM ${schema}.shift_swap_requests s
+           LEFT JOIN ${schema}.oncall_schedules sched ON s.schedule_id = sched.id
+           LEFT JOIN ${schema}.users req ON s.requester_id = req.id
+           LEFT JOIN ${schema}.users offered ON s.offered_to_user_id = offered.id
+           LEFT JOIN ${schema}.users accepter ON s.accepter_id = accepter.id
+           LEFT JOIN ${schema}.users approver ON s.approved_by = approver.id
+           WHERE s.${idColumn} = $1`,
+          [swapId]
+        );
+
+        if (!result.rows[0]) {
+          throw new NotFoundError('Shift Swap Request', swapId);
+        }
+
+        return result.rows[0];
+      },
+      { ttl: 300 } // 5 minutes
     );
-
-    if (!result.rows[0]) {
-      throw new NotFoundError('Shift Swap Request', swapId);
-    }
-
-    return result.rows[0];
   }
 
   /**
@@ -324,6 +343,9 @@ class ShiftSwapService {
       'Shift swap request created'
     );
 
+    // Invalidate cache
+    await cacheService.invalidateTenant(tenantSlug, 'shiftswaps');
+
     return this.getById(tenantSlug, result.rows[0].id);
   }
 
@@ -409,6 +431,9 @@ class ShiftSwapService {
 
     logger.info({ swapId: swap.id }, 'Shift swap request updated');
 
+    // Invalidate cache
+    await cacheService.invalidateTenant(tenantSlug, 'shiftswaps');
+
     return this.getById(tenantSlug, swapId);
   }
 
@@ -439,6 +464,9 @@ class ShiftSwapService {
     );
 
     logger.info({ swapId: swap.id, userId }, 'Shift swap request cancelled');
+
+    // Invalidate cache
+    await cacheService.invalidateTenant(tenantSlug, 'shiftswaps');
 
     return this.getById(tenantSlug, result.rows[0].id);
   }
@@ -529,6 +557,9 @@ class ShiftSwapService {
       'Shift swap request accepted'
     );
 
+    // Invalidate cache
+    await cacheService.invalidateTenant(tenantSlug, 'shiftswaps');
+
     // Send notification to requester
     try {
       const requester = await pool.query(
@@ -592,6 +623,9 @@ class ShiftSwapService {
       { swapId: swap.id, userId, requesterId: swap.requester_id },
       'Shift swap request rejected'
     );
+
+    // Invalidate cache
+    await cacheService.invalidateTenant(tenantSlug, 'shiftswaps');
 
     // Send notification to requester
     try {
@@ -689,6 +723,9 @@ class ShiftSwapService {
       'Shift swap request admin approved'
     );
 
+    // Invalidate cache
+    await cacheService.invalidateTenant(tenantSlug, 'shiftswaps');
+
     return this.getById(tenantSlug, swapId);
   }
 
@@ -720,6 +757,9 @@ class ShiftSwapService {
 
     logger.info({ swapId: swap.id }, 'Shift swap request completed');
 
+    // Invalidate cache
+    await cacheService.invalidateTenant(tenantSlug, 'shiftswaps');
+
     return this.getById(tenantSlug, result.rows[0].id);
   }
 
@@ -745,6 +785,8 @@ class ShiftSwapService {
         { tenantSlug, expiredCount },
         'Expired old shift swap requests'
       );
+      // Invalidate cache
+      await cacheService.invalidateTenant(tenantSlug, 'shiftswaps');
     }
 
     return expiredCount;
@@ -771,6 +813,8 @@ class ShiftSwapService {
         { tenantSlug, expiredCount },
         'Expired shift swap requests for passed shifts'
       );
+      // Invalidate cache
+      await cacheService.invalidateTenant(tenantSlug, 'shiftswaps');
     }
 
     return expiredCount;
