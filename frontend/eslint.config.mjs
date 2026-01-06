@@ -23,6 +23,18 @@ const eslintConfig = defineConfig([
         "caughtErrorsIgnorePattern": "^_"
       }]
     }
+  },
+  // Test file overrides - relax strict typing for mocks and test utilities
+  {
+    files: ["**/__tests__/**/*.{ts,tsx}", "**/*.test.{ts,tsx}", "**/*.spec.{ts,tsx}"],
+    rules: {
+      // Allow any in test files for flexible mocking
+      "@typescript-eslint/no-explicit-any": "off",
+      // Allow unused vars in tests (common for destructured values)
+      "@typescript-eslint/no-unused-vars": "off",
+      // Allow anonymous components in test mocks
+      "react/display-name": "off"
+    }
   }
 ]);
 
