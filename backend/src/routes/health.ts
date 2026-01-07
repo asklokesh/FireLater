@@ -1,8 +1,35 @@
 import { FastifyInstance } from 'fastify';
-// import { z } from 'zod';
+import { z } from 'zod';
 import { healthScoreConfigService, healthScoreService } from '../services/health.js';
 import { requirePermission } from '../middleware/auth.js';
 import { parsePagination, createPaginatedResponse } from '../utils/pagination.js';
+
+// Parameter validation schemas
+const tierParamSchema = z.object({
+  tier: z.enum(['P1', 'P2', 'P3', 'P4']),
+});
+
+const applicationIdParamSchema = z.object({
+  applicationId: z.string().uuid(),
+});
+
+// Query validation schemas
+const listScoresQuerySchema = z.object({
+  page: z.coerce.number().int().positive().optional(),
+  per_page: z.coerce.number().int().min(1).max(100).optional(),
+});
+
+const historyQuerySchema = z.object({
+  days: z.coerce.number().int().min(1).max(365).optional(),
+});
+
+// Update config schema
+const updateConfigSchema = z.object({
+  slaWeight: z.number().min(0).max(100).optional(),
+  issueWeight: z.number().min(0).max(100).optional(),
+  changeWeight: z.number().min(0).max(100).optional(),
+  incidentWeight: z.number().min(0).max(100).optional(),
+});
 
 export default async function healthRoutes(app: FastifyInstance) {
   // ============================================
@@ -23,13 +50,15 @@ export default async function healthRoutes(app: FastifyInstance) {
     preHandler: [requirePermission('health_scores:read')],
   }, async (request, reply) => {
     const { tenantSlug } = request.user;
-    const config = await healthScoreConfigService.findByTier(tenantSlug, request.params.tier);
+    const { tier } = tierParamSchema.parse(request.params);
+
+    const config = await healthScoreConfigService.findByTier(tenantSlug, tier);
 
     if (!config) {
       return reply.status(404).send({
         statusCode: 404,
         error: 'Not Found',
-        message: `Config for tier '${request.params.tier}' not found`,
+        message: `Config for tier '${tier}' not found`,
       });
     }
 
@@ -41,8 +70,10 @@ export default async function healthRoutes(app: FastifyInstance) {
     preHandler: [requirePermission('health_scores:manage')],
   }, async (request, reply) => {
     const { tenantSlug } = request.user;
-    const data = request.body as Record<string, number>;
-    const config = await healthScoreConfigService.update(tenantSlug, request.params.tier, data);
+    const { tier } = tierParamSchema.parse(request.params);
+    const data = updateConfigSchema.parse(request.body);
+
+    const config = await healthScoreConfigService.update(tenantSlug, tier, data);
     reply.send({ config });
   });
 
@@ -76,9 +107,11 @@ export default async function healthRoutes(app: FastifyInstance) {
     preHandler: [requirePermission('health_scores:read')],
   }, async (request, reply) => {
     const { tenantSlug } = request.user;
+    const { applicationId } = applicationIdParamSchema.parse(request.params);
+
     const score = await healthScoreService.getLatestForApplication(
       tenantSlug,
-      request.params.applicationId
+      applicationId
     );
     reply.send({ score });
   });
@@ -88,12 +121,13 @@ export default async function healthRoutes(app: FastifyInstance) {
     preHandler: [requirePermission('health_scores:read')],
   }, async (request, reply) => {
     const { tenantSlug } = request.user;
-    const days = request.query.days ? parseInt(request.query.days, 10) : 30;
+    const { applicationId } = applicationIdParamSchema.parse(request.params);
+    const { days } = historyQuerySchema.parse(request.query);
 
     const history = await healthScoreService.getHistoryForApplication(
       tenantSlug,
-      request.params.applicationId,
-      days
+      applicationId,
+      days ?? 30
     );
     reply.send({ history });
   });
@@ -103,10 +137,11 @@ export default async function healthRoutes(app: FastifyInstance) {
     preHandler: [requirePermission('health_scores:manage')],
   }, async (request, reply) => {
     const { tenantSlug, userId } = request.user;
+    const { applicationId } = applicationIdParamSchema.parse(request.params);
 
     const score = await healthScoreService.calculateForApplication(
       tenantSlug,
-      request.params.applicationId,
+      applicationId,
       userId
     );
     reply.status(201).send({ score });

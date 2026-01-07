@@ -338,12 +338,18 @@ export class UserService {
         [userId]
       );
 
-      // Assign new roles
-      for (const roleId of roleIds) {
+      // Assign new roles (batch insert - N+1 fix)
+      if (roleIds.length > 0) {
+        const values: unknown[] = [userId, grantedBy];
+        const valuePlaceholders = roleIds.map((_, idx) => {
+          values.push(roleIds[idx]);
+          return `($1, $${idx + 3}, $2)`;
+        }).join(', ');
+
         await client.query(
           `INSERT INTO ${schema}.user_roles (user_id, role_id, granted_by)
-           VALUES ($1, $2, $3)`,
-          [userId, roleId, grantedBy]
+           VALUES ${valuePlaceholders}`,
+          values
         );
       }
 

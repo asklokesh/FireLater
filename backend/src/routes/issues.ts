@@ -61,6 +61,26 @@ const worklogSchema = z.object({
   billable: z.boolean().optional(),
 });
 
+// Parameter validation schemas
+const issueIdParamSchema = z.object({
+  id: z.string().uuid(),
+});
+
+// Query parameter validation schema
+const listIssuesQuerySchema = z.object({
+  page: z.coerce.number().int().positive().optional(),
+  per_page: z.coerce.number().int().min(1).max(100).optional(),
+  status: z.enum(['new', 'assigned', 'in_progress', 'pending', 'resolved', 'closed']).optional(),
+  priority: z.enum(['critical', 'high', 'medium', 'low']).optional(),
+  assigned_to: z.string().uuid().optional(),
+  assigned_group: z.string().uuid().optional(),
+  application_id: z.string().uuid().optional(),
+  reporter_id: z.string().uuid().optional(),
+  search: z.string().max(200).optional(),
+  q: z.string().max(200).optional(),
+  sla_breached: z.enum(['true', 'false']).optional(),
+});
+
 export default async function issueRoutes(app: FastifyInstance) {
   // List issues
   app.get('/', {
@@ -68,17 +88,20 @@ export default async function issueRoutes(app: FastifyInstance) {
   }, async (request, reply) => {
     const { tenantSlug } = request.user;
     const query = request.query as Record<string, string>;
+
+    // Validate query parameters
+    const validatedQuery = listIssuesQuerySchema.parse(query);
     const pagination = parsePagination(query);
 
     const filters = {
-      status: query.status,
-      priority: query.priority,
-      assignedTo: query.assigned_to,
-      assignedGroup: query.assigned_group,
-      applicationId: query.application_id,
-      reporterId: query.reporter_id,
-      search: query.search || query.q,
-      slaBreached: query.sla_breached === 'true' ? true : query.sla_breached === 'false' ? false : undefined,
+      status: validatedQuery.status,
+      priority: validatedQuery.priority,
+      assignedTo: validatedQuery.assigned_to,
+      assignedGroup: validatedQuery.assigned_group,
+      applicationId: validatedQuery.application_id,
+      reporterId: validatedQuery.reporter_id,
+      search: validatedQuery.search || validatedQuery.q,
+      slaBreached: validatedQuery.sla_breached === 'true' ? true : validatedQuery.sla_breached === 'false' ? false : undefined,
     };
 
     const { issues, total } = await issueService.list(tenantSlug, pagination, filters);
@@ -90,13 +113,15 @@ export default async function issueRoutes(app: FastifyInstance) {
     preHandler: [requirePermission('issues:read')],
   }, async (request, reply) => {
     const { tenantSlug } = request.user;
-    const issue = await issueService.findById(tenantSlug, request.params.id);
+    const { id } = issueIdParamSchema.parse(request.params);
+
+    const issue = await issueService.findById(tenantSlug, id);
 
     if (!issue) {
       return reply.status(404).send({
         statusCode: 404,
         error: 'Not Found',
-        message: `Issue with id '${request.params.id}' not found`,
+        message: `Issue with id '${id}' not found`,
       });
     }
 
@@ -119,9 +144,10 @@ export default async function issueRoutes(app: FastifyInstance) {
     preHandler: [requirePermission('issues:update')],
   }, async (request, reply) => {
     const { tenantSlug, userId } = request.user;
+    const { id } = issueIdParamSchema.parse(request.params);
     const body = updateIssueSchema.parse(request.body);
 
-    const issue = await issueService.update(tenantSlug, request.params.id, body, userId);
+    const issue = await issueService.update(tenantSlug, id, body, userId);
     reply.send(issue);
   });
 
@@ -130,11 +156,12 @@ export default async function issueRoutes(app: FastifyInstance) {
     preHandler: [requirePermission('issues:assign')],
   }, async (request, reply) => {
     const { tenantSlug, userId } = request.user;
+    const { id } = issueIdParamSchema.parse(request.params);
     const body = assignSchema.parse(request.body);
 
     const issue = await issueService.assign(
       tenantSlug,
-      request.params.id,
+      id,
       body.assignedTo || null,
       body.assignedGroup || null,
       userId
@@ -147,8 +174,9 @@ export default async function issueRoutes(app: FastifyInstance) {
     preHandler: [requirePermission('issues:update')],
   }, async (request, reply) => {
     const { tenantSlug, userId } = request.user;
+    const { id } = issueIdParamSchema.parse(request.params);
 
-    const issue = await issueService.escalate(tenantSlug, request.params.id, userId);
+    const issue = await issueService.escalate(tenantSlug, id, userId);
     reply.send(issue);
   });
 
@@ -157,11 +185,12 @@ export default async function issueRoutes(app: FastifyInstance) {
     preHandler: [requirePermission('issues:resolve')],
   }, async (request, reply) => {
     const { tenantSlug, userId } = request.user;
+    const { id } = issueIdParamSchema.parse(request.params);
     const body = resolveSchema.parse(request.body);
 
     const issue = await issueService.resolve(
       tenantSlug,
-      request.params.id,
+      id,
       body.resolutionCode,
       body.resolutionNotes,
       userId
@@ -174,8 +203,9 @@ export default async function issueRoutes(app: FastifyInstance) {
     preHandler: [requirePermission('issues:update')],
   }, async (request, reply) => {
     const { tenantSlug, userId } = request.user;
+    const { id } = issueIdParamSchema.parse(request.params);
 
-    const issue = await issueService.close(tenantSlug, request.params.id, userId);
+    const issue = await issueService.close(tenantSlug, id, userId);
     reply.send(issue);
   });
 
@@ -184,8 +214,9 @@ export default async function issueRoutes(app: FastifyInstance) {
     preHandler: [requirePermission('issues:update')],
   }, async (request, reply) => {
     const { tenantSlug, userId } = request.user;
+    const { id } = issueIdParamSchema.parse(request.params);
 
-    const issue = await issueService.changeStatus(tenantSlug, request.params.id, 'in_progress', userId, 'Reopened');
+    const issue = await issueService.changeStatus(tenantSlug, id, 'in_progress', userId, 'Reopened');
     reply.send(issue);
   });
 
@@ -194,11 +225,12 @@ export default async function issueRoutes(app: FastifyInstance) {
     preHandler: [requirePermission('issues:update')],
   }, async (request, reply) => {
     const { tenantSlug, userId } = request.user;
+    const { id } = issueIdParamSchema.parse(request.params);
     const body = statusChangeSchema.parse(request.body);
 
     const issue = await issueService.changeStatus(
       tenantSlug,
-      request.params.id,
+      id,
       body.status,
       userId,
       body.reason
@@ -215,8 +247,9 @@ export default async function issueRoutes(app: FastifyInstance) {
     preHandler: [requirePermission('issues:read')],
   }, async (request, reply) => {
     const { tenantSlug } = request.user;
+    const { id } = issueIdParamSchema.parse(request.params);
 
-    const comments = await issueService.getComments(tenantSlug, request.params.id);
+    const comments = await issueService.getComments(tenantSlug, id);
     reply.send({ data: comments });
   });
 
@@ -225,11 +258,12 @@ export default async function issueRoutes(app: FastifyInstance) {
     preHandler: [requirePermission('issues:update')],
   }, async (request, reply) => {
     const { tenantSlug, userId } = request.user;
+    const { id } = issueIdParamSchema.parse(request.params);
     const body = commentSchema.parse(request.body);
 
     const comment = await issueService.addComment(
       tenantSlug,
-      request.params.id,
+      id,
       body.content,
       userId,
       body.isInternal
@@ -246,8 +280,9 @@ export default async function issueRoutes(app: FastifyInstance) {
     preHandler: [requirePermission('issues:read')],
   }, async (request, reply) => {
     const { tenantSlug } = request.user;
+    const { id } = issueIdParamSchema.parse(request.params);
 
-    const worklogs = await issueService.getWorklogs(tenantSlug, request.params.id);
+    const worklogs = await issueService.getWorklogs(tenantSlug, id);
     reply.send({ data: worklogs });
   });
 
@@ -256,11 +291,12 @@ export default async function issueRoutes(app: FastifyInstance) {
     preHandler: [requirePermission('issues:update')],
   }, async (request, reply) => {
     const { tenantSlug, userId } = request.user;
+    const { id } = issueIdParamSchema.parse(request.params);
     const body = worklogSchema.parse(request.body);
 
     const worklog = await issueService.addWorklog(
       tenantSlug,
-      request.params.id,
+      id,
       body.timeSpent,
       body.description,
       userId,
@@ -279,8 +315,9 @@ export default async function issueRoutes(app: FastifyInstance) {
     preHandler: [requirePermission('issues:read')],
   }, async (request, reply) => {
     const { tenantSlug } = request.user;
+    const { id } = issueIdParamSchema.parse(request.params);
 
-    const history = await issueService.getStatusHistory(tenantSlug, request.params.id);
+    const history = await issueService.getStatusHistory(tenantSlug, id);
     reply.send({ data: history });
   });
 
@@ -307,8 +344,9 @@ export default async function issueRoutes(app: FastifyInstance) {
     preHandler: [requirePermission('issues:read')],
   }, async (request, reply) => {
     const { tenantSlug } = request.user;
+    const { id } = issueIdParamSchema.parse(request.params);
 
-    const problem = await issueService.getLinkedProblem(tenantSlug, request.params.id);
+    const problem = await issueService.getLinkedProblem(tenantSlug, id);
     reply.send({ data: problem });
   });
 
@@ -317,6 +355,7 @@ export default async function issueRoutes(app: FastifyInstance) {
     preHandler: [requirePermission('issues:update')],
   }, async (request, reply) => {
     const { tenantSlug, userId } = request.user;
+    const { id } = issueIdParamSchema.parse(request.params);
     const body = z.object({
       problemId: z.string().uuid(),
       relationshipType: z.enum(['caused_by', 'related_to', 'duplicate_of']).optional(),
@@ -325,7 +364,7 @@ export default async function issueRoutes(app: FastifyInstance) {
 
     await issueService.linkToProblem(
       tenantSlug,
-      request.params.id,
+      id,
       body.problemId,
       userId,
       body.relationshipType,
@@ -339,8 +378,9 @@ export default async function issueRoutes(app: FastifyInstance) {
     preHandler: [requirePermission('issues:update')],
   }, async (request, reply) => {
     const { tenantSlug } = request.user;
+    const { id } = issueIdParamSchema.parse(request.params);
 
-    await issueService.unlinkFromProblem(tenantSlug, request.params.id);
+    await issueService.unlinkFromProblem(tenantSlug, id);
     reply.send({ success: true });
   });
 }

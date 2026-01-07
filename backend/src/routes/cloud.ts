@@ -62,6 +62,53 @@ const createMappingRuleSchema = z.object({
   environmentType: z.string().optional(),
 });
 
+// Parameter validation schemas
+const accountIdParamSchema = z.object({
+  id: z.string().uuid(),
+});
+
+const resourceIdParamSchema = z.object({
+  id: z.string().uuid(),
+});
+
+const applicationIdParamSchema = z.object({
+  applicationId: z.string().uuid(),
+});
+
+const mappingRuleIdParamSchema = z.object({
+  id: z.string().uuid(),
+});
+
+// Query validation schemas
+const listAccountsQuerySchema = z.object({
+  page: z.coerce.number().int().positive().optional(),
+  per_page: z.coerce.number().int().min(1).max(100).optional(),
+  provider: z.enum(['aws', 'azure', 'gcp']).optional(),
+  status: z.enum(['active', 'inactive', 'error']).optional(),
+});
+
+const listResourcesQuerySchema = z.object({
+  page: z.coerce.number().int().positive().optional(),
+  per_page: z.coerce.number().int().min(1).max(100).optional(),
+  cloud_account_id: z.string().uuid().optional(),
+  resource_type: z.string().max(100).optional(),
+  application_id: z.string().uuid().optional(),
+  environment_id: z.string().uuid().optional(),
+  region: z.string().max(50).optional(),
+  is_deleted: z.enum(['true', 'false']).optional(),
+});
+
+const listCostsQuerySchema = z.object({
+  page: z.coerce.number().int().positive().optional(),
+  per_page: z.coerce.number().int().min(1).max(100).optional(),
+  cloud_account_id: z.string().uuid().optional(),
+  period_type: z.enum(['daily', 'weekly', 'monthly']).optional(),
+});
+
+const applicationCostsQuerySchema = z.object({
+  period_type: z.enum(['daily', 'weekly', 'monthly']).optional(),
+});
+
 export default async function cloudRoutes(app: FastifyInstance) {
   // ============================================
   // CLOUD ACCOUNTS
@@ -73,11 +120,14 @@ export default async function cloudRoutes(app: FastifyInstance) {
   }, async (request, reply) => {
     const { tenantSlug } = request.user;
     const query = request.query as Record<string, string>;
+
+    // Validate query parameters
+    const validatedQuery = listAccountsQuerySchema.parse(query);
     const pagination = parsePagination(query);
 
     const { accounts, total } = await cloudAccountService.list(tenantSlug, pagination, {
-      provider: query.provider,
-      status: query.status,
+      provider: validatedQuery.provider,
+      status: validatedQuery.status,
     });
     reply.send(createPaginatedResponse(accounts, total, pagination));
   });
@@ -87,13 +137,15 @@ export default async function cloudRoutes(app: FastifyInstance) {
     preHandler: [requirePermission('cloud_accounts:read')],
   }, async (request, reply) => {
     const { tenantSlug } = request.user;
-    const account = await cloudAccountService.findById(tenantSlug, request.params.id);
+    const { id } = accountIdParamSchema.parse(request.params);
+
+    const account = await cloudAccountService.findById(tenantSlug, id);
 
     if (!account) {
       return reply.status(404).send({
         statusCode: 404,
         error: 'Not Found',
-        message: `Cloud account '${request.params.id}' not found`,
+        message: `Cloud account '${id}' not found`,
       });
     }
 
@@ -115,8 +167,10 @@ export default async function cloudRoutes(app: FastifyInstance) {
     preHandler: [requirePermission('cloud_accounts:manage')],
   }, async (request, reply) => {
     const { tenantSlug } = request.user;
+    const { id } = accountIdParamSchema.parse(request.params);
     const data = updateAccountSchema.parse(request.body);
-    const account = await cloudAccountService.update(tenantSlug, request.params.id, data);
+
+    const account = await cloudAccountService.update(tenantSlug, id, data);
     reply.send({ account });
   });
 
@@ -125,7 +179,9 @@ export default async function cloudRoutes(app: FastifyInstance) {
     preHandler: [requirePermission('cloud_accounts:manage')],
   }, async (request, reply) => {
     const { tenantSlug } = request.user;
-    await cloudAccountService.delete(tenantSlug, request.params.id);
+    const { id } = accountIdParamSchema.parse(request.params);
+
+    await cloudAccountService.delete(tenantSlug, id);
     reply.status(204).send();
   });
 
@@ -134,7 +190,9 @@ export default async function cloudRoutes(app: FastifyInstance) {
     preHandler: [requirePermission('cloud_accounts:manage')],
   }, async (request, reply) => {
     const { tenantSlug } = request.user;
-    const result = await cloudAccountService.testConnection(tenantSlug, request.params.id);
+    const { id } = accountIdParamSchema.parse(request.params);
+
+    const result = await cloudAccountService.testConnection(tenantSlug, id);
     reply.send(result);
   });
 
@@ -148,15 +206,18 @@ export default async function cloudRoutes(app: FastifyInstance) {
   }, async (request, reply) => {
     const { tenantSlug } = request.user;
     const query = request.query as Record<string, string>;
+
+    // Validate query parameters
+    const validatedQuery = listResourcesQuerySchema.parse(query);
     const pagination = parsePagination(query);
 
     const { resources, total } = await cloudResourceService.list(tenantSlug, pagination, {
-      cloudAccountId: query.cloud_account_id,
-      resourceType: query.resource_type,
-      applicationId: query.application_id,
-      environmentId: query.environment_id,
-      region: query.region,
-      isDeleted: query.is_deleted === 'true',
+      cloudAccountId: validatedQuery.cloud_account_id,
+      resourceType: validatedQuery.resource_type,
+      applicationId: validatedQuery.application_id,
+      environmentId: validatedQuery.environment_id,
+      region: validatedQuery.region,
+      isDeleted: validatedQuery.is_deleted === 'true',
     });
     reply.send(createPaginatedResponse(resources, total, pagination));
   });
@@ -175,13 +236,15 @@ export default async function cloudRoutes(app: FastifyInstance) {
     preHandler: [requirePermission('cloud_resources:read')],
   }, async (request, reply) => {
     const { tenantSlug } = request.user;
-    const resource = await cloudResourceService.findById(tenantSlug, request.params.id);
+    const { id } = resourceIdParamSchema.parse(request.params);
+
+    const resource = await cloudResourceService.findById(tenantSlug, id);
 
     if (!resource) {
       return reply.status(404).send({
         statusCode: 404,
         error: 'Not Found',
-        message: `Cloud resource '${request.params.id}' not found`,
+        message: `Cloud resource '${id}' not found`,
       });
     }
 
@@ -193,11 +256,12 @@ export default async function cloudRoutes(app: FastifyInstance) {
     preHandler: [requirePermission('cloud_resources:manage')],
   }, async (request, reply) => {
     const { tenantSlug } = request.user;
+    const { id } = resourceIdParamSchema.parse(request.params);
     const { applicationId, environmentId } = mapResourceSchema.parse(request.body);
 
     const resource = await cloudResourceService.mapToApplication(
       tenantSlug,
-      request.params.id,
+      id,
       applicationId,
       environmentId
     );
@@ -209,7 +273,9 @@ export default async function cloudRoutes(app: FastifyInstance) {
     preHandler: [requirePermission('cloud_resources:manage')],
   }, async (request, reply) => {
     const { tenantSlug } = request.user;
-    const resource = await cloudResourceService.unmapFromApplication(tenantSlug, request.params.id);
+    const { id } = resourceIdParamSchema.parse(request.params);
+
+    const resource = await cloudResourceService.unmapFromApplication(tenantSlug, id);
     reply.send({ resource });
   });
 
@@ -218,9 +284,11 @@ export default async function cloudRoutes(app: FastifyInstance) {
     preHandler: [requirePermission('cloud_resources:read')],
   }, async (request, reply) => {
     const { tenantSlug } = request.user;
+    const { applicationId } = applicationIdParamSchema.parse(request.params);
+
     const resources = await cloudResourceService.getResourcesByApplication(
       tenantSlug,
-      request.params.applicationId
+      applicationId
     );
     reply.send({ resources });
   });
@@ -235,11 +303,14 @@ export default async function cloudRoutes(app: FastifyInstance) {
   }, async (request, reply) => {
     const { tenantSlug } = request.user;
     const query = request.query as Record<string, string>;
+
+    // Validate query parameters
+    const validatedQuery = listCostsQuerySchema.parse(query);
     const pagination = parsePagination(query);
 
     const { costs, total } = await cloudCostService.getCostSummary(tenantSlug, pagination, {
-      cloudAccountId: query.cloud_account_id,
-      periodType: query.period_type,
+      cloudAccountId: validatedQuery.cloud_account_id,
+      periodType: validatedQuery.period_type,
     });
     reply.send(createPaginatedResponse(costs, total, pagination));
   });
@@ -249,11 +320,13 @@ export default async function cloudRoutes(app: FastifyInstance) {
     preHandler: [requirePermission('cloud_costs:read')],
   }, async (request, reply) => {
     const { tenantSlug } = request.user;
-    const periodType = request.query.period_type || 'monthly';
+    const { applicationId } = applicationIdParamSchema.parse(request.params);
+    const queryParams = applicationCostsQuerySchema.parse(request.query);
+    const periodType = queryParams.period_type || 'monthly';
 
     const costs = await cloudCostService.getCostsByApplication(
       tenantSlug,
-      request.params.applicationId,
+      applicationId,
       periodType
     );
     reply.send({ costs });
@@ -287,7 +360,9 @@ export default async function cloudRoutes(app: FastifyInstance) {
     preHandler: [requirePermission('cloud_resources:manage')],
   }, async (request, reply) => {
     const { tenantSlug } = request.user;
-    await cloudMappingRuleService.delete(tenantSlug, request.params.id);
+    const { id } = mappingRuleIdParamSchema.parse(request.params);
+
+    await cloudMappingRuleService.delete(tenantSlug, id);
     reply.status(204).send();
   });
 

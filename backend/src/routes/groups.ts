@@ -29,6 +29,25 @@ const addMemberSchema = z.object({
   role: z.enum(['member', 'lead']).optional(),
 });
 
+// Parameter validation schemas
+const groupIdParamSchema = z.object({
+  id: z.string().uuid(),
+});
+
+const groupMemberParamSchema = z.object({
+  id: z.string().uuid(),
+  userId: z.string().uuid(),
+});
+
+// Query parameter validation schema
+const listGroupsQuerySchema = z.object({
+  page: z.coerce.number().int().positive().optional(),
+  per_page: z.coerce.number().int().min(1).max(100).optional(),
+  type: z.enum(['team', 'department', 'distribution']).optional(),
+  search: z.string().max(200).optional(),
+  q: z.string().max(200).optional(),
+});
+
 export default async function groupRoutes(app: FastifyInstance) {
   // List groups
   app.get('/', {
@@ -36,11 +55,14 @@ export default async function groupRoutes(app: FastifyInstance) {
   }, async (request, reply) => {
     const { tenantSlug } = request.user;
     const query = request.query as Record<string, string>;
+
+    // Validate query parameters
+    const validatedQuery = listGroupsQuerySchema.parse(query);
     const pagination = parsePagination(query);
 
     const filters = {
-      type: query.type,
-      search: query.search || query.q,
+      type: validatedQuery.type,
+      search: validatedQuery.search || validatedQuery.q,
     };
 
     const { groups, total } = await groupService.list(tenantSlug, pagination, filters);
@@ -52,13 +74,15 @@ export default async function groupRoutes(app: FastifyInstance) {
     preHandler: [requirePermission('groups:read')],
   }, async (request, reply) => {
     const { tenantSlug } = request.user;
-    const group = await groupService.findById(tenantSlug, request.params.id);
+    const { id } = groupIdParamSchema.parse(request.params);
+
+    const group = await groupService.findById(tenantSlug, id);
 
     if (!group) {
       return reply.status(404).send({
         statusCode: 404,
         error: 'Not Found',
-        message: `Group with id '${request.params.id}' not found`,
+        message: `Group with id '${id}' not found`,
       });
     }
 
@@ -81,9 +105,10 @@ export default async function groupRoutes(app: FastifyInstance) {
     preHandler: [requirePermission('groups:update')],
   }, async (request, reply) => {
     const { tenantSlug, userId } = request.user;
+    const { id } = groupIdParamSchema.parse(request.params);
     const body = updateGroupSchema.parse(request.body);
 
-    const group = await groupService.update(tenantSlug, request.params.id, body, userId);
+    const group = await groupService.update(tenantSlug, id, body, userId);
     reply.send(group);
   });
 
@@ -92,8 +117,9 @@ export default async function groupRoutes(app: FastifyInstance) {
     preHandler: [requirePermission('groups:delete')],
   }, async (request, reply) => {
     const { tenantSlug, userId } = request.user;
+    const { id } = groupIdParamSchema.parse(request.params);
 
-    await groupService.delete(tenantSlug, request.params.id, userId);
+    await groupService.delete(tenantSlug, id, userId);
     reply.status(204).send();
   });
 
@@ -102,8 +128,9 @@ export default async function groupRoutes(app: FastifyInstance) {
     preHandler: [requirePermission('groups:read')],
   }, async (request, reply) => {
     const { tenantSlug } = request.user;
+    const { id } = groupIdParamSchema.parse(request.params);
 
-    const members = await groupService.getMembers(tenantSlug, request.params.id);
+    const members = await groupService.getMembers(tenantSlug, id);
     reply.send({ data: members });
   });
 
@@ -112,9 +139,10 @@ export default async function groupRoutes(app: FastifyInstance) {
     preHandler: [requirePermission('groups:update')],
   }, async (request, reply) => {
     const { tenantSlug, userId } = request.user;
+    const { id } = groupIdParamSchema.parse(request.params);
     const body = addMemberSchema.parse(request.body);
 
-    await groupService.addMember(tenantSlug, request.params.id, body.userId, body.role, userId);
+    await groupService.addMember(tenantSlug, id, body.userId, body.role, userId);
     reply.status(201).send({ message: 'Member added successfully' });
   });
 
@@ -123,8 +151,9 @@ export default async function groupRoutes(app: FastifyInstance) {
     preHandler: [requirePermission('groups:update')],
   }, async (request, reply) => {
     const { tenantSlug, userId } = request.user;
+    const params = groupMemberParamSchema.parse(request.params);
 
-    await groupService.removeMember(tenantSlug, request.params.id, request.params.userId, userId);
+    await groupService.removeMember(tenantSlug, params.id, params.userId, userId);
     reply.status(204).send();
   });
 }

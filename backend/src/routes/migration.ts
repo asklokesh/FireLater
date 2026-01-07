@@ -4,6 +4,7 @@
  */
 
 import { FastifyPluginAsync } from 'fastify';
+import { z } from 'zod';
 import { migrationService } from '../services/migration/index.js';
 import { authenticate } from '../middleware/auth.js';
 import { BadRequestError } from '../utils/errors.js';
@@ -13,6 +14,11 @@ import type {
   SourceSystem,
   EntityType,
 } from '../services/migration/types.js';
+
+// Parameter validation schemas
+const jobIdParamSchema = z.object({
+  jobId: z.string().uuid(),
+});
 
 const migrationRoutes: FastifyPluginAsync = async (fastify) => {
   // Upload and create migration job
@@ -181,8 +187,9 @@ const migrationRoutes: FastifyPluginAsync = async (fastify) => {
       },
     },
     async (request, reply) => {
+      const { jobId } = jobIdParamSchema.parse(request.params);
       const executeRequest: MigrationExecuteRequest = {
-        jobId: request.params.jobId,
+        jobId,
         mappingConfig: request.body.mappingConfig,
         continueOnError: request.body.continueOnError,
         batchSize: request.body.batchSize,
@@ -230,7 +237,8 @@ const migrationRoutes: FastifyPluginAsync = async (fastify) => {
       },
     },
     async (request, reply) => {
-      const job = await migrationService.getJobById(request.params.jobId);
+      const { jobId } = jobIdParamSchema.parse(request.params);
+      const job = await migrationService.getJobById(jobId);
       reply.send(job);
     }
   );

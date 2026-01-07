@@ -121,6 +121,30 @@ const updateItemSchema = z.object({
   metadata: z.record(z.union([z.string(), z.number(), z.boolean(), z.null()])).optional(),
 });
 
+// Parameter validation schemas
+const categoryIdParamSchema = z.object({
+  id: z.string().uuid(),
+});
+
+const itemIdParamSchema = z.object({
+  id: z.string().uuid(),
+});
+
+// Query parameter validation schemas
+const listCategoriesQuerySchema = z.object({
+  include_inactive: z.enum(['true', 'false']).optional(),
+});
+
+const listItemsQuerySchema = z.object({
+  page: z.coerce.number().int().positive().optional(),
+  per_page: z.coerce.number().int().min(1).max(100).optional(),
+  category_id: z.string().uuid().optional(),
+  search: z.string().max(200).optional(),
+  q: z.string().max(200).optional(),
+  is_active: z.enum(['true', 'false']).optional(),
+  tags: z.string().max(1000).optional(), // Comma-separated tags
+});
+
 export default async function catalogRoutes(app: FastifyInstance) {
   // ========================================
   // CATEGORIES
@@ -132,7 +156,10 @@ export default async function catalogRoutes(app: FastifyInstance) {
   }, async (request, reply) => {
     const { tenantSlug } = request.user;
     const query = request.query as Record<string, string>;
-    const includeInactive = query.include_inactive === 'true';
+
+    // Validate query parameters
+    const validatedQuery = listCategoriesQuerySchema.parse(query);
+    const includeInactive = validatedQuery.include_inactive === 'true';
 
     const categories = await catalogCategoryService.list(tenantSlug, includeInactive);
     reply.send({ data: categories });
@@ -143,13 +170,15 @@ export default async function catalogRoutes(app: FastifyInstance) {
     preHandler: [requirePermission('catalog:read')],
   }, async (request, reply) => {
     const { tenantSlug } = request.user;
-    const category = await catalogCategoryService.findById(tenantSlug, request.params.id);
+    const { id } = categoryIdParamSchema.parse(request.params);
+
+    const category = await catalogCategoryService.findById(tenantSlug, id);
 
     if (!category) {
       return reply.status(404).send({
         statusCode: 404,
         error: 'Not Found',
-        message: `Category with id '${request.params.id}' not found`,
+        message: `Category with id '${id}' not found`,
       });
     }
 
@@ -172,9 +201,10 @@ export default async function catalogRoutes(app: FastifyInstance) {
     preHandler: [requirePermission('catalog:update')],
   }, async (request, reply) => {
     const { tenantSlug, userId } = request.user;
+    const { id } = categoryIdParamSchema.parse(request.params);
     const body = updateCategorySchema.parse(request.body);
 
-    const category = await catalogCategoryService.update(tenantSlug, request.params.id, body, userId);
+    const category = await catalogCategoryService.update(tenantSlug, id, body, userId);
     reply.send(category);
   });
 
@@ -183,8 +213,9 @@ export default async function catalogRoutes(app: FastifyInstance) {
     preHandler: [requirePermission('catalog:delete')],
   }, async (request, reply) => {
     const { tenantSlug, userId } = request.user;
+    const { id } = categoryIdParamSchema.parse(request.params);
 
-    await catalogCategoryService.delete(tenantSlug, request.params.id, userId);
+    await catalogCategoryService.delete(tenantSlug, id, userId);
     reply.status(204).send();
   });
 
@@ -198,13 +229,16 @@ export default async function catalogRoutes(app: FastifyInstance) {
   }, async (request, reply) => {
     const { tenantSlug } = request.user;
     const query = request.query as Record<string, string>;
+
+    // Validate query parameters
+    const validatedQuery = listItemsQuerySchema.parse(query);
     const pagination = parsePagination(query);
 
     const filters = {
-      categoryId: query.category_id,
-      search: query.search || query.q,
-      isActive: query.is_active === 'true' ? true : query.is_active === 'false' ? false : undefined,
-      tags: query.tags ? query.tags.split(',') : undefined,
+      categoryId: validatedQuery.category_id,
+      search: validatedQuery.search || validatedQuery.q,
+      isActive: validatedQuery.is_active === 'true' ? true : validatedQuery.is_active === 'false' ? false : undefined,
+      tags: validatedQuery.tags ? validatedQuery.tags.split(',') : undefined,
     };
 
     const { items, total } = await catalogItemService.list(tenantSlug, pagination, filters);
@@ -216,13 +250,15 @@ export default async function catalogRoutes(app: FastifyInstance) {
     preHandler: [requirePermission('catalog:read')],
   }, async (request, reply) => {
     const { tenantSlug } = request.user;
-    const item = await catalogItemService.findById(tenantSlug, request.params.id);
+    const { id } = itemIdParamSchema.parse(request.params);
+
+    const item = await catalogItemService.findById(tenantSlug, id);
 
     if (!item) {
       return reply.status(404).send({
         statusCode: 404,
         error: 'Not Found',
-        message: `Catalog item with id '${request.params.id}' not found`,
+        message: `Catalog item with id '${id}' not found`,
       });
     }
 
@@ -245,9 +281,10 @@ export default async function catalogRoutes(app: FastifyInstance) {
     preHandler: [requirePermission('catalog:update')],
   }, async (request, reply) => {
     const { tenantSlug, userId } = request.user;
+    const { id } = itemIdParamSchema.parse(request.params);
     const body = updateItemSchema.parse(request.body);
 
-    const item = await catalogItemService.update(tenantSlug, request.params.id, body, userId);
+    const item = await catalogItemService.update(tenantSlug, id, body, userId);
     reply.send(item);
   });
 
@@ -256,8 +293,9 @@ export default async function catalogRoutes(app: FastifyInstance) {
     preHandler: [requirePermission('catalog:delete')],
   }, async (request, reply) => {
     const { tenantSlug, userId } = request.user;
+    const { id } = itemIdParamSchema.parse(request.params);
 
-    await catalogItemService.delete(tenantSlug, request.params.id, userId);
+    await catalogItemService.delete(tenantSlug, id, userId);
     reply.status(204).send();
   });
 }

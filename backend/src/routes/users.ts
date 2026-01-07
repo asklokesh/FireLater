@@ -27,6 +27,11 @@ const assignRolesSchema = z.object({
   roleIds: z.array(z.string().uuid()),
 });
 
+// Parameter validation schema
+const userIdParamSchema = z.object({
+  id: z.string().uuid(),
+});
+
 export default async function userRoutes(app: FastifyInstance) {
   // List users
   app.get('/', {
@@ -51,13 +56,14 @@ export default async function userRoutes(app: FastifyInstance) {
     preHandler: [requirePermission('users:read')],
   }, async (request, reply) => {
     const { tenantSlug } = request.user;
-    const user = await userService.findById(tenantSlug, request.params.id);
+    const { id } = userIdParamSchema.parse(request.params);
+    const user = await userService.findById(tenantSlug, id);
 
     if (!user) {
       return reply.status(404).send({
         statusCode: 404,
         error: 'Not Found',
-        message: `User with id '${request.params.id}' not found`,
+        message: `User with id '${id}' not found`,
       });
     }
 
@@ -80,9 +86,10 @@ export default async function userRoutes(app: FastifyInstance) {
     preHandler: [requirePermission('users:update')],
   }, async (request, reply) => {
     const { tenantSlug, userId } = request.user;
+    const { id } = userIdParamSchema.parse(request.params);
     const body = updateUserSchema.parse(request.body);
 
-    const user = await userService.update(tenantSlug, request.params.id, body, userId);
+    const user = await userService.update(tenantSlug, id, body, userId);
     reply.send(user);
   });
 
@@ -91,8 +98,9 @@ export default async function userRoutes(app: FastifyInstance) {
     preHandler: [requirePermission('users:delete')],
   }, async (request, reply) => {
     const { tenantSlug, userId } = request.user;
+    const { id } = userIdParamSchema.parse(request.params);
 
-    await userService.delete(tenantSlug, request.params.id, userId);
+    await userService.delete(tenantSlug, id, userId);
     reply.status(204).send();
   });
 
@@ -101,8 +109,9 @@ export default async function userRoutes(app: FastifyInstance) {
     preHandler: [requirePermission('users:read')],
   }, async (request, reply) => {
     const { tenantSlug } = request.user;
+    const { id } = userIdParamSchema.parse(request.params);
 
-    const groups = await userService.getUserGroups(tenantSlug, request.params.id);
+    const groups = await userService.getUserGroups(tenantSlug, id);
     reply.send({ data: groups });
   });
 
@@ -111,9 +120,10 @@ export default async function userRoutes(app: FastifyInstance) {
     preHandler: [requirePermission('users:update')],
   }, async (request, reply) => {
     const { tenantSlug, userId } = request.user;
+    const { id } = userIdParamSchema.parse(request.params);
     const body = assignRolesSchema.parse(request.body);
 
-    await userService.assignRoles(tenantSlug, request.params.id, body.roleIds, userId);
+    await userService.assignRoles(tenantSlug, id, body.roleIds, userId);
     reply.send({ message: 'Roles assigned successfully' });
   });
 }

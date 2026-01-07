@@ -18,6 +18,11 @@ const updateRoleSchema = z.object({
   permissionIds: z.array(z.string().uuid()).optional(),
 });
 
+// Parameter validation schema
+const roleIdParamSchema = z.object({
+  id: z.string().uuid(),
+});
+
 export default async function roleRoutes(app: FastifyInstance) {
   // List roles
   app.get('/', {
@@ -42,15 +47,16 @@ export default async function roleRoutes(app: FastifyInstance) {
     preHandler: [requirePermission('users:read')],
   }, async (request, reply) => {
     const { tenantSlug } = request.user;
+    const { id } = roleIdParamSchema.parse(request.params);
     const schema = tenantService.getSchemaName(tenantSlug);
 
     const roleResult = await pool.query(
       `SELECT * FROM ${schema}.roles WHERE id = $1`,
-      [request.params.id]
+      [id]
     );
 
     if (roleResult.rows.length === 0) {
-      throw new NotFoundError('Role', request.params.id);
+      throw new NotFoundError('Role', id);
     }
 
     const permissionsResult = await pool.query(
@@ -58,7 +64,7 @@ export default async function roleRoutes(app: FastifyInstance) {
        JOIN ${schema}.role_permissions rp ON p.id = rp.permission_id
        WHERE rp.role_id = $1
        ORDER BY p.resource, p.action`,
-      [request.params.id]
+      [id]
     );
 
     reply.send({
@@ -127,6 +133,7 @@ export default async function roleRoutes(app: FastifyInstance) {
     preHandler: [requireRole('admin')],
   }, async (request, reply) => {
     const { tenantSlug } = request.user;
+    const { id } = roleIdParamSchema.parse(request.params);
     const schema = tenantService.getSchemaName(tenantSlug);
     const body = updateRoleSchema.parse(request.body);
     const client = await pool.connect();
@@ -137,11 +144,11 @@ export default async function roleRoutes(app: FastifyInstance) {
       // Check if role exists and is not a system role
       const existingResult = await client.query(
         `SELECT * FROM ${schema}.roles WHERE id = $1`,
-        [request.params.id]
+        [id]
       );
 
       if (existingResult.rows.length === 0) {
-        throw new NotFoundError('Role', request.params.id);
+        throw new NotFoundError('Role', id);
       }
 
       const existing = existingResult.rows[0];
@@ -165,7 +172,7 @@ export default async function roleRoutes(app: FastifyInstance) {
       }
 
       if (updates.length > 0) {
-        values.push(request.params.id);
+        values.push(id);
         await client.query(
           `UPDATE ${schema}.roles SET ${updates.join(', ')} WHERE id = $${paramIndex}`,
           values
@@ -176,22 +183,22 @@ export default async function roleRoutes(app: FastifyInstance) {
       if (body.permissionIds && !existing.is_system) {
         await client.query(
           `DELETE FROM ${schema}.role_permissions WHERE role_id = $1`,
-          [request.params.id]
+          [id]
         );
 
         // Batch insert permissions (N+1 fix)
         if (body.permissionIds.length > 0) {
           const permissionIds = body.permissionIds; // Type narrowing
-          const values: unknown[] = [request.params.id];
+          const permValues: unknown[] = [id];
           const valuePlaceholders = permissionIds.map((_, idx) => {
-            values.push(permissionIds[idx]);
+            permValues.push(permissionIds[idx]);
             return `($1, $${idx + 2})`;
           }).join(', ');
 
           await client.query(
             `INSERT INTO ${schema}.role_permissions (role_id, permission_id)
              VALUES ${valuePlaceholders}`,
-            values
+            permValues
           );
         }
       }
@@ -201,7 +208,7 @@ export default async function roleRoutes(app: FastifyInstance) {
       // Fetch updated role
       const updatedResult = await pool.query(
         `SELECT * FROM ${schema}.roles WHERE id = $1`,
-        [request.params.id]
+        [id]
       );
 
       reply.send(updatedResult.rows[0]);
@@ -218,19 +225,20 @@ export default async function roleRoutes(app: FastifyInstance) {
     preHandler: [requireRole('admin')],
   }, async (request, reply) => {
     const { tenantSlug } = request.user;
+    const { id } = roleIdParamSchema.parse(request.params);
     const schema = tenantService.getSchemaName(tenantSlug);
 
     // Check if role exists and is not a system role
     const existingResult = await pool.query(
       `SELECT * FROM ${schema}.roles WHERE id = $1`,
-      [request.params.id]
+      [id]
     );
 
     if (existingResult.rows.length === 0) {
       return reply.status(404).send({
         statusCode: 404,
         error: 'Not Found',
-        message: `Role with id '${request.params.id}' not found`,
+        message: `Role with id '${id}' not found`,
       });
     }
 
@@ -246,7 +254,7 @@ export default async function roleRoutes(app: FastifyInstance) {
     // Delete role (cascade will handle role_permissions and user_roles)
     await pool.query(
       `DELETE FROM ${schema}.roles WHERE id = $1`,
-      [request.params.id]
+      [id]
     );
 
     reply.status(204).send();

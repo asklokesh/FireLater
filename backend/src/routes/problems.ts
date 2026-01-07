@@ -3,7 +3,6 @@ import { z } from 'zod';
 import { problemService } from '../services/problems.js';
 import { requirePermission } from '../middleware/auth.js';
 import { parsePagination, createPaginatedResponse } from '../utils/pagination.js';
-import { isValidUUID } from '../utils/errors.js';
 
 const createProblemSchema = z.object({
   title: z.string().min(5).max(500),
@@ -78,6 +77,32 @@ const linkIssueSchema = z.object({
   notes: z.string().max(1000).optional(),
 });
 
+// Parameter validation schemas
+const problemIdParamSchema = z.object({
+  id: z.string().uuid(),
+});
+
+const problemIssueParamSchema = z.object({
+  id: z.string().uuid(),
+  issueId: z.string().uuid(),
+});
+
+// Query parameter validation schema
+const listProblemsQuerySchema = z.object({
+  page: z.coerce.number().int().positive().optional(),
+  per_page: z.coerce.number().int().min(1).max(100).optional(),
+  status: z.enum(['new', 'assigned', 'investigating', 'root_cause_identified', 'known_error', 'resolved', 'closed']).optional(),
+  priority: z.enum(['critical', 'high', 'medium', 'low']).optional(),
+  assigned_to: z.string().uuid().optional(),
+  assigned_group: z.string().uuid().optional(),
+  application_id: z.string().uuid().optional(),
+  reporter_id: z.string().uuid().optional(),
+  search: z.string().max(200).optional(),
+  q: z.string().max(200).optional(),
+  is_known_error: z.enum(['true', 'false']).optional(),
+  problem_type: z.enum(['reactive', 'proactive']).optional(),
+});
+
 const costBreakdownSchema = z.object({
   labor_hours: z.number().min(0).optional(),
   labor_rate: z.number().min(0).optional(),
@@ -103,18 +128,21 @@ export default async function problemRoutes(app: FastifyInstance) {
   }, async (request, reply) => {
     const { tenantSlug } = request.user;
     const query = request.query as Record<string, string>;
+
+    // Validate query parameters
+    const validatedQuery = listProblemsQuerySchema.parse(query);
     const pagination = parsePagination(query);
 
     const filters = {
-      status: query.status,
-      priority: query.priority,
-      assignedTo: query.assigned_to,
-      assignedGroup: query.assigned_group,
-      applicationId: query.application_id,
-      reporterId: query.reporter_id,
-      search: query.search || query.q,
-      isKnownError: query.is_known_error === 'true' ? true : query.is_known_error === 'false' ? false : undefined,
-      problemType: query.problem_type,
+      status: validatedQuery.status,
+      priority: validatedQuery.priority,
+      assignedTo: validatedQuery.assigned_to,
+      assignedGroup: validatedQuery.assigned_group,
+      applicationId: validatedQuery.application_id,
+      reporterId: validatedQuery.reporter_id,
+      search: validatedQuery.search || validatedQuery.q,
+      isKnownError: validatedQuery.is_known_error === 'true' ? true : validatedQuery.is_known_error === 'false' ? false : undefined,
+      problemType: validatedQuery.problem_type,
     };
 
     const { problems, total } = await problemService.list(tenantSlug, pagination, filters);
@@ -125,18 +153,9 @@ export default async function problemRoutes(app: FastifyInstance) {
   app.get<{ Params: { id: string } }>('/:id', {
     preHandler: [requirePermission('problems:read')],
   }, async (request, reply) => {
-    const { id } = request.params;
-
-    // Validate UUID format
-    if (!isValidUUID(id)) {
-      return reply.status(404).send({
-        statusCode: 404,
-        error: 'Not Found',
-        message: `Problem with id '${id}' not found`,
-      });
-    }
-
     const { tenantSlug } = request.user;
+    const { id } = problemIdParamSchema.parse(request.params);
+
     const problem = await problemService.getById(tenantSlug, id);
     if (!problem) {
       return reply.status(404).send({
@@ -164,9 +183,10 @@ export default async function problemRoutes(app: FastifyInstance) {
     preHandler: [requirePermission('problems:update')],
   }, async (request, reply) => {
     const { tenantSlug, userId } = request.user;
+    const { id } = problemIdParamSchema.parse(request.params);
     const body = updateProblemSchema.parse(request.body);
 
-    const problem = await problemService.update(tenantSlug, request.params.id, body, userId);
+    const problem = await problemService.update(tenantSlug, id, body, userId);
     reply.send(problem);
   });
 
@@ -175,7 +195,9 @@ export default async function problemRoutes(app: FastifyInstance) {
     preHandler: [requirePermission('problems:delete')],
   }, async (request, reply) => {
     const { tenantSlug } = request.user;
-    await problemService.delete(tenantSlug, request.params.id);
+    const { id } = problemIdParamSchema.parse(request.params);
+
+    await problemService.delete(tenantSlug, id);
     reply.status(204).send();
   });
 
@@ -184,9 +206,10 @@ export default async function problemRoutes(app: FastifyInstance) {
     preHandler: [requirePermission('problems:update')],
   }, async (request, reply) => {
     const { tenantSlug, userId } = request.user;
+    const { id } = problemIdParamSchema.parse(request.params);
     const body = statusChangeSchema.parse(request.body);
 
-    const problem = await problemService.updateStatus(tenantSlug, request.params.id, body.status, userId, body.reason);
+    const problem = await problemService.updateStatus(tenantSlug, id, body.status, userId, body.reason);
     reply.send(problem);
   });
 
@@ -195,9 +218,10 @@ export default async function problemRoutes(app: FastifyInstance) {
     preHandler: [requirePermission('problems:assign')],
   }, async (request, reply) => {
     const { tenantSlug, userId } = request.user;
+    const { id } = problemIdParamSchema.parse(request.params);
     const body = assignSchema.parse(request.body);
 
-    const problem = await problemService.assign(tenantSlug, request.params.id, body.assigneeId, userId);
+    const problem = await problemService.assign(tenantSlug, id, body.assigneeId, userId);
     reply.send(problem);
   });
 
@@ -206,7 +230,9 @@ export default async function problemRoutes(app: FastifyInstance) {
     preHandler: [requirePermission('problems:read')],
   }, async (request, reply) => {
     const { tenantSlug } = request.user;
-    const comments = await problemService.getComments(tenantSlug, request.params.id);
+    const { id } = problemIdParamSchema.parse(request.params);
+
+    const comments = await problemService.getComments(tenantSlug, id);
     reply.send(comments);
   });
 
@@ -215,9 +241,10 @@ export default async function problemRoutes(app: FastifyInstance) {
     preHandler: [requirePermission('problems:update')],
   }, async (request, reply) => {
     const { tenantSlug, userId } = request.user;
+    const { id } = problemIdParamSchema.parse(request.params);
     const body = commentSchema.parse(request.body);
 
-    const result = await problemService.addComment(tenantSlug, request.params.id, userId, body.content, body.isInternal);
+    const result = await problemService.addComment(tenantSlug, id, userId, body.content, body.isInternal);
     reply.status(201).send(result);
   });
 
@@ -226,7 +253,9 @@ export default async function problemRoutes(app: FastifyInstance) {
     preHandler: [requirePermission('problems:read')],
   }, async (request, reply) => {
     const { tenantSlug } = request.user;
-    const worklogs = await problemService.getWorklogs(tenantSlug, request.params.id);
+    const { id } = problemIdParamSchema.parse(request.params);
+
+    const worklogs = await problemService.getWorklogs(tenantSlug, id);
     reply.send(worklogs);
   });
 
@@ -235,11 +264,12 @@ export default async function problemRoutes(app: FastifyInstance) {
     preHandler: [requirePermission('problems:update')],
   }, async (request, reply) => {
     const { tenantSlug, userId } = request.user;
+    const { id } = problemIdParamSchema.parse(request.params);
     const body = worklogSchema.parse(request.body);
 
     const result = await problemService.addWorklog(
       tenantSlug,
-      request.params.id,
+      id,
       userId,
       body.timeSpent,
       body.description,
@@ -253,7 +283,9 @@ export default async function problemRoutes(app: FastifyInstance) {
     preHandler: [requirePermission('problems:read')],
   }, async (request, reply) => {
     const { tenantSlug } = request.user;
-    const issues = await problemService.getLinkedIssues(tenantSlug, request.params.id);
+    const { id } = problemIdParamSchema.parse(request.params);
+
+    const issues = await problemService.getLinkedIssues(tenantSlug, id);
     reply.send(issues);
   });
 
@@ -262,11 +294,12 @@ export default async function problemRoutes(app: FastifyInstance) {
     preHandler: [requirePermission('problems:update')],
   }, async (request, reply) => {
     const { tenantSlug, userId } = request.user;
+    const { id } = problemIdParamSchema.parse(request.params);
     const body = linkIssueSchema.parse(request.body);
 
     await problemService.linkIssue(
       tenantSlug,
-      request.params.id,
+      id,
       body.issueId,
       userId,
       body.relationshipType,
@@ -280,7 +313,9 @@ export default async function problemRoutes(app: FastifyInstance) {
     preHandler: [requirePermission('problems:update')],
   }, async (request, reply) => {
     const { tenantSlug } = request.user;
-    await problemService.unlinkIssue(tenantSlug, request.params.id, request.params.issueId);
+    const { id, issueId } = problemIssueParamSchema.parse(request.params);
+
+    await problemService.unlinkIssue(tenantSlug, id, issueId);
     reply.status(204).send();
   });
 
@@ -289,7 +324,9 @@ export default async function problemRoutes(app: FastifyInstance) {
     preHandler: [requirePermission('problems:read')],
   }, async (request, reply) => {
     const { tenantSlug } = request.user;
-    const history = await problemService.getStatusHistory(tenantSlug, request.params.id);
+    const { id } = problemIdParamSchema.parse(request.params);
+
+    const history = await problemService.getStatusHistory(tenantSlug, id);
     reply.send(history);
   });
 
@@ -298,8 +335,9 @@ export default async function problemRoutes(app: FastifyInstance) {
     preHandler: [requirePermission('problems:update')],
   }, async (request, reply) => {
     const { tenantSlug, userId } = request.user;
+    const { id } = problemIdParamSchema.parse(request.params);
 
-    const problem = await problemService.updateStatus(tenantSlug, request.params.id, 'known_error', userId, 'Converted to known error');
+    const problem = await problemService.updateStatus(tenantSlug, id, 'known_error', userId, 'Converted to known error');
     reply.send(problem);
   });
 }

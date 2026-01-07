@@ -31,6 +31,28 @@ const updateTemplateSchema = z.object({
   isActive: z.boolean().optional(),
 });
 
+// Parameter validation schemas
+const notificationIdParamSchema = z.object({
+  id: z.string().uuid(),
+});
+
+const channelIdParamSchema = z.object({
+  id: z.string().uuid(),
+});
+
+const templateParamSchema = z.object({
+  eventType: z.string().min(1).max(100),
+  channelType: z.enum(['email', 'in_app', 'slack', 'webhook']),
+});
+
+// Query parameter validation schema
+const listNotificationsQuerySchema = z.object({
+  page: z.coerce.number().int().positive().optional(),
+  per_page: z.coerce.number().int().min(1).max(100).optional(),
+  unread: z.enum(['true', 'false']).optional(),
+  event_type: z.string().max(100).optional(),
+});
+
 export default async function notificationRoutes(app: FastifyInstance) {
   // Get current user's notifications
   app.get('/', {
@@ -38,11 +60,14 @@ export default async function notificationRoutes(app: FastifyInstance) {
   }, async (request, reply) => {
     const { tenantSlug, userId } = request.user;
     const query = request.query as Record<string, string>;
+
+    // Validate query parameters
+    const validatedQuery = listNotificationsQuerySchema.parse(query);
     const pagination = parsePagination(query);
 
     const filters = {
-      unreadOnly: query.unread === 'true',
-      eventType: query.event_type,
+      unreadOnly: validatedQuery.unread === 'true',
+      eventType: validatedQuery.event_type,
     };
 
     const { notifications, total } = await notificationService.list(tenantSlug, userId, pagination, filters);
@@ -64,8 +89,9 @@ export default async function notificationRoutes(app: FastifyInstance) {
     preHandler: [requirePermission('requests:read')],
   }, async (request, reply) => {
     const { tenantSlug, userId } = request.user;
+    const { id } = notificationIdParamSchema.parse(request.params);
 
-    const notification = await notificationService.markAsRead(tenantSlug, request.params.id, userId);
+    const notification = await notificationService.markAsRead(tenantSlug, id, userId);
     if (!notification) {
       return reply.status(404).send({
         statusCode: 404,
@@ -92,8 +118,9 @@ export default async function notificationRoutes(app: FastifyInstance) {
     preHandler: [requirePermission('requests:read')],
   }, async (request, reply) => {
     const { tenantSlug, userId } = request.user;
+    const { id } = notificationIdParamSchema.parse(request.params);
 
-    await notificationService.delete(tenantSlug, request.params.id, userId);
+    await notificationService.delete(tenantSlug, id, userId);
     reply.status(204).send();
   });
 
@@ -144,9 +171,10 @@ export default async function notificationRoutes(app: FastifyInstance) {
     preHandler: [requirePermission('settings:update')],
   }, async (request, reply) => {
     const { tenantSlug } = request.user;
+    const { id } = channelIdParamSchema.parse(request.params);
     const body = updateChannelSchema.parse(request.body);
 
-    const channel = await notificationService.updateChannel(tenantSlug, request.params.id, body);
+    const channel = await notificationService.updateChannel(tenantSlug, id, body);
     reply.send(channel);
   });
 
@@ -165,12 +193,13 @@ export default async function notificationRoutes(app: FastifyInstance) {
     preHandler: [requirePermission('settings:update')],
   }, async (request, reply) => {
     const { tenantSlug } = request.user;
+    const { eventType, channelType } = templateParamSchema.parse(request.params);
     const body = updateTemplateSchema.parse(request.body);
 
     const template = await notificationService.updateTemplate(
       tenantSlug,
-      request.params.eventType,
-      request.params.channelType,
+      eventType,
+      channelType,
       body
     );
     reply.send(template);

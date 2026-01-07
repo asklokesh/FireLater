@@ -177,6 +177,58 @@ const saveMinutesSchema = z.object({
   minutes: z.string().min(1).max(100000),
 });
 
+// Parameter validation schemas
+const idParamSchema = z.object({
+  id: z.string().uuid(),
+});
+
+const idTaskParamSchema = z.object({
+  id: z.string().uuid(),
+  taskId: z.string().uuid(),
+});
+
+const idUserParamSchema = z.object({
+  id: z.string().uuid(),
+  userId: z.string().uuid(),
+});
+
+const idChangeParamSchema = z.object({
+  id: z.string().uuid(),
+  changeId: z.string().uuid(),
+});
+
+// Query validation schemas
+const listQuerySchema = z.object({
+  page: z.coerce.number().int().positive().optional(),
+  per_page: z.coerce.number().int().min(1).max(100).optional(),
+  type: z.string().max(50).optional(),
+  status: z.string().max(50).optional(),
+});
+
+const listChangesQuerySchema = z.object({
+  page: z.coerce.number().int().positive().optional(),
+  per_page: z.coerce.number().int().min(1).max(100).optional(),
+  status: z.string().max(50).optional(),
+  type: z.string().max(50).optional(),
+  application_id: z.string().uuid().optional(),
+  requester_id: z.string().uuid().optional(),
+  implementer_id: z.string().uuid().optional(),
+  risk_level: z.string().max(50).optional(),
+});
+
+const upcomingQuerySchema = z.object({
+  days: z.coerce.number().int().min(1).max(365).optional(),
+});
+
+const cabMeetingsQuerySchema = z.object({
+  page: z.coerce.number().int().positive().optional(),
+  per_page: z.coerce.number().int().min(1).max(100).optional(),
+  status: z.string().max(50).optional(),
+  organizer_id: z.string().uuid().optional(),
+  from_date: z.string().optional(),
+  to_date: z.string().optional(),
+});
+
 export default async function changeRoutes(app: FastifyInstance) {
   // ========================================
   // CHANGE WINDOWS
@@ -216,13 +268,15 @@ export default async function changeRoutes(app: FastifyInstance) {
     preHandler: [requirePermission('changes:read')],
   }, async (request, reply) => {
     const { tenantSlug } = request.user;
-    const window = await changeWindowService.findById(tenantSlug, request.params.id);
+    const { id } = idParamSchema.parse(request.params);
+
+    const window = await changeWindowService.findById(tenantSlug, id);
 
     if (!window) {
       return reply.status(404).send({
         statusCode: 404,
         error: 'Not Found',
-        message: `Change window with id '${request.params.id}' not found`,
+        message: `Change window with id '${id}' not found`,
       });
     }
 
@@ -245,9 +299,10 @@ export default async function changeRoutes(app: FastifyInstance) {
     preHandler: [requirePermission('change_windows:manage')],
   }, async (request, reply) => {
     const { tenantSlug } = request.user;
+    const { id } = idParamSchema.parse(request.params);
     const body = updateWindowSchema.parse(request.body);
 
-    const window = await changeWindowService.update(tenantSlug, request.params.id, body);
+    const window = await changeWindowService.update(tenantSlug, id, body);
     reply.send(window);
   });
 
@@ -256,8 +311,9 @@ export default async function changeRoutes(app: FastifyInstance) {
     preHandler: [requirePermission('change_windows:manage')],
   }, async (request, reply) => {
     const { tenantSlug } = request.user;
+    const { id } = idParamSchema.parse(request.params);
 
-    await changeWindowService.delete(tenantSlug, request.params.id);
+    await changeWindowService.delete(tenantSlug, id);
     reply.status(204).send();
   });
 
@@ -282,13 +338,15 @@ export default async function changeRoutes(app: FastifyInstance) {
     preHandler: [requirePermission('changes:read')],
   }, async (request, reply) => {
     const { tenantSlug } = request.user;
-    const template = await changeTemplateService.findById(tenantSlug, request.params.id);
+    const { id } = idParamSchema.parse(request.params);
+
+    const template = await changeTemplateService.findById(tenantSlug, id);
 
     if (!template) {
       return reply.status(404).send({
         statusCode: 404,
         error: 'Not Found',
-        message: `Change template with id '${request.params.id}' not found`,
+        message: `Change template with id '${id}' not found`,
       });
     }
 
@@ -311,9 +369,10 @@ export default async function changeRoutes(app: FastifyInstance) {
     preHandler: [requirePermission('change_templates:manage')],
   }, async (request, reply) => {
     const { tenantSlug } = request.user;
+    const { id } = idParamSchema.parse(request.params);
     const body = updateTemplateSchema.parse(request.body);
 
-    const template = await changeTemplateService.update(tenantSlug, request.params.id, body);
+    const template = await changeTemplateService.update(tenantSlug, id, body);
     reply.send(template);
   });
 
@@ -322,8 +381,9 @@ export default async function changeRoutes(app: FastifyInstance) {
     preHandler: [requirePermission('change_templates:manage')],
   }, async (request, reply) => {
     const { tenantSlug } = request.user;
+    const { id } = idParamSchema.parse(request.params);
 
-    await changeTemplateService.delete(tenantSlug, request.params.id);
+    await changeTemplateService.delete(tenantSlug, id);
     reply.status(204).send();
   });
 
@@ -357,13 +417,15 @@ export default async function changeRoutes(app: FastifyInstance) {
     preHandler: [requirePermission('changes:read')],
   }, async (request, reply) => {
     const { tenantSlug } = request.user;
-    const change = await changeRequestService.findById(tenantSlug, request.params.id);
+    const { id } = idParamSchema.parse(request.params);
+
+    const change = await changeRequestService.findById(tenantSlug, id);
 
     if (!change) {
       return reply.status(404).send({
         statusCode: 404,
         error: 'Not Found',
-        message: `Change request with id '${request.params.id}' not found`,
+        message: `Change request with id '${id}' not found`,
       });
     }
 
@@ -386,9 +448,10 @@ export default async function changeRoutes(app: FastifyInstance) {
     preHandler: [requirePermission('changes:update')],
   }, async (request, reply) => {
     const { tenantSlug, userId } = request.user;
+    const { id } = idParamSchema.parse(request.params);
     const body = updateChangeSchema.parse(request.body);
 
-    const change = await changeRequestService.update(tenantSlug, request.params.id, body, userId);
+    const change = await changeRequestService.update(tenantSlug, id, body, userId);
     reply.send(change);
   });
 
@@ -397,9 +460,10 @@ export default async function changeRoutes(app: FastifyInstance) {
     preHandler: [requirePermission('changes:delete')],
   }, async (request, reply) => {
     const { tenantSlug, userId } = request.user;
+    const { id } = idParamSchema.parse(request.params);
     const body = request.body as { reason?: string } | undefined;
 
-    await changeRequestService.cancel(tenantSlug, request.params.id, userId, body?.reason);
+    await changeRequestService.cancel(tenantSlug, id, userId, body?.reason);
     reply.status(204).send();
   });
 
@@ -412,8 +476,9 @@ export default async function changeRoutes(app: FastifyInstance) {
     preHandler: [requirePermission('changes:update')],
   }, async (request, reply) => {
     const { tenantSlug, userId } = request.user;
+    const { id } = idParamSchema.parse(request.params);
 
-    const change = await changeRequestService.submit(tenantSlug, request.params.id, userId);
+    const change = await changeRequestService.submit(tenantSlug, id, userId);
     reply.send(change);
   });
 
@@ -422,11 +487,12 @@ export default async function changeRoutes(app: FastifyInstance) {
     preHandler: [requirePermission('changes:approve')],
   }, async (request, reply) => {
     const { tenantSlug, userId } = request.user;
+    const { id } = idParamSchema.parse(request.params);
     const body = request.body as { comments?: string } | undefined;
 
     const change = await changeRequestService.approve(
       tenantSlug,
-      request.params.id,
+      id,
       userId,
       body?.comments
     );
@@ -438,9 +504,10 @@ export default async function changeRoutes(app: FastifyInstance) {
     preHandler: [requirePermission('changes:approve')],
   }, async (request, reply) => {
     const { tenantSlug, userId } = request.user;
+    const { id } = idParamSchema.parse(request.params);
     const body = z.object({ reason: z.string().min(1).max(2000) }).parse(request.body);
 
-    const change = await changeRequestService.reject(tenantSlug, request.params.id, userId, body.reason);
+    const change = await changeRequestService.reject(tenantSlug, id, userId, body.reason);
     reply.send(change);
   });
 
@@ -449,11 +516,12 @@ export default async function changeRoutes(app: FastifyInstance) {
     preHandler: [requirePermission('changes:update')],
   }, async (request, reply) => {
     const { tenantSlug, userId } = request.user;
+    const { id } = idParamSchema.parse(request.params);
     const body = request.body as { plannedStart?: string; plannedEnd?: string } | undefined;
 
     const change = await changeRequestService.schedule(
       tenantSlug,
-      request.params.id,
+      id,
       userId,
       body?.plannedStart,
       body?.plannedEnd
@@ -466,8 +534,9 @@ export default async function changeRoutes(app: FastifyInstance) {
     preHandler: [requirePermission('changes:implement')],
   }, async (request, reply) => {
     const { tenantSlug, userId } = request.user;
+    const { id } = idParamSchema.parse(request.params);
 
-    const change = await changeRequestService.start(tenantSlug, request.params.id, userId);
+    const change = await changeRequestService.start(tenantSlug, id, userId);
     reply.send(change);
   });
 
@@ -476,11 +545,12 @@ export default async function changeRoutes(app: FastifyInstance) {
     preHandler: [requirePermission('changes:implement')],
   }, async (request, reply) => {
     const { tenantSlug, userId } = request.user;
+    const { id } = idParamSchema.parse(request.params);
     const body = request.body as { outcomeNotes?: string } | undefined;
 
     const change = await changeRequestService.complete(
       tenantSlug,
-      request.params.id,
+      id,
       userId,
       body?.outcomeNotes
     );
@@ -492,11 +562,12 @@ export default async function changeRoutes(app: FastifyInstance) {
     preHandler: [requirePermission('changes:implement')],
   }, async (request, reply) => {
     const { tenantSlug, userId } = request.user;
+    const { id } = idParamSchema.parse(request.params);
     const body = z.object({ outcomeNotes: z.string().min(1).max(5000) }).parse(request.body);
 
     const change = await changeRequestService.fail(
       tenantSlug,
-      request.params.id,
+      id,
       userId,
       body.outcomeNotes
     );
@@ -508,11 +579,12 @@ export default async function changeRoutes(app: FastifyInstance) {
     preHandler: [requirePermission('changes:implement')],
   }, async (request, reply) => {
     const { tenantSlug, userId } = request.user;
+    const { id } = idParamSchema.parse(request.params);
     const body = z.object({ outcomeNotes: z.string().min(1).max(5000) }).parse(request.body);
 
     const change = await changeRequestService.rollback(
       tenantSlug,
-      request.params.id,
+      id,
       userId,
       body.outcomeNotes
     );
@@ -528,8 +600,9 @@ export default async function changeRoutes(app: FastifyInstance) {
     preHandler: [requirePermission('changes:read')],
   }, async (request, reply) => {
     const { tenantSlug } = request.user;
+    const { id } = idParamSchema.parse(request.params);
 
-    const approvals = await changeRequestService.getApprovals(tenantSlug, request.params.id);
+    const approvals = await changeRequestService.getApprovals(tenantSlug, id);
     reply.send({ data: approvals });
   });
 
@@ -542,8 +615,9 @@ export default async function changeRoutes(app: FastifyInstance) {
     preHandler: [requirePermission('changes:read')],
   }, async (request, reply) => {
     const { tenantSlug } = request.user;
+    const { id } = idParamSchema.parse(request.params);
 
-    const history = await changeRequestService.getStatusHistory(tenantSlug, request.params.id);
+    const history = await changeRequestService.getStatusHistory(tenantSlug, id);
     reply.send({ data: history });
   });
 
@@ -556,8 +630,9 @@ export default async function changeRoutes(app: FastifyInstance) {
     preHandler: [requirePermission('changes:read')],
   }, async (request, reply) => {
     const { tenantSlug } = request.user;
+    const { id } = idParamSchema.parse(request.params);
 
-    const tasks = await changeRequestService.getTasks(tenantSlug, request.params.id);
+    const tasks = await changeRequestService.getTasks(tenantSlug, id);
     reply.send({ data: tasks });
   });
 
@@ -566,9 +641,10 @@ export default async function changeRoutes(app: FastifyInstance) {
     preHandler: [requirePermission('changes:update')],
   }, async (request, reply) => {
     const { tenantSlug } = request.user;
+    const { id } = idParamSchema.parse(request.params);
     const body = createTaskSchema.parse(request.body);
 
-    const task = await changeRequestService.createTask(tenantSlug, request.params.id, body);
+    const task = await changeRequestService.createTask(tenantSlug, id, body);
     reply.status(201).send(task);
   });
 
@@ -577,12 +653,13 @@ export default async function changeRoutes(app: FastifyInstance) {
     preHandler: [requirePermission('changes:update')],
   }, async (request, reply) => {
     const { tenantSlug } = request.user;
+    const { id, taskId } = idTaskParamSchema.parse(request.params);
     const body = updateTaskSchema.parse(request.body);
 
     const task = await changeRequestService.updateTask(
       tenantSlug,
-      request.params.id,
-      request.params.taskId,
+      id,
+      taskId,
       body
     );
     reply.send(task);
@@ -593,11 +670,12 @@ export default async function changeRoutes(app: FastifyInstance) {
     preHandler: [requirePermission('changes:implement')],
   }, async (request, reply) => {
     const { tenantSlug } = request.user;
+    const { id, taskId } = idTaskParamSchema.parse(request.params);
 
     const task = await changeRequestService.startTask(
       tenantSlug,
-      request.params.id,
-      request.params.taskId
+      id,
+      taskId
     );
     reply.send(task);
   });
@@ -607,12 +685,13 @@ export default async function changeRoutes(app: FastifyInstance) {
     preHandler: [requirePermission('changes:implement')],
   }, async (request, reply) => {
     const { tenantSlug } = request.user;
+    const { id, taskId } = idTaskParamSchema.parse(request.params);
     const body = request.body as { notes?: string } | undefined;
 
     const task = await changeRequestService.completeTask(
       tenantSlug,
-      request.params.id,
-      request.params.taskId,
+      id,
+      taskId,
       body?.notes
     );
     reply.send(task);
@@ -623,8 +702,9 @@ export default async function changeRoutes(app: FastifyInstance) {
     preHandler: [requirePermission('changes:update')],
   }, async (request, reply) => {
     const { tenantSlug } = request.user;
+    const { id, taskId } = idTaskParamSchema.parse(request.params);
 
-    await changeRequestService.deleteTask(tenantSlug, request.params.id, request.params.taskId);
+    await changeRequestService.deleteTask(tenantSlug, id, taskId);
     reply.status(204).send();
   });
 
@@ -637,8 +717,9 @@ export default async function changeRoutes(app: FastifyInstance) {
     preHandler: [requirePermission('changes:read')],
   }, async (request, reply) => {
     const { tenantSlug } = request.user;
+    const { id } = idParamSchema.parse(request.params);
 
-    const comments = await changeRequestService.getComments(tenantSlug, request.params.id);
+    const comments = await changeRequestService.getComments(tenantSlug, id);
     reply.send({ data: comments });
   });
 
@@ -647,11 +728,12 @@ export default async function changeRoutes(app: FastifyInstance) {
     preHandler: [requirePermission('changes:read')],
   }, async (request, reply) => {
     const { tenantSlug, userId } = request.user;
+    const { id } = idParamSchema.parse(request.params);
     const body = commentSchema.parse(request.body);
 
     const comment = await changeRequestService.addComment(
       tenantSlug,
-      request.params.id,
+      id,
       userId,
       body.content,
       body.isInternal
@@ -709,8 +791,9 @@ export default async function changeRoutes(app: FastifyInstance) {
     preHandler: [requirePermission('changes:read')],
   }, async (request, reply) => {
     const { tenantSlug } = request.user;
+    const { id } = idParamSchema.parse(request.params);
 
-    const meeting = await cabMeetingService.getById(tenantSlug, request.params.id);
+    const meeting = await cabMeetingService.getById(tenantSlug, id);
     reply.send(meeting);
   });
 
@@ -730,9 +813,10 @@ export default async function changeRoutes(app: FastifyInstance) {
     preHandler: [requirePermission('changes:approve')],
   }, async (request, reply) => {
     const { tenantSlug } = request.user;
+    const { id } = idParamSchema.parse(request.params);
     const body = updateCabMeetingSchema.parse(request.body);
 
-    const meeting = await cabMeetingService.update(tenantSlug, request.params.id, body);
+    const meeting = await cabMeetingService.update(tenantSlug, id, body);
     reply.send(meeting);
   });
 
@@ -741,8 +825,9 @@ export default async function changeRoutes(app: FastifyInstance) {
     preHandler: [requirePermission('changes:approve')],
   }, async (request, reply) => {
     const { tenantSlug } = request.user;
+    const { id } = idParamSchema.parse(request.params);
 
-    await cabMeetingService.delete(tenantSlug, request.params.id);
+    await cabMeetingService.delete(tenantSlug, id);
     reply.status(204).send();
   });
 
@@ -755,8 +840,9 @@ export default async function changeRoutes(app: FastifyInstance) {
     preHandler: [requirePermission('changes:read')],
   }, async (request, reply) => {
     const { tenantSlug } = request.user;
+    const { id } = idParamSchema.parse(request.params);
 
-    const attendees = await cabMeetingService.getAttendees(tenantSlug, request.params.id);
+    const attendees = await cabMeetingService.getAttendees(tenantSlug, id);
     reply.send({ data: attendees });
   });
 
@@ -765,11 +851,12 @@ export default async function changeRoutes(app: FastifyInstance) {
     preHandler: [requirePermission('changes:approve')],
   }, async (request, reply) => {
     const { tenantSlug } = request.user;
+    const { id } = idParamSchema.parse(request.params);
     const body = addAttendeeSchema.parse(request.body);
 
     const attendee = await cabMeetingService.addAttendee(
       tenantSlug,
-      request.params.id,
+      id,
       body.userId,
       body.role
     );
@@ -781,11 +868,12 @@ export default async function changeRoutes(app: FastifyInstance) {
     preHandler: [requirePermission('changes:approve')],
   }, async (request, reply) => {
     const { tenantSlug } = request.user;
+    const { id, userId } = idUserParamSchema.parse(request.params);
 
     await cabMeetingService.removeAttendee(
       tenantSlug,
-      request.params.id,
-      request.params.userId
+      id,
+      userId
     );
     reply.status(204).send();
   });
@@ -795,12 +883,13 @@ export default async function changeRoutes(app: FastifyInstance) {
     preHandler: [requirePermission('changes:read')],
   }, async (request, reply) => {
     const { tenantSlug } = request.user;
+    const { id, userId } = idUserParamSchema.parse(request.params);
     const body = updateAttendeeSchema.parse(request.body);
 
     const attendee = await cabMeetingService.updateAttendeeStatus(
       tenantSlug,
-      request.params.id,
-      request.params.userId,
+      id,
+      userId,
       body.status,
       body.notes
     );
@@ -816,8 +905,9 @@ export default async function changeRoutes(app: FastifyInstance) {
     preHandler: [requirePermission('changes:read')],
   }, async (request, reply) => {
     const { tenantSlug } = request.user;
+    const { id } = idParamSchema.parse(request.params);
 
-    const changes = await cabMeetingService.getChanges(tenantSlug, request.params.id);
+    const changes = await cabMeetingService.getChanges(tenantSlug, id);
     reply.send({ data: changes });
   });
 
@@ -826,11 +916,12 @@ export default async function changeRoutes(app: FastifyInstance) {
     preHandler: [requirePermission('changes:approve')],
   }, async (request, reply) => {
     const { tenantSlug } = request.user;
+    const { id } = idParamSchema.parse(request.params);
     const body = addMeetingChangeSchema.parse(request.body);
 
     const change = await cabMeetingService.addChange(
       tenantSlug,
-      request.params.id,
+      id,
       body.changeId,
       body.timeAllocatedMinutes,
       body.sortOrder
@@ -843,11 +934,12 @@ export default async function changeRoutes(app: FastifyInstance) {
     preHandler: [requirePermission('changes:approve')],
   }, async (request, reply) => {
     const { tenantSlug } = request.user;
+    const { id, changeId } = idChangeParamSchema.parse(request.params);
 
     await cabMeetingService.removeChange(
       tenantSlug,
-      request.params.id,
-      request.params.changeId
+      id,
+      changeId
     );
     reply.status(204).send();
   });
@@ -857,12 +949,13 @@ export default async function changeRoutes(app: FastifyInstance) {
     preHandler: [requirePermission('changes:approve')],
   }, async (request, reply) => {
     const { tenantSlug } = request.user;
+    const { id, changeId } = idChangeParamSchema.parse(request.params);
     const body = updateMeetingChangeSchema.parse(request.body);
 
     const change = await cabMeetingService.updateChange(
       tenantSlug,
-      request.params.id,
-      request.params.changeId,
+      id,
+      changeId,
       body
     );
     reply.send(change);
@@ -877,8 +970,9 @@ export default async function changeRoutes(app: FastifyInstance) {
     preHandler: [requirePermission('changes:approve')],
   }, async (request, reply) => {
     const { tenantSlug, userId } = request.user;
+    const { id } = idParamSchema.parse(request.params);
 
-    const meeting = await cabMeetingService.startMeeting(tenantSlug, request.params.id, userId);
+    const meeting = await cabMeetingService.startMeeting(tenantSlug, id, userId);
     reply.send(meeting);
   });
 
@@ -887,8 +981,9 @@ export default async function changeRoutes(app: FastifyInstance) {
     preHandler: [requirePermission('changes:approve')],
   }, async (request, reply) => {
     const { tenantSlug, userId } = request.user;
+    const { id } = idParamSchema.parse(request.params);
 
-    const meeting = await cabMeetingService.completeMeeting(tenantSlug, request.params.id, userId);
+    const meeting = await cabMeetingService.completeMeeting(tenantSlug, id, userId);
     reply.send(meeting);
   });
 
@@ -897,8 +992,9 @@ export default async function changeRoutes(app: FastifyInstance) {
     preHandler: [requirePermission('changes:approve')],
   }, async (request, reply) => {
     const { tenantSlug, userId } = request.user;
+    const { id } = idParamSchema.parse(request.params);
 
-    const meeting = await cabMeetingService.cancelMeeting(tenantSlug, request.params.id, userId);
+    const meeting = await cabMeetingService.cancelMeeting(tenantSlug, id, userId);
     reply.send(meeting);
   });
 
@@ -907,8 +1003,9 @@ export default async function changeRoutes(app: FastifyInstance) {
     preHandler: [requirePermission('changes:approve')],
   }, async (request, reply) => {
     const { tenantSlug } = request.user;
+    const { id } = idParamSchema.parse(request.params);
 
-    const agenda = await cabMeetingService.generateAgenda(tenantSlug, request.params.id);
+    const agenda = await cabMeetingService.generateAgenda(tenantSlug, id);
     reply.send({ agenda });
   });
 
@@ -917,11 +1014,12 @@ export default async function changeRoutes(app: FastifyInstance) {
     preHandler: [requirePermission('changes:approve')],
   }, async (request, reply) => {
     const { tenantSlug } = request.user;
+    const { id } = idParamSchema.parse(request.params);
     const body = saveMinutesSchema.parse(request.body);
 
     const meeting = await cabMeetingService.saveMinutes(
       tenantSlug,
-      request.params.id,
+      id,
       body.minutes
     );
     reply.send(meeting);
@@ -932,11 +1030,12 @@ export default async function changeRoutes(app: FastifyInstance) {
     preHandler: [requirePermission('changes:approve')],
   }, async (request, reply) => {
     const { tenantSlug } = request.user;
+    const { id } = idParamSchema.parse(request.params);
     const body = recordDecisionSchema.parse(request.body);
 
     const meeting = await cabMeetingService.recordDecision(
       tenantSlug,
-      request.params.id,
+      id,
       body.changeId,
       body.decision,
       body.notes
@@ -949,11 +1048,12 @@ export default async function changeRoutes(app: FastifyInstance) {
     preHandler: [requirePermission('changes:approve')],
   }, async (request, reply) => {
     const { tenantSlug } = request.user;
+    const { id } = idParamSchema.parse(request.params);
     const body = addActionItemSchema.parse(request.body);
 
     const result = await cabMeetingService.addActionItem(
       tenantSlug,
-      request.params.id,
+      id,
       body
     );
     reply.status(201).send(result);

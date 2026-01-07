@@ -5,7 +5,6 @@ import { shiftSwapService } from '../services/shiftSwaps.js';
 import { requirePermission, optionalAuth } from '../middleware/auth.js';
 import { parsePagination, createPaginatedResponse } from '../utils/pagination.js';
 import { tenantService as _tenantService } from '../services/tenant.js';
-import { isValidUUID } from '../utils/errors.js';
 import { validateDate, validateDateRange } from '../utils/validation.js';
 
 // ============================================
@@ -121,6 +120,40 @@ const adminApproveSchema = z.object({
   accepterUserId: z.string().uuid().optional(),
 });
 
+// Parameter validation schemas
+const idParamSchema = z.object({
+  id: z.string().uuid(),
+});
+
+const idRotationParamSchema = z.object({
+  id: z.string().uuid(),
+  rotationId: z.string().uuid(),
+});
+
+const idShiftParamSchema = z.object({
+  id: z.string().uuid(),
+  shiftId: z.string().uuid(),
+});
+
+const idAppParamSchema = z.object({
+  id: z.string().uuid(),
+  applicationId: z.string().uuid(),
+});
+
+const idStepParamSchema = z.object({
+  id: z.string().uuid(),
+  stepId: z.string().uuid(),
+});
+
+const scheduleIdParamSchema = z.object({
+  scheduleId: z.string().uuid(),
+});
+
+const scheduleIdTokenParamSchema = z.object({
+  scheduleId: z.string().uuid(),
+  token: z.string().min(1),
+});
+
 export default async function oncallRoutes(app: FastifyInstance) {
   // ========================================
   // SCHEDULES
@@ -147,18 +180,9 @@ export default async function oncallRoutes(app: FastifyInstance) {
   app.get<{ Params: { id: string } }>('/schedules/:id', {
     preHandler: [requirePermission('oncall:read')],
   }, async (request, reply) => {
-    const { id } = request.params;
-
-    // Validate UUID format to prevent PostgreSQL errors
-    if (!isValidUUID(id)) {
-      return reply.status(404).send({
-        statusCode: 404,
-        error: 'Not Found',
-        message: `Schedule with id '${id}' not found`,
-      });
-    }
-
     const { tenantSlug } = request.user;
+    const { id } = idParamSchema.parse(request.params);
+
     const schedule = await oncallScheduleService.findById(tenantSlug, id);
 
     if (!schedule) {
@@ -188,9 +212,10 @@ export default async function oncallRoutes(app: FastifyInstance) {
     preHandler: [requirePermission('oncall:manage')],
   }, async (request, reply) => {
     const { tenantSlug, userId } = request.user;
+    const { id } = idParamSchema.parse(request.params);
     const body = updateScheduleSchema.parse(request.body);
 
-    const schedule = await oncallScheduleService.update(tenantSlug, request.params.id, body, userId);
+    const schedule = await oncallScheduleService.update(tenantSlug, id, body, userId);
     reply.send(schedule);
   });
 
@@ -199,8 +224,9 @@ export default async function oncallRoutes(app: FastifyInstance) {
     preHandler: [requirePermission('oncall:manage')],
   }, async (request, reply) => {
     const { tenantSlug, userId } = request.user;
+    const { id } = idParamSchema.parse(request.params);
 
-    await oncallScheduleService.delete(tenantSlug, request.params.id, userId);
+    await oncallScheduleService.delete(tenantSlug, id, userId);
     reply.status(204).send();
   });
 
@@ -208,18 +234,9 @@ export default async function oncallRoutes(app: FastifyInstance) {
   app.get<{ Params: { id: string } }>('/schedules/:id/rotations', {
     preHandler: [requirePermission('oncall:read')],
   }, async (request, reply) => {
-    const { id } = request.params;
-
-    // Validate UUID format
-    if (!isValidUUID(id)) {
-      return reply.status(404).send({
-        statusCode: 404,
-        error: 'Not Found',
-        message: `Schedule with id '${id}' not found`,
-      });
-    }
-
     const { tenantSlug } = request.user;
+    const { id } = idParamSchema.parse(request.params);
+
     const rotations = await oncallScheduleService.getRotations(tenantSlug, id);
     reply.send({ data: rotations });
   });
@@ -229,11 +246,12 @@ export default async function oncallRoutes(app: FastifyInstance) {
     preHandler: [requirePermission('oncall:manage')],
   }, async (request, reply) => {
     const { tenantSlug } = request.user;
+    const { id } = idParamSchema.parse(request.params);
     const body = addToRotationSchema.parse(request.body);
 
     const rotation = await oncallScheduleService.addToRotation(
       tenantSlug,
-      request.params.id,
+      id,
       body.userId,
       body.position
     );
@@ -245,12 +263,13 @@ export default async function oncallRoutes(app: FastifyInstance) {
     preHandler: [requirePermission('oncall:manage')],
   }, async (request, reply) => {
     const { tenantSlug } = request.user;
+    const { id, rotationId } = idRotationParamSchema.parse(request.params);
     const body = z.object({ position: z.number().int().min(1) }).parse(request.body);
 
     const rotation = await oncallScheduleService.updateRotationPosition(
       tenantSlug,
-      request.params.id,
-      request.params.rotationId,
+      id,
+      rotationId,
       body.position
     );
     reply.send(rotation);
@@ -261,8 +280,9 @@ export default async function oncallRoutes(app: FastifyInstance) {
     preHandler: [requirePermission('oncall:manage')],
   }, async (request, reply) => {
     const { tenantSlug } = request.user;
+    const { id, rotationId } = idRotationParamSchema.parse(request.params);
 
-    await oncallScheduleService.removeFromRotation(tenantSlug, request.params.id, request.params.rotationId);
+    await oncallScheduleService.removeFromRotation(tenantSlug, id, rotationId);
     reply.status(204).send();
   });
 
@@ -270,18 +290,8 @@ export default async function oncallRoutes(app: FastifyInstance) {
   app.get<{ Params: { id: string } }>('/schedules/:id/shifts', {
     preHandler: [requirePermission('oncall:read')],
   }, async (request, reply) => {
-    const { id } = request.params;
-
-    // Validate UUID format
-    if (!isValidUUID(id)) {
-      return reply.status(404).send({
-        statusCode: 404,
-        error: 'Not Found',
-        message: `Schedule with id '${id}' not found`,
-      });
-    }
-
     const { tenantSlug } = request.user;
+    const { id } = idParamSchema.parse(request.params);
     const query = request.query as Record<string, string>;
 
     // Validate and parse date parameters with defaults
@@ -304,12 +314,13 @@ export default async function oncallRoutes(app: FastifyInstance) {
     preHandler: [requirePermission('oncall:manage')],
   }, async (request, reply) => {
     const { tenantSlug, userId } = request.user;
+    const { id } = idParamSchema.parse(request.params);
     const body = createShiftSchema.parse(request.body);
 
     const shift = await oncallScheduleService.createShift(
       tenantSlug,
       {
-        scheduleId: request.params.id,
+        scheduleId: id,
         userId: body.userId,
         startTime: new Date(body.startTime),
         endTime: new Date(body.endTime),
@@ -326,12 +337,13 @@ export default async function oncallRoutes(app: FastifyInstance) {
     preHandler: [requirePermission('oncall:update')],
   }, async (request, reply) => {
     const { tenantSlug, userId } = request.user;
+    const { id } = idParamSchema.parse(request.params);
     const body = createOverrideSchema.parse(request.body);
 
     const override = await oncallScheduleService.createOverride(
       tenantSlug,
       {
-        scheduleId: request.params.id,
+        scheduleId: id,
         userId: body.userId,
         startTime: new Date(body.startTime),
         endTime: new Date(body.endTime),
@@ -348,8 +360,9 @@ export default async function oncallRoutes(app: FastifyInstance) {
     preHandler: [requirePermission('oncall:manage')],
   }, async (request, reply) => {
     const { tenantSlug } = request.user;
+    const { id, shiftId } = idShiftParamSchema.parse(request.params);
 
-    await oncallScheduleService.deleteShift(tenantSlug, request.params.id, request.params.shiftId);
+    await oncallScheduleService.deleteShift(tenantSlug, id, shiftId);
     reply.status(204).send();
   });
 
@@ -358,8 +371,9 @@ export default async function oncallRoutes(app: FastifyInstance) {
     preHandler: [requirePermission('oncall:read')],
   }, async (request, reply) => {
     const { tenantSlug } = request.user;
+    const { id } = idParamSchema.parse(request.params);
 
-    const applications = await oncallScheduleService.getLinkedApplications(tenantSlug, request.params.id);
+    const applications = await oncallScheduleService.getLinkedApplications(tenantSlug, id);
     reply.send({ data: applications });
   });
 
@@ -368,9 +382,10 @@ export default async function oncallRoutes(app: FastifyInstance) {
     preHandler: [requirePermission('oncall:manage')],
   }, async (request, reply) => {
     const { tenantSlug } = request.user;
+    const { id } = idParamSchema.parse(request.params);
     const body = z.object({ applicationId: z.string().uuid() }).parse(request.body);
 
-    await oncallScheduleService.linkToApplication(tenantSlug, request.params.id, body.applicationId);
+    await oncallScheduleService.linkToApplication(tenantSlug, id, body.applicationId);
     reply.status(204).send();
   });
 
@@ -379,8 +394,9 @@ export default async function oncallRoutes(app: FastifyInstance) {
     preHandler: [requirePermission('oncall:manage')],
   }, async (request, reply) => {
     const { tenantSlug } = request.user;
+    const { id, applicationId } = idAppParamSchema.parse(request.params);
 
-    await oncallScheduleService.unlinkFromApplication(tenantSlug, request.params.id, request.params.applicationId);
+    await oncallScheduleService.unlinkFromApplication(tenantSlug, id, applicationId);
     reply.status(204).send();
   });
 
@@ -424,18 +440,20 @@ export default async function oncallRoutes(app: FastifyInstance) {
     preHandler: [requirePermission('oncall:read')],
   }, async (request, reply) => {
     const { tenantSlug } = request.user;
-    const policy = await escalationPolicyService.findById(tenantSlug, request.params.id);
+    const { id } = idParamSchema.parse(request.params);
+
+    const policy = await escalationPolicyService.findById(tenantSlug, id);
 
     if (!policy) {
       return reply.status(404).send({
         statusCode: 404,
         error: 'Not Found',
-        message: `Escalation policy with id '${request.params.id}' not found`,
+        message: `Escalation policy with id '${id}' not found`,
       });
     }
 
     // Include steps
-    const steps = await escalationPolicyService.getSteps(tenantSlug, request.params.id);
+    const steps = await escalationPolicyService.getSteps(tenantSlug, id);
     reply.send({ ...policy, steps });
   });
 
@@ -455,9 +473,10 @@ export default async function oncallRoutes(app: FastifyInstance) {
     preHandler: [requirePermission('oncall:manage')],
   }, async (request, reply) => {
     const { tenantSlug, userId } = request.user;
+    const { id } = idParamSchema.parse(request.params);
     const body = updatePolicySchema.parse(request.body);
 
-    const policy = await escalationPolicyService.update(tenantSlug, request.params.id, body, userId);
+    const policy = await escalationPolicyService.update(tenantSlug, id, body, userId);
     reply.send(policy);
   });
 
@@ -466,8 +485,9 @@ export default async function oncallRoutes(app: FastifyInstance) {
     preHandler: [requirePermission('oncall:manage')],
   }, async (request, reply) => {
     const { tenantSlug, userId } = request.user;
+    const { id } = idParamSchema.parse(request.params);
 
-    await escalationPolicyService.delete(tenantSlug, request.params.id, userId);
+    await escalationPolicyService.delete(tenantSlug, id, userId);
     reply.status(204).send();
   });
 
@@ -476,8 +496,9 @@ export default async function oncallRoutes(app: FastifyInstance) {
     preHandler: [requirePermission('oncall:read')],
   }, async (request, reply) => {
     const { tenantSlug } = request.user;
+    const { id } = idParamSchema.parse(request.params);
 
-    const steps = await escalationPolicyService.getSteps(tenantSlug, request.params.id);
+    const steps = await escalationPolicyService.getSteps(tenantSlug, id);
     reply.send({ data: steps });
   });
 
@@ -486,9 +507,10 @@ export default async function oncallRoutes(app: FastifyInstance) {
     preHandler: [requirePermission('oncall:manage')],
   }, async (request, reply) => {
     const { tenantSlug } = request.user;
+    const { id } = idParamSchema.parse(request.params);
     const body = addStepSchema.parse(request.body);
 
-    const step = await escalationPolicyService.addStep(tenantSlug, request.params.id, body);
+    const step = await escalationPolicyService.addStep(tenantSlug, id, body);
     reply.status(201).send(step);
   });
 
@@ -497,12 +519,13 @@ export default async function oncallRoutes(app: FastifyInstance) {
     preHandler: [requirePermission('oncall:manage')],
   }, async (request, reply) => {
     const { tenantSlug } = request.user;
+    const { id, stepId } = idStepParamSchema.parse(request.params);
     const body = addStepSchema.partial().parse(request.body);
 
     const step = await escalationPolicyService.updateStep(
       tenantSlug,
-      request.params.id,
-      request.params.stepId,
+      id,
+      stepId,
       body
     );
     reply.send(step);
@@ -513,8 +536,9 @@ export default async function oncallRoutes(app: FastifyInstance) {
     preHandler: [requirePermission('oncall:manage')],
   }, async (request, reply) => {
     const { tenantSlug } = request.user;
+    const { id, stepId } = idStepParamSchema.parse(request.params);
 
-    await escalationPolicyService.deleteStep(tenantSlug, request.params.id, request.params.stepId);
+    await escalationPolicyService.deleteStep(tenantSlug, id, stepId);
     reply.status(204).send();
   });
 
@@ -568,8 +592,9 @@ export default async function oncallRoutes(app: FastifyInstance) {
     preHandler: [requirePermission('oncall:read')],
   }, async (request, reply) => {
     const { tenantSlug } = request.user;
+    const { id } = idParamSchema.parse(request.params);
 
-    const swap = await shiftSwapService.getById(tenantSlug, request.params.id);
+    const swap = await shiftSwapService.getById(tenantSlug, id);
     reply.send(swap);
   });
 
@@ -589,9 +614,10 @@ export default async function oncallRoutes(app: FastifyInstance) {
     preHandler: [requirePermission('oncall:update')],
   }, async (request, reply) => {
     const { tenantSlug, userId } = request.user;
+    const { id } = idParamSchema.parse(request.params);
     const body = updateShiftSwapSchema.parse(request.body);
 
-    const swap = await shiftSwapService.update(tenantSlug, request.params.id, userId, body);
+    const swap = await shiftSwapService.update(tenantSlug, id, userId, body);
     reply.send(swap);
   });
 
@@ -600,8 +626,9 @@ export default async function oncallRoutes(app: FastifyInstance) {
     preHandler: [requirePermission('oncall:update')],
   }, async (request, reply) => {
     const { tenantSlug, userId } = request.user;
+    const { id } = idParamSchema.parse(request.params);
 
-    const swap = await shiftSwapService.cancel(tenantSlug, request.params.id, userId);
+    const swap = await shiftSwapService.cancel(tenantSlug, id, userId);
     reply.send(swap);
   });
 
@@ -610,9 +637,10 @@ export default async function oncallRoutes(app: FastifyInstance) {
     preHandler: [requirePermission('oncall:update')],
   }, async (request, reply) => {
     const { tenantSlug, userId } = request.user;
+    const { id } = idParamSchema.parse(request.params);
     const body = swapResponseSchema.parse(request.body || {});
 
-    const swap = await shiftSwapService.accept(tenantSlug, request.params.id, userId, body.message);
+    const swap = await shiftSwapService.accept(tenantSlug, id, userId, body.message);
     reply.send(swap);
   });
 
@@ -621,9 +649,10 @@ export default async function oncallRoutes(app: FastifyInstance) {
     preHandler: [requirePermission('oncall:update')],
   }, async (request, reply) => {
     const { tenantSlug, userId } = request.user;
+    const { id } = idParamSchema.parse(request.params);
     const body = swapResponseSchema.parse(request.body || {});
 
-    const swap = await shiftSwapService.reject(tenantSlug, request.params.id, userId, body.message);
+    const swap = await shiftSwapService.reject(tenantSlug, id, userId, body.message);
     reply.send(swap);
   });
 
@@ -632,11 +661,12 @@ export default async function oncallRoutes(app: FastifyInstance) {
     preHandler: [requirePermission('oncall:manage')],
   }, async (request, reply) => {
     const { tenantSlug, userId } = request.user;
+    const { id } = idParamSchema.parse(request.params);
     const body = adminApproveSchema.parse(request.body || {});
 
     const swap = await shiftSwapService.adminApprove(
       tenantSlug,
-      request.params.id,
+      id,
       userId,
       body.accepterUserId
     );
@@ -648,11 +678,12 @@ export default async function oncallRoutes(app: FastifyInstance) {
     preHandler: [requirePermission('oncall:read')],
   }, async (request, reply) => {
     const { tenantSlug } = request.user;
+    const { scheduleId } = scheduleIdParamSchema.parse(request.params);
     const query = request.query as Record<string, string>;
 
     const stats = await shiftSwapService.getScheduleStats(
       tenantSlug,
-      request.params.scheduleId,
+      scheduleId,
       query.from_date,
       query.to_date
     );
@@ -668,6 +699,7 @@ export default async function oncallRoutes(app: FastifyInstance) {
     preHandler: [requirePermission('oncall:read')],
   }, async (request, reply) => {
     const { tenantSlug, userId } = request.user;
+    const { scheduleId } = scheduleIdParamSchema.parse(request.params);
     const query = request.query as Record<string, string>;
 
     const from = validateDate(query.from, 'from');
@@ -677,7 +709,7 @@ export default async function oncallRoutes(app: FastifyInstance) {
     }
 
     const icalContent = await icalExportService.generateICalendar(tenantSlug, {
-      scheduleId: request.params.scheduleId,
+      scheduleId,
       from,
       to,
       userId: query.user_id || userId,
@@ -694,10 +726,11 @@ export default async function oncallRoutes(app: FastifyInstance) {
     preHandler: [requirePermission('oncall:read')],
   }, async (request, reply) => {
     const { tenantSlug, userId } = request.user;
+    const { scheduleId } = scheduleIdParamSchema.parse(request.params);
 
     const { token, url } = await icalExportService.createSubscriptionToken(
       tenantSlug,
-      request.params.scheduleId,
+      scheduleId,
       userId
     );
 
@@ -708,12 +741,13 @@ export default async function oncallRoutes(app: FastifyInstance) {
   app.get<{ Params: { scheduleId: string; token: string } }>('/schedules/:scheduleId/ical/subscribe/:token', {
     preHandler: [optionalAuth],
   }, async (request, reply) => {
+    const { scheduleId, token } = scheduleIdTokenParamSchema.parse(request.params);
     const query = request.query as Record<string, string>;
 
     // Look up tenant from schedule and validate token (searches all tenant schemas)
     const subscription = await icalExportService.validatePublicSubscriptionToken(
-      request.params.scheduleId,
-      request.params.token
+      scheduleId,
+      token
     );
 
     if (!subscription) {
@@ -728,7 +762,7 @@ export default async function oncallRoutes(app: FastifyInstance) {
     }
 
     const icalContent = await icalExportService.generateICalendar(subscription.tenantSlug, {
-      scheduleId: request.params.scheduleId,
+      scheduleId,
       from,
       to,
       userId: subscription.filterUserId || subscription.userId,
@@ -745,10 +779,11 @@ export default async function oncallRoutes(app: FastifyInstance) {
     preHandler: [requirePermission('oncall:read')],
   }, async (request, reply) => {
     const { tenantSlug, userId } = request.user;
+    const { scheduleId } = scheduleIdParamSchema.parse(request.params);
 
     await icalExportService.revokeSubscriptionToken(
       tenantSlug,
-      request.params.scheduleId,
+      scheduleId,
       userId
     );
 

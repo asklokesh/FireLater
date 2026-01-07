@@ -63,6 +63,11 @@ const createWidgetSchema = z.object({
   showLegend: z.boolean().optional(),
 });
 
+// Parameter validation schemas
+const idParamSchema = z.object({
+  id: z.string().uuid(),
+});
+
 // Export schemas for testing
 export { createTemplateSchema, createScheduleSchema, createWidgetSchema };
 
@@ -91,13 +96,14 @@ export default async function reportingRoutes(app: FastifyInstance) {
     preHandler: [requirePermission('reports:read')],
   }, async (request, reply) => {
     const { tenantSlug } = request.user;
-    const template = await reportTemplateService.findById(tenantSlug, request.params.id);
+    const { id } = idParamSchema.parse(request.params);
+    const template = await reportTemplateService.findById(tenantSlug, id);
 
     if (!template) {
       return reply.status(404).send({
         statusCode: 404,
         error: 'Not Found',
-        message: `Report template '${request.params.id}' not found`,
+        message: `Report template '${id}' not found`,
       });
     }
 
@@ -119,8 +125,9 @@ export default async function reportingRoutes(app: FastifyInstance) {
     preHandler: [requirePermission('reports:manage')],
   }, async (request, reply) => {
     const { tenantSlug } = request.user;
+    const { id } = idParamSchema.parse(request.params);
     const data = request.body as Partial<z.infer<typeof createTemplateSchema>>;
-    const template = await reportTemplateService.update(tenantSlug, request.params.id, data);
+    const template = await reportTemplateService.update(tenantSlug, id, data);
     reply.send({ template });
   });
 
@@ -129,7 +136,8 @@ export default async function reportingRoutes(app: FastifyInstance) {
     preHandler: [requirePermission('reports:manage')],
   }, async (request, reply) => {
     const { tenantSlug } = request.user;
-    await reportTemplateService.delete(tenantSlug, request.params.id);
+    const { id } = idParamSchema.parse(request.params);
+    await reportTemplateService.delete(tenantSlug, id);
     reply.status(204).send();
   });
 
@@ -154,13 +162,14 @@ export default async function reportingRoutes(app: FastifyInstance) {
     preHandler: [requirePermission('reports:read')],
   }, async (request, reply) => {
     const { tenantSlug } = request.user;
-    const schedule = await scheduledReportService.findById(tenantSlug, request.params.id);
+    const { id } = idParamSchema.parse(request.params);
+    const schedule = await scheduledReportService.findById(tenantSlug, id);
 
     if (!schedule) {
       return reply.status(404).send({
         statusCode: 404,
         error: 'Not Found',
-        message: `Scheduled report '${request.params.id}' not found`,
+        message: `Scheduled report '${id}' not found`,
       });
     }
 
@@ -182,8 +191,9 @@ export default async function reportingRoutes(app: FastifyInstance) {
     preHandler: [requirePermission('reports:manage')],
   }, async (request, reply) => {
     const { tenantSlug } = request.user;
+    const { id } = idParamSchema.parse(request.params);
     const data = request.body as Partial<z.infer<typeof createScheduleSchema>>;
-    const schedule = await scheduledReportService.update(tenantSlug, request.params.id, data);
+    const schedule = await scheduledReportService.update(tenantSlug, id, data);
     reply.send({ schedule });
   });
 
@@ -192,7 +202,8 @@ export default async function reportingRoutes(app: FastifyInstance) {
     preHandler: [requirePermission('reports:manage')],
   }, async (request, reply) => {
     const { tenantSlug } = request.user;
-    await scheduledReportService.delete(tenantSlug, request.params.id);
+    const { id } = idParamSchema.parse(request.params);
+    await scheduledReportService.delete(tenantSlug, id);
     reply.status(204).send();
   });
 
@@ -220,13 +231,14 @@ export default async function reportingRoutes(app: FastifyInstance) {
     preHandler: [requirePermission('reports:read')],
   }, async (request, reply) => {
     const { tenantSlug } = request.user;
-    const execution = await reportExecutionService.findById(tenantSlug, request.params.id);
+    const { id } = idParamSchema.parse(request.params);
+    const execution = await reportExecutionService.findById(tenantSlug, id);
 
     if (!execution) {
       return reply.status(404).send({
         statusCode: 404,
         error: 'Not Found',
-        message: `Report execution '${request.params.id}' not found`,
+        message: `Report execution '${id}' not found`,
       });
     }
 
@@ -295,7 +307,8 @@ export default async function reportingRoutes(app: FastifyInstance) {
     preHandler: [requirePermission('reports:read')],
   }, async (request, reply) => {
     const { tenantSlug, userId } = request.user;
-    await savedReportService.delete(tenantSlug, userId, request.params.id);
+    const { id } = idParamSchema.parse(request.params);
+    await savedReportService.delete(tenantSlug, userId, id);
     reply.status(204).send();
   });
 
@@ -327,8 +340,9 @@ export default async function reportingRoutes(app: FastifyInstance) {
     preHandler: [requirePermission('dashboards:manage')],
   }, async (request, reply) => {
     const { tenantSlug, userId } = request.user;
+    const { id } = idParamSchema.parse(request.params);
     const data = request.body as Partial<z.infer<typeof createWidgetSchema>>;
-    const widget = await dashboardWidgetService.update(tenantSlug, userId, request.params.id, data);
+    const widget = await dashboardWidgetService.update(tenantSlug, userId, id, data);
     reply.send({ widget });
   });
 
@@ -337,7 +351,8 @@ export default async function reportingRoutes(app: FastifyInstance) {
     preHandler: [requirePermission('dashboards:manage')],
   }, async (request, reply) => {
     const { tenantSlug, userId } = request.user;
-    await dashboardWidgetService.delete(tenantSlug, userId, request.params.id);
+    const { id } = idParamSchema.parse(request.params);
+    await dashboardWidgetService.delete(tenantSlug, userId, id);
     reply.status(204).send();
   });
 
