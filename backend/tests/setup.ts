@@ -12,6 +12,7 @@ process.env.HOST = '0.0.0.0';
 
 // Mock external services
 const mockRedisData = new Map<string, string>();
+const mockRedisTTL = new Map<string, number>();
 
 vi.mock('../src/config/redis.js', () => ({
   redis: {
@@ -19,15 +20,32 @@ vi.mock('../src/config/redis.js', () => ({
     set: vi.fn((key: string, value: string, ...args: any[]) => {
       // Handle both SET key value and SET key value EX seconds
       mockRedisData.set(key, value);
+      // Check for EX argument
+      const exIdx = args.indexOf('EX');
+      if (exIdx >= 0 && args[exIdx + 1]) {
+        mockRedisTTL.set(key, args[exIdx + 1]);
+      }
       return Promise.resolve('OK');
     }),
     setex: vi.fn((key: string, ttl: number, value: string) => {
       mockRedisData.set(key, value);
+      mockRedisTTL.set(key, ttl);
       return Promise.resolve('OK');
+    }),
+    ttl: vi.fn((key: string) => {
+      // Return the TTL if set, -2 if key doesn't exist, -1 if no TTL
+      if (!mockRedisData.has(key)) {
+        return Promise.resolve(-2);
+      }
+      const ttl = mockRedisTTL.get(key);
+      return Promise.resolve(ttl !== undefined ? ttl : -1);
     }),
     del: vi.fn((...keys: string[]) => {
       const flatKeys = keys.flat();
-      flatKeys.forEach(k => mockRedisData.delete(k));
+      flatKeys.forEach(k => {
+        mockRedisData.delete(k);
+        mockRedisTTL.delete(k);
+      });
       return Promise.resolve(flatKeys.length);
     }),
     keys: vi.fn((pattern: string) => {
@@ -45,6 +63,7 @@ vi.mock('../src/config/redis.js', () => ({
     }),
     flushdb: vi.fn(() => {
       mockRedisData.clear();
+      mockRedisTTL.clear();
       return Promise.resolve('OK');
     }),
     info: vi.fn((section?: string) => {

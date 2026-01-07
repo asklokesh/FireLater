@@ -24,7 +24,7 @@ export class SSOService {
       throw new NotFoundError('Tenant', tenantSlug);
     }
 
-    const schemaName = `tenant_${tenant.slug}`;
+    const schemaName = tenantService.getSchemaName(tenant.slug);
 
     const result = await pool.query(
       `SELECT * FROM ${schemaName}.sso_providers WHERE id = $1`,
@@ -47,7 +47,7 @@ export class SSOService {
       throw new NotFoundError('Tenant', tenantSlug);
     }
 
-    const schemaName = `tenant_${tenant.slug}`;
+    const schemaName = tenantService.getSchemaName(tenant.slug);
 
     const result = await pool.query(
       `SELECT * FROM ${schemaName}.sso_providers
@@ -71,7 +71,7 @@ export class SSOService {
       throw new NotFoundError('Tenant', tenantSlug);
     }
 
-    const schemaName = `tenant_${tenant.slug}`;
+    const schemaName = tenantService.getSchemaName(tenant.slug);
 
     const result = await pool.query(
       `SELECT * FROM ${schemaName}.sso_providers
@@ -94,7 +94,7 @@ export class SSOService {
       throw new NotFoundError('Tenant', tenantSlug);
     }
 
-    const schemaName = `tenant_${tenant.slug}`;
+    const schemaName = tenantService.getSchemaName(tenant.slug);
 
     const result = await pool.query(
       `INSERT INTO ${schemaName}.sso_providers (
@@ -137,7 +137,7 @@ export class SSOService {
       throw new NotFoundError('Tenant', tenantSlug);
     }
 
-    const schemaName = `tenant_${tenant.slug}`;
+    const schemaName = tenantService.getSchemaName(tenant.slug);
 
     const updateFields: string[] = [];
     const values: any[] = [];
@@ -212,7 +212,7 @@ export class SSOService {
       throw new NotFoundError('Tenant', tenantSlug);
     }
 
-    const schemaName = `tenant_${tenant.slug}`;
+    const schemaName = tenantService.getSchemaName(tenant.slug);
 
     const result = await pool.query(
       `DELETE FROM ${schemaName}.sso_providers WHERE id = $1`,

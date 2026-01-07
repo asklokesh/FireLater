@@ -51,9 +51,10 @@ export async function buildApp(): Promise<FastifyInstance> {
 
     // Handle custom errors with statusCode
     if ('statusCode' in error && typeof error.statusCode === 'number') {
+      const errorLabel = 'error' in error && typeof error.error === 'string' ? error.error : error.name;
       reply.status(error.statusCode).send({
         statusCode: error.statusCode,
-        error: (error as any).error || error.name,
+        error: errorLabel,
         message: error.message,
       });
       return;

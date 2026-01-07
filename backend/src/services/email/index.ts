@@ -420,18 +420,28 @@ class EmailService {
     let sent = 0;
     let failed = 0;
 
-    for (const recipient of recipients) {
-      const result = await this.send({
-        to: recipient.email,
-        type,
-        data: { ...commonData, ...recipient.data },
-        tenantSlug,
-      });
+    // Process in parallel batches of 10 to avoid overwhelming email provider
+    const batchSize = 10;
+    for (let i = 0; i < recipients.length; i += batchSize) {
+      const batch = recipients.slice(i, i + batchSize);
 
-      if (result.success) {
-        sent++;
-      } else {
-        failed++;
+      const results = await Promise.allSettled(
+        batch.map(recipient =>
+          this.send({
+            to: recipient.email,
+            type,
+            data: { ...commonData, ...recipient.data },
+            tenantSlug,
+          })
+        )
+      );
+
+      for (const result of results) {
+        if (result.status === 'fulfilled' && result.value.success) {
+          sent++;
+        } else {
+          failed++;
+        }
       }
     }
 
@@ -461,13 +471,14 @@ class EmailService {
         return; // Table doesn't exist yet, skip tracking
       }
 
-      for (const email of recipients) {
-        await pool.query(`
-          INSERT INTO ${schema}.notification_deliveries (
-            channel, recipient, notification_type, status, error_message
-          ) VALUES ('email', $1, $2, $3, $4)
-        `, [email, type, status, errorMessage || null]);
-      }
+      // Use batch UNNEST query to insert all recipients in a single query
+      // This replaces N individual INSERT statements with 1 batch INSERT
+      await pool.query(`
+        INSERT INTO ${schema}.notification_deliveries (
+          channel, recipient, notification_type, status, error_message
+        )
+        SELECT 'email', unnest($1::text[]), $2, $3, $4
+      `, [recipients, type, status, errorMessage || null]);
     } catch (error) {
       logger.debug({ err: error }, 'Failed to track email delivery');
     }

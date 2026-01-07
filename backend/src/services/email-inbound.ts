@@ -1,6 +1,8 @@
 import { pool } from '../config/database.js';
 import { logger } from '../utils/logger.js';
 import { sanitizeHTML } from '../utils/contentSanitization.js';
+import { cacheService } from '../utils/cache.js';
+import { tenantService } from './tenant.js';
 
 // ============================================
 // EMAIL-TO-TICKET SERVICE
@@ -147,35 +149,60 @@ function parseEmailAddress(from: string): { email: string; name?: string } {
 // ============================================
 
 async function getEmailConfig(tenantSlug: string, emailAddress: string): Promise<EmailConfig | null> {
-  const schema = `tenant_${tenantSlug.replace(/-/g, '_')}`;
+  const normalizedEmail = emailAddress.toLowerCase();
+  const cacheKey = `${tenantSlug}:email:config:${normalizedEmail}`;
 
-  const result = await pool.query(
-    `SELECT * FROM ${schema}.email_configs WHERE email_address = $1 AND is_active = true`,
-    [emailAddress.toLowerCase()]
+  return cacheService.getOrSet(
+    cacheKey,
+    async () => {
+      const schema = tenantService.getSchemaName(tenantSlug);
+
+      const result = await pool.query(
+        `SELECT * FROM ${schema}.email_configs WHERE email_address = $1 AND is_active = true`,
+        [normalizedEmail]
+      );
+
+      return result.rows[0] || null;
+    },
+    { ttl: 600 } // 10 minutes - email configs change infrequently
   );
-
-  return result.rows[0] || null;
 }
 
 async function getEmailConfigById(tenantSlug: string, configId: string): Promise<EmailConfig | null> {
-  const schema = `tenant_${tenantSlug.replace(/-/g, '_')}`;
+  const cacheKey = `${tenantSlug}:email:configById:${configId}`;
 
-  const result = await pool.query(
-    `SELECT * FROM ${schema}.email_configs WHERE id = $1`,
-    [configId]
+  return cacheService.getOrSet(
+    cacheKey,
+    async () => {
+      const schema = tenantService.getSchemaName(tenantSlug);
+
+      const result = await pool.query(
+        `SELECT * FROM ${schema}.email_configs WHERE id = $1`,
+        [configId]
+      );
+
+      return result.rows[0] || null;
+    },
+    { ttl: 600 } // 10 minutes - email configs change infrequently
   );
-
-  return result.rows[0] || null;
 }
 
 async function listEmailConfigs(tenantSlug: string): Promise<EmailConfig[]> {
-  const schema = `tenant_${tenantSlug.replace(/-/g, '_')}`;
+  const cacheKey = `${tenantSlug}:email:configList`;
 
-  const result = await pool.query(
-    `SELECT * FROM ${schema}.email_configs ORDER BY created_at DESC`
+  return cacheService.getOrSet(
+    cacheKey,
+    async () => {
+      const schema = tenantService.getSchemaName(tenantSlug);
+
+      const result = await pool.query(
+        `SELECT * FROM ${schema}.email_configs ORDER BY created_at DESC`
+      );
+
+      return result.rows;
+    },
+    { ttl: 600 } // 10 minutes - email configs change infrequently
   );
-
-  return result.rows;
 }
 
 async function createEmailConfig(
@@ -194,7 +221,7 @@ async function createEmailConfig(
     blockedDomains?: string[];
   }
 ): Promise<EmailConfig> {
-  const schema = `tenant_${tenantSlug.replace(/-/g, '_')}`;
+  const schema = tenantService.getSchemaName(tenantSlug);
 
   const result = await pool.query(
     `INSERT INTO ${schema}.email_configs (
@@ -219,6 +246,11 @@ async function createEmailConfig(
     ]
   );
 
+  // Invalidate email config caches (non-blocking)
+  cacheService.invalidateTenant(tenantSlug, 'email').catch((err: Error) => {
+    logger.warn({ err, tenantSlug }, 'Failed to invalidate email config cache after create');
+  });
+
   return result.rows[0];
 }
 
@@ -238,7 +270,7 @@ async function updateEmailConfig(
     blockedDomains?: string[];
   }
 ): Promise<EmailConfig | null> {
-  const schema = `tenant_${tenantSlug.replace(/-/g, '_')}`;
+  const schema = tenantService.getSchemaName(tenantSlug);
 
   const updates: string[] = [];
   const values: unknown[] = [];
@@ -297,16 +329,26 @@ async function updateEmailConfig(
     values
   );
 
+  // Invalidate email config caches (non-blocking)
+  cacheService.invalidateTenant(tenantSlug, 'email').catch((err: Error) => {
+    logger.warn({ err, tenantSlug }, 'Failed to invalidate email config cache after update');
+  });
+
   return result.rows[0] || null;
 }
 
 async function deleteEmailConfig(tenantSlug: string, configId: string): Promise<boolean> {
-  const schema = `tenant_${tenantSlug.replace(/-/g, '_')}`;
+  const schema = tenantService.getSchemaName(tenantSlug);
 
   const result = await pool.query(
     `DELETE FROM ${schema}.email_configs WHERE id = $1`,
     [configId]
   );
+
+  // Invalidate email config caches (non-blocking)
+  cacheService.invalidateTenant(tenantSlug, 'email').catch((err: Error) => {
+    logger.warn({ err, tenantSlug }, 'Failed to invalidate email config cache after delete');
+  });
 
   return (result.rowCount ?? 0) > 0;
 }
@@ -320,7 +362,7 @@ async function findOrCreateUserByEmail(
   email: string,
   _name?: string
 ): Promise<string | null> {
-  const schema = `tenant_${tenantSlug.replace(/-/g, '_')}`;
+  const schema = tenantService.getSchemaName(tenantSlug);
 
   // First, try to find existing user
   const existingUser = await pool.query(
@@ -338,7 +380,7 @@ async function findOrCreateUserByEmail(
 }
 
 async function findIssueByNumber(tenantSlug: string, issueNumber: string): Promise<{ id: string } | null> {
-  const schema = `tenant_${tenantSlug.replace(/-/g, '_')}`;
+  const schema = tenantService.getSchemaName(tenantSlug);
 
   const result = await pool.query(
     `SELECT id FROM ${schema}.issues WHERE issue_number = $1`,
@@ -355,7 +397,7 @@ async function addCommentToIssue(
   userId?: string,
   isInternal: boolean = false
 ): Promise<void> {
-  const schema = `tenant_${tenantSlug.replace(/-/g, '_')}`;
+  const schema = tenantService.getSchemaName(tenantSlug);
 
   // Sanitize email content to prevent XSS attacks
   const sanitizedContent = sanitizeHTML(content);
@@ -368,7 +410,7 @@ async function addCommentToIssue(
 }
 
 async function getNextIssueNumber(tenantSlug: string): Promise<string> {
-  const schema = `tenant_${tenantSlug.replace(/-/g, '_')}`;
+  const schema = tenantService.getSchemaName(tenantSlug);
 
   const result = await pool.query(
     `UPDATE ${schema}.id_sequences
@@ -389,7 +431,7 @@ async function createIssueFromEmail(
   email: ParsedEmail,
   config: EmailConfig
 ): Promise<{ id: string; issueNumber: string }> {
-  const schema = `tenant_${tenantSlug.replace(/-/g, '_')}`;
+  const schema = tenantService.getSchemaName(tenantSlug);
 
   // Find reporter
   const reporterId = await findOrCreateUserByEmail(tenantSlug, email.senderEmail, email.senderName);
@@ -432,7 +474,7 @@ async function logInboundEmail(
     errorMessage?: string;
   }
 ): Promise<void> {
-  const schema = `tenant_${tenantSlug.replace(/-/g, '_')}`;
+  const schema = tenantService.getSchemaName(tenantSlug);
 
   await pool.query(
     `INSERT INTO ${schema}.email_logs (
@@ -635,7 +677,7 @@ async function getEmailLogs(
     limit?: number;
   }
 ): Promise<{ logs: unknown[]; total: number }> {
-  const schema = `tenant_${tenantSlug.replace(/-/g, '_')}`;
+  const schema = tenantService.getSchemaName(tenantSlug);
 
   const conditions: string[] = [];
   const values: unknown[] = [];

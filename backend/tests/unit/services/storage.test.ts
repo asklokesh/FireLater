@@ -78,6 +78,15 @@ vi.mock('../../../src/config/index.js', () => ({
   },
 }));
 
+// Mock cache service - bypass caching entirely
+vi.mock('../../../src/utils/cache.js', () => ({
+  cacheService: {
+    getOrSet: vi.fn(async (_key: string, fetcher: () => Promise<unknown>) => fetcher()),
+    invalidate: vi.fn().mockResolvedValue(1),
+    invalidateTenant: vi.fn().mockResolvedValue(1),
+  },
+}));
+
 // Mock nanoid
 vi.mock('nanoid', () => ({
   nanoid: () => 'abc123xyz789',

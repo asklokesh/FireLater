@@ -214,18 +214,21 @@ export async function createSlaPolicy(
     `, [data.name, data.description, data.entityType, data.isDefault ?? false]);
 
     const policy = policyResult.rows[0];
-    const targets: SlaTarget[] = [];
+    let targets: SlaTarget[] = [];
 
-    // Create targets
+    // Create targets using batch UNNEST query (replaces N individual INSERTs with 1 batch INSERT)
     if (data.targets && data.targets.length > 0) {
-      for (const target of data.targets) {
-        const targetResult = await client.query(`
-          INSERT INTO ${schema}.sla_targets (policy_id, metric_type, priority, target_minutes, warning_threshold_percent)
-          VALUES ($1, $2, $3, $4, $5)
-          RETURNING *
-        `, [policy.id, target.metricType, target.priority, target.targetMinutes, target.warningThresholdPercent ?? 80]);
-        targets.push(targetResult.rows[0]);
-      }
+      const metricTypes = data.targets.map(t => t.metricType);
+      const priorities = data.targets.map(t => t.priority);
+      const targetMinutes = data.targets.map(t => t.targetMinutes);
+      const warningThresholds = data.targets.map(t => t.warningThresholdPercent ?? 80);
+
+      const targetResult = await client.query(`
+        INSERT INTO ${schema}.sla_targets (policy_id, metric_type, priority, target_minutes, warning_threshold_percent)
+        SELECT $1, unnest($2::text[]), unnest($3::text[]), unnest($4::int[]), unnest($5::int[])
+        RETURNING *
+      `, [policy.id, metricTypes, priorities, targetMinutes, warningThresholds]);
+      targets = targetResult.rows;
     }
 
     await client.query('COMMIT');

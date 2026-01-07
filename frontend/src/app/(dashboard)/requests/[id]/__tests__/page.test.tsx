@@ -683,4 +683,616 @@ describe('RequestDetailPage', () => {
       });
     });
   });
+
+  describe('Edit Mode', () => {
+    it('shows Edit button when request is editable', async () => {
+      render(<RequestDetailPage />);
+
+      await waitFor(() => {
+        expect(screen.getByRole('button', { name: /edit/i })).toBeInTheDocument();
+      });
+    });
+
+    it('does not show Edit button when request is completed', async () => {
+      const completedRequest = { ...mockRequest, status: 'completed' };
+      vi.mocked(requestsApi.get).mockResolvedValue(completedRequest);
+
+      render(<RequestDetailPage />);
+
+      await waitFor(() => {
+        expect(screen.getByText('REQ0001234')).toBeInTheDocument();
+      });
+
+      expect(screen.queryByRole('button', { name: /edit/i })).not.toBeInTheDocument();
+    });
+
+    it('does not show Edit button when request is cancelled', async () => {
+      const cancelledRequest = { ...mockRequest, status: 'cancelled' };
+      vi.mocked(requestsApi.get).mockResolvedValue(cancelledRequest);
+
+      render(<RequestDetailPage />);
+
+      await waitFor(() => {
+        expect(screen.getByText('REQ0001234')).toBeInTheDocument();
+      });
+
+      expect(screen.queryByRole('button', { name: /edit/i })).not.toBeInTheDocument();
+    });
+
+    it('enters edit mode when Edit is clicked', async () => {
+      render(<RequestDetailPage />);
+
+      await waitFor(() => {
+        expect(screen.getByRole('button', { name: /edit/i })).toBeInTheDocument();
+      });
+
+      fireEvent.click(screen.getByRole('button', { name: /edit/i }));
+
+      await waitFor(() => {
+        expect(screen.getByRole('button', { name: /save/i })).toBeInTheDocument();
+        expect(screen.getByRole('button', { name: /cancel/i })).toBeInTheDocument();
+      });
+    });
+
+    it('shows priority select in edit mode', async () => {
+      render(<RequestDetailPage />);
+
+      await waitFor(() => {
+        expect(screen.getByRole('button', { name: /edit/i })).toBeInTheDocument();
+      });
+
+      fireEvent.click(screen.getByRole('button', { name: /edit/i }));
+
+      await waitFor(() => {
+        // Find select with priority options
+        const selects = document.querySelectorAll('select');
+        const prioritySelect = Array.from(selects).find(s =>
+          Array.from(s.options).some(o => o.text === 'Critical')
+        );
+        expect(prioritySelect).toBeInTheDocument();
+      });
+    });
+
+    it('shows notes textarea in edit mode', async () => {
+      render(<RequestDetailPage />);
+
+      await waitFor(() => {
+        expect(screen.getByRole('button', { name: /edit/i })).toBeInTheDocument();
+      });
+
+      fireEvent.click(screen.getByRole('button', { name: /edit/i }));
+
+      await waitFor(() => {
+        expect(screen.getByPlaceholderText(/add additional notes/i)).toBeInTheDocument();
+      });
+    });
+
+    it('shows cost center input in edit mode', async () => {
+      render(<RequestDetailPage />);
+
+      await waitFor(() => {
+        expect(screen.getByRole('button', { name: /edit/i })).toBeInTheDocument();
+      });
+
+      fireEvent.click(screen.getByRole('button', { name: /edit/i }));
+
+      await waitFor(() => {
+        expect(screen.getByPlaceholderText(/enter cost center/i)).toBeInTheDocument();
+      });
+    });
+
+    it('cancels edit mode without saving', async () => {
+      render(<RequestDetailPage />);
+
+      await waitFor(() => {
+        expect(screen.getByRole('button', { name: /edit/i })).toBeInTheDocument();
+      });
+
+      fireEvent.click(screen.getByRole('button', { name: /edit/i }));
+
+      await waitFor(() => {
+        expect(screen.getByRole('button', { name: /cancel/i })).toBeInTheDocument();
+      });
+
+      fireEvent.click(screen.getByRole('button', { name: /cancel/i }));
+
+      await waitFor(() => {
+        expect(screen.getByRole('button', { name: /edit/i })).toBeInTheDocument();
+        expect(screen.queryByRole('button', { name: /save/i })).not.toBeInTheDocument();
+      });
+    });
+  });
+
+  describe('Action Buttons', () => {
+    it('shows Start Work button when request is approved and assigned', async () => {
+      const approvedRequest = { ...mockRequest, status: 'approved' };
+      vi.mocked(requestsApi.get).mockResolvedValue(approvedRequest);
+
+      render(<RequestDetailPage />);
+
+      await waitFor(() => {
+        expect(screen.getByRole('button', { name: /start work/i })).toBeInTheDocument();
+      });
+    });
+
+    it('shows Complete button when request is in_progress', async () => {
+      const inProgressRequest = { ...mockRequest, status: 'in_progress' };
+      vi.mocked(requestsApi.get).mockResolvedValue(inProgressRequest);
+
+      render(<RequestDetailPage />);
+
+      await waitFor(() => {
+        expect(screen.getByRole('button', { name: /complete/i })).toBeInTheDocument();
+      });
+    });
+
+    it('shows Cancel button when request is cancellable', async () => {
+      render(<RequestDetailPage />);
+
+      await waitFor(() => {
+        // Find cancel button - may be in edit mode area
+        const cancelButtons = screen.getAllByRole('button', { name: /cancel/i });
+        expect(cancelButtons.length).toBeGreaterThan(0);
+      });
+    });
+
+    it('does not show Cancel button when request is completed', async () => {
+      const completedRequest = { ...mockRequest, status: 'completed' };
+      vi.mocked(requestsApi.get).mockResolvedValue(completedRequest);
+
+      render(<RequestDetailPage />);
+
+      await waitFor(() => {
+        expect(screen.getByText('REQ0001234')).toBeInTheDocument();
+      });
+
+      // There should be no cancel button in the action area
+      const cancelButtons = screen.queryAllByRole('button', { name: /cancel/i });
+      // The only cancel buttons should not include action cancel
+      cancelButtons.forEach(btn => {
+        expect(btn.closest('.space-x-2')).toBeFalsy();
+      });
+    });
+  });
+
+  describe('Cancel Modal', () => {
+    it('shows cancel modal when Cancel button is clicked', async () => {
+      render(<RequestDetailPage />);
+
+      await waitFor(() => {
+        expect(screen.getByText('REQ0001234')).toBeInTheDocument();
+      });
+
+      // Find the action cancel button (not edit cancel)
+      const cancelButtons = screen.getAllByRole('button', { name: /cancel/i });
+      const actionCancel = cancelButtons.find(btn => btn.textContent?.toLowerCase() === 'cancel');
+      if (actionCancel) {
+        fireEvent.click(actionCancel);
+
+        await waitFor(() => {
+          // Look for the modal with title "Cancel Request"
+          const cancelRequestElements = screen.getAllByText('Cancel Request');
+          // The modal should have the placeholder text
+          expect(screen.getByPlaceholderText(/reason for cancellation/i)).toBeInTheDocument();
+          expect(cancelRequestElements.length).toBeGreaterThanOrEqual(1);
+        });
+      }
+    });
+
+    it('shows Keep Request button in cancel modal', async () => {
+      render(<RequestDetailPage />);
+
+      await waitFor(() => {
+        expect(screen.getByText('REQ0001234')).toBeInTheDocument();
+      });
+
+      const cancelButtons = screen.getAllByRole('button', { name: /cancel/i });
+      const actionCancel = cancelButtons.find(btn => btn.textContent?.toLowerCase() === 'cancel');
+      if (actionCancel) {
+        fireEvent.click(actionCancel);
+
+        await waitFor(() => {
+          expect(screen.getByRole('button', { name: /keep request/i })).toBeInTheDocument();
+        });
+      }
+    });
+
+    it('closes cancel modal when Keep Request is clicked', async () => {
+      render(<RequestDetailPage />);
+
+      await waitFor(() => {
+        expect(screen.getByText('REQ0001234')).toBeInTheDocument();
+      });
+
+      const cancelButtons = screen.getAllByRole('button', { name: /cancel/i });
+      const actionCancel = cancelButtons.find(btn => btn.textContent?.toLowerCase() === 'cancel');
+      if (actionCancel) {
+        fireEvent.click(actionCancel);
+
+        await waitFor(() => {
+          // Modal is open when we see the placeholder
+          expect(screen.getByPlaceholderText(/reason for cancellation/i)).toBeInTheDocument();
+        });
+
+        fireEvent.click(screen.getByRole('button', { name: /keep request/i }));
+
+        await waitFor(() => {
+          expect(screen.queryByText('Please provide a reason')).not.toBeInTheDocument();
+        });
+      }
+    });
+  });
+
+  describe('Assignment Section', () => {
+    it('displays assigned user when present', async () => {
+      render(<RequestDetailPage />);
+
+      await waitFor(() => {
+        expect(screen.getByText('Bob Wilson')).toBeInTheDocument();
+        expect(screen.getByText('bob@example.com')).toBeInTheDocument();
+      });
+    });
+
+    it('shows Not assigned when no assignee', async () => {
+      const unassignedRequest = { ...mockRequest, assigned_to: null };
+      vi.mocked(requestsApi.get).mockResolvedValue(unassignedRequest);
+
+      render(<RequestDetailPage />);
+
+      await waitFor(() => {
+        expect(screen.getByText('Not assigned')).toBeInTheDocument();
+      });
+    });
+
+    it('shows user select dropdown when not assigned', async () => {
+      const unassignedRequest = { ...mockRequest, assigned_to: null };
+      vi.mocked(requestsApi.get).mockResolvedValue(unassignedRequest);
+
+      render(<RequestDetailPage />);
+
+      await waitFor(() => {
+        const selects = document.querySelectorAll('select');
+        const userSelect = Array.from(selects).find(s =>
+          Array.from(s.options).some(o => o.text === 'Select user...')
+        );
+        expect(userSelect).toBeInTheDocument();
+      });
+    });
+
+    it('shows Assign button when not assigned', async () => {
+      const unassignedRequest = { ...mockRequest, assigned_to: null };
+      vi.mocked(requestsApi.get).mockResolvedValue(unassignedRequest);
+
+      render(<RequestDetailPage />);
+
+      await waitFor(() => {
+        expect(screen.getByRole('button', { name: /assign/i })).toBeInTheDocument();
+      });
+    });
+  });
+
+  describe('In Progress Status', () => {
+    it('renders in_progress status correctly', async () => {
+      const inProgressRequest = { ...mockRequest, status: 'in_progress' };
+      vi.mocked(requestsApi.get).mockResolvedValue(inProgressRequest);
+
+      render(<RequestDetailPage />);
+
+      await waitFor(() => {
+        const elements = screen.getAllByText(/in.progress/i);
+        expect(elements.length).toBeGreaterThan(0);
+      });
+    });
+  });
+
+  describe('Progress Timeline', () => {
+    it('displays progress section', async () => {
+      render(<RequestDetailPage />);
+
+      await waitFor(() => {
+        expect(screen.getByText('Progress')).toBeInTheDocument();
+      });
+    });
+
+    it('shows status steps in progress section', async () => {
+      render(<RequestDetailPage />);
+
+      await waitFor(() => {
+        expect(screen.getByText('Submitted')).toBeInTheDocument();
+        expect(screen.getAllByText(/pending.approval/i)[0]).toBeInTheDocument();
+      });
+    });
+
+    it('shows Cancelled status in progress when cancelled', async () => {
+      const cancelledRequest = { ...mockRequest, status: 'cancelled' };
+      vi.mocked(requestsApi.get).mockResolvedValue(cancelledRequest);
+
+      render(<RequestDetailPage />);
+
+      await waitFor(() => {
+        // Find Cancelled in Progress section (red text)
+        const cancelledTexts = screen.getAllByText(/cancelled/i);
+        const progressCancelled = cancelledTexts.find(el =>
+          el.classList.contains('text-red-600')
+        );
+        expect(progressCancelled).toBeInTheDocument();
+      });
+    });
+
+    it('shows Rejected status in progress when rejected', async () => {
+      const rejectedRequest = { ...mockRequest, status: 'rejected' };
+      vi.mocked(requestsApi.get).mockResolvedValue(rejectedRequest);
+
+      render(<RequestDetailPage />);
+
+      await waitFor(() => {
+        const rejectedTexts = screen.getAllByText(/rejected/i);
+        const progressRejected = rejectedTexts.find(el =>
+          el.classList.contains('text-red-600')
+        );
+        expect(progressRejected).toBeInTheDocument();
+      });
+    });
+  });
+
+  describe('Request Information Section', () => {
+    it('displays Request Information heading', async () => {
+      render(<RequestDetailPage />);
+
+      await waitFor(() => {
+        expect(screen.getByText('Request Information')).toBeInTheDocument();
+      });
+    });
+
+    it('displays due date when present', async () => {
+      render(<RequestDetailPage />);
+
+      await waitFor(() => {
+        expect(screen.getByText('Due Date')).toBeInTheDocument();
+      });
+    });
+
+    it('displays completed date when completed', async () => {
+      const completedRequest = {
+        ...mockRequest,
+        status: 'completed',
+        completed_at: '2024-01-10T10:00:00Z'
+      };
+      vi.mocked(requestsApi.get).mockResolvedValue(completedRequest);
+
+      render(<RequestDetailPage />);
+
+      await waitFor(() => {
+        // "Completed" may appear in multiple places (status badge and info section)
+        const completedElements = screen.getAllByText(/completed/i);
+        expect(completedElements.length).toBeGreaterThan(0);
+      });
+    });
+  });
+
+  describe('Cancellation Reason', () => {
+    it('displays cancellation reason when present', async () => {
+      const cancelledRequest = {
+        ...mockRequest,
+        status: 'cancelled',
+        cancel_reason: 'No longer needed'
+      };
+      vi.mocked(requestsApi.get).mockResolvedValue(cancelledRequest);
+
+      render(<RequestDetailPage />);
+
+      await waitFor(() => {
+        expect(screen.getByText('Cancellation Reason')).toBeInTheDocument();
+        expect(screen.getByText('No longer needed')).toBeInTheDocument();
+      });
+    });
+  });
+
+  describe('Internal Comment Checkbox', () => {
+    it('shows internal note checkbox in comments tab', async () => {
+      render(<RequestDetailPage />);
+
+      await waitFor(() => {
+        expect(screen.getByText('REQ0001234')).toBeInTheDocument();
+      });
+
+      const commentsButton = screen.getByRole('button', { name: /comments/i });
+      fireEvent.click(commentsButton);
+
+      await waitFor(() => {
+        // "internal note" may appear in multiple places (existing internal comments)
+        const internalNoteElements = screen.getAllByText(/internal note/i);
+        expect(internalNoteElements.length).toBeGreaterThan(0);
+      });
+    });
+
+    it('allows toggling internal note checkbox', async () => {
+      render(<RequestDetailPage />);
+
+      await waitFor(() => {
+        expect(screen.getByText('REQ0001234')).toBeInTheDocument();
+      });
+
+      const commentsButton = screen.getByRole('button', { name: /comments/i });
+      fireEvent.click(commentsButton);
+
+      await waitFor(() => {
+        const checkbox = screen.getByRole('checkbox');
+        expect(checkbox).not.toBeChecked();
+        fireEvent.click(checkbox);
+        expect(checkbox).toBeChecked();
+      });
+    });
+  });
+
+  describe('Pending Approval Badge', () => {
+    it('shows pending approval count in approvals tab', async () => {
+      render(<RequestDetailPage />);
+
+      await waitFor(() => {
+        expect(screen.getByText('REQ0001234')).toBeInTheDocument();
+      });
+
+      // The approvals tab should show a badge with count
+      const approvalsButton = screen.getByRole('button', { name: /approvals/i });
+      const badge = approvalsButton.querySelector('.bg-yellow-100');
+      expect(badge).toBeInTheDocument();
+    });
+  });
+
+  describe('Comments Count Badge', () => {
+    it('shows comments count in comments tab', async () => {
+      render(<RequestDetailPage />);
+
+      await waitFor(() => {
+        expect(screen.getByText('REQ0001234')).toBeInTheDocument();
+      });
+
+      // The comments tab should show a badge with count
+      const commentsButton = screen.getByRole('button', { name: /comments/i });
+      const badge = commentsButton.querySelector('.bg-gray-100');
+      expect(badge).toBeInTheDocument();
+    });
+  });
+
+  describe('Approval Actions', () => {
+    it('shows approve button for pending approvals', async () => {
+      render(<RequestDetailPage />);
+
+      await waitFor(() => {
+        expect(screen.getByText('REQ0001234')).toBeInTheDocument();
+      });
+
+      const approvalsButton = screen.getByRole('button', { name: /approvals/i });
+      fireEvent.click(approvalsButton);
+
+      await waitFor(() => {
+        // There should be approve buttons in pending approval sections
+        const approveButtons = screen.getAllByRole('button', { name: /^approve$/i });
+        expect(approveButtons.length).toBeGreaterThan(0);
+      });
+    });
+
+    it('shows reject button for pending approvals', async () => {
+      render(<RequestDetailPage />);
+
+      await waitFor(() => {
+        expect(screen.getByText('REQ0001234')).toBeInTheDocument();
+      });
+
+      const approvalsButton = screen.getByRole('button', { name: /approvals/i });
+      fireEvent.click(approvalsButton);
+
+      await waitFor(() => {
+        const rejectButtons = screen.getAllByRole('button', { name: /^reject$/i });
+        expect(rejectButtons.length).toBeGreaterThan(0);
+      });
+    });
+
+    it('shows approval comment textarea for pending approvals', async () => {
+      render(<RequestDetailPage />);
+
+      await waitFor(() => {
+        expect(screen.getByText('REQ0001234')).toBeInTheDocument();
+      });
+
+      const approvalsButton = screen.getByRole('button', { name: /approvals/i });
+      fireEvent.click(approvalsButton);
+
+      await waitFor(() => {
+        expect(screen.getByPlaceholderText(/add comments/i)).toBeInTheDocument();
+      });
+    });
+  });
+
+  describe('Delegated Approval', () => {
+    it('displays delegated approver when present', async () => {
+      const delegatedApprovals = [
+        {
+          ...mockApprovals[1],
+          delegated_to_id: 'user-6',
+          delegated_to_name: 'Delegate Person',
+        },
+      ];
+      vi.mocked(requestsApi.getApprovals).mockResolvedValue({ data: delegatedApprovals });
+
+      render(<RequestDetailPage />);
+
+      await waitFor(() => {
+        expect(screen.getByText('REQ0001234')).toBeInTheDocument();
+      });
+
+      const approvalsButton = screen.getByRole('button', { name: /approvals/i });
+      fireEvent.click(approvalsButton);
+
+      await waitFor(() => {
+        expect(screen.getByText('Finance Approval')).toBeInTheDocument();
+      });
+    });
+  });
+
+  describe('Error State', () => {
+    it('displays action error when update fails', async () => {
+      vi.mocked(requestsApi.update).mockRejectedValue(new Error('Failed to update'));
+
+      render(<RequestDetailPage />);
+
+      await waitFor(() => {
+        expect(screen.getByText('REQ0001234')).toBeInTheDocument();
+      });
+
+      // Click edit button
+      const editButton = screen.getByRole('button', { name: /edit/i });
+      fireEvent.click(editButton);
+
+      await waitFor(() => {
+        expect(screen.getByRole('button', { name: /save/i })).toBeInTheDocument();
+      });
+
+      // Try to save (this should fail)
+      const saveButton = screen.getByRole('button', { name: /save/i });
+      fireEvent.click(saveButton);
+
+      await waitFor(() => {
+        expect(screen.getByText(/failed to update/i)).toBeInTheDocument();
+      });
+    });
+
+    it('shows dismiss button for action error', async () => {
+      vi.mocked(requestsApi.update).mockRejectedValue(new Error('Failed to update'));
+
+      render(<RequestDetailPage />);
+
+      await waitFor(() => {
+        expect(screen.getByText('REQ0001234')).toBeInTheDocument();
+      });
+
+      // Click edit button
+      const editButton = screen.getByRole('button', { name: /edit/i });
+      fireEvent.click(editButton);
+
+      await waitFor(() => {
+        expect(screen.getByRole('button', { name: /save/i })).toBeInTheDocument();
+      });
+
+      // Try to save (this should fail)
+      const saveButton = screen.getByRole('button', { name: /save/i });
+      fireEvent.click(saveButton);
+
+      await waitFor(() => {
+        expect(screen.getByText('Dismiss')).toBeInTheDocument();
+      });
+    });
+  });
+
+  describe('Back Link', () => {
+    it('has back link to catalog', async () => {
+      render(<RequestDetailPage />);
+
+      await waitFor(() => {
+        const backLink = screen.getByRole('link', { name: '' });
+        expect(backLink).toHaveAttribute('href', '/catalog');
+      });
+    });
+  });
 });

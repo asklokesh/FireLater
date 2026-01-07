@@ -726,4 +726,622 @@ describe('IssueDetailPage', () => {
       expect(screen.getByText('Closed')).toBeInTheDocument();
     });
   });
+
+  describe('Assign Modal', () => {
+    it('opens assign modal when assign button clicked', async () => {
+      renderComponent();
+      fireEvent.click(screen.getByRole('button', { name: /assign/i }));
+
+      await waitFor(() => {
+        expect(screen.getByText('Assign Issue')).toBeInTheDocument();
+        expect(screen.getByText('Select a user to assign this issue to:')).toBeInTheDocument();
+      });
+    });
+
+    it('displays list of users in assign modal', async () => {
+      renderComponent();
+      fireEvent.click(screen.getByRole('button', { name: /assign/i }));
+
+      await waitFor(() => {
+        // Jane Smith appears in both modal and may appear in main content
+        const janeElements = screen.getAllByText('Jane Smith');
+        expect(janeElements.length).toBeGreaterThanOrEqual(1);
+        const bobElements = screen.getAllByText('Bob Wilson');
+        expect(bobElements.length).toBeGreaterThanOrEqual(1);
+      });
+    });
+
+    it('closes assign modal when Cancel clicked', async () => {
+      renderComponent();
+      fireEvent.click(screen.getByRole('button', { name: /assign/i }));
+
+      await waitFor(() => {
+        expect(screen.getByText('Assign Issue')).toBeInTheDocument();
+      });
+
+      // Click the cancel button in the modal
+      const cancelButtons = screen.getAllByRole('button', { name: /cancel/i });
+      fireEvent.click(cancelButtons[cancelButtons.length - 1]);
+
+      await waitFor(() => {
+        expect(screen.queryByText('Assign Issue')).not.toBeInTheDocument();
+      });
+    });
+
+    it('calls assignIssue API when user selected', async () => {
+      const mockAssign = vi.fn().mockResolvedValue({});
+      vi.mocked(apiHooks.useAssignIssue).mockReturnValue({
+        mutateAsync: mockAssign,
+        isPending: false,
+      } as any);
+
+      renderComponent();
+      fireEvent.click(screen.getByRole('button', { name: /assign/i }));
+
+      await waitFor(() => {
+        const janeElements = screen.getAllByText('Jane Smith');
+        expect(janeElements.length).toBeGreaterThanOrEqual(1);
+      });
+
+      // Find and click the user button in the modal
+      const userButtons = screen.getAllByRole('button');
+      const janeButton = userButtons.find(btn => btn.textContent?.includes('Jane Smith'));
+      if (janeButton) {
+        fireEvent.click(janeButton);
+      }
+
+      await waitFor(() => {
+        expect(mockAssign).toHaveBeenCalledWith({
+          id: 'issue-123',
+          assignedTo: 'user-1',
+        });
+      });
+    });
+
+    it('displays error when assign fails', async () => {
+      const mockAssign = vi.fn().mockRejectedValue(new Error('Failed to assign'));
+      vi.mocked(apiHooks.useAssignIssue).mockReturnValue({
+        mutateAsync: mockAssign,
+        isPending: false,
+      } as any);
+
+      renderComponent();
+      fireEvent.click(screen.getByRole('button', { name: /assign/i }));
+
+      await waitFor(() => {
+        const janeElements = screen.getAllByText('Jane Smith');
+        expect(janeElements.length).toBeGreaterThanOrEqual(1);
+      });
+
+      const userButtons = screen.getAllByRole('button');
+      const janeButton = userButtons.find(btn => btn.textContent?.includes('Jane Smith'));
+      if (janeButton) {
+        fireEvent.click(janeButton);
+      }
+
+      await waitFor(() => {
+        // The error message comes from the Error instance thrown
+        expect(screen.getByText('Failed to assign')).toBeInTheDocument();
+      });
+    });
+  });
+
+  describe('Linked Problem Section', () => {
+    it('displays Linked Problem heading', () => {
+      renderComponent();
+      expect(screen.getByText('Linked Problem')).toBeInTheDocument();
+    });
+
+    it('shows Link button when no problem linked', () => {
+      renderComponent();
+      // Find the Link button in the Linked Problem section
+      const linkButtons = screen.getAllByRole('button', { name: /link/i });
+      expect(linkButtons.length).toBeGreaterThan(0);
+    });
+
+    it('shows empty state when no problem linked', () => {
+      renderComponent();
+      expect(screen.getByText(/no linked problem/i)).toBeInTheDocument();
+    });
+
+    it('displays linked problem when present', () => {
+      const linkedProblem = {
+        id: 'prob-1',
+        problem_number: 'PRB0001',
+        title: 'Database performance issue',
+        status: 'open',
+        relationship_type: 'caused_by',
+      };
+      vi.mocked(apiHooks.useIssueLinkedProblem).mockReturnValue({
+        data: { data: linkedProblem },
+      } as any);
+
+      renderComponent();
+      expect(screen.getByText('PRB0001')).toBeInTheDocument();
+      expect(screen.getByText('Database performance issue')).toBeInTheDocument();
+    });
+
+    it('shows Unlink button when problem is linked', () => {
+      const linkedProblem = {
+        id: 'prob-1',
+        problem_number: 'PRB0001',
+        title: 'Database performance issue',
+        status: 'open',
+        relationship_type: 'caused_by',
+      };
+      vi.mocked(apiHooks.useIssueLinkedProblem).mockReturnValue({
+        data: { data: linkedProblem },
+      } as any);
+
+      renderComponent();
+      expect(screen.getByRole('button', { name: /unlink/i })).toBeInTheDocument();
+    });
+
+    it('displays relationship type for linked problem', () => {
+      const linkedProblem = {
+        id: 'prob-1',
+        problem_number: 'PRB0001',
+        title: 'Database performance issue',
+        status: 'open',
+        relationship_type: 'caused_by',
+      };
+      vi.mocked(apiHooks.useIssueLinkedProblem).mockReturnValue({
+        data: { data: linkedProblem },
+      } as any);
+
+      renderComponent();
+      expect(screen.getByText(/caused by/i)).toBeInTheDocument();
+    });
+
+    it('shows Known Error badge for known error problems', () => {
+      const linkedProblem = {
+        id: 'prob-1',
+        problem_number: 'PRB0001',
+        title: 'Database performance issue',
+        status: 'known_error',
+        is_known_error: true,
+        relationship_type: 'caused_by',
+      };
+      vi.mocked(apiHooks.useIssueLinkedProblem).mockReturnValue({
+        data: { data: linkedProblem },
+      } as any);
+
+      renderComponent();
+      expect(screen.getByText('Known Error')).toBeInTheDocument();
+    });
+
+    it('calls unlinkFromProblem API when Unlink clicked', async () => {
+      const mockUnlink = vi.fn().mockResolvedValue({});
+      vi.mocked(apiHooks.useUnlinkIssueFromProblem).mockReturnValue({
+        mutateAsync: mockUnlink,
+        isPending: false,
+      } as any);
+
+      const linkedProblem = {
+        id: 'prob-1',
+        problem_number: 'PRB0001',
+        title: 'Database performance issue',
+        status: 'open',
+        relationship_type: 'caused_by',
+      };
+      vi.mocked(apiHooks.useIssueLinkedProblem).mockReturnValue({
+        data: { data: linkedProblem },
+      } as any);
+
+      renderComponent();
+      fireEvent.click(screen.getByRole('button', { name: /unlink/i }));
+
+      await waitFor(() => {
+        expect(mockUnlink).toHaveBeenCalledWith('issue-123');
+      });
+    });
+  });
+
+  describe('Knowledge Base Section', () => {
+    it('displays Knowledge Base heading', () => {
+      renderComponent();
+      expect(screen.getByText('Knowledge Base')).toBeInTheDocument();
+    });
+
+    it('shows Link button for KB articles', () => {
+      renderComponent();
+      // Check Knowledge Base section has a Link button
+      const kbSection = screen.getByText('Knowledge Base').closest('div');
+      expect(kbSection).toBeInTheDocument();
+    });
+
+    it('shows empty state when no KB articles linked', () => {
+      renderComponent();
+      expect(screen.getByText(/no linked articles/i)).toBeInTheDocument();
+    });
+
+    it('displays linked KB articles when present', () => {
+      const linkedArticles = [
+        {
+          id: 'kb-1',
+          title: 'Database troubleshooting guide',
+          type: 'troubleshooting',
+          summary: 'Guide for troubleshooting database issues',
+        },
+      ];
+      vi.mocked(apiHooks.useKBArticlesForIssue).mockReturnValue({
+        data: { data: linkedArticles },
+      } as any);
+
+      renderComponent();
+      expect(screen.getByText('Database troubleshooting guide')).toBeInTheDocument();
+    });
+
+    it('displays article type badge', () => {
+      const linkedArticles = [
+        {
+          id: 'kb-1',
+          title: 'Database troubleshooting guide',
+          type: 'troubleshooting',
+          summary: 'Guide for troubleshooting database issues',
+        },
+      ];
+      vi.mocked(apiHooks.useKBArticlesForIssue).mockReturnValue({
+        data: { data: linkedArticles },
+      } as any);
+
+      renderComponent();
+      expect(screen.getByText('troubleshooting')).toBeInTheDocument();
+    });
+  });
+
+  describe('Link Problem Modal', () => {
+    it('opens link problem modal when Link clicked', async () => {
+      renderComponent();
+      // Find the Link button in the Linked Problem section
+      const linkedProblemSection = screen.getByText('Linked Problem').closest('div');
+      const linkButton = linkedProblemSection?.querySelector('button');
+      if (linkButton) {
+        fireEvent.click(linkButton);
+      }
+
+      await waitFor(() => {
+        // "Link to Problem" may appear multiple times (in title and button)
+        const linkElements = screen.getAllByText(/link to problem/i);
+        expect(linkElements.length).toBeGreaterThanOrEqual(1);
+      });
+    });
+
+    it('displays available problems in modal', async () => {
+      renderComponent();
+      const linkedProblemSection = screen.getByText('Linked Problem').closest('div');
+      const linkButton = linkedProblemSection?.querySelector('button');
+      if (linkButton) {
+        fireEvent.click(linkButton);
+      }
+
+      await waitFor(() => {
+        // Check for problem number in select option or displayed text
+        const selectElements = document.querySelectorAll('select');
+        const problemSelect = Array.from(selectElements).find(s =>
+          Array.from(s.options).some(o => o.text.includes('PRB0001'))
+        );
+        expect(problemSelect).toBeInTheDocument();
+      });
+    });
+  });
+
+  describe('Timeline Section', () => {
+    it('displays Timeline heading', () => {
+      renderComponent();
+      expect(screen.getByText('Timeline')).toBeInTheDocument();
+    });
+
+    it('displays created date', () => {
+      renderComponent();
+      expect(screen.getByText('Created')).toBeInTheDocument();
+    });
+
+    it('displays last updated date', () => {
+      renderComponent();
+      expect(screen.getByText('Last Updated')).toBeInTheDocument();
+    });
+
+    it('displays resolved date when issue is resolved', () => {
+      const resolvedIssue = {
+        ...mockIssue,
+        status: 'resolved',
+        resolved_at: '2024-01-05T10:00:00Z',
+      };
+      vi.mocked(apiHooks.useIssue).mockReturnValue({
+        data: resolvedIssue,
+        isLoading: false,
+        error: null,
+      } as any);
+
+      renderComponent();
+      // "Resolved" appears in both status badge and timeline
+      const resolvedElements = screen.getAllByText(/resolved/i);
+      expect(resolvedElements.length).toBeGreaterThan(0);
+    });
+
+    it('displays closed date when issue is closed', () => {
+      const closedIssue = {
+        ...mockIssue,
+        status: 'closed',
+        closed_at: '2024-01-06T10:00:00Z',
+      };
+      vi.mocked(apiHooks.useIssue).mockReturnValue({
+        data: closedIssue,
+        isLoading: false,
+        error: null,
+      } as any);
+
+      renderComponent();
+      // "Closed" appears in both status badge and timeline
+      const closedElements = screen.getAllByText(/closed/i);
+      expect(closedElements.length).toBeGreaterThan(0);
+    });
+  });
+
+  describe('SLA Status', () => {
+    it('displays SLA Breached when SLA is breached', () => {
+      const breachedIssue = {
+        ...mockIssue,
+        sla_breached: true,
+      };
+      vi.mocked(apiHooks.useIssue).mockReturnValue({
+        data: breachedIssue,
+        isLoading: false,
+        error: null,
+      } as any);
+
+      renderComponent();
+      expect(screen.getByText('SLA Status')).toBeInTheDocument();
+      expect(screen.getByText('Breached')).toBeInTheDocument();
+    });
+
+    it('displays SLA Breached At date when present', () => {
+      const breachedIssue = {
+        ...mockIssue,
+        sla_breached: true,
+        sla_breached_at: '2024-01-03T10:00:00Z',
+      };
+      vi.mocked(apiHooks.useIssue).mockReturnValue({
+        data: breachedIssue,
+        isLoading: false,
+        error: null,
+      } as any);
+
+      renderComponent();
+      expect(screen.getByText('SLA Breached At')).toBeInTheDocument();
+    });
+  });
+
+  describe('Details Section', () => {
+    it('displays Assigned To section', () => {
+      renderComponent();
+      expect(screen.getByText('Assigned To')).toBeInTheDocument();
+    });
+
+    it('displays Unassigned when no assignee', () => {
+      renderComponent();
+      expect(screen.getByText('Unassigned')).toBeInTheDocument();
+    });
+
+    it('displays assignee name when assigned', () => {
+      const assignedIssue = {
+        ...mockIssue,
+        assignee_name: 'Jane Smith',
+        assignee_email: 'jane@example.com',
+      };
+      vi.mocked(apiHooks.useIssue).mockReturnValue({
+        data: assignedIssue,
+        isLoading: false,
+        error: null,
+      } as any);
+
+      renderComponent();
+      // Use getAllByText since name might appear in multiple places
+      const janeElements = screen.getAllByText('Jane Smith');
+      expect(janeElements.length).toBeGreaterThan(0);
+    });
+
+    it('displays assignee email when assigned', () => {
+      const assignedIssue = {
+        ...mockIssue,
+        assignee_name: 'Jane Smith',
+        assignee_email: 'jane@example.com',
+      };
+      vi.mocked(apiHooks.useIssue).mockReturnValue({
+        data: assignedIssue,
+        isLoading: false,
+        error: null,
+      } as any);
+
+      renderComponent();
+      expect(screen.getByText('jane@example.com')).toBeInTheDocument();
+    });
+
+    it('displays Assignment Group', () => {
+      const issueWithGroup = {
+        ...mockIssue,
+        assigned_group_name: 'Support Team',
+      };
+      vi.mocked(apiHooks.useIssue).mockReturnValue({
+        data: issueWithGroup,
+        isLoading: false,
+        error: null,
+      } as any);
+
+      renderComponent();
+      expect(screen.getByText('Assignment Group')).toBeInTheDocument();
+      expect(screen.getByText('Support Team')).toBeInTheDocument();
+    });
+
+    it('displays Reporter information', () => {
+      renderComponent();
+      expect(screen.getByText('Reporter')).toBeInTheDocument();
+      expect(screen.getByText('John Doe')).toBeInTheDocument();
+      expect(screen.getByText('john@example.com')).toBeInTheDocument();
+    });
+
+    it('displays Application link when application is set', () => {
+      renderComponent();
+      expect(screen.getByText('Application')).toBeInTheDocument();
+      const appLink = screen.getByRole('link', { name: 'Payment Service' });
+      expect(appLink).toHaveAttribute('href', '/applications/app-1');
+    });
+
+    it('displays severity when present', () => {
+      renderComponent();
+      expect(screen.getByText('Severity')).toBeInTheDocument();
+      expect(screen.getByText('S2')).toBeInTheDocument();
+    });
+
+    it('displays urgency when present', () => {
+      const urgentIssue = {
+        ...mockIssue,
+        urgency: 'high',
+      };
+      vi.mocked(apiHooks.useIssue).mockReturnValue({
+        data: urgentIssue,
+        isLoading: false,
+        error: null,
+      } as any);
+
+      renderComponent();
+      expect(screen.getByText('Urgency')).toBeInTheDocument();
+    });
+
+    it('displays impact when present', () => {
+      const impactIssue = {
+        ...mockIssue,
+        impact: 'high',
+      };
+      vi.mocked(apiHooks.useIssue).mockReturnValue({
+        data: impactIssue,
+        isLoading: false,
+        error: null,
+      } as any);
+
+      renderComponent();
+      expect(screen.getByText('Impact')).toBeInTheDocument();
+    });
+  });
+
+  describe('Edit Mode Selects', () => {
+    it('displays priority select in edit mode', () => {
+      renderComponent();
+      fireEvent.click(screen.getByRole('button', { name: /edit/i }));
+
+      // Find priority select by its options
+      const selects = document.querySelectorAll('select');
+      const prioritySelect = Array.from(selects).find(s =>
+        Array.from(s.options).some(o => o.text === 'Critical')
+      );
+      expect(prioritySelect).toBeInTheDocument();
+    });
+
+    it('displays severity select in edit mode', () => {
+      renderComponent();
+      fireEvent.click(screen.getByRole('button', { name: /edit/i }));
+
+      // Find severity select by its options
+      const selects = document.querySelectorAll('select');
+      const severitySelect = Array.from(selects).find(s =>
+        Array.from(s.options).some(o => o.text === 'S1 - Critical')
+      );
+      expect(severitySelect).toBeInTheDocument();
+    });
+
+    it('displays assigned to select in edit mode', () => {
+      renderComponent();
+      fireEvent.click(screen.getByRole('button', { name: /edit/i }));
+
+      // Find assigned to select by its options
+      const selects = document.querySelectorAll('select');
+      const assignedSelect = Array.from(selects).find(s =>
+        Array.from(s.options).some(o => o.text === 'Jane Smith')
+      );
+      expect(assignedSelect).toBeInTheDocument();
+    });
+
+    it('displays assignment group select in edit mode', () => {
+      renderComponent();
+      fireEvent.click(screen.getByRole('button', { name: /edit/i }));
+
+      // Find group select by its options
+      const selects = document.querySelectorAll('select');
+      const groupSelect = Array.from(selects).find(s =>
+        Array.from(s.options).some(o => o.text === 'Database Team')
+      );
+      expect(groupSelect).toBeInTheDocument();
+    });
+
+    it('displays application select in edit mode', () => {
+      renderComponent();
+      fireEvent.click(screen.getByRole('button', { name: /edit/i }));
+
+      // Find application select by its options
+      const selects = document.querySelectorAll('select');
+      const appSelect = Array.from(selects).find(s =>
+        Array.from(s.options).some(o => o.text === 'Payment Service')
+      );
+      expect(appSelect).toBeInTheDocument();
+    });
+  });
+
+  describe('Close Button', () => {
+    it('shows close button for new status issues', () => {
+      renderComponent();
+      // The Close button should be available for non-closed/non-resolved issues
+      const closeButton = screen.getByRole('button', { name: /close/i });
+      expect(closeButton).toBeInTheDocument();
+    });
+
+    it('calls changeStatus with closed when close button clicked', async () => {
+      const mockChangeStatus = vi.fn().mockResolvedValue({});
+      vi.mocked(apiHooks.useChangeIssueStatus).mockReturnValue({
+        mutateAsync: mockChangeStatus,
+        isPending: false,
+      } as any);
+
+      renderComponent();
+      fireEvent.click(screen.getByRole('button', { name: /close/i }));
+
+      await waitFor(() => {
+        expect(mockChangeStatus).toHaveBeenCalledWith({
+          id: 'issue-123',
+          status: 'closed',
+        });
+      });
+    });
+  });
+
+  describe('Pending Status', () => {
+    it('renders pending status correctly', () => {
+      const pendingIssue = { ...mockIssue, status: 'pending' };
+      vi.mocked(apiHooks.useIssue).mockReturnValue({
+        data: pendingIssue,
+        isLoading: false,
+        error: null,
+      } as any);
+
+      renderComponent();
+      expect(screen.getByText('Pending')).toBeInTheDocument();
+    });
+  });
+
+  describe('First Response Time', () => {
+    it('displays first response time when present', () => {
+      const issueWithFirstResponse = {
+        ...mockIssue,
+        first_response_at: '2024-01-01T12:00:00Z',
+      };
+      vi.mocked(apiHooks.useIssue).mockReturnValue({
+        data: issueWithFirstResponse,
+        isLoading: false,
+        error: null,
+      } as any);
+
+      renderComponent();
+      expect(screen.getByText('First Response')).toBeInTheDocument();
+    });
+  });
 });

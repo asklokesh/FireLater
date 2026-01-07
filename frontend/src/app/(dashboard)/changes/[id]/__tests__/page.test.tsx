@@ -116,13 +116,13 @@ describe('ChangeDetailPage', () => {
       isLoading: false,
     }));
 
-    vi.spyOn(useApiHooks, 'useChange').mockImplementation(mockUseChange);
-    vi.spyOn(useApiHooks, 'useChangeComments').mockImplementation(mockUseChangeComments);
-    vi.spyOn(useApiHooks, 'useAddChangeComment').mockImplementation(mockUseAddChangeComment);
-    vi.spyOn(useApiHooks, 'useUpdateChange').mockImplementation(mockUseUpdateChange);
-    vi.spyOn(useApiHooks, 'useApplications').mockImplementation(mockUseApplications);
-    vi.spyOn(useApiHooks, 'useUsers').mockImplementation(mockUseUsers);
-    vi.spyOn(useApiHooks, 'useGroups').mockImplementation(mockUseGroups);
+    vi.spyOn(useApiHooks, 'useChange').mockImplementation(mockUseChange as any);
+    vi.spyOn(useApiHooks, 'useChangeComments').mockImplementation(mockUseChangeComments as any);
+    vi.spyOn(useApiHooks, 'useAddChangeComment').mockImplementation(mockUseAddChangeComment as any);
+    vi.spyOn(useApiHooks, 'useUpdateChange').mockImplementation(mockUseUpdateChange as any);
+    vi.spyOn(useApiHooks, 'useApplications').mockImplementation(mockUseApplications as any);
+    vi.spyOn(useApiHooks, 'useUsers').mockImplementation(mockUseUsers as any);
+    vi.spyOn(useApiHooks, 'useGroups').mockImplementation(mockUseGroups as any);
   });
 
   describe('Basic Rendering', () => {
@@ -544,6 +544,744 @@ describe('ChangeDetailPage', () => {
       render(<ChangeDetailPage />);
 
       expect(screen.getByText(/Critical/i)).toBeInTheDocument();
+    });
+  });
+
+  describe('Edit Mode', () => {
+    it('enters edit mode when edit button is clicked', async () => {
+      const { userEvent } = await import('@testing-library/user-event');
+      const user = userEvent.setup();
+
+      render(<ChangeDetailPage />);
+
+      const editButton = screen.getByRole('button', { name: /edit/i });
+      await user.click(editButton);
+
+      expect(screen.getByRole('button', { name: /save/i })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /cancel/i })).toBeInTheDocument();
+    });
+
+    it('displays title input in edit mode', async () => {
+      const { userEvent } = await import('@testing-library/user-event');
+      const user = userEvent.setup();
+
+      render(<ChangeDetailPage />);
+
+      await user.click(screen.getByRole('button', { name: /edit/i }));
+
+      const titleInput = screen.getByPlaceholderText('Change title');
+      expect(titleInput).toBeInTheDocument();
+      expect(titleInput).toHaveValue('Deploy new API version');
+    });
+
+    it('displays description textarea in edit mode', async () => {
+      const { userEvent } = await import('@testing-library/user-event');
+      const user = userEvent.setup();
+
+      render(<ChangeDetailPage />);
+
+      await user.click(screen.getByRole('button', { name: /edit/i }));
+
+      const descTextarea = screen.getByPlaceholderText('Describe the change...');
+      expect(descTextarea).toBeInTheDocument();
+    });
+
+    it('displays justification textarea in edit mode', async () => {
+      const { userEvent } = await import('@testing-library/user-event');
+      const user = userEvent.setup();
+
+      render(<ChangeDetailPage />);
+
+      await user.click(screen.getByRole('button', { name: /edit/i }));
+
+      const justificationTextarea = screen.getByPlaceholderText('Why is this change needed?');
+      expect(justificationTextarea).toBeInTheDocument();
+    });
+
+    it('cancels edit mode and restores original values', async () => {
+      const { userEvent } = await import('@testing-library/user-event');
+      const user = userEvent.setup();
+
+      render(<ChangeDetailPage />);
+
+      await user.click(screen.getByRole('button', { name: /edit/i }));
+
+      const titleInput = screen.getByPlaceholderText('Change title');
+      await user.clear(titleInput);
+      await user.type(titleInput, 'Modified Title');
+
+      await user.click(screen.getByRole('button', { name: /cancel/i }));
+
+      expect(screen.getByText('Deploy new API version')).toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: /save/i })).not.toBeInTheDocument();
+    });
+
+    it('displays type select in edit mode', async () => {
+      const { userEvent } = await import('@testing-library/user-event');
+      const user = userEvent.setup();
+
+      render(<ChangeDetailPage />);
+
+      await user.click(screen.getByRole('button', { name: /edit/i }));
+
+      // Find select by looking for the one with Standard/Normal/Emergency options
+      const selects = document.querySelectorAll('select');
+      const typeSelect = Array.from(selects).find(s =>
+        Array.from(s.options).some(o => o.text === 'Standard')
+      );
+      expect(typeSelect).toBeInTheDocument();
+    });
+
+    it('displays risk level select in edit mode', async () => {
+      const { userEvent } = await import('@testing-library/user-event');
+      const user = userEvent.setup();
+
+      render(<ChangeDetailPage />);
+
+      await user.click(screen.getByRole('button', { name: /edit/i }));
+
+      // Find select by looking for the one with Low/Medium/High/Critical options
+      const selects = document.querySelectorAll('select');
+      const riskSelect = Array.from(selects).find(s =>
+        Array.from(s.options).some(o => o.text === 'Critical')
+      );
+      expect(riskSelect).toBeInTheDocument();
+    });
+
+    it('displays impact select in edit mode', async () => {
+      const { userEvent } = await import('@testing-library/user-event');
+      const user = userEvent.setup();
+
+      render(<ChangeDetailPage />);
+
+      await user.click(screen.getByRole('button', { name: /edit/i }));
+
+      // Find select by looking for the one with impact options
+      const selects = document.querySelectorAll('select');
+      const impactSelect = Array.from(selects).find(s =>
+        Array.from(s.options).some(o => o.text === 'Significant')
+      );
+      expect(impactSelect).toBeInTheDocument();
+    });
+
+    it('displays datetime inputs for schedule in edit mode', async () => {
+      const { userEvent } = await import('@testing-library/user-event');
+      const user = userEvent.setup();
+
+      render(<ChangeDetailPage />);
+
+      await user.click(screen.getByRole('button', { name: /edit/i }));
+
+      // Check for datetime-local inputs
+      const datetimeInputs = document.querySelectorAll('input[type="datetime-local"]');
+      expect(datetimeInputs.length).toBeGreaterThanOrEqual(2);
+    });
+  });
+
+  describe('Actions Section', () => {
+    it('shows Submit for Approval button when status is draft', () => {
+      mockUseChange.mockReturnValue({
+        data: { ...mockChange, status: 'draft' },
+        isLoading: false,
+        error: null,
+        refetch: vi.fn(),
+      });
+
+      render(<ChangeDetailPage />);
+
+      expect(screen.getByRole('button', { name: /submit for approval/i })).toBeInTheDocument();
+    });
+
+    it('shows Approve and Reject buttons when status is submitted', () => {
+      mockUseChange.mockReturnValue({
+        data: { ...mockChange, status: 'submitted' },
+        isLoading: false,
+        error: null,
+        refetch: vi.fn(),
+      });
+
+      render(<ChangeDetailPage />);
+
+      expect(screen.getByRole('button', { name: /approve/i })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /reject/i })).toBeInTheDocument();
+    });
+
+    it('shows Approve and Reject buttons when status is review', () => {
+      mockUseChange.mockReturnValue({
+        data: { ...mockChange, status: 'review' },
+        isLoading: false,
+        error: null,
+        refetch: vi.fn(),
+      });
+
+      render(<ChangeDetailPage />);
+
+      expect(screen.getByRole('button', { name: /approve/i })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /reject/i })).toBeInTheDocument();
+    });
+
+    it('shows Schedule button when status is approved', () => {
+      mockUseChange.mockReturnValue({
+        data: { ...mockChange, status: 'approved' },
+        isLoading: false,
+        error: null,
+        refetch: vi.fn(),
+      });
+
+      // Clear comments to avoid "Approved" text conflict
+      mockUseChangeComments.mockReturnValue({
+        data: { data: [] },
+        isLoading: false,
+      });
+
+      render(<ChangeDetailPage />);
+
+      expect(screen.getByRole('button', { name: /schedule/i })).toBeInTheDocument();
+    });
+
+    it('shows Start Implementation button when status is scheduled', () => {
+      mockUseChange.mockReturnValue({
+        data: { ...mockChange, status: 'scheduled' },
+        isLoading: false,
+        error: null,
+        refetch: vi.fn(),
+      });
+
+      render(<ChangeDetailPage />);
+
+      expect(screen.getByRole('button', { name: /start implementation/i })).toBeInTheDocument();
+    });
+
+    it('shows Complete, Fail, and Rollback buttons when status is implementing', () => {
+      mockUseChange.mockReturnValue({
+        data: { ...mockChange, status: 'implementing' },
+        isLoading: false,
+        error: null,
+        refetch: vi.fn(),
+      });
+
+      render(<ChangeDetailPage />);
+
+      expect(screen.getByRole('button', { name: /complete successfully/i })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /mark as failed/i })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /rollback/i })).toBeInTheDocument();
+    });
+
+    it('shows Cancel button for draft status', () => {
+      mockUseChange.mockReturnValue({
+        data: { ...mockChange, status: 'draft' },
+        isLoading: false,
+        error: null,
+        refetch: vi.fn(),
+      });
+
+      render(<ChangeDetailPage />);
+
+      expect(screen.getByRole('button', { name: /cancel/i })).toBeInTheDocument();
+    });
+
+    it('shows completion message when status is completed', () => {
+      mockUseChange.mockReturnValue({
+        data: { ...mockChange, status: 'completed' },
+        isLoading: false,
+        error: null,
+        refetch: vi.fn(),
+      });
+
+      render(<ChangeDetailPage />);
+
+      expect(screen.getByText(/this change is completed/i)).toBeInTheDocument();
+    });
+
+    it('shows completion message when status is failed', () => {
+      mockUseChange.mockReturnValue({
+        data: { ...mockChange, status: 'failed' },
+        isLoading: false,
+        error: null,
+        refetch: vi.fn(),
+      });
+
+      render(<ChangeDetailPage />);
+
+      expect(screen.getByText(/this change is failed/i)).toBeInTheDocument();
+    });
+
+    it('shows completion message when status is rolled_back', () => {
+      mockUseChange.mockReturnValue({
+        data: { ...mockChange, status: 'rolled_back' },
+        isLoading: false,
+        error: null,
+        refetch: vi.fn(),
+      });
+
+      render(<ChangeDetailPage />);
+
+      expect(screen.getByText(/this change is rolled back/i)).toBeInTheDocument();
+    });
+
+    it('shows completion message when status is cancelled', () => {
+      mockUseChange.mockReturnValue({
+        data: { ...mockChange, status: 'cancelled' },
+        isLoading: false,
+        error: null,
+        refetch: vi.fn(),
+      });
+
+      render(<ChangeDetailPage />);
+
+      expect(screen.getByText(/this change is cancelled/i)).toBeInTheDocument();
+    });
+  });
+
+  describe('Comment Submission', () => {
+    it('renders comment input area', () => {
+      render(<ChangeDetailPage />);
+
+      expect(screen.getByPlaceholderText('Add a comment...')).toBeInTheDocument();
+    });
+
+    it('renders send button for comments', () => {
+      render(<ChangeDetailPage />);
+
+      expect(screen.getByRole('button', { name: /send/i })).toBeInTheDocument();
+    });
+
+    it('send button is disabled when comment is empty', () => {
+      render(<ChangeDetailPage />);
+
+      const sendButton = screen.getByRole('button', { name: /send/i });
+      expect(sendButton).toBeDisabled();
+    });
+
+    it('send button is enabled when comment has text', async () => {
+      const { userEvent } = await import('@testing-library/user-event');
+      const user = userEvent.setup();
+
+      render(<ChangeDetailPage />);
+
+      const textarea = screen.getByPlaceholderText('Add a comment...');
+      await user.type(textarea, 'Test comment');
+
+      const sendButton = screen.getByRole('button', { name: /send/i });
+      expect(sendButton).not.toBeDisabled();
+    });
+
+    it('shows no comments message when comments list is empty', () => {
+      mockUseChangeComments.mockReturnValue({
+        data: { data: [] },
+        isLoading: false,
+      });
+
+      render(<ChangeDetailPage />);
+
+      expect(screen.getByText('No comments yet')).toBeInTheDocument();
+    });
+
+    it('shows loading state for comments', () => {
+      mockUseChangeComments.mockReturnValue({
+        data: null,
+        isLoading: true,
+      });
+
+      render(<ChangeDetailPage />);
+
+      expect(screen.getByText('Loading comments...')).toBeInTheDocument();
+    });
+  });
+
+  describe('Approvals Section', () => {
+    it('renders approvals when available', () => {
+      mockUseChange.mockReturnValue({
+        data: {
+          ...mockChange,
+          approvals: [
+            {
+              id: 'approval-1',
+              status: 'approved',
+              approver: { name: 'Manager One' },
+              approved_at: '2026-01-12T10:00:00Z',
+              comments: 'LGTM',
+            },
+          ],
+        },
+        isLoading: false,
+        error: null,
+        refetch: vi.fn(),
+      });
+
+      render(<ChangeDetailPage />);
+
+      expect(screen.getByText('Approvals')).toBeInTheDocument();
+      expect(screen.getByText('Manager One')).toBeInTheDocument();
+      expect(screen.getByText('LGTM')).toBeInTheDocument();
+    });
+
+    it('renders rejected approval status', () => {
+      mockUseChange.mockReturnValue({
+        data: {
+          ...mockChange,
+          approvals: [
+            {
+              id: 'approval-1',
+              status: 'rejected',
+              approver: { name: 'Manager Two' },
+              approved_at: '2026-01-12T10:00:00Z',
+              comments: 'Needs more testing',
+            },
+          ],
+        },
+        isLoading: false,
+        error: null,
+        refetch: vi.fn(),
+      });
+
+      render(<ChangeDetailPage />);
+
+      expect(screen.getByText('Manager Two')).toBeInTheDocument();
+      expect(screen.getByText('Needs more testing')).toBeInTheDocument();
+    });
+
+    it('renders pending approval status', () => {
+      mockUseChange.mockReturnValue({
+        data: {
+          ...mockChange,
+          approvals: [
+            {
+              id: 'approval-1',
+              status: 'pending',
+              approver: { name: 'Manager Three' },
+              approved_at: null,
+            },
+          ],
+        },
+        isLoading: false,
+        error: null,
+        refetch: vi.fn(),
+      });
+
+      render(<ChangeDetailPage />);
+
+      expect(screen.getByText('Manager Three')).toBeInTheDocument();
+    });
+
+    it('does not render approvals section when no approvals', () => {
+      mockUseChange.mockReturnValue({
+        data: { ...mockChange, approvals: [] },
+        isLoading: false,
+        error: null,
+        refetch: vi.fn(),
+      });
+
+      render(<ChangeDetailPage />);
+
+      expect(screen.queryByText('Approvals')).not.toBeInTheDocument();
+    });
+  });
+
+  describe('Outcome Notes Section', () => {
+    it('renders outcome notes when available', () => {
+      mockUseChange.mockReturnValue({
+        data: {
+          ...mockChange,
+          outcome: 'successful',
+          outcome_notes: 'Deployment completed without issues',
+        },
+        isLoading: false,
+        error: null,
+        refetch: vi.fn(),
+      });
+
+      render(<ChangeDetailPage />);
+
+      expect(screen.getByText('Outcome Notes')).toBeInTheDocument();
+      expect(screen.getByText('Deployment completed without issues')).toBeInTheDocument();
+    });
+
+    it('renders failed outcome notes', () => {
+      mockUseChange.mockReturnValue({
+        data: {
+          ...mockChange,
+          outcome: 'failed',
+          outcome_notes: 'Server crashed during deployment',
+        },
+        isLoading: false,
+        error: null,
+        refetch: vi.fn(),
+      });
+
+      render(<ChangeDetailPage />);
+
+      expect(screen.getByText('Server crashed during deployment')).toBeInTheDocument();
+    });
+
+    it('renders rolled_back outcome notes', () => {
+      mockUseChange.mockReturnValue({
+        data: {
+          ...mockChange,
+          outcome: 'rolled_back',
+          outcome_notes: 'Rolled back due to performance issues',
+        },
+        isLoading: false,
+        error: null,
+        refetch: vi.fn(),
+      });
+
+      render(<ChangeDetailPage />);
+
+      expect(screen.getByText('Rolled back due to performance issues')).toBeInTheDocument();
+    });
+
+    it('does not render outcome notes when not available', () => {
+      mockUseChange.mockReturnValue({
+        data: { ...mockChange, outcome_notes: null },
+        isLoading: false,
+        error: null,
+        refetch: vi.fn(),
+      });
+
+      render(<ChangeDetailPage />);
+
+      expect(screen.queryByText('Outcome Notes')).not.toBeInTheDocument();
+    });
+  });
+
+  describe('Additional Status Variations', () => {
+    it('renders review status correctly', () => {
+      mockUseChange.mockReturnValue({
+        data: { ...mockChange, status: 'review' },
+        isLoading: false,
+        error: null,
+        refetch: vi.fn(),
+      });
+
+      render(<ChangeDetailPage />);
+
+      expect(screen.getByText('In Review')).toBeInTheDocument();
+    });
+
+    it('renders scheduled status correctly', () => {
+      mockUseChange.mockReturnValue({
+        data: { ...mockChange, status: 'scheduled' },
+        isLoading: false,
+        error: null,
+        refetch: vi.fn(),
+      });
+
+      render(<ChangeDetailPage />);
+
+      expect(screen.getByText('Scheduled')).toBeInTheDocument();
+    });
+
+    it('renders failed status correctly', () => {
+      mockUseChange.mockReturnValue({
+        data: { ...mockChange, status: 'failed' },
+        isLoading: false,
+        error: null,
+        refetch: vi.fn(),
+      });
+
+      render(<ChangeDetailPage />);
+
+      expect(screen.getByText('Failed')).toBeInTheDocument();
+    });
+
+    it('renders rolled_back status correctly', () => {
+      mockUseChange.mockReturnValue({
+        data: { ...mockChange, status: 'rolled_back' },
+        isLoading: false,
+        error: null,
+        refetch: vi.fn(),
+      });
+
+      render(<ChangeDetailPage />);
+
+      expect(screen.getByText('Rolled Back')).toBeInTheDocument();
+    });
+
+    it('renders cancelled status correctly', () => {
+      mockUseChange.mockReturnValue({
+        data: { ...mockChange, status: 'cancelled' },
+        isLoading: false,
+        error: null,
+        refetch: vi.fn(),
+      });
+
+      render(<ChangeDetailPage />);
+
+      expect(screen.getByText('Cancelled')).toBeInTheDocument();
+    });
+  });
+
+  describe('Additional Details Section', () => {
+    it('displays actual start time when available', () => {
+      mockUseChange.mockReturnValue({
+        data: { ...mockChange, actual_start: '2026-01-15T14:30:00Z' },
+        isLoading: false,
+        error: null,
+        refetch: vi.fn(),
+      });
+
+      render(<ChangeDetailPage />);
+
+      expect(screen.getByText('Actual Start')).toBeInTheDocument();
+    });
+
+    it('displays actual end time when available', () => {
+      mockUseChange.mockReturnValue({
+        data: { ...mockChange, actual_end: '2026-01-15T16:30:00Z' },
+        isLoading: false,
+        error: null,
+        refetch: vi.fn(),
+      });
+
+      render(<ChangeDetailPage />);
+
+      expect(screen.getByText('Actual End')).toBeInTheDocument();
+    });
+
+    it('displays downtime minutes when available', () => {
+      mockUseChange.mockReturnValue({
+        data: { ...mockChange, downtime_minutes: 15 },
+        isLoading: false,
+        error: null,
+        refetch: vi.fn(),
+      });
+
+      render(<ChangeDetailPage />);
+
+      expect(screen.getByText('Estimated Downtime')).toBeInTheDocument();
+      expect(screen.getByText('15 minutes')).toBeInTheDocument();
+    });
+
+    it('displays environment name when available', () => {
+      mockUseChange.mockReturnValue({
+        data: { ...mockChange, environment_name: 'Production' },
+        isLoading: false,
+        error: null,
+        refetch: vi.fn(),
+      });
+
+      render(<ChangeDetailPage />);
+
+      expect(screen.getByText('Environment')).toBeInTheDocument();
+      expect(screen.getByText('Production')).toBeInTheDocument();
+    });
+
+    it('displays urgency when available', () => {
+      mockUseChange.mockReturnValue({
+        data: { ...mockChange, urgency: 'high' },
+        isLoading: false,
+        error: null,
+        refetch: vi.fn(),
+      });
+
+      render(<ChangeDetailPage />);
+
+      expect(screen.getByText('Urgency')).toBeInTheDocument();
+    });
+
+    it('displays CAB required indicator', () => {
+      mockUseChange.mockReturnValue({
+        data: { ...mockChange, cab_required: true, cab_date: '2026-01-14T10:00:00Z' },
+        isLoading: false,
+        error: null,
+        refetch: vi.fn(),
+      });
+
+      render(<ChangeDetailPage />);
+
+      expect(screen.getByText('CAB Review')).toBeInTheDocument();
+    });
+
+    it('displays created date', () => {
+      render(<ChangeDetailPage />);
+
+      expect(screen.getByText('Created')).toBeInTheDocument();
+    });
+
+    it('displays last updated date', () => {
+      render(<ChangeDetailPage />);
+
+      expect(screen.getByText('Last Updated')).toBeInTheDocument();
+    });
+
+    it('displays requester email', () => {
+      render(<ChangeDetailPage />);
+
+      expect(screen.getByText('john@example.com')).toBeInTheDocument();
+    });
+
+    it('displays implementer email', () => {
+      render(<ChangeDetailPage />);
+
+      expect(screen.getByText('jane@example.com')).toBeInTheDocument();
+    });
+  });
+
+  describe('Internal Comments', () => {
+    it('displays internal note badge for internal comments', () => {
+      mockUseChangeComments.mockReturnValue({
+        data: {
+          data: [
+            {
+              id: 'comment-1',
+              changeId: 'change-123',
+              userId: 'user-1',
+              user_name: 'Admin',
+              content: 'Internal note for team',
+              created_at: '2026-01-11T10:00:00Z',
+              is_internal: true,
+            },
+          ],
+        },
+        isLoading: false,
+      });
+
+      render(<ChangeDetailPage />);
+
+      expect(screen.getByText('Internal Note')).toBeInTheDocument();
+    });
+  });
+
+  describe('Application Link', () => {
+    it('renders application as a link', () => {
+      render(<ChangeDetailPage />);
+
+      const appLink = screen.getByRole('link', { name: 'Core API' });
+      expect(appLink).toHaveAttribute('href', '/applications/undefined');
+    });
+
+    it('renders application link with correct href when application_id is present', () => {
+      mockUseChange.mockReturnValue({
+        data: { ...mockChange, application_id: 'app-123' },
+        isLoading: false,
+        error: null,
+        refetch: vi.fn(),
+      });
+
+      render(<ChangeDetailPage />);
+
+      const appLink = screen.getByRole('link', { name: 'Core API' });
+      expect(appLink).toHaveAttribute('href', '/applications/app-123');
+    });
+  });
+
+  describe('User Avatar Display', () => {
+    it('displays requester initial in avatar', () => {
+      render(<ChangeDetailPage />);
+
+      const avatars = document.querySelectorAll('.rounded-full');
+      const requesterAvatar = Array.from(avatars).find(a => a.textContent === 'J');
+      expect(requesterAvatar).toBeInTheDocument();
+    });
+
+    it('displays implementer initial in avatar', () => {
+      render(<ChangeDetailPage />);
+
+      const avatars = document.querySelectorAll('.rounded-full');
+      // Both John and Jane start with J, check that we have multiple J avatars
+      const jAvatars = Array.from(avatars).filter(a => a.textContent === 'J');
+      expect(jAvatars.length).toBeGreaterThanOrEqual(2);
     });
   });
 });

@@ -582,18 +582,26 @@ export class IssueService {
 
   // Comments
   async getComments(tenantSlug: string, issueId: string): Promise<unknown[]> {
-    const schema = tenantService.getSchemaName(tenantSlug);
+    const cacheKey = `${tenantSlug}:issues:comments:${issueId}`;
 
-    const result = await pool.query(
-      `SELECT c.*, u.name as user_name, u.email as user_email, u.avatar_url
-       FROM ${schema}.issue_comments c
-       LEFT JOIN ${schema}.users u ON c.user_id = u.id
-       WHERE c.issue_id = $1
-       ORDER BY c.created_at`,
-      [issueId]
+    return cacheService.getOrSet(
+      cacheKey,
+      async () => {
+        const schema = tenantService.getSchemaName(tenantSlug);
+
+        const result = await pool.query(
+          `SELECT c.*, u.name as user_name, u.email as user_email, u.avatar_url
+           FROM ${schema}.issue_comments c
+           LEFT JOIN ${schema}.users u ON c.user_id = u.id
+           WHERE c.issue_id = $1
+           ORDER BY c.created_at`,
+          [issueId]
+        );
+
+        return result.rows;
+      },
+      { ttl: 300 } // 5 minutes - comments are read more than written
     );
-
-    return result.rows;
   }
 
   async addComment(tenantSlug: string, issueId: string, content: string, userId: string, isInternal: boolean = false): Promise<unknown> {
@@ -621,23 +629,37 @@ export class IssueService {
     );
 
     logger.info({ issueId: issue.id, commentId: result.rows[0].id }, 'Comment added');
+
+    // Invalidate comments cache (non-blocking)
+    cacheService.invalidate(`cache:${tenantSlug}:issues:comments:${issue.id}`).catch((err: Error) => {
+      logger.warn({ err, tenantSlug, issueId: issue.id }, 'Failed to invalidate comments cache');
+    });
+
     return result.rows[0];
   }
 
   // Worklogs
   async getWorklogs(tenantSlug: string, issueId: string): Promise<unknown[]> {
-    const schema = tenantService.getSchemaName(tenantSlug);
+    const cacheKey = `${tenantSlug}:issues:worklogs:${issueId}`;
 
-    const result = await pool.query(
-      `SELECT w.*, u.name as user_name, u.email as user_email
-       FROM ${schema}.issue_worklogs w
-       LEFT JOIN ${schema}.users u ON w.user_id = u.id
-       WHERE w.issue_id = $1
-       ORDER BY w.work_date DESC, w.created_at DESC`,
-      [issueId]
+    return cacheService.getOrSet(
+      cacheKey,
+      async () => {
+        const schema = tenantService.getSchemaName(tenantSlug);
+
+        const result = await pool.query(
+          `SELECT w.*, u.name as user_name, u.email as user_email
+           FROM ${schema}.issue_worklogs w
+           LEFT JOIN ${schema}.users u ON w.user_id = u.id
+           WHERE w.issue_id = $1
+           ORDER BY w.work_date DESC, w.created_at DESC`,
+          [issueId]
+        );
+
+        return result.rows;
+      },
+      { ttl: 300 } // 5 minutes - worklogs are read more than written
     );
-
-    return result.rows;
   }
 
   async addWorklog(tenantSlug: string, issueId: string, timeSpent: number, description: string, userId: string, workDate?: Date, billable: boolean = false): Promise<unknown> {
@@ -656,6 +678,12 @@ export class IssueService {
     );
 
     logger.info({ issueId: issue.id, worklogId: result.rows[0].id, timeSpent }, 'Worklog added');
+
+    // Invalidate worklogs cache (non-blocking)
+    cacheService.invalidate(`cache:${tenantSlug}:issues:worklogs:${issue.id}`).catch((err: Error) => {
+      logger.warn({ err, tenantSlug, issueId: issue.id }, 'Failed to invalidate worklogs cache');
+    });
+
     return result.rows[0];
   }
 

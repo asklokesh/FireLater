@@ -90,11 +90,11 @@ async function registerPlugins() {
   const SLOW_ENDPOINT_THRESHOLD = parseInt(process.env.SLOW_ENDPOINT_THRESHOLD || '500', 10);
 
   app.addHook('onRequest', async (request) => {
-    (request as any).startTime = Date.now();
+    request.startTime = Date.now();
   });
 
   app.addHook('onResponse', async (request, reply) => {
-    const startTime = (request as any).startTime;
+    const startTime = request.startTime;
     if (!startTime) return;
 
     const duration = Date.now() - startTime;

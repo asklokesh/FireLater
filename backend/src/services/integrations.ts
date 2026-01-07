@@ -4,6 +4,7 @@ import { logger } from '../utils/logger.js';
 import { encrypt, decrypt } from '../utils/encryption.js';
 import { validateUrlForSSRF } from '../utils/ssrf.js';
 import { cacheService } from '../utils/cache.js';
+import { tenantService } from './tenant.js';
 
 // ============================================
 // TYPES
@@ -66,9 +67,9 @@ interface Integration {
   updated_at: Date;
 }
 
-// Helper to get tenant schema
+// Helper to get tenant schema - uses centralized sanitization
 function getSchema(tenantSlug: string): string {
-  return `tenant_${tenantSlug.replace(/-/g, '_')}`;
+  return tenantService.getSchemaName(tenantSlug);
 }
 
 // Generate a random API key
@@ -458,7 +459,8 @@ export const webhooksService = {
     const webhooks = await this.findByEvent(tenantSlug, event);
     const schema = getSchema(tenantSlug);
 
-    for (const webhook of webhooks) {
+    // Process webhooks in parallel for better performance
+    await Promise.allSettled(webhooks.map(async (webhook) => {
       try {
         // Create delivery record
         const deliveryResult = await pool.query(`
@@ -473,7 +475,7 @@ export const webhooksService = {
         // Sign payload - secret is required for webhook security
         if (!webhook.secret) {
           logger.error({ webhookId: webhook.id }, 'Webhook missing secret, skipping delivery');
-          continue;
+          return;
         }
         const timestamp = Date.now();
         const signature = crypto
@@ -560,7 +562,7 @@ export const webhooksService = {
       } catch (error) {
         logger.error({ err: error, webhookId: webhook.id, event }, 'Failed to trigger webhook');
       }
-    }
+    }));
   },
 
   async getDeliveries(tenantSlug: string, webhookId?: string, limit = 50): Promise<unknown[]> {

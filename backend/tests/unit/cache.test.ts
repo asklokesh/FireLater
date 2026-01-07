@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { cacheService } from '../../src/utils/cache.js';
 import { redis } from '../../src/config/redis.js';
 
@@ -147,6 +147,219 @@ describe('Cache Service', () => {
       expect(stats).toHaveProperty('keys');
       expect(stats).toHaveProperty('memory');
       expect(stats.keys).toBeGreaterThanOrEqual(3);
+    });
+
+    it('should return hit rate when available', async () => {
+      // Perform some cache operations to generate hits/misses
+      await redis.set('cache:stat-test', 'value', 'EX', 10);
+      await redis.get('cache:stat-test'); // hit
+      await redis.get('cache:nonexistent'); // miss
+
+      const stats = await cacheService.getStats();
+
+      expect(stats).toHaveProperty('keys');
+      expect(stats).toHaveProperty('memory');
+      // hitRate may or may not be present depending on Redis version
+      expect(typeof stats.hitRate === 'number' || stats.hitRate === undefined).toBe(true);
+    });
+
+    it('should handle empty database', async () => {
+      await redis.flushdb();
+
+      const stats = await cacheService.getStats();
+
+      expect(stats.keys).toBe(0);
+      expect(stats).toHaveProperty('memory');
+    });
+  });
+
+  describe('set', () => {
+    it('should set a value with custom TTL', async () => {
+      const key = 'cache:custom-ttl-key';
+      const value = { data: 'custom-ttl-test' };
+
+      await cacheService.set(key, value, 60);
+
+      const cached = await redis.get(key);
+      expect(JSON.parse(cached!)).toEqual(value);
+
+      const ttl = await redis.ttl(key);
+      expect(ttl).toBeGreaterThan(0);
+      expect(ttl).toBeLessThanOrEqual(60);
+    });
+
+    it('should use default TTL when not specified', async () => {
+      const key = 'cache:default-ttl-key';
+      const value = { data: 'default-ttl-test' };
+
+      await cacheService.set(key, value);
+
+      const ttl = await redis.ttl(key);
+      // Default is 300 seconds (5 minutes)
+      expect(ttl).toBeGreaterThan(290);
+      expect(ttl).toBeLessThanOrEqual(300);
+    });
+  });
+
+  describe('invalidatePrefix', () => {
+    it('should invalidate all keys with a specific prefix', async () => {
+      // Set multiple keys with different prefixes
+      await redis.set('myprefix:key1', 'value1', 'EX', 10);
+      await redis.set('myprefix:key2', 'value2', 'EX', 10);
+      await redis.set('myprefix:subprefix:key3', 'value3', 'EX', 10);
+      await redis.set('otherprefix:key4', 'value4', 'EX', 10);
+
+      const deleted = await cacheService.invalidatePrefix('myprefix');
+      expect(deleted).toBeGreaterThanOrEqual(3);
+
+      // Verify myprefix keys are gone
+      const key1 = await redis.get('myprefix:key1');
+      expect(key1).toBeNull();
+
+      // Verify other prefix keys still exist
+      const key4 = await redis.get('otherprefix:key4');
+      expect(key4).not.toBeNull();
+    });
+  });
+
+  describe('flush', () => {
+    it('should clear all cache entries', async () => {
+      // Set some keys
+      await redis.set('cache:flush-test-1', 'value1', 'EX', 10);
+      await redis.set('cache:flush-test-2', 'value2', 'EX', 10);
+
+      await cacheService.flush();
+
+      const key1 = await redis.get('cache:flush-test-1');
+      const key2 = await redis.get('cache:flush-test-2');
+
+      expect(key1).toBeNull();
+      expect(key2).toBeNull();
+    });
+  });
+
+  describe('edge cases', () => {
+    it('should handle complex nested objects', async () => {
+      const key = 'test:complex';
+      const complexValue = {
+        name: 'Test',
+        nested: {
+          deep: {
+            value: 'nested-data',
+            array: [1, 2, 3],
+          },
+        },
+        nullValue: null,
+        boolValue: true,
+      };
+
+      const result = await cacheService.getOrSet(key, async () => complexValue, { ttl: 10 });
+      expect(result).toEqual(complexValue);
+
+      // Verify second call returns cached value
+      const cached = await cacheService.getOrSet(key, async () => ({ different: 'data' }), { ttl: 10 });
+      expect(cached).toEqual(complexValue);
+    });
+
+    it('should handle array values', async () => {
+      const key = 'test:array';
+      const arrayValue = [1, 'two', { three: 3 }, [4, 5]];
+
+      const result = await cacheService.getOrSet(key, async () => arrayValue, { ttl: 10 });
+      expect(result).toEqual(arrayValue);
+    });
+
+    it('should handle custom prefix option', async () => {
+      const key = 'my-key';
+      const value = { custom: 'prefix' };
+
+      await cacheService.getOrSet(key, async () => value, { ttl: 10, prefix: 'custom' });
+
+      // Should be stored with custom prefix
+      const cached = await redis.get('custom:my-key');
+      expect(JSON.parse(cached!)).toEqual(value);
+    });
+  });
+
+  describe('error handling', () => {
+    it('should handle set errors gracefully', async () => {
+      const originalSetex = redis.setex;
+      // Mock setex to throw an error
+      vi.spyOn(redis, 'setex').mockRejectedValueOnce(new Error('Redis connection error'));
+
+      await expect(cacheService.set('test-key', { data: 'test' }, 60)).rejects.toThrow(
+        'Redis connection error'
+      );
+
+      // Restore
+      redis.setex = originalSetex;
+    });
+
+    it('should handle invalidate pattern scan errors gracefully', async () => {
+      const originalScan = redis.scan;
+      // Mock scan to throw an error
+      vi.spyOn(redis, 'scan').mockRejectedValueOnce(new Error('Redis scan error'));
+
+      // Should return 0 when an error occurs
+      const deleted = await cacheService.invalidate('cache:error:*');
+      expect(deleted).toBe(0);
+
+      // Restore
+      redis.scan = originalScan;
+    });
+
+    it('should handle getStats errors gracefully', async () => {
+      const originalInfo = redis.info;
+      // Mock info to throw an error
+      vi.spyOn(redis, 'info').mockRejectedValueOnce(new Error('Redis info error'));
+
+      const stats = await cacheService.getStats();
+
+      // Should return default values on error
+      expect(stats.keys).toBe(0);
+      expect(stats.memory).toBe('unknown');
+
+      // Restore
+      redis.info = originalInfo;
+    });
+
+    it('should handle flush errors gracefully', async () => {
+      const originalFlushdb = redis.flushdb;
+      // Mock flushdb to throw an error
+      vi.spyOn(redis, 'flushdb').mockRejectedValueOnce(new Error('Redis flush error'));
+
+      await expect(cacheService.flush()).rejects.toThrow('Redis flush error');
+
+      // Restore
+      redis.flushdb = originalFlushdb;
+    });
+
+    it('should handle getOrSet read errors and still fetch data', async () => {
+      const originalGet = redis.get;
+      // Mock get to throw an error (simulating Redis failure)
+      vi.spyOn(redis, 'get').mockRejectedValueOnce(new Error('Redis read error'));
+
+      const fetchedData = { value: 'fetched-after-error' };
+      const result = await cacheService.getOrSet('error-key', async () => fetchedData, { ttl: 10 });
+
+      // Should still return fetched data even when cache read fails
+      expect(result).toEqual(fetchedData);
+
+      // Restore
+      redis.get = originalGet;
+    });
+
+    it('should handle delete errors in single key invalidation', async () => {
+      const originalDel = redis.del;
+      // Mock del to throw an error
+      vi.spyOn(redis, 'del').mockRejectedValueOnce(new Error('Redis delete error'));
+
+      // Should return 0 when an error occurs
+      const deleted = await cacheService.invalidate('cache:single-key');
+      expect(deleted).toBe(0);
+
+      // Restore
+      redis.del = originalDel;
     });
   });
 });

@@ -44,7 +44,7 @@ vi.mock('lucide-react', () => ({
 
 import * as useApi from '@/hooks/useApi';
 
-const mockUseApi = useApi as jest.Mocked<typeof useApi>;
+const mockUseApi = useApi as typeof useApi;
 
 describe('IntegrationsPage', () => {
   beforeEach(() => {

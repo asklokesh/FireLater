@@ -244,7 +244,7 @@ export class MigrationService {
         case 'incident':
           importResult = await incidentImporter.import(records, mappingConfig, {
             tenantId: tenant.id,
-            tenantSchema: `tenant_${tenant.slug}`,
+            tenantSchema: tenantService.getSchemaName(tenant.slug),
             jobId: job.id,
             skipDuplicates: true,
             updateExisting: request.continueOnError || false,
@@ -254,7 +254,7 @@ export class MigrationService {
         case 'request':
           importResult = await requestImporter.import(records, mappingConfig, {
             tenantId: tenant.id,
-            tenantSchema: `tenant_${tenant.slug}`,
+            tenantSchema: tenantService.getSchemaName(tenant.slug),
             jobId: job.id,
             skipDuplicates: true,
             updateExisting: request.continueOnError || false,

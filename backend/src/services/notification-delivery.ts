@@ -56,21 +56,29 @@ class NotificationDeliveryService {
       [notification.user.id, notification.eventType]
     );
 
+    // Collect delivery results and channel info for batch status update
+    const deliveryData: Array<{ channelId: string; result: DeliveryResult }> = [];
+
     for (const channel of channelsResult.rows) {
       try {
         const result = await this.deliverToChannel(tenantSlug, channel, notification);
         results.push(result);
-
-        // Update notification status for this channel
-        await this.updateDeliveryStatus(schema, notification.id, channel.id, result);
+        deliveryData.push({ channelId: channel.id, result });
       } catch (error) {
         logger.error({ error, channelId: channel.id, notificationId: notification.id }, 'Delivery failed');
-        results.push({
+        const failedResult: DeliveryResult = {
           success: false,
           channelType: channel.type,
           error: error instanceof Error ? error.message : 'Unknown error',
-        });
+        };
+        results.push(failedResult);
+        deliveryData.push({ channelId: channel.id, result: failedResult });
       }
+    }
+
+    // Batch update all delivery statuses in a single query
+    if (deliveryData.length > 0) {
+      await this.updateDeliveryStatusBatch(schema, notification.id, deliveryData);
     }
 
     return results;
@@ -591,35 +599,47 @@ class NotificationDeliveryService {
   // DELIVERY STATUS TRACKING
   // ============================================
 
-  private async updateDeliveryStatus(
+  // Batch update delivery statuses in a single query using UNNEST
+  private async updateDeliveryStatusBatch(
     schema: string,
     notificationId: string,
-    channelId: string,
-    result: DeliveryResult
+    deliveries: Array<{ channelId: string; result: DeliveryResult }>
   ): Promise<void> {
-    // Create or update delivery record
+    if (deliveries.length === 0) return;
+
+    const channelIds = deliveries.map(d => d.channelId);
+    const statuses = deliveries.map(d => d.result.success ? 'delivered' : 'failed');
+    const errors = deliveries.map(d => d.result.error || null);
+    const deliveredAts = deliveries.map(d => d.result.success ? new Date() : null);
+    const metadatas = deliveries.map(d => JSON.stringify(d.result.metadata || {}));
+    const notificationIds = deliveries.map(() => notificationId);
+
     await pool.query(
       `INSERT INTO ${schema}.notification_deliveries (
         notification_id, channel_id, status, error, delivered_at, metadata
-      ) VALUES ($1, $2, $3, $4, $5, $6)
+      )
+      SELECT * FROM UNNEST($1::uuid[], $2::uuid[], $3::text[], $4::text[], $5::timestamptz[], $6::jsonb[])
       ON CONFLICT (notification_id, channel_id)
       DO UPDATE SET
         status = EXCLUDED.status,
         error = EXCLUDED.error,
         delivered_at = EXCLUDED.delivered_at,
         metadata = EXCLUDED.metadata`,
-      [
-        notificationId,
-        channelId,
-        result.success ? 'delivered' : 'failed',
-        result.error || null,
-        result.success ? new Date() : null,
-        JSON.stringify(result.metadata || {}),
-      ]
+      [notificationIds, channelIds, statuses, errors, deliveredAts, metadatas]
     ).catch(() => {
       // Table might not exist, just log
       logger.warn('notification_deliveries table not found, skipping status update');
     });
+  }
+
+  // Legacy single update method - kept for backwards compatibility
+  private async updateDeliveryStatus(
+    schema: string,
+    notificationId: string,
+    channelId: string,
+    result: DeliveryResult
+  ): Promise<void> {
+    await this.updateDeliveryStatusBatch(schema, notificationId, [{ channelId, result }]);
   }
 
   // ============================================

@@ -173,6 +173,28 @@ describe('Network Utilities', () => {
         // This may or may not be trusted depending on implementation
         expect(typeof result).toBe('boolean');
       });
+
+      it('should handle IPv6 link-local addresses', () => {
+        // fe80:: addresses are link-local, not in our trusted ranges
+        expect(isTrustedProxy('fe80::1')).toBe(false);
+      });
+
+      it('should handle IPv6 with zone identifiers', () => {
+        // Zone identifiers (fe80::1%eth0) should be handled
+        const result = isTrustedProxy('fe80::1%eth0');
+        expect(typeof result).toBe('boolean');
+      });
+
+      it('should handle very long IPv6 addresses', () => {
+        // Full notation IPv6 that's in unique local range
+        expect(isTrustedProxy('fd00:0000:0000:0000:0000:0000:0000:0001')).toBe(true);
+      });
+
+      it('should handle IPv6 with embedded IPv4 in non-trusted range', () => {
+        // ::ffff:8.8.8.8 is IPv4-mapped IPv6 for public IP
+        const result = isTrustedProxy('::ffff:8.8.8.8');
+        expect(typeof result).toBe('boolean');
+      });
     });
   });
 });

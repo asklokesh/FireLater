@@ -1057,6 +1057,97 @@ describe('ChangesService', () => {
         });
       });
 
+      describe('updateTask', () => {
+        it('should update a task with new data', async () => {
+          const mockChange = { id: 'change-1' };
+          const mockUpdatedTask = { id: 'task-1', title: 'Updated Title', status: 'in_progress' };
+          mockQuery
+            .mockResolvedValueOnce({ rows: [mockChange] })
+            .mockResolvedValueOnce({ rows: [mockUpdatedTask] });
+
+          const result = await changeRequestService.updateTask('test-tenant', 'change-1', 'task-1', {
+            title: 'Updated Title',
+            status: 'in_progress',
+          });
+
+          expect(result).toEqual(mockUpdatedTask);
+          expect(cacheService.invalidateTenant).toHaveBeenCalledWith('test-tenant', 'changes');
+        });
+
+        it('should return existing task when no data to update', async () => {
+          const mockChange = { id: 'change-1' };
+          const mockTask = { id: 'task-1', title: 'Original Title' };
+          mockQuery
+            .mockResolvedValueOnce({ rows: [mockChange] })
+            .mockResolvedValueOnce({ rows: [mockTask] });
+
+          const result = await changeRequestService.updateTask('test-tenant', 'change-1', 'task-1', {});
+
+          expect(result).toEqual(mockTask);
+        });
+
+        it('should throw NotFoundError if change does not exist', async () => {
+          mockQuery.mockResolvedValueOnce({ rows: [] });
+
+          await expect(
+            changeRequestService.updateTask('test-tenant', 'non-existent-change', 'task-1', { title: 'New' })
+          ).rejects.toThrow(NotFoundError);
+        });
+
+        it('should throw NotFoundError if task does not exist', async () => {
+          const mockChange = { id: 'change-1' };
+          mockQuery
+            .mockResolvedValueOnce({ rows: [mockChange] })
+            .mockResolvedValueOnce({ rows: [] });
+
+          await expect(
+            changeRequestService.updateTask('test-tenant', 'change-1', 'non-existent-task', { title: 'New' })
+          ).rejects.toThrow(NotFoundError);
+        });
+      });
+
+      describe('startTask', () => {
+        it('should start a task by setting status and actualStart', async () => {
+          const mockChange = { id: 'change-1' };
+          const mockStartedTask = { id: 'task-1', status: 'in_progress', actual_start: '2024-01-01T10:00:00Z' };
+          mockQuery
+            .mockResolvedValueOnce({ rows: [mockChange] })
+            .mockResolvedValueOnce({ rows: [mockStartedTask] });
+
+          const result = await changeRequestService.startTask('test-tenant', 'change-1', 'task-1');
+
+          expect(result).toEqual(mockStartedTask);
+          expect(cacheService.invalidateTenant).toHaveBeenCalledWith('test-tenant', 'changes');
+        });
+      });
+
+      describe('completeTask', () => {
+        it('should complete a task by setting status and actualEnd', async () => {
+          const mockChange = { id: 'change-1' };
+          const mockCompletedTask = { id: 'task-1', status: 'completed', actual_end: '2024-01-01T12:00:00Z' };
+          mockQuery
+            .mockResolvedValueOnce({ rows: [mockChange] })
+            .mockResolvedValueOnce({ rows: [mockCompletedTask] });
+
+          const result = await changeRequestService.completeTask('test-tenant', 'change-1', 'task-1');
+
+          expect(result).toEqual(mockCompletedTask);
+          expect(cacheService.invalidateTenant).toHaveBeenCalledWith('test-tenant', 'changes');
+        });
+
+        it('should complete a task with notes', async () => {
+          const mockChange = { id: 'change-1' };
+          const mockCompletedTask = { id: 'task-1', status: 'completed', notes: 'Task finished' };
+          mockQuery
+            .mockResolvedValueOnce({ rows: [mockChange] })
+            .mockResolvedValueOnce({ rows: [mockCompletedTask] });
+
+          const result = await changeRequestService.completeTask('test-tenant', 'change-1', 'task-1', 'Task finished');
+
+          expect(result).toEqual(mockCompletedTask);
+        });
+      });
+
       describe('deleteTask', () => {
         it('should delete a task', async () => {
           const mockChange = { id: 'change-1' };
@@ -1079,6 +1170,14 @@ describe('ChangesService', () => {
             changeRequestService.deleteTask('test-tenant', 'change-1', 'nonexistent')
           ).rejects.toThrow(NotFoundError);
         });
+
+        it('should throw NotFoundError if change does not exist', async () => {
+          mockQuery.mockResolvedValueOnce({ rows: [] });
+
+          await expect(
+            changeRequestService.deleteTask('test-tenant', 'non-existent-change', 'task-1')
+          ).rejects.toThrow(NotFoundError);
+        });
       });
     });
 
@@ -1097,6 +1196,14 @@ describe('ChangesService', () => {
           const result = await changeRequestService.getComments('test-tenant', 'change-1');
 
           expect(result).toHaveLength(2);
+        });
+
+        it('should throw NotFoundError when change does not exist', async () => {
+          mockQuery.mockResolvedValueOnce({ rows: [] });
+
+          await expect(
+            changeRequestService.getComments('test-tenant', 'non-existent-change')
+          ).rejects.toThrow(NotFoundError);
         });
       });
 
@@ -1135,6 +1242,14 @@ describe('ChangesService', () => {
           );
 
           expect(result).toEqual(mockComment);
+        });
+
+        it('should throw NotFoundError when change does not exist', async () => {
+          mockQuery.mockResolvedValueOnce({ rows: [] });
+
+          await expect(
+            changeRequestService.addComment('test-tenant', 'non-existent-change', 'user-1', 'Comment')
+          ).rejects.toThrow(NotFoundError);
         });
       });
     });

@@ -63,6 +63,8 @@ declare module '@fastify/jwt' {
 declare module 'fastify' {
   interface FastifyRequest {
     tenantSlug?: string;
+    tenant?: { id: string; name: string; slug: string };
+    startTime?: number;
     csrfProtection?: () => Promise<void>;
   }
 }

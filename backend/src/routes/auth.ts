@@ -4,6 +4,25 @@ import { authService } from '../services/auth.js';
 import { tenantService } from '../services/tenant.js';
 import { authenticate } from '../middleware/auth.js';
 import { BadRequestError, ConflictError } from '../utils/errors.js';
+import { logger } from '../utils/logger.js';
+
+// Security warning: log if secure cookies are disabled in production
+const isSecureCookiesDisabled = process.env.NODE_ENV === 'production' && process.env.DISABLE_SECURE_COOKIES === 'true';
+if (isSecureCookiesDisabled) {
+  logger.warn({
+    setting: 'DISABLE_SECURE_COOKIES',
+    environment: process.env.NODE_ENV
+  }, 'SECURITY WARNING: Secure cookies are disabled in production. This should only be used behind a trusted reverse proxy with TLS termination.');
+}
+
+// Centralized cookie options for security consistency
+const getRefreshTokenCookieOptions = () => ({
+  httpOnly: true,
+  secure: process.env.NODE_ENV === 'production' && !isSecureCookiesDisabled,
+  sameSite: 'strict' as const,
+  path: '/',
+  maxAge: 7 * 24 * 60 * 60, // 7 days
+});
 
 const loginSchema = z.object({
   email: z.string().email(),
@@ -161,13 +180,7 @@ export default async function authRoutes(app: FastifyInstance) {
     );
 
     // Set refresh token as httpOnly cookie
-    reply.setCookie('refreshToken', result.refreshToken, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production' && process.env.DISABLE_SECURE_COOKIES !== 'true',
-      sameSite: 'strict',
-      path: '/',
-      maxAge: 7 * 24 * 60 * 60, // 7 days
-    });
+    reply.setCookie('refreshToken', result.refreshToken, getRefreshTokenCookieOptions());
 
     reply.send({
       accessToken: result.accessToken,
@@ -209,13 +222,7 @@ export default async function authRoutes(app: FastifyInstance) {
       (payload) => app.jwt.sign(payload)
     );
 
-    reply.setCookie('refreshToken', result.refreshToken, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production' && process.env.DISABLE_SECURE_COOKIES !== 'true',
-      sameSite: 'strict',
-      path: '/',
-      maxAge: 7 * 24 * 60 * 60,
-    });
+    reply.setCookie('refreshToken', result.refreshToken, getRefreshTokenCookieOptions());
 
     reply.send({
       accessToken: result.accessToken,

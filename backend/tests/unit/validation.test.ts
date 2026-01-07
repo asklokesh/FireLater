@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import {
+  validateTenantContext,
   validateDate,
   validateDateRange,
   validateUUID,
@@ -11,6 +12,21 @@ import {
 import { BadRequestError } from '../../src/utils/errors.js';
 
 describe('Validation Utilities', () => {
+  describe('validateTenantContext', () => {
+    it('should pass for valid tenant slug', () => {
+      expect(() => validateTenantContext('my-tenant')).not.toThrow();
+    });
+
+    it('should throw BadRequestError for undefined tenant', () => {
+      expect(() => validateTenantContext(undefined)).toThrow(BadRequestError);
+      expect(() => validateTenantContext(undefined)).toThrow('Tenant context required');
+    });
+
+    it('should throw BadRequestError for empty string tenant', () => {
+      expect(() => validateTenantContext('')).toThrow(BadRequestError);
+    });
+  });
+
   describe('validateDate', () => {
     it('should accept valid ISO 8601 dates', () => {
       const result = validateDate('2024-01-15T10:30:00Z', 'testDate');

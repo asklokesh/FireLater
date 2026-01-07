@@ -603,11 +603,11 @@ export async function executeWorkflowAction(
 
       case 'send_notification': {
         const { recipientIds, message } = action.parameters as { recipientIds: string[]; message: string };
-        // Queue notification for each recipient
+        // Queue notifications in parallel for better performance
         const { notificationQueue } = await import('../jobs/queues.js');
-        for (const recipientId of recipientIds) {
-          try {
-            await notificationQueue.add('send-notification', {
+        const queueResults = await Promise.allSettled(
+          recipientIds.map(recipientId =>
+            notificationQueue.add('send-notification', {
               tenantSlug,
               type: 'workflow_notification',
               recipientIds: [recipientId],
@@ -617,15 +617,18 @@ export async function executeWorkflowAction(
                 message,
                 subject: `Workflow Notification: ${entityType}`,
               },
-            });
-          } catch (queueError) {
+            })
+          )
+        );
+        // Log any failures
+        queueResults.forEach((result, index) => {
+          if (result.status === 'rejected') {
             logger.error(
-              { err: queueError, tenantSlug, recipientId, entityType, entityId },
+              { err: result.reason, tenantSlug, recipientId: recipientIds[index], entityType, entityId },
               'Failed to queue workflow notification due to Redis error'
             );
-            // Continue with other recipients even if one fails
           }
-        }
+        });
         break;
       }
 

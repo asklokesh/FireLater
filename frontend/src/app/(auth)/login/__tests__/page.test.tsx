@@ -21,7 +21,12 @@ vi.mock('next/link', () => ({
 // Mock auth store
 const mockLogin = vi.fn();
 const mockClearError = vi.fn();
-const mockAuthStore = {
+const mockAuthStore: {
+  login: typeof mockLogin;
+  isLoading: boolean;
+  error: string | null;
+  clearError: typeof mockClearError;
+} = {
   login: mockLogin,
   isLoading: false,
   error: null,

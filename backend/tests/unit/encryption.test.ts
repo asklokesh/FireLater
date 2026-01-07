@@ -1,12 +1,20 @@
-import { describe, it, expect, beforeAll } from 'vitest';
+import { describe, it, expect, beforeAll, beforeEach, afterEach, vi } from 'vitest';
 import { encrypt, decrypt, encryptObject, decryptObject, generateEncryptionKey } from '../../src/utils/encryption.js';
 
 describe('Encryption Utilities', () => {
   let encryptionKey: string;
+  let originalEncryptionKey: string | undefined;
 
   beforeAll(() => {
+    // Save original key
+    originalEncryptionKey = process.env.ENCRYPTION_KEY;
     // Generate a test encryption key
     encryptionKey = generateEncryptionKey();
+    process.env.ENCRYPTION_KEY = encryptionKey;
+  });
+
+  afterEach(() => {
+    // Restore the original key after each test
     process.env.ENCRYPTION_KEY = encryptionKey;
   });
 
@@ -142,6 +150,113 @@ describe('Encryption Utilities', () => {
       const key2 = generateEncryptionKey();
 
       expect(key1).not.toBe(key2);
+    });
+  });
+
+  describe('getEncryptionKey edge cases', () => {
+    it('should handle non-hex key by hashing it', () => {
+      // Use a non-hex key (not 64 chars hex)
+      process.env.ENCRYPTION_KEY = 'my-secret-password-that-is-not-hex';
+
+      const plaintext = 'test data';
+      const encrypted = encrypt(plaintext);
+      const decrypted = decrypt(encrypted);
+
+      expect(decrypted).toBe(plaintext);
+    });
+
+    it('should handle short non-hex key', () => {
+      process.env.ENCRYPTION_KEY = 'short';
+
+      const plaintext = 'test data';
+      const encrypted = encrypt(plaintext);
+      const decrypted = decrypt(encrypted);
+
+      expect(decrypted).toBe(plaintext);
+    });
+  });
+
+  describe('decrypt edge cases', () => {
+    it('should return empty string for empty input', () => {
+      const result = decrypt('');
+      expect(result).toBe('');
+    });
+
+    it('should return original string for invalid encrypted format (3 parts but invalid hex)', () => {
+      // Valid format but invalid hex will throw and return original
+      const invalidEncrypted = 'notvalidhex:notvalidhex:notvalidhex';
+      const result = decrypt(invalidEncrypted);
+      expect(result).toBe(invalidEncrypted);
+    });
+
+    it('should handle decryption with corrupted auth tag gracefully', () => {
+      const encrypted = encrypt('secret data');
+      const parts = encrypted.split(':');
+      // Corrupt the auth tag (second part)
+      parts[1] = 'ff'.repeat(16);
+      const corrupted = parts.join(':');
+
+      // Should return the corrupted string since decryption fails
+      const result = decrypt(corrupted);
+      expect(result).toBe(corrupted);
+    });
+
+    it('should handle tampered ciphertext gracefully', () => {
+      const encrypted = encrypt('secret data');
+      // Tamper with the ciphertext
+      const parts = encrypted.split(':');
+      parts[2] = parts[2].replace(/[0-9]/, 'x'); // Corrupt the hex
+      const tampered = parts.join(':');
+
+      const result = decrypt(tampered);
+      // Should return original since decryption fails
+      expect(result).toBe(tampered);
+    });
+  });
+
+  describe('encryptObject edge cases', () => {
+    it('should handle arrays in objects', () => {
+      const original = {
+        tags: ['tag1', 'tag2', 'tag3'],
+        name: 'test',
+      };
+
+      const encrypted = encryptObject(original);
+      const decrypted = decryptObject(encrypted);
+
+      expect(decrypted.name).toBe('test');
+      // Arrays are treated as objects
+      expect(decrypted.tags).toBeDefined();
+    });
+
+    it('should handle undefined values in objects', () => {
+      const original = {
+        defined: 'value',
+        undefined: undefined as unknown as string,
+      };
+
+      const encrypted = encryptObject(original);
+      const decrypted = decryptObject(encrypted);
+
+      expect(decrypted.defined).toBe('value');
+      expect(decrypted.undefined).toBeUndefined();
+    });
+
+    it('should handle deeply nested objects', () => {
+      const original = {
+        level1: {
+          level2: {
+            level3: {
+              secret: 'deep-secret',
+            },
+          },
+        },
+      };
+
+      const encrypted = encryptObject(original);
+      const decrypted = decryptObject(encrypted);
+
+      expect(decrypted).toEqual(original);
     });
   });
 });

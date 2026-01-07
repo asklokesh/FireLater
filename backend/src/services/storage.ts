@@ -15,6 +15,7 @@ import { pool } from '../config/database.js';
 import { tenantService } from './tenant.js';
 import { logger } from '../utils/logger.js';
 import { NotFoundError, BadRequestError } from '../utils/errors.js';
+import { cacheService } from '../utils/cache.js';
 
 // Local storage directory for development (when S3 is not configured)
 const LOCAL_STORAGE_DIR = join(process.cwd(), 'uploads');
@@ -227,6 +228,14 @@ class StorageService {
       'File uploaded successfully'
     );
 
+    // Invalidate storage caches (non-blocking)
+    Promise.all([
+      cacheService.invalidate(`cache:${tenantSlug}:storage:entity:${entityType}:${entityId}`),
+      cacheService.invalidate(`cache:${tenantSlug}:storage:usage`),
+    ]).catch((err: Error) => {
+      logger.warn({ err, tenantSlug }, 'Failed to invalidate storage cache after upload');
+    });
+
     return {
       id: result.rows[0].id,
       filename: storedFilename,
@@ -378,6 +387,15 @@ class StorageService {
       { attachmentId, storageKey: attachment.storage_key },
       'Attachment marked as deleted'
     );
+
+    // Invalidate storage caches (non-blocking)
+    Promise.all([
+      cacheService.invalidate(`cache:${tenantSlug}:storage:attachment:${attachmentId}`),
+      cacheService.invalidate(`cache:${tenantSlug}:storage:entity:${attachment.entity_type}:${attachment.entity_id}`),
+      cacheService.invalidate(`cache:${tenantSlug}:storage:usage`),
+    ]).catch((err: Error) => {
+      logger.warn({ err, tenantSlug }, 'Failed to invalidate storage cache after delete');
+    });
   }
 
   async hardDelete(tenantSlug: string, attachmentId: string): Promise<void> {
@@ -427,32 +445,48 @@ class StorageService {
     entityType: EntityType,
     entityId: string
   ): Promise<AttachmentRecord[]> {
-    const schema = tenantService.getSchemaName(tenantSlug);
+    const cacheKey = `${tenantSlug}:storage:entity:${entityType}:${entityId}`;
 
-    const result = await pool.query(
-      `SELECT a.*, u.name as uploaded_by_name
-       FROM ${schema}.attachments a
-       LEFT JOIN ${schema}.users u ON a.uploaded_by = u.id
-       WHERE a.entity_type = $1 AND a.entity_id = $2 AND a.is_deleted = false
-       ORDER BY a.uploaded_at DESC`,
-      [entityType, entityId]
+    return cacheService.getOrSet(
+      cacheKey,
+      async () => {
+        const schema = tenantService.getSchemaName(tenantSlug);
+
+        const result = await pool.query(
+          `SELECT a.*, u.name as uploaded_by_name
+           FROM ${schema}.attachments a
+           LEFT JOIN ${schema}.users u ON a.uploaded_by = u.id
+           WHERE a.entity_type = $1 AND a.entity_id = $2 AND a.is_deleted = false
+           ORDER BY a.uploaded_at DESC`,
+          [entityType, entityId]
+        );
+
+        return result.rows;
+      },
+      { ttl: 300 } // 5 minutes - attachments change infrequently
     );
-
-    return result.rows;
   }
 
   async getById(tenantSlug: string, attachmentId: string): Promise<AttachmentRecord | null> {
-    const schema = tenantService.getSchemaName(tenantSlug);
+    const cacheKey = `${tenantSlug}:storage:attachment:${attachmentId}`;
 
-    const result = await pool.query(
-      `SELECT a.*, u.name as uploaded_by_name
-       FROM ${schema}.attachments a
-       LEFT JOIN ${schema}.users u ON a.uploaded_by = u.id
-       WHERE a.id = $1 AND a.is_deleted = false`,
-      [attachmentId]
+    return cacheService.getOrSet(
+      cacheKey,
+      async () => {
+        const schema = tenantService.getSchemaName(tenantSlug);
+
+        const result = await pool.query(
+          `SELECT a.*, u.name as uploaded_by_name
+           FROM ${schema}.attachments a
+           LEFT JOIN ${schema}.users u ON a.uploaded_by = u.id
+           WHERE a.id = $1 AND a.is_deleted = false`,
+          [attachmentId]
+        );
+
+        return result.rows[0] || null;
+      },
+      { ttl: 600 } // 10 minutes - individual attachments rarely change
     );
-
-    return result.rows[0] || null;
   }
 
   async getStorageUsage(tenantSlug: string): Promise<{
@@ -460,27 +494,35 @@ class StorageService {
     totalSize: number;
     byEntityType: Record<string, { files: number; size: number }>;
   }> {
-    const schema = tenantService.getSchemaName(tenantSlug);
+    const cacheKey = `${tenantSlug}:storage:usage`;
 
-    const result = await pool.query(
-      `SELECT entity_type, total_files, total_size
-       FROM ${schema}.storage_usage`
+    return cacheService.getOrSet(
+      cacheKey,
+      async () => {
+        const schema = tenantService.getSchemaName(tenantSlug);
+
+        const result = await pool.query(
+          `SELECT entity_type, total_files, total_size
+           FROM ${schema}.storage_usage`
+        );
+
+        let totalFiles = 0;
+        let totalSize = 0;
+        const byEntityType: Record<string, { files: number; size: number }> = {};
+
+        for (const row of result.rows) {
+          totalFiles += parseInt(row.total_files, 10);
+          totalSize += parseInt(row.total_size, 10);
+          byEntityType[row.entity_type] = {
+            files: parseInt(row.total_files, 10),
+            size: parseInt(row.total_size, 10),
+          };
+        }
+
+        return { totalFiles, totalSize, byEntityType };
+      },
+      { ttl: 300 } // 5 minutes - usage stats for dashboards
     );
-
-    let totalFiles = 0;
-    let totalSize = 0;
-    const byEntityType: Record<string, { files: number; size: number }> = {};
-
-    for (const row of result.rows) {
-      totalFiles += parseInt(row.total_files, 10);
-      totalSize += parseInt(row.total_size, 10);
-      byEntityType[row.entity_type] = {
-        files: parseInt(row.total_files, 10),
-        size: parseInt(row.total_size, 10),
-      };
-    }
-
-    return { totalFiles, totalSize, byEntityType };
   }
 
   private getExtension(filename: string): string {
