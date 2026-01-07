@@ -35,7 +35,7 @@ export default async function knowledgeRoutes(app: FastifyInstance) {
   // List articles
   app.get('/', {
     preHandler: [requirePermission('kb:read')],
-  }, async (request, reply) => {
+  }, async (request, _reply) => {
     const { tenantSlug } = request.user;
     const query = request.query as Record<string, string>;
     const pagination = parsePagination(query);
@@ -60,7 +60,7 @@ export default async function knowledgeRoutes(app: FastifyInstance) {
   // Search articles
   app.get('/search', {
     preHandler: [requirePermission('kb:read')],
-  }, async (request, reply) => {
+  }, async (request, _reply) => {
     const { tenantSlug } = request.user;
     const query = request.query as Record<string, string>;
     const pagination = parsePagination(query);
@@ -81,7 +81,7 @@ export default async function knowledgeRoutes(app: FastifyInstance) {
   // Get single article
   app.get('/:articleId', {
     preHandler: [requirePermission('kb:read')],
-  }, async (request, reply) => {
+  }, async (request, _reply) => {
     const { tenantSlug } = request.user;
     const { articleId } = request.params as { articleId: string };
 
@@ -112,7 +112,7 @@ export default async function knowledgeRoutes(app: FastifyInstance) {
   // Update article
   app.put('/:articleId', {
     preHandler: [requirePermission('kb:update')],
-  }, async (request, reply) => {
+  }, async (request, _reply) => {
     const { tenantSlug } = request.user;
     const { articleId } = request.params as { articleId: string };
     const validatedBody = updateArticleSchema.parse(request.body);
@@ -142,7 +142,7 @@ export default async function knowledgeRoutes(app: FastifyInstance) {
   // List categories
   app.get('/categories', {
     preHandler: [requirePermission('kb:read')],
-  }, async (request, reply) => {
+  }, async (request, _reply) => {
     const { tenantSlug } = request.user;
 
     const categories = await knowledgeService.listCategories(tenantSlug);

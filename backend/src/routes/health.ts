@@ -13,8 +13,8 @@ const applicationIdParamSchema = z.object({
   applicationId: z.string().uuid(),
 });
 
-// Query validation schemas
-const listScoresQuerySchema = z.object({
+// Query validation schemas (for future use with stricter validation)
+const _listScoresQuerySchema = z.object({
   page: z.coerce.number().int().positive().optional(),
   per_page: z.coerce.number().int().min(1).max(100).optional(),
 });

@@ -50,14 +50,14 @@ interface DashboardWidget {
 
 class ReportTemplateService {
   async list(
-    tenantSlug: string,
-    pagination: PaginationParams,
-    filters?: { reportType?: string; isPublic?: boolean }
+    _tenantSlug: string,
+    _pagination: PaginationParams,
+    _filters?: { reportType?: string; isPublic?: boolean }
   ): Promise<{ templates: ReportTemplate[]; total: number }> {
     return { templates: [], total: 0 };
   }
 
-  async findById(tenantSlug: string, id: string): Promise<ReportTemplate | null> {
+  async findById(_tenantSlug: string, _id: string): Promise<ReportTemplate | null> {
     return null;
   }
 
@@ -71,7 +71,7 @@ class ReportTemplateService {
     };
   }
 
-  async update(tenantSlug: string, id: string, data: unknown): Promise<ReportTemplate> {
+  async update(_tenantSlug: string, id: string, _data: unknown): Promise<ReportTemplate> {
     return {
       id,
       name: 'Updated Template',
@@ -81,17 +81,17 @@ class ReportTemplateService {
     };
   }
 
-  async delete(tenantSlug: string, id: string): Promise<void> {
+  async delete(_tenantSlug: string, _id: string): Promise<void> {
     // Stub - no-op
   }
 }
 
 class ScheduledReportService {
-  async list(tenantSlug: string, pagination: PaginationParams): Promise<{ schedules: ScheduledReport[]; total: number }> {
+  async list(_tenantSlug: string, _pagination: PaginationParams): Promise<{ schedules: ScheduledReport[]; total: number }> {
     return { schedules: [], total: 0 };
   }
 
-  async findById(tenantSlug: string, id: string): Promise<ScheduledReport | null> {
+  async findById(_tenantSlug: string, _id: string): Promise<ScheduledReport | null> {
     return null;
   }
 
@@ -99,7 +99,7 @@ class ScheduledReportService {
     return this.findById(tenantSlug, id);
   }
 
-  async create(tenantSlug: string, userId: string, data: unknown): Promise<ScheduledReport> {
+  async create(_tenantSlug: string, userId: string, _data: unknown): Promise<ScheduledReport> {
     return {
       id: '123e4567-e89b-12d3-a456-426614174001',
       name: 'Test Schedule',
@@ -112,7 +112,7 @@ class ScheduledReportService {
     };
   }
 
-  async update(tenantSlug: string, id: string, data: unknown): Promise<ScheduledReport> {
+  async update(_tenantSlug: string, id: string, _data: unknown): Promise<ScheduledReport> {
     return {
       id,
       name: 'Updated Schedule',
@@ -125,37 +125,37 @@ class ScheduledReportService {
     };
   }
 
-  async delete(tenantSlug: string, id: string): Promise<void> {
+  async delete(_tenantSlug: string, _id: string): Promise<void> {
     // Stub - no-op
   }
 
-  async updateLastRun(tenantSlug: string, id: string): Promise<void> {
+  async updateLastRun(_tenantSlug: string, _id: string): Promise<void> {
     // Stub implementation
   }
 
-  async getDueReports(tenantSlug: string): Promise<ScheduledReport[]> {
+  async getDueReports(_tenantSlug: string): Promise<ScheduledReport[]> {
     return [];
   }
 }
 
 class ReportExecutionService {
   async list(
-    tenantSlug: string,
-    pagination: PaginationParams,
-    filters?: { templateId?: string; status?: string }
+    _tenantSlug: string,
+    _pagination: PaginationParams,
+    _filters?: { templateId?: string; status?: string }
   ): Promise<{ executions: ReportExecution[]; total: number }> {
     return { executions: [], total: 0 };
   }
 
-  async findById(tenantSlug: string, id: string): Promise<ReportExecution | null> {
+  async findById(_tenantSlug: string, _id: string): Promise<ReportExecution | null> {
     return null;
   }
 
   async execute(
-    tenantSlug: string,
+    _tenantSlug: string,
     userId: string,
     templateId: string,
-    options?: {
+    _options?: {
       outputFormat?: string;
       dateRangeStart?: Date;
       dateRangeEnd?: Date;
@@ -176,11 +176,11 @@ class ReportExecutionService {
 }
 
 class SavedReportService {
-  async list(tenantSlug: string, userId: string): Promise<SavedReport[]> {
+  async list(_tenantSlug: string, _userId: string): Promise<SavedReport[]> {
     return [];
   }
 
-  async create(tenantSlug: string, userId: string, data: unknown): Promise<SavedReport> {
+  async create(_tenantSlug: string, userId: string, _data: unknown): Promise<SavedReport> {
     return {
       id: '123e4567-e89b-12d3-a456-426614174003',
       name: 'Saved Report',
@@ -190,17 +190,17 @@ class SavedReportService {
     };
   }
 
-  async delete(tenantSlug: string, userId: string, id: string): Promise<void> {
+  async delete(_tenantSlug: string, _userId: string, _id: string): Promise<void> {
     // Stub - no-op
   }
 }
 
 class DashboardWidgetService {
-  async list(tenantSlug: string, userId: string): Promise<DashboardWidget[]> {
+  async list(_tenantSlug: string, _userId: string): Promise<DashboardWidget[]> {
     return [];
   }
 
-  async create(tenantSlug: string, userId: string, data: unknown): Promise<DashboardWidget> {
+  async create(_tenantSlug: string, userId: string, _data: unknown): Promise<DashboardWidget> {
     return {
       id: '123e4567-e89b-12d3-a456-426614174004',
       widget_type: 'chart',
@@ -209,7 +209,7 @@ class DashboardWidgetService {
     };
   }
 
-  async update(tenantSlug: string, userId: string, id: string, data: unknown): Promise<DashboardWidget> {
+  async update(_tenantSlug: string, userId: string, id: string, _data: unknown): Promise<DashboardWidget> {
     return {
       id,
       widget_type: 'chart',
@@ -218,7 +218,7 @@ class DashboardWidgetService {
     };
   }
 
-  async delete(tenantSlug: string, userId: string, id: string): Promise<void> {
+  async delete(_tenantSlug: string, _userId: string, _id: string): Promise<void> {
     // Stub - no-op
   }
 }

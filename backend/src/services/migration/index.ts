@@ -22,9 +22,8 @@ import type {
   MigrationStatus,
   FieldMappingConfig,
   ParsedRecord,
-  SourceSystem,
-  EntityType,
 } from './types.js';
+// Note: SourceSystem and EntityType will be used when source-specific processing is implemented
 
 export class MigrationService {
   /**

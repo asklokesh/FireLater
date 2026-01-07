@@ -1,7 +1,7 @@
 import { FastifyRequest, FastifyReply } from 'fastify';
 import { UnauthorizedError } from '../utils/errors.js';
 
-export async function validateTenantSchema(request: FastifyRequest, reply: FastifyReply) {
+export async function validateTenantSchema(request: FastifyRequest, _reply: FastifyReply) {
   const tenantSlug = request.tenantSlug;
   
   if (!tenantSlug) {

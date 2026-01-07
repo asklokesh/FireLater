@@ -34,7 +34,8 @@ async function up(pool: Pool, tenantSlug?: string): Promise<void> {
   }
 }
 
-async function down(pool: Pool, tenantSlug?: string): Promise<void> {
+// Rollback function - kept for future migration reversal functionality
+async function _down(pool: Pool, tenantSlug?: string): Promise<void> {
   const schemas: string[] = [];
 
   if (tenantSlug) {

@@ -197,15 +197,15 @@ const idChangeParamSchema = z.object({
   changeId: z.string().uuid(),
 });
 
-// Query validation schemas
-const listQuerySchema = z.object({
+// Query validation schemas (for future use with stricter validation)
+const _listQuerySchema = z.object({
   page: z.coerce.number().int().positive().optional(),
   per_page: z.coerce.number().int().min(1).max(100).optional(),
   type: z.string().max(50).optional(),
   status: z.string().max(50).optional(),
 });
 
-const listChangesQuerySchema = z.object({
+const _listChangesQuerySchema = z.object({
   page: z.coerce.number().int().positive().optional(),
   per_page: z.coerce.number().int().min(1).max(100).optional(),
   status: z.string().max(50).optional(),
@@ -216,11 +216,11 @@ const listChangesQuerySchema = z.object({
   risk_level: z.string().max(50).optional(),
 });
 
-const upcomingQuerySchema = z.object({
+const _upcomingQuerySchema = z.object({
   days: z.coerce.number().int().min(1).max(365).optional(),
 });
 
-const cabMeetingsQuerySchema = z.object({
+const _cabMeetingsQuerySchema = z.object({
   page: z.coerce.number().int().positive().optional(),
   per_page: z.coerce.number().int().min(1).max(100).optional(),
   status: z.string().max(50).optional(),

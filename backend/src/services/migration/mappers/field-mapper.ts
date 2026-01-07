@@ -10,7 +10,7 @@ import type {
   MigrationError,
   EntityType,
 } from '../types.js';
-import { logger } from '../../../utils/logger.js';
+// Note: logger will be used when detailed field mapping diagnostics are implemented
 
 export interface TransformResult {
   success: boolean;
@@ -170,7 +170,7 @@ export class FieldMapper {
         return { success: false, value: null, error: 'Invalid date format' };
       }
       return { success: true, value: date.toISOString() };
-    } catch (error) {
+    } catch (_error) {
       return { success: false, value: null, error: 'Date parsing failed' };
     }
   }
@@ -323,8 +323,9 @@ export class FieldMapper {
 
   /**
    * Suggest field mappings based on column names
+   * @param _entityType - Reserved for entity-specific mappings in future versions
    */
-  suggestMappings(headers: string[], entityType: EntityType): FieldMapping[] {
+  suggestMappings(headers: string[], _entityType: EntityType): FieldMapping[] {
     const suggestions: FieldMapping[] = [];
 
     // Common field name variations

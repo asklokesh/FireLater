@@ -5,15 +5,14 @@
 
 import { pool } from '../../config/database.js';
 import { tenantService } from '../tenant.js';
-import { NotFoundError, BadRequestError, UnauthorizedError } from '../../utils/errors.js';
+import { NotFoundError, BadRequestError } from '../../utils/errors.js';
 import { logger } from '../../utils/logger.js';
 import type {
   SSOProvider,
-  SSOAuthResult,
   AttributeMapping,
-  SAMLConfig,
-  OIDCConfig,
 } from './types.js';
+// Note: These types will be used when SAML/OIDC providers are fully implemented
+// import type { SSOAuthResult, SAMLConfig, OIDCConfig } from './types.js';
 
 export class SSOService {
   /**
