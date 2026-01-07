@@ -314,6 +314,42 @@ describe('CatalogCategoryService', () => {
 
       expect(mockQuery.mock.calls[1][0]).toContain('is_active = $1');
     });
+
+    it('should update category icon', async () => {
+      mockQuery
+        .mockResolvedValueOnce({ rows: [existingCategory] })
+        .mockResolvedValueOnce({ rows: [] })
+        .mockResolvedValueOnce({ rows: [{ ...existingCategory, icon: 'folder' }] });
+
+      await catalogCategoryService.update(tenantSlug, 'cat-1', { icon: 'folder' }, userId);
+
+      expect(mockQuery.mock.calls[1][0]).toContain('icon = $1');
+      expect(mockQuery.mock.calls[1][1][0]).toBe('folder');
+    });
+
+    it('should update category sortOrder', async () => {
+      mockQuery
+        .mockResolvedValueOnce({ rows: [existingCategory] })
+        .mockResolvedValueOnce({ rows: [] })
+        .mockResolvedValueOnce({ rows: [{ ...existingCategory, sort_order: 5 }] });
+
+      await catalogCategoryService.update(tenantSlug, 'cat-1', { sortOrder: 5 }, userId);
+
+      expect(mockQuery.mock.calls[1][0]).toContain('sort_order = $1');
+      expect(mockQuery.mock.calls[1][1][0]).toBe(5);
+    });
+
+    it('should update category description', async () => {
+      mockQuery
+        .mockResolvedValueOnce({ rows: [existingCategory] })
+        .mockResolvedValueOnce({ rows: [] })
+        .mockResolvedValueOnce({ rows: [{ ...existingCategory, description: 'New description' }] });
+
+      await catalogCategoryService.update(tenantSlug, 'cat-1', { description: 'New description' }, userId);
+
+      expect(mockQuery.mock.calls[1][0]).toContain('description = $1');
+      expect(mockQuery.mock.calls[1][1][0]).toBe('New description');
+    });
   });
 
   describe('delete', () => {
@@ -719,6 +755,102 @@ describe('CatalogItemService', () => {
       );
 
       expect(mockQuery.mock.calls[1][1]).toContain('{"custom":"value"}');
+    });
+
+    it('should update costCenter', async () => {
+      mockQuery
+        .mockResolvedValueOnce({ rows: [existingItem] })
+        .mockResolvedValueOnce({ rows: [] })
+        .mockResolvedValueOnce({ rows: [existingItem] });
+
+      await catalogItemService.update(tenantSlug, 'item-1', { costCenter: 'IT-001' }, userId);
+
+      expect(mockQuery.mock.calls[1][0]).toContain('cost_center = $1');
+      expect(mockQuery.mock.calls[1][1][0]).toBe('IT-001');
+    });
+
+    it('should update sortOrder', async () => {
+      mockQuery
+        .mockResolvedValueOnce({ rows: [existingItem] })
+        .mockResolvedValueOnce({ rows: [] })
+        .mockResolvedValueOnce({ rows: [existingItem] });
+
+      await catalogItemService.update(tenantSlug, 'item-1', { sortOrder: 10 }, userId);
+
+      expect(mockQuery.mock.calls[1][0]).toContain('sort_order = $1');
+      expect(mockQuery.mock.calls[1][1][0]).toBe(10);
+    });
+
+    it('should update approvalGroupId', async () => {
+      mockQuery
+        .mockResolvedValueOnce({ rows: [existingItem] })
+        .mockResolvedValueOnce({ rows: [] })
+        .mockResolvedValueOnce({ rows: [existingItem] });
+
+      await catalogItemService.update(tenantSlug, 'item-1', { approvalGroupId: 'group-123' }, userId);
+
+      expect(mockQuery.mock.calls[1][0]).toContain('approval_group_id = $1');
+      expect(mockQuery.mock.calls[1][1][0]).toBe('group-123');
+    });
+
+    it('should update expectedCompletionDays', async () => {
+      mockQuery
+        .mockResolvedValueOnce({ rows: [existingItem] })
+        .mockResolvedValueOnce({ rows: [] })
+        .mockResolvedValueOnce({ rows: [existingItem] });
+
+      await catalogItemService.update(tenantSlug, 'item-1', { expectedCompletionDays: 5 }, userId);
+
+      expect(mockQuery.mock.calls[1][0]).toContain('expected_completion_days = $1');
+      expect(mockQuery.mock.calls[1][1][0]).toBe(5);
+    });
+
+    it('should update imageUrl', async () => {
+      mockQuery
+        .mockResolvedValueOnce({ rows: [existingItem] })
+        .mockResolvedValueOnce({ rows: [] })
+        .mockResolvedValueOnce({ rows: [existingItem] });
+
+      await catalogItemService.update(tenantSlug, 'item-1', { imageUrl: 'https://example.com/image.png' }, userId);
+
+      expect(mockQuery.mock.calls[1][0]).toContain('image_url = $1');
+      expect(mockQuery.mock.calls[1][1][0]).toBe('https://example.com/image.png');
+    });
+
+    it('should update fulfillmentGroupId', async () => {
+      mockQuery
+        .mockResolvedValueOnce({ rows: [existingItem] })
+        .mockResolvedValueOnce({ rows: [] })
+        .mockResolvedValueOnce({ rows: [existingItem] });
+
+      await catalogItemService.update(tenantSlug, 'item-1', { fulfillmentGroupId: 'fulfillment-team' }, userId);
+
+      expect(mockQuery.mock.calls[1][0]).toContain('fulfillment_group_id = $1');
+      expect(mockQuery.mock.calls[1][1][0]).toBe('fulfillment-team');
+    });
+
+    it('should update description', async () => {
+      mockQuery
+        .mockResolvedValueOnce({ rows: [existingItem] })
+        .mockResolvedValueOnce({ rows: [] })
+        .mockResolvedValueOnce({ rows: [existingItem] });
+
+      await catalogItemService.update(tenantSlug, 'item-1', { description: 'Full detailed description' }, userId);
+
+      expect(mockQuery.mock.calls[1][0]).toContain('description = $1');
+      expect(mockQuery.mock.calls[1][1][0]).toBe('Full detailed description');
+    });
+
+    it('should update icon', async () => {
+      mockQuery
+        .mockResolvedValueOnce({ rows: [existingItem] })
+        .mockResolvedValueOnce({ rows: [] })
+        .mockResolvedValueOnce({ rows: [existingItem] });
+
+      await catalogItemService.update(tenantSlug, 'item-1', { icon: 'laptop' }, userId);
+
+      expect(mockQuery.mock.calls[1][0]).toContain('icon = $1');
+      expect(mockQuery.mock.calls[1][1][0]).toBe('laptop');
     });
   });
 

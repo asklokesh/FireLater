@@ -527,6 +527,21 @@ describe('Integrations Service', () => {
         expect(result.success).toBe(false);
         expect(result.error).toBe('Connection refused');
       });
+
+      it('should return error when webhook has no secret', async () => {
+        const mockWebhook = {
+          id: 'wh-1',
+          url: 'https://example.com/hook',
+          secret: null, // No secret
+          custom_headers: {},
+        };
+        mockPoolQuery.mockResolvedValueOnce({ rows: [mockWebhook] });
+
+        const result = await webhooksService.testWebhook('test-tenant', 'wh-1');
+
+        expect(result.success).toBe(false);
+        expect(result.error).toBe('Webhook is missing a secret');
+      });
     });
   });
 

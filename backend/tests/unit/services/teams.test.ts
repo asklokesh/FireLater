@@ -490,6 +490,38 @@ describe('TeamsService', () => {
   });
 
   describe('template execution with webhook', () => {
+    it('should execute change_approval_required template', async () => {
+      const fetchMock = vi.fn().mockResolvedValue({
+        ok: true,
+        text: () => Promise.resolve('1'),
+      });
+      vi.stubGlobal('fetch', fetchMock);
+
+      const { teamsService } = await import('../../../src/services/teams/index.js');
+
+      const result = await teamsService.send({
+        webhookUrl: 'https://outlook.office.com/webhook/test',
+        type: 'change_approval_required',
+        data: {
+          changeId: 'CHG001',
+          title: 'Database Migration',
+          riskLevel: 'high',
+          requestedBy: 'John Doe',
+          scheduledStart: '2024-01-20 02:00:00',
+          changeUuid: 'change-uuid-1',
+        },
+      });
+
+      expect(result.success).toBe(true);
+      const callBody = JSON.parse(fetchMock.mock.calls[0][1].body);
+      expect(callBody.attachments[0].content.body[0].text).toBe('Change Approval Required');
+      expect(callBody.attachments[0].content.body[0].color).toBe('Warning');
+      const factSet = callBody.attachments[0].content.body.find((b: any) => b.type === 'FactSet');
+      expect(factSet.facts[1].value).toBe('HIGH');
+      expect(callBody.attachments[0].content.actions[0].url).toContain('/changes/change-uuid-1/approve');
+      vi.unstubAllGlobals();
+    });
+
     it('should execute change_approved template', async () => {
       const fetchMock = vi.fn().mockResolvedValue({
         ok: true,
@@ -915,6 +947,45 @@ describe('TeamsService', () => {
       });
 
       expect(pool.query).toHaveBeenCalledTimes(2);
+
+      vi.unstubAllGlobals();
+    });
+
+    it('should handle trackDelivery error gracefully', async () => {
+      const fetchMock = vi.fn().mockResolvedValue({
+        ok: true,
+        text: () => Promise.resolve('1'),
+      });
+      vi.stubGlobal('fetch', fetchMock);
+
+      const { pool } = await import('../../../src/config/database.js');
+      const { logger } = await import('../../../src/utils/logger.js');
+      // Table exists check succeeds
+      (pool.query as any).mockResolvedValueOnce({ rows: [{ exists: true }] });
+      // Insert fails
+      (pool.query as any).mockRejectedValueOnce(new Error('DB connection error'));
+
+      const { teamsService } = await import('../../../src/services/teams/index.js');
+
+      const result = await teamsService.send({
+        webhookUrl: 'https://outlook.office.com/webhook/test',
+        type: 'sla_breach',
+        tenantSlug: 'test-tenant',
+        data: {
+          issueNumber: 'INC001',
+          breachType: 'Response',
+          priority: 'high',
+          breachedAt: '2024-01-15',
+          issueId: 'issue-1',
+        },
+      });
+
+      // Should still succeed - trackDelivery errors are swallowed
+      expect(result.success).toBe(true);
+      expect(logger.debug).toHaveBeenCalledWith(
+        expect.objectContaining({ err: expect.any(Error) }),
+        'Failed to track Teams delivery'
+      );
 
       vi.unstubAllGlobals();
     });

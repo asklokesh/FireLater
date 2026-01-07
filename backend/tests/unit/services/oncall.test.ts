@@ -360,6 +360,14 @@ describe('OnCallService', () => {
 
         expect(result.position).toBe(1);
       });
+
+      it('should throw NotFoundError if schedule does not exist', async () => {
+        mockQuery.mockResolvedValueOnce({ rows: [] });
+
+        await expect(
+          oncallScheduleService.addToRotation('test-tenant', 'nonexistent', 'user-1')
+        ).rejects.toThrow(NotFoundError);
+      });
     });
 
     describe('updateRotationPosition', () => {
@@ -782,6 +790,112 @@ describe('OnCallService', () => {
           ['policy-1']
         );
       });
+
+      it('should update policy metadata', async () => {
+        const metadata = { priority: 'high', team: 'platform' };
+        const existingPolicy = { id: 'policy-1', name: 'Policy' };
+        const updatedPolicy = { id: 'policy-1', name: 'Policy', metadata };
+
+        mockQuery.mockResolvedValueOnce({ rows: [existingPolicy] });
+        mockQuery.mockResolvedValueOnce({ rows: [updatedPolicy] });
+        mockQuery.mockResolvedValueOnce({ rows: [updatedPolicy] });
+
+        await escalationPolicyService.update(
+          'test-tenant',
+          'policy-1',
+          { metadata },
+          'user-1'
+        );
+
+        expect(mockQuery).toHaveBeenCalledWith(
+          expect.stringContaining('metadata = $1'),
+          expect.arrayContaining([JSON.stringify(metadata)])
+        );
+      });
+
+      it('should update policy repeatDelayMinutes', async () => {
+        const existingPolicy = { id: 'policy-1', name: 'Policy' };
+        const updatedPolicy = { id: 'policy-1', name: 'Policy', repeat_delay_minutes: 30 };
+
+        mockQuery.mockResolvedValueOnce({ rows: [existingPolicy] });
+        mockQuery.mockResolvedValueOnce({ rows: [updatedPolicy] });
+        mockQuery.mockResolvedValueOnce({ rows: [updatedPolicy] });
+
+        await escalationPolicyService.update(
+          'test-tenant',
+          'policy-1',
+          { repeatDelayMinutes: 30 },
+          'user-1'
+        );
+
+        expect(mockQuery).toHaveBeenCalledWith(
+          expect.stringContaining('repeat_delay_minutes = $1'),
+          expect.arrayContaining([30])
+        );
+      });
+
+      it('should update policy isActive', async () => {
+        const existingPolicy = { id: 'policy-1', name: 'Policy' };
+        const updatedPolicy = { id: 'policy-1', name: 'Policy', is_active: false };
+
+        mockQuery.mockResolvedValueOnce({ rows: [existingPolicy] });
+        mockQuery.mockResolvedValueOnce({ rows: [updatedPolicy] });
+        mockQuery.mockResolvedValueOnce({ rows: [updatedPolicy] });
+
+        await escalationPolicyService.update(
+          'test-tenant',
+          'policy-1',
+          { isActive: false },
+          'user-1'
+        );
+
+        expect(mockQuery).toHaveBeenCalledWith(
+          expect.stringContaining('is_active = $1'),
+          expect.arrayContaining([false])
+        );
+      });
+
+      it('should update policy repeatCount', async () => {
+        const existingPolicy = { id: 'policy-1', name: 'Policy' };
+        const updatedPolicy = { id: 'policy-1', name: 'Policy', repeat_count: 3 };
+
+        mockQuery.mockResolvedValueOnce({ rows: [existingPolicy] });
+        mockQuery.mockResolvedValueOnce({ rows: [updatedPolicy] });
+        mockQuery.mockResolvedValueOnce({ rows: [updatedPolicy] });
+
+        await escalationPolicyService.update(
+          'test-tenant',
+          'policy-1',
+          { repeatCount: 3 },
+          'user-1'
+        );
+
+        expect(mockQuery).toHaveBeenCalledWith(
+          expect.stringContaining('repeat_count = $1'),
+          expect.arrayContaining([3])
+        );
+      });
+
+      it('should update policy description', async () => {
+        const existingPolicy = { id: 'policy-1', name: 'Policy' };
+        const updatedPolicy = { id: 'policy-1', name: 'Policy', description: 'Updated description' };
+
+        mockQuery.mockResolvedValueOnce({ rows: [existingPolicy] });
+        mockQuery.mockResolvedValueOnce({ rows: [updatedPolicy] });
+        mockQuery.mockResolvedValueOnce({ rows: [updatedPolicy] });
+
+        await escalationPolicyService.update(
+          'test-tenant',
+          'policy-1',
+          { description: 'Updated description' },
+          'user-1'
+        );
+
+        expect(mockQuery).toHaveBeenCalledWith(
+          expect.stringContaining('description = $1'),
+          expect.arrayContaining(['Updated description'])
+        );
+      });
     });
 
     describe('delete', () => {
@@ -902,6 +1016,102 @@ describe('OnCallService', () => {
         );
 
         expect(result.delay_minutes).toBe(5);
+      });
+
+      it('should update step groupId', async () => {
+        mockQuery.mockResolvedValueOnce({
+          rows: [{ id: 'step-1', group_id: 'group-123' }],
+        });
+
+        const result = await escalationPolicyService.updateStep(
+          'test-tenant',
+          'policy-1',
+          'step-1',
+          { groupId: 'group-123' }
+        );
+
+        expect(result.group_id).toBe('group-123');
+        expect(mockQuery).toHaveBeenCalledWith(
+          expect.stringContaining('group_id = $1'),
+          expect.arrayContaining(['group-123'])
+        );
+      });
+
+      it('should update step notificationChannels', async () => {
+        const channels = ['email', 'sms', 'slack'];
+        mockQuery.mockResolvedValueOnce({
+          rows: [{ id: 'step-1', notification_channels: channels }],
+        });
+
+        const result = await escalationPolicyService.updateStep(
+          'test-tenant',
+          'policy-1',
+          'step-1',
+          { notificationChannels: channels }
+        );
+
+        expect(result.notification_channels).toEqual(channels);
+        expect(mockQuery).toHaveBeenCalledWith(
+          expect.stringContaining('notification_channels = $1'),
+          expect.arrayContaining([channels])
+        );
+      });
+
+      it('should update step scheduleId', async () => {
+        mockQuery.mockResolvedValueOnce({
+          rows: [{ id: 'step-1', schedule_id: 'schedule-456' }],
+        });
+
+        const result = await escalationPolicyService.updateStep(
+          'test-tenant',
+          'policy-1',
+          'step-1',
+          { scheduleId: 'schedule-456' }
+        );
+
+        expect(result.schedule_id).toBe('schedule-456');
+        expect(mockQuery).toHaveBeenCalledWith(
+          expect.stringContaining('schedule_id = $1'),
+          expect.arrayContaining(['schedule-456'])
+        );
+      });
+
+      it('should update step userId', async () => {
+        mockQuery.mockResolvedValueOnce({
+          rows: [{ id: 'step-1', user_id: 'user-789' }],
+        });
+
+        const result = await escalationPolicyService.updateStep(
+          'test-tenant',
+          'policy-1',
+          'step-1',
+          { userId: 'user-789' }
+        );
+
+        expect(result.user_id).toBe('user-789');
+        expect(mockQuery).toHaveBeenCalledWith(
+          expect.stringContaining('user_id = $1'),
+          expect.arrayContaining(['user-789'])
+        );
+      });
+
+      it('should update step notifyType', async () => {
+        mockQuery.mockResolvedValueOnce({
+          rows: [{ id: 'step-1', notify_type: 'user' }],
+        });
+
+        const result = await escalationPolicyService.updateStep(
+          'test-tenant',
+          'policy-1',
+          'step-1',
+          { notifyType: 'user' }
+        );
+
+        expect(result.notify_type).toBe('user');
+        expect(mockQuery).toHaveBeenCalledWith(
+          expect.stringContaining('notify_type = $1'),
+          expect.arrayContaining(['user'])
+        );
       });
     });
 

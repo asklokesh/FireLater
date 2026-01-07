@@ -570,6 +570,237 @@ describe('Integrations Service - Comprehensive Tests', () => {
     });
   });
 
+  describe('Integrations Service', () => {
+    describe('getWithCredentials()', () => {
+      it('should return null when integration not found', async () => {
+        vi.mocked(pool.query).mockResolvedValue({ rows: [] } as any);
+
+        const result = await integrationsService.getWithCredentials(mockTenantSlug, 'non-existent');
+
+        expect(result).toBeNull();
+      });
+
+      it('should decrypt credentials when present', async () => {
+        const mockIntegration = {
+          id: '1',
+          name: 'Test Integration',
+          type: 'slack',
+          credentials: 'encrypted-credentials',
+        };
+        vi.mocked(pool.query).mockResolvedValue({ rows: [mockIntegration] } as any);
+        vi.mocked(encryption.decrypt).mockReturnValue('{"apiKey":"secret123"}');
+
+        const result = await integrationsService.getWithCredentials(mockTenantSlug, '1');
+
+        expect(result).toBeDefined();
+        expect(result!.credentials).toEqual({ apiKey: 'secret123' });
+        expect(encryption.decrypt).toHaveBeenCalledWith('encrypted-credentials');
+      });
+
+      it('should handle decryption failure by trying JSON.parse', async () => {
+        const mockIntegration = {
+          id: '1',
+          name: 'Test Integration',
+          type: 'slack',
+          credentials: '{"apiKey":"plaintext"}', // Already JSON, not encrypted (migration scenario)
+        };
+        vi.mocked(pool.query).mockResolvedValue({ rows: [mockIntegration] } as any);
+        vi.mocked(encryption.decrypt).mockImplementation(() => {
+          throw new Error('Decryption failed');
+        });
+
+        const result = await integrationsService.getWithCredentials(mockTenantSlug, '1');
+
+        expect(result).toBeDefined();
+        expect(result!.credentials).toEqual({ apiKey: 'plaintext' });
+      });
+
+      it('should return empty object when both decryption and JSON.parse fail', async () => {
+        const mockIntegration = {
+          id: '1',
+          name: 'Test Integration',
+          type: 'slack',
+          credentials: 'invalid-not-json-not-encrypted',
+        };
+        vi.mocked(pool.query).mockResolvedValue({ rows: [mockIntegration] } as any);
+        vi.mocked(encryption.decrypt).mockImplementation(() => {
+          throw new Error('Decryption failed');
+        });
+
+        const result = await integrationsService.getWithCredentials(mockTenantSlug, '1');
+
+        expect(result).toBeDefined();
+        expect(result!.credentials).toEqual({});
+        // Logger.warn is called but we don't assert it since it's mocked at module level
+      });
+
+      it('should return integration without credentials field modification when credentials is null', async () => {
+        const mockIntegration = {
+          id: '1',
+          name: 'Test Integration',
+          type: 'slack',
+          credentials: null,
+        };
+        vi.mocked(pool.query).mockResolvedValue({ rows: [mockIntegration] } as any);
+
+        const result = await integrationsService.getWithCredentials(mockTenantSlug, '1');
+
+        expect(result).toBeDefined();
+        expect(result!.credentials).toBeNull();
+        expect(encryption.decrypt).not.toHaveBeenCalled();
+      });
+    });
+
+    describe('update()', () => {
+      it('should update description when provided', async () => {
+        vi.mocked(pool.query).mockResolvedValue({
+          rows: [{
+            id: '1',
+            name: 'Test Integration',
+            type: 'slack',
+            description: 'Updated description',
+          }],
+        } as any);
+
+        const result = await integrationsService.update(mockTenantSlug, '1', {
+          description: 'Updated description',
+        });
+
+        expect(result).toBeDefined();
+        expect(pool.query).toHaveBeenCalledWith(
+          expect.stringContaining('description'),
+          expect.arrayContaining(['Updated description'])
+        );
+      });
+
+      it('should update config when provided', async () => {
+        vi.mocked(pool.query).mockResolvedValue({
+          rows: [{
+            id: '1',
+            name: 'Updated Integration',
+            type: 'slack',
+            config: { setting1: 'value1' },
+          }],
+        } as any);
+
+        const result = await integrationsService.update(mockTenantSlug, '1', {
+          config: { setting1: 'value1' },
+        });
+
+        expect(result).toBeDefined();
+        expect(pool.query).toHaveBeenCalledWith(
+          expect.stringContaining('config'),
+          expect.arrayContaining([JSON.stringify({ setting1: 'value1' })])
+        );
+      });
+
+      it('should update isActive when provided', async () => {
+        vi.mocked(pool.query).mockResolvedValue({
+          rows: [{
+            id: '1',
+            name: 'Updated Integration',
+            type: 'slack',
+            is_active: false,
+          }],
+        } as any);
+
+        const result = await integrationsService.update(mockTenantSlug, '1', {
+          isActive: false,
+        });
+
+        expect(result).toBeDefined();
+        expect(pool.query).toHaveBeenCalledWith(
+          expect.stringContaining('is_active'),
+          expect.arrayContaining([false])
+        );
+      });
+
+      it('should update fieldMappings when provided', async () => {
+        vi.mocked(pool.query).mockResolvedValue({
+          rows: [{
+            id: '1',
+            name: 'Updated Integration',
+            type: 'slack',
+            field_mappings: { field1: 'mapped1' },
+          }],
+        } as any);
+
+        const result = await integrationsService.update(mockTenantSlug, '1', {
+          fieldMappings: { field1: 'mapped1' },
+        });
+
+        expect(result).toBeDefined();
+        expect(pool.query).toHaveBeenCalledWith(
+          expect.stringContaining('field_mappings'),
+          expect.arrayContaining([JSON.stringify({ field1: 'mapped1' })])
+        );
+      });
+
+      it('should update syncDirection when provided', async () => {
+        vi.mocked(pool.query).mockResolvedValue({
+          rows: [{
+            id: '1',
+            name: 'Updated Integration',
+            type: 'servicenow',
+            sync_direction: 'bidirectional',
+          }],
+        } as any);
+
+        const result = await integrationsService.update(mockTenantSlug, '1', {
+          syncDirection: 'bidirectional',
+        });
+
+        expect(result).toBeDefined();
+        expect(pool.query).toHaveBeenCalledWith(
+          expect.stringContaining('sync_direction'),
+          expect.arrayContaining(['bidirectional'])
+        );
+      });
+
+      it('should update syncEnabled when provided', async () => {
+        vi.mocked(pool.query).mockResolvedValue({
+          rows: [{
+            id: '1',
+            name: 'Updated Integration',
+            type: 'servicenow',
+            sync_enabled: true,
+          }],
+        } as any);
+
+        const result = await integrationsService.update(mockTenantSlug, '1', {
+          syncEnabled: true,
+        });
+
+        expect(result).toBeDefined();
+        expect(pool.query).toHaveBeenCalledWith(
+          expect.stringContaining('sync_enabled'),
+          expect.arrayContaining([true])
+        );
+      });
+
+      it('should update syncInterval when provided', async () => {
+        vi.mocked(pool.query).mockResolvedValue({
+          rows: [{
+            id: '1',
+            name: 'Updated Integration',
+            type: 'servicenow',
+            sync_interval: 3600,
+          }],
+        } as any);
+
+        const result = await integrationsService.update(mockTenantSlug, '1', {
+          syncInterval: 3600,
+        });
+
+        expect(result).toBeDefined();
+        expect(pool.query).toHaveBeenCalledWith(
+          expect.stringContaining('sync_interval'),
+          expect.arrayContaining([3600])
+        );
+      });
+    });
+  });
+
   describe('Constants', () => {
     it('should export WEBHOOK_EVENTS', () => {
       expect(WEBHOOK_EVENTS).toBeDefined();

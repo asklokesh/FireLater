@@ -117,26 +117,17 @@ export async function validateUrlForSSRF(urlString: string): Promise<void> {
         }
       }
     } catch (_ipv6Error) {
-      // Both IPv4 and IPv6 resolution failed
-      if (error instanceof BadRequestError) {
-        throw error;
-      }
-      // Allow it to proceed - the actual request will fail if DNS is truly broken
-      logger.debug({ hostname, error }, 'DNS resolution failed during SSRF check');
+      // Both inner try and outer catch only throw BadRequestError.
+      // DNS network failures are converted to [] by .catch(() => []).
+      // The outer catch's `error` is always BadRequestError (from private IPv4 found).
+      // Re-throw it to propagate the SSRF block.
+      throw error;
     }
   }
 
-  // Additional check for URL-encoded attacks (e.g., %31%32%37.%30.%30.%31 = 127.0.0.1)
-  const decodedHostname = decodeURIComponent(hostname);
-  if (decodedHostname !== hostname) {
-    logger.warn(
-      { hostname, decodedHostname, url: urlString },
-      'SSRF attempt blocked: URL-encoded hostname'
-    );
-    throw new BadRequestError(
-      'URL-encoded hostnames are not allowed'
-    );
-  }
+  // Note: URL-encoded hostname check is NOT needed here because JavaScript's URL
+  // constructor automatically decodes hostnames (e.g., %6C%6F%63%61%6C%68%6F%73%74 -> localhost).
+  // The decoded hostname will already be caught by the isBlockedHostname or isPrivateIP checks above.
 }
 
 /**
@@ -179,15 +170,7 @@ export function validateUrlForSSRFSync(urlString: string): void {
     }
   }
 
-  // Check for URL-encoded attacks
-  const decodedHostname = decodeURIComponent(hostname);
-  if (decodedHostname !== hostname) {
-    logger.warn(
-      { hostname, decodedHostname, url: urlString },
-      'SSRF attempt blocked: URL-encoded hostname'
-    );
-    throw new BadRequestError(
-      'URL-encoded hostnames are not allowed'
-    );
-  }
+  // Note: URL-encoded hostname check is NOT needed here because JavaScript's URL
+  // constructor automatically decodes hostnames (e.g., %6C%6F%63%61%6C%68%6F%73%74 -> localhost).
+  // The decoded hostname will already be caught by the isBlockedHostname or isPrivateIP checks above.
 }

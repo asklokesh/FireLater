@@ -1055,6 +1055,14 @@ describe('ChangesService', () => {
           expect(result).toEqual(mockTask);
           expect(cacheService.invalidateTenant).toHaveBeenCalledWith('test-tenant', 'changes');
         });
+
+        it('should throw NotFoundError if change does not exist', async () => {
+          mockQuery.mockResolvedValueOnce({ rows: [] });
+
+          await expect(
+            changeRequestService.createTask('test-tenant', 'non-existent', { title: 'Task' })
+          ).rejects.toThrow(NotFoundError);
+        });
       });
 
       describe('updateTask', () => {
@@ -1284,6 +1292,14 @@ describe('ChangesService', () => {
         const result = await changeRequestService.getApprovals('test-tenant', 'change-1');
 
         expect(result).toHaveLength(1);
+      });
+
+      it('should throw NotFoundError if change does not exist', async () => {
+        mockQuery.mockResolvedValueOnce({ rows: [] });
+
+        await expect(
+          changeRequestService.getApprovals('test-tenant', 'non-existent')
+        ).rejects.toThrow(NotFoundError);
       });
     });
   });

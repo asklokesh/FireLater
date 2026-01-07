@@ -525,6 +525,44 @@ describe('ApplicationService', () => {
       );
     });
 
+    it('should update application description', async () => {
+      mockQuery
+        .mockResolvedValueOnce({ rows: [] })
+        .mockResolvedValueOnce({ rows: [] })
+        .mockResolvedValueOnce({ rows: [{ ...existingApp, description: 'New description' }] });
+
+      await applicationService.update(
+        tenantSlug,
+        'APP-000001',
+        { description: 'New description' },
+        userId
+      );
+
+      expect(mockQuery).toHaveBeenCalledWith(
+        expect.stringContaining('description = $1'),
+        expect.arrayContaining(['New description'])
+      );
+    });
+
+    it('should update application lifecycleStage', async () => {
+      mockQuery
+        .mockResolvedValueOnce({ rows: [] })
+        .mockResolvedValueOnce({ rows: [] })
+        .mockResolvedValueOnce({ rows: [{ ...existingApp, lifecycle_stage: 'sunset' }] });
+
+      await applicationService.update(
+        tenantSlug,
+        'APP-000001',
+        { lifecycleStage: 'sunset' },
+        userId
+      );
+
+      expect(mockQuery).toHaveBeenCalledWith(
+        expect.stringContaining('lifecycle_stage = $1'),
+        expect.arrayContaining(['sunset'])
+      );
+    });
+
     it('should return existing app when no updates provided', async () => {
       const result = await applicationService.update(tenantSlug, 'APP-000001', {}, userId);
 
@@ -561,6 +599,44 @@ describe('ApplicationService', () => {
       );
     });
 
+    it('should update ownerGroupId', async () => {
+      mockQuery
+        .mockResolvedValueOnce({ rows: [] })
+        .mockResolvedValueOnce({ rows: [] })
+        .mockResolvedValueOnce({ rows: [{ ...existingApp, owner_group_id: 'group-123' }] });
+
+      await applicationService.update(
+        tenantSlug,
+        'APP-000001',
+        { ownerGroupId: 'group-123' },
+        userId
+      );
+
+      expect(mockQuery).toHaveBeenCalledWith(
+        expect.stringContaining('owner_group_id = $1'),
+        expect.arrayContaining(['group-123'])
+      );
+    });
+
+    it('should update supportGroupId', async () => {
+      mockQuery
+        .mockResolvedValueOnce({ rows: [] })
+        .mockResolvedValueOnce({ rows: [] })
+        .mockResolvedValueOnce({ rows: [{ ...existingApp, support_group_id: 'support-team' }] });
+
+      await applicationService.update(
+        tenantSlug,
+        'APP-000001',
+        { supportGroupId: 'support-team' },
+        userId
+      );
+
+      expect(mockQuery).toHaveBeenCalledWith(
+        expect.stringContaining('support_group_id = $1'),
+        expect.arrayContaining(['support-team'])
+      );
+    });
+
     it('should update metadata as JSON', async () => {
       const metadata = { env: 'production', version: '3.0' };
       mockQuery
@@ -578,6 +654,45 @@ describe('ApplicationService', () => {
       expect(mockQuery).toHaveBeenCalledWith(
         expect.stringContaining('metadata = $1'),
         expect.arrayContaining([JSON.stringify(metadata)])
+      );
+    });
+
+    it('should update businessUnit', async () => {
+      mockQuery
+        .mockResolvedValueOnce({ rows: [] })
+        .mockResolvedValueOnce({ rows: [] })
+        .mockResolvedValueOnce({ rows: [{ ...existingApp, business_unit: 'Operations' }] });
+
+      await applicationService.update(
+        tenantSlug,
+        'APP-000001',
+        { businessUnit: 'Operations' },
+        userId
+      );
+
+      expect(mockQuery).toHaveBeenCalledWith(
+        expect.stringContaining('business_unit = $1'),
+        expect.arrayContaining(['Operations'])
+      );
+    });
+
+    it('should update tags', async () => {
+      const tags = ['critical', 'payment', 'production'];
+      mockQuery
+        .mockResolvedValueOnce({ rows: [] })
+        .mockResolvedValueOnce({ rows: [] })
+        .mockResolvedValueOnce({ rows: [{ ...existingApp, tags }] });
+
+      await applicationService.update(
+        tenantSlug,
+        'APP-000001',
+        { tags },
+        userId
+      );
+
+      expect(mockQuery).toHaveBeenCalledWith(
+        expect.stringContaining('tags = $1'),
+        expect.arrayContaining([tags])
       );
     });
 
@@ -895,6 +1010,157 @@ describe('ApplicationService', () => {
           userId
         )
       ).rejects.toThrow(NotFoundError);
+    });
+
+    it('should update environment type', async () => {
+      mockQuery
+        .mockResolvedValueOnce({ rows: [existingApp] })
+        .mockResolvedValueOnce({ rows: [{ ...existingEnv, type: 'production' }] });
+
+      const result = await applicationService.updateEnvironment(
+        tenantSlug,
+        'APP-000001',
+        'env-uuid',
+        { type: 'production' },
+        userId
+      );
+
+      expect(result.type).toBe('production');
+      expect(mockQuery).toHaveBeenCalledWith(
+        expect.stringContaining('type = $1'),
+        expect.arrayContaining(['production'])
+      );
+    });
+
+    it('should update environment cloudProvider', async () => {
+      mockQuery
+        .mockResolvedValueOnce({ rows: [existingApp] })
+        .mockResolvedValueOnce({ rows: [{ ...existingEnv, cloud_provider: 'aws' }] });
+
+      const result = await applicationService.updateEnvironment(
+        tenantSlug,
+        'APP-000001',
+        'env-uuid',
+        { cloudProvider: 'aws' },
+        userId
+      );
+
+      expect(result.cloud_provider).toBe('aws');
+      expect(mockQuery).toHaveBeenCalledWith(
+        expect.stringContaining('cloud_provider = $1'),
+        expect.arrayContaining(['aws'])
+      );
+    });
+
+    it('should update environment cloudAccount', async () => {
+      mockQuery
+        .mockResolvedValueOnce({ rows: [existingApp] })
+        .mockResolvedValueOnce({ rows: [{ ...existingEnv, cloud_account: '123456789' }] });
+
+      const result = await applicationService.updateEnvironment(
+        tenantSlug,
+        'APP-000001',
+        'env-uuid',
+        { cloudAccount: '123456789' },
+        userId
+      );
+
+      expect(result.cloud_account).toBe('123456789');
+      expect(mockQuery).toHaveBeenCalledWith(
+        expect.stringContaining('cloud_account = $1'),
+        expect.arrayContaining(['123456789'])
+      );
+    });
+
+    it('should update environment cloudRegion', async () => {
+      mockQuery
+        .mockResolvedValueOnce({ rows: [existingApp] })
+        .mockResolvedValueOnce({ rows: [{ ...existingEnv, cloud_region: 'us-west-2' }] });
+
+      const result = await applicationService.updateEnvironment(
+        tenantSlug,
+        'APP-000001',
+        'env-uuid',
+        { cloudRegion: 'us-west-2' },
+        userId
+      );
+
+      expect(result.cloud_region).toBe('us-west-2');
+      expect(mockQuery).toHaveBeenCalledWith(
+        expect.stringContaining('cloud_region = $1'),
+        expect.arrayContaining(['us-west-2'])
+      );
+    });
+
+    it('should update environment resourceIds', async () => {
+      const resourceIds = ['i-abc123', 'i-def456'];
+      mockQuery
+        .mockResolvedValueOnce({ rows: [existingApp] })
+        .mockResolvedValueOnce({ rows: [{ ...existingEnv, resource_ids: resourceIds }] });
+
+      const result = await applicationService.updateEnvironment(
+        tenantSlug,
+        'APP-000001',
+        'env-uuid',
+        { resourceIds },
+        userId
+      );
+
+      expect(result.resource_ids).toEqual(resourceIds);
+      expect(mockQuery).toHaveBeenCalledWith(
+        expect.stringContaining('resource_ids = $1'),
+        expect.arrayContaining([JSON.stringify(resourceIds)])
+      );
+    });
+
+    it('should update environment metadata', async () => {
+      const metadata = { version: '3.0', deployedBy: 'terraform' };
+      mockQuery
+        .mockResolvedValueOnce({ rows: [existingApp] })
+        .mockResolvedValueOnce({ rows: [{ ...existingEnv, metadata }] });
+
+      const result = await applicationService.updateEnvironment(
+        tenantSlug,
+        'APP-000001',
+        'env-uuid',
+        { metadata },
+        userId
+      );
+
+      expect(result.metadata).toEqual(metadata);
+      expect(mockQuery).toHaveBeenCalledWith(
+        expect.stringContaining('metadata = $1'),
+        expect.arrayContaining([JSON.stringify(metadata)])
+      );
+    });
+
+    it('should update multiple cloud fields at once', async () => {
+      mockQuery
+        .mockResolvedValueOnce({ rows: [existingApp] })
+        .mockResolvedValueOnce({
+          rows: [{
+            ...existingEnv,
+            cloud_provider: 'gcp',
+            cloud_account: 'my-project',
+            cloud_region: 'us-central1',
+          }],
+        });
+
+      const result = await applicationService.updateEnvironment(
+        tenantSlug,
+        'APP-000001',
+        'env-uuid',
+        {
+          cloudProvider: 'gcp',
+          cloudAccount: 'my-project',
+          cloudRegion: 'us-central1',
+        },
+        userId
+      );
+
+      expect(result.cloud_provider).toBe('gcp');
+      expect(result.cloud_account).toBe('my-project');
+      expect(result.cloud_region).toBe('us-central1');
     });
   });
 
