@@ -1,6 +1,8 @@
 import { FastifyInstance } from 'fastify';
 import { z } from 'zod';
+import crypto from 'crypto';
 import { emailInboundService, InboundEmail } from '../services/email-inbound.js';
+import { logger } from '../utils/logger.js';
 
 // ============================================
 // EMAIL WEBHOOK & CONFIGURATION ROUTES
@@ -57,6 +59,10 @@ const mailgunInboundSchema = z.object({
   'Message-Id': z.string().optional(),
   'In-Reply-To': z.string().optional(),
   References: z.string().optional(),
+  // Signature fields for verification
+  timestamp: z.string().optional(),
+  token: z.string().optional(),
+  signature: z.string().optional(),
 });
 
 // Generic inbound email format (for testing or custom integrations)
@@ -72,6 +78,55 @@ const genericInboundSchema = z.object({
   references: z.array(z.string()).optional(),
 });
 
+// ============================================
+// WEBHOOK SIGNATURE VERIFICATION
+// ============================================
+
+/**
+ * Verify Mailgun webhook signature
+ * Mailgun sends: timestamp, token, signature in the request body
+ * Signature = HMAC-SHA256(timestamp + token, signingKey)
+ */
+function verifyMailgunSignature(
+  timestamp: string,
+  token: string,
+  signature: string,
+  signingKey: string | undefined
+): boolean {
+  if (!signingKey) {
+    // If no signing key configured, log warning but allow request (backward compatibility)
+    logger.warn('Mailgun webhook signature verification skipped - no signing key configured');
+    return true;
+  }
+
+  const encodedToken = crypto
+    .createHmac('sha256', signingKey)
+    .update(timestamp + token)
+    .digest('hex');
+
+  return encodedToken === signature;
+}
+
+/**
+ * Verify SendGrid Event Webhook signature using a shared secret
+ * SendGrid inbound parse doesn't have built-in signature verification,
+ * but we implement basic verification using a configured webhook secret header
+ */
+function verifySendGridSecret(
+  headers: Record<string, string | string[] | undefined>,
+  webhookSecret: string | undefined
+): boolean {
+  if (!webhookSecret) {
+    // If no secret configured, allow request (backward compatibility)
+    logger.warn('SendGrid webhook secret verification skipped - no secret configured');
+    return true;
+  }
+
+  // Check for custom verification header that can be configured in SendGrid
+  const providedSecret = headers['x-sendgrid-webhook-secret'] as string | undefined;
+  return providedSecret === webhookSecret;
+}
+
 export default async function emailRoutes(fastify: FastifyInstance) {
   // ============================================
   // WEBHOOK ENDPOINTS (Public - no auth required)
@@ -84,6 +139,13 @@ export default async function emailRoutes(fastify: FastifyInstance) {
     const { tenantSlug } = request.params as { tenantSlug: string };
 
     try {
+      // Verify webhook signature if configured
+      const webhookSecret = process.env.SENDGRID_WEBHOOK_SECRET;
+      if (!verifySendGridSecret(request.headers as Record<string, string | string[] | undefined>, webhookSecret)) {
+        logger.warn({ tenantSlug }, 'SendGrid webhook signature verification failed');
+        return reply.code(401).send({ error: 'Invalid webhook signature' });
+      }
+
       // SendGrid sends form-encoded data
       const body = request.body as Record<string, string>;
 
@@ -124,6 +186,18 @@ export default async function emailRoutes(fastify: FastifyInstance) {
     try {
       const body = request.body as Record<string, string>;
       const parsed = mailgunInboundSchema.parse(body);
+
+      // Verify Mailgun webhook signature if credentials provided
+      const signingKey = process.env.MAILGUN_WEBHOOK_SIGNING_KEY;
+      if (parsed.timestamp && parsed.token && parsed.signature) {
+        if (!verifyMailgunSignature(parsed.timestamp, parsed.token, parsed.signature, signingKey)) {
+          logger.warn({ tenantSlug }, 'Mailgun webhook signature verification failed');
+          return reply.code(401).send({ error: 'Invalid webhook signature' });
+        }
+      } else if (signingKey) {
+        // If signing key is configured but signature fields are missing, warn
+        logger.warn({ tenantSlug }, 'Mailgun webhook missing signature fields but signing key is configured');
+      }
 
       const email: InboundEmail = {
         from: parsed.sender,
@@ -186,7 +260,7 @@ export default async function emailRoutes(fastify: FastifyInstance) {
       return;
     }
 
-    const tenant = (request as any).tenant;
+    const tenant = request.tenant!
     if (!tenant) {
       return reply.code(401).send({ error: 'Unauthorized' });
     }
@@ -194,7 +268,7 @@ export default async function emailRoutes(fastify: FastifyInstance) {
 
   // List email configurations
   fastify.get('/configs', async (request, _reply) => {
-    const tenant = (request as any).tenant;
+    const tenant = request.tenant!
 
     const configs = await emailInboundService.listEmailConfigs(tenant.slug);
 
@@ -203,7 +277,7 @@ export default async function emailRoutes(fastify: FastifyInstance) {
 
   // Get single email configuration
   fastify.get('/configs/:id', async (request, reply) => {
-    const tenant = (request as any).tenant;
+    const tenant = request.tenant!
     const { id } = request.params as { id: string };
 
     const config = await emailInboundService.getEmailConfigById(tenant.slug, id);
@@ -217,7 +291,7 @@ export default async function emailRoutes(fastify: FastifyInstance) {
 
   // Create email configuration
   fastify.post('/configs', async (request, reply) => {
-    const tenant = (request as any).tenant;
+    const tenant = request.tenant!
     const body = emailConfigSchema.parse(request.body);
 
     try {
@@ -231,7 +305,7 @@ export default async function emailRoutes(fastify: FastifyInstance) {
 
   // Update email configuration
   fastify.patch('/configs/:id', async (request, reply) => {
-    const tenant = (request as any).tenant;
+    const tenant = request.tenant!
     const { id } = request.params as { id: string };
     const body = updateEmailConfigSchema.parse(request.body);
 
@@ -251,7 +325,7 @@ export default async function emailRoutes(fastify: FastifyInstance) {
 
   // Delete email configuration
   fastify.delete('/configs/:id', async (request, reply) => {
-    const tenant = (request as any).tenant;
+    const tenant = request.tenant!
     const { id } = request.params as { id: string };
 
     try {
@@ -270,7 +344,7 @@ export default async function emailRoutes(fastify: FastifyInstance) {
 
   // Get email logs
   fastify.get('/logs', async (request, _reply) => {
-    const tenant = (request as any).tenant;
+    const tenant = request.tenant!
     const query = request.query as {
       configId?: string;
       action?: string;
@@ -299,7 +373,7 @@ export default async function emailRoutes(fastify: FastifyInstance) {
 
   // Test webhook endpoint (for verifying setup)
   fastify.post('/test', async (request, reply) => {
-    const tenant = (request as any).tenant;
+    const tenant = request.tenant!
     const body = request.body as { to: string; subject?: string; body?: string };
 
     if (!body.to) {
@@ -321,7 +395,7 @@ export default async function emailRoutes(fastify: FastifyInstance) {
 
   // Get webhook URLs for setup instructions
   fastify.get('/webhook-urls', async (request, _reply) => {
-    const tenant = (request as any).tenant;
+    const tenant = request.tenant!
     const baseUrl = process.env.API_URL || `${request.protocol}://${request.hostname}`;
 
     return {
