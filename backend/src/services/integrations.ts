@@ -470,10 +470,14 @@ export const webhooksService = {
 
         const deliveryId = deliveryResult.rows[0].id;
 
-        // Sign payload
+        // Sign payload - secret is required for webhook security
+        if (!webhook.secret) {
+          logger.error({ webhookId: webhook.id }, 'Webhook missing secret, skipping delivery');
+          continue;
+        }
         const timestamp = Date.now();
         const signature = crypto
-          .createHmac('sha256', webhook.secret || '')
+          .createHmac('sha256', webhook.secret)
           .update(`${timestamp}.${JSON.stringify(payload)}`)
           .digest('hex');
 
@@ -597,9 +601,14 @@ export const webhooksService = {
       // Validate webhook URL before making test request
       await validateUrlForSSRF(webhook.url);
 
+      // Ensure webhook has a secret for signature generation
+      if (!webhook.secret) {
+        return { success: false, error: 'Webhook is missing a secret' };
+      }
+
       const timestamp = Date.now();
       const signature = crypto
-        .createHmac('sha256', webhook.secret || '')
+        .createHmac('sha256', webhook.secret)
         .update(`${timestamp}.${JSON.stringify(testPayload)}`)
         .digest('hex');
 
