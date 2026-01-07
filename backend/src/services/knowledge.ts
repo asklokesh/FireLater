@@ -73,7 +73,7 @@ class KnowledgeService {
     return cacheService.getOrSet(
       cacheKey,
       async () => this.listArticlesUncached(tenantSlug, filters, pagination),
-      { ttl: 300, prefix: 'kb' }
+      { ttl: 300 }
     );
   }
 
@@ -235,8 +235,22 @@ class KnowledgeService {
   /**
    * Get single article by ID
    * Optimized with single query using LEFT JOINs
+   * Cached with 5-minute TTL to reduce database load
    */
   async getArticleById(tenantSlug: string, articleId: string) {
+    const cacheKey = `${tenantSlug}:kb:article:${articleId}`;
+
+    return cacheService.getOrSet(
+      cacheKey,
+      async () => this.getArticleByIdUncached(tenantSlug, articleId),
+      { ttl: 300 }
+    );
+  }
+
+  /**
+   * Internal uncached implementation of getArticleById
+   */
+  private async getArticleByIdUncached(tenantSlug: string, articleId: string) {
     const schema = tenantService.getSchemaName(tenantSlug);
 
     const result = await pool.query(
@@ -509,8 +523,22 @@ class KnowledgeService {
   /**
    * Get all categories
    * Optimized to fetch parent categories in single query
+   * Cached with 10-minute TTL (admin-configured data)
    */
   async listCategories(tenantSlug: string) {
+    const cacheKey = `${tenantSlug}:kb:categories:list`;
+
+    return cacheService.getOrSet(
+      cacheKey,
+      async () => this.listCategoriesUncached(tenantSlug),
+      { ttl: 600 }
+    );
+  }
+
+  /**
+   * Internal uncached implementation of listCategories
+   */
+  private async listCategoriesUncached(tenantSlug: string) {
     const schema = tenantService.getSchemaName(tenantSlug);
 
     const result = await pool.query(
@@ -561,10 +589,13 @@ class KnowledgeService {
   /**
    * Invalidate all knowledge base cache entries for a tenant
    * Called after create/update/delete operations to ensure cache consistency
+   * Clears article lists, individual articles, and category caches
    */
   private async invalidateCache(tenantSlug: string): Promise<void> {
     try {
-      const deleted = await cacheService.invalidate(`kb:${tenantSlug}:kb:articles:*`);
+      // Invalidate all KB caches for tenant (articles, categories)
+      // Cache keys: cache:{tenantSlug}:kb:articles:*, cache:{tenantSlug}:kb:article:*, cache:{tenantSlug}:kb:categories:*
+      const deleted = await cacheService.invalidateTenant(tenantSlug, 'kb');
       logger.debug(
         { tenantSlug, deletedKeys: deleted },
         'Invalidated knowledge base cache'

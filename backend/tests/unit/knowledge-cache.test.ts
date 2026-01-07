@@ -43,7 +43,7 @@ describe('Knowledge Base Redis Caching (PERF-004)', () => {
       getOrSetSpy.mockRestore();
     });
 
-    it('should pass correct options to cache (5-min TTL, kb prefix)', async () => {
+    it('should pass correct options to cache (5-min TTL)', async () => {
       const getOrSetSpy = vi.spyOn(cacheService, 'getOrSet');
       getOrSetSpy.mockResolvedValue({ articles: [], total: 0, page: 1, perPage: 20, pages: 0 });
 
@@ -55,7 +55,6 @@ describe('Knowledge Base Redis Caching (PERF-004)', () => {
         expect.any(Function),
         expect.objectContaining({
           ttl: 300,
-          prefix: 'kb',
         })
       );
 
@@ -125,7 +124,7 @@ describe('Knowledge Base Redis Caching (PERF-004)', () => {
       expect(getOrSetSpy).toHaveBeenCalledWith(
         expect.any(String),
         expect.any(Function),
-        expect.objectContaining({ ttl: 300, prefix: 'kb' })
+        expect.objectContaining({ ttl: 300 })
       );
 
       getOrSetSpy.mockRestore();
@@ -154,9 +153,10 @@ describe('Knowledge Base Redis Caching (PERF-004)', () => {
       });
 
       // Verify cache invalidation was called with correct pattern
+      // Uses invalidateTenant which creates pattern: cache:{tenantSlug}:kb:*
       expect(invalidateSpy).toHaveBeenCalled();
       expect(invalidateSpy).toHaveBeenCalledWith(
-        expect.stringMatching(/kb:test-tenant:kb:articles:\*/)
+        expect.stringMatching(/cache:test-tenant:kb:\*/)
       );
 
       mockQuery.mockRestore();
@@ -178,7 +178,7 @@ describe('Knowledge Base Redis Caching (PERF-004)', () => {
 
       expect(invalidateSpy).toHaveBeenCalled();
       expect(invalidateSpy).toHaveBeenCalledWith(
-        expect.stringMatching(/kb:test-tenant:kb:articles:\*/)
+        expect.stringMatching(/cache:test-tenant:kb:\*/)
       );
 
       mockQuery.mockRestore();
@@ -200,7 +200,7 @@ describe('Knowledge Base Redis Caching (PERF-004)', () => {
 
       expect(invalidateSpy).toHaveBeenCalled();
       expect(invalidateSpy).toHaveBeenCalledWith(
-        expect.stringMatching(/kb:test-tenant:kb:articles:\*/)
+        expect.stringMatching(/cache:test-tenant:kb:\*/)
       );
 
       mockQuery.mockRestore();
@@ -222,12 +222,12 @@ describe('Knowledge Base Redis Caching (PERF-004)', () => {
 
       // Should invalidate tenant-alpha cache only
       expect(invalidateSpy).toHaveBeenCalledWith(
-        expect.stringMatching(/kb:tenant-alpha:kb:articles:\*/)
+        expect.stringMatching(/cache:tenant-alpha:kb:\*/)
       );
 
       // Should NOT invalidate other tenants
       expect(invalidateSpy).not.toHaveBeenCalledWith(
-        expect.stringMatching(/kb:tenant-beta:kb:articles:\*/)
+        expect.stringMatching(/cache:tenant-beta:kb:\*/)
       );
 
       mockQuery.mockRestore();
