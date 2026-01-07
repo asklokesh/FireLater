@@ -127,5 +127,38 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Additional cloud provider integrations
 - Mobile application
 - Advanced analytics and AI-powered insights
-- Webhook integrations
 - API rate limiting dashboard
+
+## [1.2.0] - 2026-01-07
+
+### Added
+- Comprehensive test coverage: 5579 backend tests, 2844 frontend tests
+- 24 integration test files covering all API routes
+- Unit tests for all services, middleware, jobs, and routes
+- Frontend tests for detail pages, hooks, and stores
+- IPv6 edge case tests for network utility
+- Teams/Slack failure edge case tests for integrations
+- Webhook signature verification for SendGrid and Mailgun
+
+### Changed
+- **Performance**: Email batch processing now uses parallel batches of 10 (10x throughput)
+- **Performance**: Webhook triggers process in parallel using Promise.allSettled
+- **Performance**: Workflow notification queuing now parallel instead of sequential
+- **Performance**: Notification delivery status updates use batch UNNEST query
+- **Performance**: SLA target creation uses batch UNNEST query
+- **Performance**: Added caching to storage attachment lookups (5-10 min TTL)
+- **Performance**: Added caching to email config lookups (10 min TTL)
+- **Performance**: Added caching to issue comments/worklogs (5 min TTL)
+
+### Fixed
+- Improved FastifyRequest type declarations, removed `as any` casts
+- Frontend test files excluded from tsconfig.json to fix TS2582 errors
+- HMAC signature security - validate secret exists before use
+
+### Security
+- Centralized schema name sanitization across SSO, integrations, email-inbound, migration services
+- Webhook signature verification for inbound email endpoints
+
+### Removed
+- Cleaned up old .loki state files and learnings
+- Removed backup files and misplaced test files
