@@ -158,7 +158,10 @@ export class SodService {
     return result.rows;
   }
 
-  async createPolicy(tenantSlug: string, data: Omit<SodPolicy, 'id'>): Promise<SodPolicy> {
+  async createPolicy(
+    tenantSlug: string,
+    data: Omit<SodPolicy, 'id' | 'is_active'> & { is_active?: boolean }
+  ): Promise<SodPolicy> {
     const schema = tenantService.getSchemaName(tenantSlug);
     const { name, description, conflicting_role_a, conflicting_role_b, entity_type, is_active } =
       data;

@@ -3,7 +3,7 @@ import { z } from 'zod';
 import { requirePermission } from '../middleware/auth.js';
 import { dataSecurityService } from '../services/data-security.js';
 import { maskingService } from '../lib/masking.js';
-import { BadRequestError, NotFoundError } from '../utils/errors.js';
+import { NotFoundError } from '../utils/errors.js';
 import { logger } from '../utils/logger.js';
 
 const updateSettingsSchema = z.object({

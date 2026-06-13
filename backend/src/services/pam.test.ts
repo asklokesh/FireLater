@@ -18,14 +18,6 @@ vi.mock('./tenant.js', () => ({
   },
 }));
 
-// ============================================
-// HELPERS
-// ============================================
-
-function mockPool() {
-  return vi.mocked((await import('../config/database.js')).pool);
-}
-
 const TENANT_SLUG = 'acme';
 
 // ============================================

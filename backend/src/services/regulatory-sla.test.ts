@@ -120,7 +120,7 @@ describe('RegulatorySlaService', () => {
 
       mockPool.query.mockResolvedValueOnce({ rows: [clockRow] });
 
-      const clocks = await service.startClocks('acme', 'inc-003', 'major', detectedAt);
+      await service.startClocks('acme', 'inc-003', 'major', detectedAt);
 
       // Verify the INSERT was called with correct deadline_at
       const insertCall = (mockPool.query as ReturnType<typeof vi.fn>).mock.calls.find(
