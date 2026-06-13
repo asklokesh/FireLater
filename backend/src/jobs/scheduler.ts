@@ -4,6 +4,7 @@ import { scheduleHealthScoreCalculation } from './processors/healthScores.js';
 import { scheduleSlaBreachChecks } from './processors/slaBreaches.js';
 import { scheduleCloudSync } from './processors/cloudSync.js';
 import { scheduleCleanup } from './processors/cleanup.js';
+import { runAuditIntegrityJob } from './audit-integrity.js';
 
 // ============================================
 // CRON-LIKE SCHEDULER
@@ -46,6 +47,12 @@ const scheduledTasks: ScheduledTask[] = [
     name: 'cleanup',
     intervalMs: 24 * 60 * 60 * 1000, // Daily
     handler: scheduleCleanup,
+    isRunning: false,
+  },
+  {
+    name: 'audit-integrity',
+    intervalMs: 24 * 60 * 60 * 1000, // Daily
+    handler: runAuditIntegrityJob,
     isRunning: false,
   },
 ];
