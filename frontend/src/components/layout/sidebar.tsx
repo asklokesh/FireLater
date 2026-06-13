@@ -24,6 +24,14 @@ import {
   HardDrive,
   Mail,
   Plug,
+  ScrollText,
+  GitBranch,
+  Lock,
+  CheckSquare,
+  BarChart2,
+  UserCheck,
+  KeyRound,
+  Building2,
 } from 'lucide-react';
 import { useAuthStore } from '@/stores/auth';
 
@@ -47,6 +55,15 @@ const adminNavigation = [
   { name: 'Workflows', href: '/admin/workflows', icon: Workflow },
   { name: 'Email Integration', href: '/admin/email', icon: Mail },
   { name: 'Integrations', href: '/admin/integrations', icon: Plug },
+  // Banking Compliance
+  { name: 'Audit Logs', href: '/admin/audit-logs', icon: ScrollText },
+  { name: 'SoD Policies', href: '/admin/sod-policies', icon: GitBranch },
+  { name: 'Data Security', href: '/admin/data-security', icon: Lock },
+  { name: 'Maker-Checker', href: '/admin/maker-checker', icon: CheckSquare },
+  { name: 'Compliance Reports', href: '/admin/compliance-reports', icon: BarChart2 },
+  { name: 'Recertification', href: '/admin/access-recertification', icon: UserCheck },
+  { name: 'PAM Grants', href: '/admin/pam', icon: KeyRound },
+  { name: 'Vendor Risk', href: '/admin/vendor-risk', icon: Building2 },
   { name: 'Settings', href: '/admin/settings', icon: Settings },
 ];
 
