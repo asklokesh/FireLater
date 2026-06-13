@@ -34,6 +34,7 @@ import { migration031EmergencyChange } from './031_emergency_change.js';
 import { migration032ComplianceReports } from './032_compliance_reports.js';
 import { migration033Recertification } from './033_recertification.js';
 import { migration034RegulatorySla } from './034_regulatory_sla.js';
+import { migration035PrivilegedGrants } from './035_privileged_grants.js';
 
 interface Migration {
   name: string;
@@ -75,6 +76,7 @@ const migrations: Migration[] = [
   { name: '032_compliance_reports', up: migration032ComplianceReports },
   { name: '033_recertification', up: migration033Recertification },
   { name: '034_regulatory_sla', up: migration034RegulatorySla },
+  { name: '035_privileged_grants', up: migration035PrivilegedGrants },
 ];
 
 async function ensureMigrationsTable() {
