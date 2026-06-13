@@ -33,6 +33,7 @@ import { migration030MakerChecker } from './030_maker_checker.js';
 import { migration031EmergencyChange } from './031_emergency_change.js';
 import { migration032ComplianceReports } from './032_compliance_reports.js';
 import { migration033Recertification } from './033_recertification.js';
+import { migration034RegulatorySla } from './034_regulatory_sla.js';
 
 interface Migration {
   name: string;
@@ -73,6 +74,7 @@ const migrations: Migration[] = [
   { name: '031_emergency_change', up: migration031EmergencyChange },
   { name: '032_compliance_reports', up: migration032ComplianceReports },
   { name: '033_recertification', up: migration033Recertification },
+  { name: '034_regulatory_sla', up: migration034RegulatorySla },
 ];
 
 async function ensureMigrationsTable() {
