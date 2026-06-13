@@ -4,14 +4,15 @@ import { useState, useEffect, useCallback } from 'react';
 import {
   GitBranch,
   Plus,
-  Trash2,
-  Toggle2,
   Loader2,
   AlertCircle,
+  Trash2,
+  ToggleLeft,
+  ToggleRight,
   X,
-  Check,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { api } from '@/lib/api';
 
 interface SodPolicy {
@@ -25,40 +26,23 @@ interface SodPolicy {
   updated_at: string;
 }
 
-interface CreatePolicyData {
-  role_a: string;
-  role_b: string;
-  description: string;
-  severity: 'critical' | 'high' | 'medium' | 'low';
-  is_active: boolean;
-}
-
-const severityColors: Record<string, { bg: string; text: string }> = {
-  critical: { bg: 'bg-red-100', text: 'text-red-800' },
-  high: { bg: 'bg-orange-100', text: 'text-orange-800' },
-  medium: { bg: 'bg-yellow-100', text: 'text-yellow-800' },
-  low: { bg: 'bg-blue-100', text: 'text-blue-800' },
-};
+type SeverityLevel = 'critical' | 'high' | 'medium' | 'low';
 
 export default function SodPoliciesPage() {
   const [policies, setPolicies] = useState<SodPolicy[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [deleting, setDeleting] = useState<string | null>(null);
-  const [toggling, setToggling] = useState<string | null>(null);
-
-  // Modal state
-  const [showModal, setShowModal] = useState(false);
+  const [showCreateModal, setShowCreateModal] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [modalError, setModalError] = useState<string | null>(null);
+  const [submitError, setSubmitError] = useState<string | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
 
   // Form state
-  const [formData, setFormData] = useState<CreatePolicyData>({
+  const [formData, setFormData] = useState({
     role_a: '',
     role_b: '',
     description: '',
-    severity: 'high',
+    severity: 'high' as SeverityLevel,
     is_active: true,
   });
 
@@ -67,7 +51,7 @@ export default function SodPoliciesPage() {
       setIsLoading(true);
       setError(null);
       const response = await api.get('/v1/sod/policies');
-      setPolicies(response.data.policies || []);
+      setPolicies(response.data?.policies || response.data || []);
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to load SoD policies';
       setError(message);
@@ -80,108 +64,102 @@ export default function SodPoliciesPage() {
     loadPolicies();
   }, [loadPolicies]);
 
-  const handleOpenModal = () => {
-    setFormData({
-      role_a: '',
-      role_b: '',
-      description: '',
-      severity: 'high',
-      is_active: true,
-    });
-    setModalError(null);
-    setShowModal(true);
-  };
-
-  const handleCloseModal = () => {
-    setShowModal(false);
-    setModalError(null);
-  };
-
   const handleCreatePolicy = async (e: React.FormEvent) => {
     e.preventDefault();
+    setSubmitError(null);
+    setIsSubmitting(true);
+
     try {
-      setIsSubmitting(true);
-      setModalError(null);
-
-      if (!formData.role_a.trim() || !formData.role_b.trim()) {
-        setModalError('Both roles are required');
-        setIsSubmitting(false);
-        return;
-      }
-
       await api.post('/v1/sod/policies', {
         role_a: formData.role_a,
         role_b: formData.role_b,
         description: formData.description || null,
-        severity: formData.severity,
         is_active: formData.is_active,
+        severity: formData.severity,
       });
 
-      setShowModal(false);
+      setShowCreateModal(false);
+      setFormData({
+        role_a: '',
+        role_b: '',
+        description: '',
+        severity: 'high',
+        is_active: true,
+      });
       await loadPolicies();
-    } catch (err) {
+    } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Failed to create policy';
-      setModalError(message);
+      setSubmitError(message);
     } finally {
       setIsSubmitting(false);
     }
   };
 
+  const handleToggleActive = async (id: string, currentActive: boolean) => {
+    try {
+      await api.put(`/v1/sod/policies/${id}`, {
+        is_active: !currentActive,
+      });
+      await loadPolicies();
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to update policy';
+      setError(message);
+    }
+  };
+
   const handleDeletePolicy = async (id: string) => {
     try {
-      setDeleting(id);
       await api.delete(`/v1/sod/policies/${id}`);
       setDeleteConfirm(null);
       await loadPolicies();
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to delete policy';
       setError(message);
-    } finally {
-      setDeleting(null);
     }
   };
 
-  const handleTogglePolicy = async (id: string, currentStatus: boolean) => {
+  const getSeverityColor = (severity: SeverityLevel) => {
+    switch (severity) {
+      case 'critical':
+        return 'bg-red-100 text-red-800';
+      case 'high':
+        return 'bg-orange-100 text-orange-800';
+      case 'medium':
+        return 'bg-yellow-100 text-yellow-800';
+      case 'low':
+        return 'bg-blue-100 text-blue-800';
+      default:
+        return 'bg-gray-100 text-gray-800';
+    }
+  };
+
+  const formatDate = (dateString: string) => {
     try {
-      setToggling(id);
-      await api.put(`/v1/sod/policies/${id}`, {
-        is_active: !currentStatus,
+      const date = new Date(dateString);
+      return date.toLocaleDateString('en-US', {
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric',
       });
-      await loadPolicies();
-    } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed to toggle policy';
-      setError(message);
-    } finally {
-      setToggling(null);
+    } catch {
+      return dateString;
     }
   };
-
-  const getSeverityLabel = (severity: string) => {
-    return severity.charAt(0).toUpperCase() + severity.slice(1);
-  };
-
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <Loader2 className="h-8 w-8 animate-spin text-blue-500" />
-      </div>
-    );
-  }
 
   return (
     <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <div>
-          <div className="flex items-center gap-2">
-            <GitBranch className="h-8 w-8 text-blue-600" />
+        <div className="flex items-center gap-3">
+          <GitBranch className="h-8 w-8 text-gray-700" />
+          <div>
             <h1 className="text-2xl font-bold text-gray-900">Segregation of Duties Policies</h1>
+            <p className="mt-1 text-sm text-gray-500">
+              Prevent conflicting role combinations to meet SOX ITGC requirements
+            </p>
           </div>
-          <p className="mt-1 text-sm text-gray-500">
-            Prevent conflicting role combinations to meet SOX ITGC requirements
-          </p>
         </div>
-        <Button onClick={handleOpenModal} className="flex items-center">
+        <Button onClick={() => setShowCreateModal(true)}>
           <Plus className="h-4 w-4 mr-2" />
           Add Policy
         </Button>
@@ -190,7 +168,7 @@ export default function SodPoliciesPage() {
       {/* Error Alert */}
       {error && (
         <div className="flex items-center gap-2 p-4 text-sm text-red-800 bg-red-100 rounded-md">
-          <AlertCircle className="h-4 w-4" />
+          <AlertCircle className="h-4 w-4 flex-shrink-0" />
           {error}
           <button
             onClick={() => setError(null)}
@@ -201,257 +179,270 @@ export default function SodPoliciesPage() {
         </div>
       )}
 
-      {/* Policies Table */}
-      <div className="bg-white rounded-lg shadow overflow-hidden">
-        <table className="min-w-full divide-y divide-gray-200">
-          <thead className="bg-gray-50">
-            <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Role A
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Role B
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Description
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Severity
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Status
-              </th>
-              <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Actions
-              </th>
-            </tr>
-          </thead>
-          <tbody className="bg-white divide-y divide-gray-200">
-            {policies.map((policy) => (
-              <tr key={policy.id} className="hover:bg-gray-50">
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="text-sm font-medium text-gray-900">{policy.role_a}</div>
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="text-sm font-medium text-gray-900">{policy.role_b}</div>
-                </td>
-                <td className="px-6 py-4">
-                  <div className="text-sm text-gray-500 max-w-xs">
+      {/* Loading State */}
+      {isLoading ? (
+        <div className="flex items-center justify-center h-64">
+          <Loader2 className="h-8 w-8 animate-spin text-blue-500" />
+        </div>
+      ) : (
+        <div className="bg-white rounded-lg shadow overflow-hidden">
+          <table className="min-w-full divide-y divide-gray-200">
+            <thead className="bg-gray-50">
+              <tr>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Role A
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Role B
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Description
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Severity
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Status
+                </th>
+                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Actions
+                </th>
+              </tr>
+            </thead>
+            <tbody className="bg-white divide-y divide-gray-200">
+              {policies.map((policy) => (
+                <tr key={policy.id} className="hover:bg-gray-50">
+                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                    {policy.role_a}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                    {policy.role_b}
+                  </td>
+                  <td className="px-6 py-4 text-sm text-gray-600 max-w-xs truncate">
                     {policy.description || '-'}
-                  </div>
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <span
-                    className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                      severityColors[policy.severity].bg
-                    } ${severityColors[policy.severity].text}`}
-                  >
-                    {getSeverityLabel(policy.severity)}
-                  </span>
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  {policy.is_active ? (
-                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                      Active
-                    </span>
-                  ) : (
-                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
-                      Inactive
-                    </span>
-                  )}
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-right">
-                  <div className="flex items-center justify-end gap-2">
-                    <button
-                      onClick={() => handleTogglePolicy(policy.id, policy.is_active)}
-                      disabled={toggling === policy.id}
-                      className="text-gray-400 hover:text-gray-600 disabled:opacity-50"
-                      title={policy.is_active ? 'Deactivate' : 'Activate'}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <span
+                      className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getSeverityColor(
+                        policy.severity
+                      )}`}
                     >
-                      {toggling === policy.id ? (
-                        <Loader2 className="h-4 w-4 animate-spin" />
+                      {policy.severity.charAt(0).toUpperCase() + policy.severity.slice(1)}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    {policy.is_active ? (
+                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                        Active
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                        Inactive
+                      </span>
+                    )}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium flex items-center justify-end gap-2">
+                    <button
+                      onClick={() => handleToggleActive(policy.id, policy.is_active)}
+                      className="text-gray-400 hover:text-gray-600"
+                      title={policy.is_active ? 'Disable policy' : 'Enable policy'}
+                    >
+                      {policy.is_active ? (
+                        <ToggleRight className="h-5 w-5 text-green-600" />
                       ) : (
-                        <Toggle2 className="h-4 w-4" />
+                        <ToggleLeft className="h-5 w-5" />
                       )}
                     </button>
                     <button
                       onClick={() => setDeleteConfirm(policy.id)}
-                      disabled={deleting === policy.id || deleteConfirm === policy.id}
-                      className="text-gray-400 hover:text-red-600 disabled:opacity-50"
-                      title="Delete"
+                      className="text-gray-400 hover:text-red-600"
+                      title="Delete policy"
                     >
-                      {deleting === policy.id ? (
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                      ) : (
-                        <Trash2 className="h-4 w-4" />
-                      )}
+                      <Trash2 className="h-5 w-5" />
                     </button>
-                  </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
 
-                  {/* Delete Confirmation */}
-                  {deleteConfirm === policy.id && (
-                    <div className="absolute right-0 top-full mt-2 bg-white rounded-lg shadow-lg border border-gray-200 p-3 z-50 w-64">
-                      <p className="text-sm text-gray-700 mb-3">
-                        Are you sure you want to delete this policy?
-                      </p>
-                      <div className="flex gap-2">
-                        <button
-                          onClick={() => handleDeletePolicy(policy.id)}
-                          className="flex-1 px-3 py-1.5 text-sm font-medium text-white bg-red-600 hover:bg-red-700 rounded-md transition-colors"
-                        >
-                          Delete
-                        </button>
-                        <button
-                          onClick={() => setDeleteConfirm(null)}
-                          className="flex-1 px-3 py-1.5 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-md transition-colors"
-                        >
-                          Cancel
-                        </button>
-                      </div>
-                    </div>
-                  )}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+          {policies.length === 0 && (
+            <div className="text-center py-12">
+              <GitBranch className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+              <h3 className="text-lg font-medium text-gray-900 mb-2">No policies found</h3>
+              <p className="text-gray-500 mb-4">Create your first SoD policy to get started</p>
+              <Button onClick={() => setShowCreateModal(true)} size="sm">
+                <Plus className="h-4 w-4 mr-2" />
+                Add Policy
+              </Button>
+            </div>
+          )}
+        </div>
+      )}
 
-        {policies.length === 0 && (
-          <div className="text-center py-12">
-            <GitBranch className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-            <h3 className="text-lg font-medium text-gray-900 mb-2">No SoD policies defined</h3>
-            <p className="text-gray-500 mb-4">Create your first policy to prevent conflicting role assignments</p>
-            <Button onClick={handleOpenModal} variant="outline" className="flex items-center mx-auto">
-              <Plus className="h-4 w-4 mr-2" />
-              Add Policy
-            </Button>
-          </div>
-        )}
-      </div>
-
-      {/* Create Policy Modal */}
-      {showModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg shadow-lg max-w-md w-full mx-4">
-            <div className="flex items-center justify-between p-6 border-b border-gray-200">
+      {/* Create Modal */}
+      {showCreateModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-xl max-w-md w-full max-h-[90vh] overflow-hidden flex flex-col">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
               <h2 className="text-lg font-semibold text-gray-900">Create SoD Policy</h2>
               <button
-                onClick={handleCloseModal}
+                onClick={() => {
+                  setShowCreateModal(false);
+                  setSubmitError(null);
+                }}
                 className="text-gray-400 hover:text-gray-600"
               >
                 <X className="h-5 w-5" />
               </button>
             </div>
 
-            <form onSubmit={handleCreatePolicy} className="p-6 space-y-4">
-              {modalError && (
-                <div className="flex items-center gap-2 p-3 text-sm text-red-800 bg-red-100 rounded-md">
-                  <AlertCircle className="h-4 w-4" />
-                  {modalError}
+            <form onSubmit={handleCreatePolicy} className="flex flex-col flex-1 overflow-hidden">
+              <div className="flex-1 overflow-auto p-6 space-y-4">
+                {submitError && (
+                  <div className="p-3 text-sm text-red-800 bg-red-100 rounded-md flex items-start gap-2">
+                    <AlertCircle className="h-4 w-4 flex-shrink-0 mt-0.5" />
+                    <div>{submitError}</div>
+                  </div>
+                )}
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Role A
+                  </label>
+                  <Input
+                    type="text"
+                    value={formData.role_a}
+                    onChange={(e) =>
+                      setFormData((prev) => ({ ...prev, role_a: e.target.value }))
+                    }
+                    placeholder="e.g., Approver"
+                    required
+                  />
                 </div>
-              )}
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Role A
-                </label>
-                <input
-                  type="text"
-                  value={formData.role_a}
-                  onChange={(e) => setFormData({ ...formData, role_a: e.target.value })}
-                  placeholder="e.g., System Admin"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Role B
+                  </label>
+                  <Input
+                    type="text"
+                    value={formData.role_b}
+                    onChange={(e) =>
+                      setFormData((prev) => ({ ...prev, role_b: e.target.value }))
+                    }
+                    placeholder="e.g., Preparer"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Description
+                  </label>
+                  <textarea
+                    value={formData.description}
+                    onChange={(e) =>
+                      setFormData((prev) => ({ ...prev, description: e.target.value }))
+                    }
+                    placeholder="Explain why these roles conflict (optional)"
+                    rows={2}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Severity
+                  </label>
+                  <select
+                    value={formData.severity}
+                    onChange={(e) =>
+                      setFormData((prev) => ({
+                        ...prev,
+                        severity: e.target.value as SeverityLevel,
+                      }))
+                    }
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="critical">Critical</option>
+                    <option value="high">High</option>
+                    <option value="medium">Medium</option>
+                    <option value="low">Low</option>
+                  </select>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    id="is_active"
+                    checked={formData.is_active}
+                    onChange={(e) =>
+                      setFormData((prev) => ({ ...prev, is_active: e.target.checked }))
+                    }
+                    className="h-4 w-4 text-blue-600 rounded border-gray-300"
+                  />
+                  <label
+                    htmlFor="is_active"
+                    className="text-sm font-medium text-gray-700 cursor-pointer"
+                  >
+                    Activate policy immediately
+                  </label>
+                </div>
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Role B
-                </label>
-                <input
-                  type="text"
-                  value={formData.role_b}
-                  onChange={(e) => setFormData({ ...formData, role_b: e.target.value })}
-                  placeholder="e.g., Approver"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Description
-                </label>
-                <textarea
-                  value={formData.description}
-                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                  placeholder="Why should these roles not be combined?"
-                  rows={3}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Severity
-                </label>
-                <select
-                  value={formData.severity}
-                  onChange={(e) =>
-                    setFormData({
-                      ...formData,
-                      severity: e.target.value as 'critical' | 'high' | 'medium' | 'low',
-                    })
-                  }
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                >
-                  <option value="critical">Critical</option>
-                  <option value="high">High</option>
-                  <option value="medium">Medium</option>
-                  <option value="low">Low</option>
-                </select>
-              </div>
-
-              <div className="flex items-center gap-2 py-2">
-                <input
-                  type="checkbox"
-                  id="is_active"
-                  checked={formData.is_active}
-                  onChange={(e) => setFormData({ ...formData, is_active: e.target.checked })}
-                  className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                />
-                <label htmlFor="is_active" className="text-sm font-medium text-gray-700">
-                  Active
-                </label>
-              </div>
-
-              <div className="flex gap-3 pt-4">
-                <button
+              <div className="px-6 py-4 border-t border-gray-200 flex justify-end space-x-3">
+                <Button
                   type="button"
-                  onClick={handleCloseModal}
-                  className="flex-1 px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-md transition-colors"
-                  disabled={isSubmitting}
+                  variant="outline"
+                  onClick={() => {
+                    setShowCreateModal(false);
+                    setSubmitError(null);
+                  }}
                 >
                   Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="flex-1 px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-md transition-colors disabled:opacity-50 flex items-center justify-center"
-                  disabled={isSubmitting}
-                >
-                  {isSubmitting ? (
-                    <>
-                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                      Creating...
-                    </>
-                  ) : (
-                    <>
-                      <Check className="h-4 w-4 mr-2" />
-                      Create Policy
-                    </>
-                  )}
-                </button>
+                </Button>
+                <Button type="submit" isLoading={isSubmitting} disabled={isSubmitting}>
+                  Create Policy
+                </Button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Confirmation */}
+      {deleteConfirm && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-xl max-w-sm w-full">
+            <div className="p-6">
+              <div className="flex items-center justify-center w-12 h-12 rounded-full bg-red-100 mx-auto mb-4">
+                <AlertCircle className="h-6 w-6 text-red-600" />
+              </div>
+              <h3 className="text-lg font-medium text-gray-900 text-center mb-2">
+                Delete Policy
+              </h3>
+              <p className="text-sm text-gray-600 text-center mb-6">
+                Are you sure you want to delete this SoD policy? This action cannot be undone.
+              </p>
+              <div className="flex gap-3">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setDeleteConfirm(null)}
+                  className="flex-1"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="button"
+                  onClick={() => handleDeletePolicy(deleteConfirm)}
+                  className="flex-1 bg-red-600 hover:bg-red-700"
+                >
+                  Delete
+                </Button>
+              </div>
+            </div>
           </div>
         </div>
       )}

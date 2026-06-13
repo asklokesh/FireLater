@@ -3,16 +3,16 @@
 import { useState, useEffect, useCallback } from 'react';
 import {
   ScrollText,
-  Calendar,
-  Search,
   Loader2,
   AlertCircle,
   CheckCircle,
-  XCircle,
-  Shield,
-  TrendingUp,
+  Copy,
+  Calendar,
+  User,
+  Zap,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { api } from '@/lib/api';
 
 interface AuditEntry {
@@ -29,41 +29,36 @@ interface AuditEntry {
   created_at: string;
 }
 
-interface VerificationResult {
+interface VerifyResult {
   valid: boolean;
   totalEntries: number;
-  firstEntry?: {
-    created_at: string;
-    user_email: string | null;
-  };
-  lastEntry?: {
-    created_at: string;
-    user_email: string | null;
-  };
+  firstEntry: { created_at: string } | null;
+  lastEntry: { created_at: string } | null;
 }
 
-type TabType = 'trail' | 'verification';
+type TabType = 'trail' | 'verify';
 
 export default function AuditLogsPage() {
   const [activeTab, setActiveTab] = useState<TabType>('trail');
-  const [entries, setEntries] = useState<AuditEntry[]>([]);
+  const [logs, setLogs] = useState<AuditEntry[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [page, setPage] = useState(1);
+  const [total, setTotal] = useState(0);
   const limit = 50;
 
-  // Filter states
-  const [fromDate, setFromDate] = useState<string>('');
-  const [toDate, setToDate] = useState<string>('');
-  const [actionFilter, setActionFilter] = useState<string>('');
-  const [searchQuery, setSearchQuery] = useState<string>('');
+  // Filter state
+  const [fromDate, setFromDate] = useState('');
+  const [toDate, setToDate] = useState('');
+  const [actionFilter, setActionFilter] = useState('');
+  const [userSearch, setUserSearch] = useState('');
 
-  // Verification states
-  const [verifying, setVerifying] = useState(false);
-  const [verificationResult, setVerificationResult] = useState<VerificationResult | null>(null);
-  const [verificationError, setVerificationError] = useState<string | null>(null);
+  // Verify state
+  const [verifyResult, setVerifyResult] = useState<VerifyResult | null>(null);
+  const [isVerifying, setIsVerifying] = useState(false);
+  const [verifyError, setVerifyError] = useState<string | null>(null);
 
-  const loadAuditLogs = useCallback(async () => {
+  const loadLogs = useCallback(async () => {
     try {
       setIsLoading(true);
       setError(null);
@@ -74,100 +69,102 @@ export default function AuditLogsPage() {
       if (fromDate) params.from = fromDate;
       if (toDate) params.to = toDate;
       if (actionFilter) params.action = actionFilter;
-      if (searchQuery) params.search = searchQuery;
+      if (userSearch) params.user = userSearch;
 
       const response = await api.get('/v1/audit/logs', { params });
-      setEntries(response.data.entries || []);
+      setLogs(response.data?.data || response.data || []);
+      setTotal(response.data?.pagination?.total || response.data?.total || 0);
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to load audit logs';
       setError(message);
     } finally {
       setIsLoading(false);
     }
-  }, [page, fromDate, toDate, actionFilter, searchQuery]);
+  }, [page, fromDate, toDate, actionFilter, userSearch]);
 
   useEffect(() => {
-    if (activeTab === 'trail') {
-      loadAuditLogs();
-    }
-  }, [activeTab, loadAuditLogs]);
+    loadLogs();
+  }, [loadLogs]);
 
-  const handleVerify = async () => {
+  const handleVerifyIntegrity = async () => {
     try {
-      setVerifying(true);
-      setVerificationError(null);
+      setIsVerifying(true);
+      setVerifyError(null);
       const response = await api.get('/v1/audit/verify');
-      setVerificationResult(response.data);
+      setVerifyResult(response.data);
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed to verify chain integrity';
-      setVerificationError(message);
+      const message = err instanceof Error ? err.message : 'Failed to verify integrity';
+      setVerifyError(message);
     } finally {
-      setVerifying(false);
+      setIsVerifying(false);
     }
   };
 
   const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', {
-      month: 'short',
-      day: 'numeric',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-      second: '2-digit',
-    });
+    try {
+      const date = new Date(dateString);
+      return date.toLocaleDateString('en-US', {
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+      });
+    } catch {
+      return dateString;
+    }
   };
 
   const truncateHash = (hash: string | null) => {
-    if (!hash) return 'N/A';
+    if (!hash) return '-';
     return hash.substring(0, 12) + '...';
   };
 
-  const getUniqueActions = () => {
-    const uniqueActions = new Set(entries.map((e) => e.action));
-    return Array.from(uniqueActions).sort();
+  const copyToClipboard = (text: string) => {
+    navigator.clipboard.writeText(text);
   };
 
-  if (isLoading && activeTab === 'trail' && entries.length === 0) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <Loader2 className="h-8 w-8 animate-spin text-blue-500" />
-      </div>
-    );
-  }
+  const getActionColor = (action: string) => {
+    const actionLower = action.toLowerCase();
+    if (actionLower.includes('create')) return 'bg-green-100 text-green-800';
+    if (actionLower.includes('delete') || actionLower.includes('remove')) return 'bg-red-100 text-red-800';
+    if (actionLower.includes('update') || actionLower.includes('modify')) return 'bg-blue-100 text-blue-800';
+    if (actionLower.includes('view') || actionLower.includes('read')) return 'bg-gray-100 text-gray-800';
+    return 'bg-purple-100 text-purple-800';
+  };
 
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center gap-3">
+        <ScrollText className="h-8 w-8 text-gray-700" />
         <div>
-          <div className="flex items-center gap-2">
-            <ScrollText className="h-8 w-8 text-blue-600" />
-            <h1 className="text-2xl font-bold text-gray-900">Audit Logs</h1>
-          </div>
-          <p className="mt-1 text-sm text-gray-500">Track all system actions and changes</p>
+          <h1 className="text-2xl font-bold text-gray-900">Audit Logs</h1>
+          <p className="mt-1 text-sm text-gray-500">
+            Track system activities and verify log integrity
+          </p>
         </div>
       </div>
 
       {/* Tabs */}
       <div className="border-b border-gray-200">
-        <div className="flex space-x-8">
+        <div className="flex gap-8">
           <button
             onClick={() => setActiveTab('trail')}
-            className={`py-2 px-1 border-b-2 font-medium text-sm transition-colors ${
+            className={`px-1 py-3 text-sm font-medium border-b-2 transition-colors ${
               activeTab === 'trail'
-                ? 'border-blue-500 text-blue-600'
-                : 'border-transparent text-gray-500 hover:text-gray-700'
+                ? 'border-blue-600 text-blue-600'
+                : 'border-transparent text-gray-600 hover:text-gray-900'
             }`}
           >
             Audit Trail
           </button>
           <button
-            onClick={() => setActiveTab('verification')}
-            className={`py-2 px-1 border-b-2 font-medium text-sm transition-colors ${
-              activeTab === 'verification'
-                ? 'border-blue-500 text-blue-600'
-                : 'border-transparent text-gray-500 hover:text-gray-700'
+            onClick={() => setActiveTab('verify')}
+            className={`px-1 py-3 text-sm font-medium border-b-2 transition-colors ${
+              activeTab === 'verify'
+                ? 'border-blue-600 text-blue-600'
+                : 'border-transparent text-gray-600 hover:text-gray-900'
             }`}
           >
             Chain Verification
@@ -178,25 +175,14 @@ export default function AuditLogsPage() {
       {/* Tab Content */}
       {activeTab === 'trail' && (
         <div className="space-y-4">
-          {/* Error Alert */}
-          {error && (
-            <div className="flex items-center gap-2 p-4 text-sm text-red-800 bg-red-100 rounded-md">
-              <AlertCircle className="h-4 w-4" />
-              {error}
-              <button
-                onClick={() => setError(null)}
-                className="ml-auto text-red-600 hover:text-red-800"
-              >
-                Dismiss
-              </button>
-            </div>
-          )}
-
           {/* Filters */}
           <div className="bg-white rounded-lg shadow p-4">
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">From Date</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <Calendar className="h-4 w-4 inline mr-1" />
+                  From Date
+                </label>
                 <input
                   type="date"
                   value={fromDate}
@@ -208,7 +194,10 @@ export default function AuditLogsPage() {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">To Date</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <Calendar className="h-4 w-4 inline mr-1" />
+                  To Date
+                </label>
                 <input
                   type="date"
                   value={toDate}
@@ -220,241 +209,251 @@ export default function AuditLogsPage() {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Action</label>
-                <select
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <Zap className="h-4 w-4 inline mr-1" />
+                  Action
+                </label>
+                <input
+                  type="text"
+                  placeholder="e.g., create, update, delete"
                   value={actionFilter}
                   onChange={(e) => {
                     setActionFilter(e.target.value);
                     setPage(1);
                   }}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                >
-                  <option value="">All Actions</option>
-                  {getUniqueActions().map((action) => (
-                    <option key={action} value={action}>
-                      {action}
-                    </option>
-                  ))}
-                </select>
+                />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Search User</label>
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-                  <input
-                    type="text"
-                    placeholder="Search by email..."
-                    value={searchQuery}
-                    onChange={(e) => {
-                      setSearchQuery(e.target.value);
-                      setPage(1);
-                    }}
-                    className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <User className="h-4 w-4 inline mr-1" />
+                  User Email
+                </label>
+                <input
+                  type="text"
+                  placeholder="Search by email"
+                  value={userSearch}
+                  onChange={(e) => {
+                    setUserSearch(e.target.value);
+                    setPage(1);
+                  }}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Error Alert */}
+          {error && (
+            <div className="flex items-center gap-2 p-4 text-sm text-red-800 bg-red-100 rounded-md">
+              <AlertCircle className="h-4 w-4 flex-shrink-0" />
+              {error}
+            </div>
+          )}
+
+          {/* Loading State */}
+          {isLoading ? (
+            <div className="flex items-center justify-center h-64">
+              <Loader2 className="h-8 w-8 animate-spin text-blue-500" />
+            </div>
+          ) : (
+            <>
+              {/* Table */}
+              <div className="bg-white rounded-lg shadow overflow-hidden">
+                <table className="min-w-full divide-y divide-gray-200">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Timestamp
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        User
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Action
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Entity Type
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Entity Name
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Hash
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-200">
+                    {logs.map((entry) => (
+                      <tr key={entry.id} className="hover:bg-gray-50">
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                          {formatDate(entry.created_at)}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm">
+                          {entry.user_email ? (
+                            <span className="text-gray-900 font-medium">{entry.user_email}</span>
+                          ) : (
+                            <span className="text-gray-400">System</span>
+                          )}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <span
+                            className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getActionColor(
+                              entry.action
+                            )}`}
+                          >
+                            {entry.action}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                          {entry.entity_type || '-'}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                          {entry.entity_name || (entry.entity_id ? `ID: ${entry.entity_id.substring(0, 8)}...` : '-')}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="flex items-center gap-2">
+                            <code className="text-xs text-gray-500 font-mono">
+                              {truncateHash(entry.hash)}
+                            </code>
+                            {entry.hash && (
+                              <button
+                                onClick={() => copyToClipboard(entry.hash || '')}
+                                className="text-gray-400 hover:text-gray-600"
+                                title="Copy hash"
+                              >
+                                <Copy className="h-4 w-4" />
+                              </button>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+
+                {logs.length === 0 && (
+                  <div className="text-center py-12">
+                    <ScrollText className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                    <h3 className="text-lg font-medium text-gray-900 mb-2">No audit log entries found</h3>
+                    <p className="text-gray-500">Try adjusting your filters</p>
+                  </div>
+                )}
+
+                {/* Pagination */}
+                <div className="px-6 py-4 border-t border-gray-200 flex items-center justify-between">
+                  <div className="text-sm text-gray-500">
+                    Showing {logs.length} of {total} entries
+                  </div>
+                  <div className="flex space-x-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      disabled={page <= 1}
+                      onClick={() => setPage((p) => Math.max(1, p - 1))}
+                    >
+                      Previous
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      disabled={page * limit >= total}
+                      onClick={() => setPage((p) => p + 1)}
+                    >
+                      Next
+                    </Button>
+                  </div>
                 </div>
               </div>
-            </div>
-          </div>
-
-          {/* Table */}
-          <div className="bg-white rounded-lg shadow overflow-hidden">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Timestamp
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    User
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Action
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Entity Type
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Entity
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Hash
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {entries.map((entry) => (
-                  <tr key={entry.id} className="hover:bg-gray-50">
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {formatDate(entry.created_at)}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {entry.user_email || 'System'}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                        {entry.action}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {entry.entity_type || '-'}
-                    </td>
-                    <td className="px-6 py-4 text-sm text-gray-500">
-                      <div>
-                        {entry.entity_name && (
-                          <div className="font-medium text-gray-900">{entry.entity_name}</div>
-                        )}
-                        <div className="text-xs text-gray-400">{entry.entity_id || '-'}</div>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-400 font-mono">
-                      {truncateHash(entry.hash)}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-
-            {entries.length === 0 && (
-              <div className="text-center py-12">
-                <ScrollText className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                <h3 className="text-lg font-medium text-gray-900 mb-2">No audit log entries found</h3>
-                <p className="text-gray-500">Try adjusting your filters</p>
-              </div>
-            )}
-
-            {/* Pagination */}
-            <div className="px-6 py-4 border-t border-gray-200 flex items-center justify-between">
-              <div className="text-sm text-gray-500">
-                {entries.length > 0 && `Page ${page}`}
-              </div>
-              <div className="flex space-x-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  disabled={page <= 1}
-                  onClick={() => setPage((p) => Math.max(1, p - 1))}
-                >
-                  Previous
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  disabled={entries.length < limit}
-                  onClick={() => setPage((p) => p + 1)}
-                >
-                  Next
-                </Button>
-              </div>
-            </div>
-          </div>
+            </>
+          )}
         </div>
       )}
 
-      {activeTab === 'verification' && (
-        <div className="space-y-6">
-          {/* Verification Button */}
+      {activeTab === 'verify' && (
+        <div className="space-y-4">
           <div className="bg-white rounded-lg shadow p-6">
-            <div className="flex items-center justify-between mb-4">
+            <div className="flex items-start justify-between mb-6">
               <div>
-                <h2 className="text-lg font-semibold text-gray-900">Chain Integrity Verification</h2>
-                <p className="text-sm text-gray-500 mt-1">
-                  Verify that the audit log chain has not been tampered with
+                <h2 className="text-lg font-semibold text-gray-900">Verify Log Chain Integrity</h2>
+                <p className="mt-1 text-sm text-gray-500">
+                  Verify that all audit logs form an unbroken cryptographic chain
                 </p>
               </div>
               <Button
-                onClick={handleVerify}
-                disabled={verifying}
-                className="flex items-center"
+                onClick={handleVerifyIntegrity}
+                isLoading={isVerifying}
+                disabled={isVerifying}
               >
-                {verifying ? (
+                {isVerifying ? (
                   <>
                     <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                     Verifying...
                   </>
                 ) : (
-                  <>
-                    <Shield className="h-4 w-4 mr-2" />
-                    Verify Integrity
-                  </>
+                  'Verify Integrity'
                 )}
               </Button>
             </div>
 
-            {verificationError && (
-              <div className="mt-4 flex items-center gap-2 p-4 text-sm text-red-800 bg-red-100 rounded-md">
-                <AlertCircle className="h-4 w-4" />
-                {verificationError}
-                <button
-                  onClick={() => setVerificationError(null)}
-                  className="ml-auto text-red-600 hover:text-red-800"
-                >
-                  Dismiss
-                </button>
+            {verifyError && (
+              <div className="mb-4 p-4 text-sm text-red-800 bg-red-100 rounded-md flex items-start gap-3">
+                <AlertCircle className="h-5 w-5 flex-shrink-0 mt-0.5" />
+                <div>{verifyError}</div>
               </div>
             )}
 
-            {verificationResult && (
-              <div className="mt-6 space-y-4">
+            {verifyResult && (
+              <div className="space-y-4">
                 {/* Status Banner */}
                 <div
-                  className={`p-4 rounded-md flex items-center gap-3 ${
-                    verificationResult.valid
+                  className={`p-4 rounded-md flex items-start gap-3 ${
+                    verifyResult.valid
                       ? 'bg-green-100 text-green-800'
                       : 'bg-red-100 text-red-800'
                   }`}
                 >
-                  {verificationResult.valid ? (
-                    <>
-                      <CheckCircle className="h-5 w-5" />
-                      <span className="font-medium">Chain integrity verified successfully</span>
-                    </>
+                  {verifyResult.valid ? (
+                    <CheckCircle className="h-5 w-5 flex-shrink-0 mt-0.5" />
                   ) : (
-                    <>
-                      <XCircle className="h-5 w-5" />
-                      <span className="font-medium">Chain integrity check failed</span>
-                    </>
+                    <AlertCircle className="h-5 w-5 flex-shrink-0 mt-0.5" />
                   )}
+                  <div>
+                    <p className="font-medium">
+                      {verifyResult.valid
+                        ? 'Chain Integrity Verified'
+                        : 'Chain Integrity Failed'}
+                    </p>
+                    <p className="text-sm mt-1">
+                      {verifyResult.valid
+                        ? 'All audit logs form an unbroken cryptographic chain.'
+                        : 'The audit log chain has been compromised or tampered with.'}
+                    </p>
+                  </div>
                 </div>
 
-                {/* Statistics */}
+                {/* Stats */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div className="bg-gray-50 rounded-lg p-4">
-                    <div className="flex items-center">
-                      <div className="h-10 w-10 rounded-lg bg-blue-100 flex items-center justify-center">
-                        <TrendingUp className="h-5 w-5 text-blue-600" />
-                      </div>
-                      <div className="ml-4">
-                        <p className="text-sm text-gray-500">Total Entries</p>
-                        <p className="text-2xl font-semibold text-gray-900">
-                          {verificationResult.totalEntries}
-                        </p>
-                      </div>
-                    </div>
+                    <p className="text-sm text-gray-600 mb-1">Total Entries</p>
+                    <p className="text-2xl font-bold text-gray-900">{verifyResult.totalEntries}</p>
                   </div>
-
-                  {verificationResult.firstEntry && (
-                    <div className="bg-gray-50 rounded-lg p-4">
-                      <p className="text-xs font-medium text-gray-500 uppercase mb-2">First Entry</p>
-                      <p className="text-sm font-medium text-gray-900">
-                        {formatDate(verificationResult.firstEntry.created_at)}
-                      </p>
-                      <p className="text-xs text-gray-500 mt-1">
-                        {verificationResult.firstEntry.user_email || 'System'}
-                      </p>
-                    </div>
-                  )}
-
-                  {verificationResult.lastEntry && (
-                    <div className="bg-gray-50 rounded-lg p-4">
-                      <p className="text-xs font-medium text-gray-500 uppercase mb-2">Last Entry</p>
-                      <p className="text-sm font-medium text-gray-900">
-                        {formatDate(verificationResult.lastEntry.created_at)}
-                      </p>
-                      <p className="text-xs text-gray-500 mt-1">
-                        {verificationResult.lastEntry.user_email || 'System'}
-                      </p>
-                    </div>
-                  )}
+                  <div className="bg-gray-50 rounded-lg p-4">
+                    <p className="text-sm text-gray-600 mb-1">First Entry</p>
+                    <p className="text-sm font-mono text-gray-900">
+                      {verifyResult.firstEntry
+                        ? formatDate(verifyResult.firstEntry.created_at)
+                        : 'N/A'}
+                    </p>
+                  </div>
+                  <div className="bg-gray-50 rounded-lg p-4">
+                    <p className="text-sm text-gray-600 mb-1">Last Entry</p>
+                    <p className="text-sm font-mono text-gray-900">
+                      {verifyResult.lastEntry
+                        ? formatDate(verifyResult.lastEntry.created_at)
+                        : 'N/A'}
+                    </p>
+                  </div>
                 </div>
               </div>
             )}
