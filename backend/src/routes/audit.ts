@@ -1,6 +1,7 @@
 import { FastifyPluginAsync } from 'fastify';
 import { requirePermission } from '../middleware/auth.js';
 import { auditService, AuditAction } from '../services/audit.js';
+import { auditChainService } from '../services/audit-chain.js';
 import { validateDate, validateDateRange, validateLimit, validateOffset } from '../utils/validation.js';
 
 // ============================================
@@ -207,6 +208,32 @@ const auditRoutes: FastifyPluginAsync = async (app) => {
       const updated = await auditService.getSettings(tenantSlug);
 
       return { settings: updated };
+    }
+  );
+
+  // Verify audit chain integrity
+  app.get<{
+    Querystring: { from?: string; to?: string };
+  }>(
+    '/verify',
+    {
+      preHandler: [requirePermission('admin:read')],
+    },
+    async (request, _reply) => {
+      const { tenantSlug } = request.user;
+      const { from, to } = request.query;
+
+      const validatedFrom = validateDate(from, 'from');
+      const validatedTo = validateDate(to, 'to');
+      validateDateRange(validatedFrom, validatedTo, 3650); // up to 10 years
+
+      const result = await auditChainService.verifyChain(
+        tenantSlug,
+        validatedFrom ?? undefined,
+        validatedTo ?? undefined
+      );
+
+      return result;
     }
   );
 

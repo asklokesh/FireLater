@@ -26,6 +26,16 @@ import { migration023IcalSubscriptions } from './023_ical_subscriptions.js';
 import { migration024PerformanceIndexes } from './024_performance_indexes.js';
 import { migration025UserSecurityColumns } from './025_user_security_columns.js';
 import { migration026MigrationSystem } from './026_migration_system.js';
+import { migration027AuditChain } from './027_audit_chain.js';
+import { migration028SodPolicy } from './028_sod_policy.js';
+import { migration029DataResidency } from './029_data_residency.js';
+import { migration030MakerChecker } from './030_maker_checker.js';
+import { migration031EmergencyChange } from './031_emergency_change.js';
+import { migration032ComplianceReports } from './032_compliance_reports.js';
+import { migration033Recertification } from './033_recertification.js';
+import { migration034RegulatorySla } from './034_regulatory_sla.js';
+import { migration035PrivilegedGrants } from './035_privileged_grants.js';
+import { migration036VendorRisk } from './036_vendor_risk.js';
 
 interface Migration {
   name: string;
@@ -59,6 +69,16 @@ const migrations: Migration[] = [
   { name: '024_performance_indexes', up: migration024PerformanceIndexes },
   { name: '025_user_security_columns', up: migration025UserSecurityColumns },
   { name: '026_migration_system', up: migration026MigrationSystem },
+  { name: '027_audit_chain', up: migration027AuditChain },
+  { name: '028_sod_policy', up: migration028SodPolicy },
+  { name: '029_data_residency', up: migration029DataResidency },
+  { name: '030_maker_checker', up: migration030MakerChecker },
+  { name: '031_emergency_change', up: migration031EmergencyChange },
+  { name: '032_compliance_reports', up: migration032ComplianceReports },
+  { name: '033_recertification', up: migration033Recertification },
+  { name: '034_regulatory_sla', up: migration034RegulatorySla },
+  { name: '035_privileged_grants', up: migration035PrivilegedGrants },
+  { name: '036_vendor_risk', up: migration036VendorRisk },
 ];
 
 async function ensureMigrationsTable() {
