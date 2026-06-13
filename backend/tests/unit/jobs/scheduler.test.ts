@@ -6,6 +6,7 @@ const mockScheduleHealthScoreCalculation = vi.fn();
 const mockScheduleSlaBreachChecks = vi.fn();
 const mockScheduleCloudSync = vi.fn();
 const mockScheduleCleanup = vi.fn();
+const mockRunAuditIntegrityJob = vi.fn();
 
 vi.mock('../../../src/jobs/processors/scheduledReports.js', () => ({
   queueDueScheduledReports: () => mockQueueDueScheduledReports(),
@@ -25,6 +26,10 @@ vi.mock('../../../src/jobs/processors/cloudSync.js', () => ({
 
 vi.mock('../../../src/jobs/processors/cleanup.js', () => ({
   scheduleCleanup: () => mockScheduleCleanup(),
+}));
+
+vi.mock('../../../src/jobs/audit-integrity.js', () => ({
+  runAuditIntegrityJob: () => mockRunAuditIntegrityJob(),
 }));
 
 // Mock logger
@@ -50,6 +55,8 @@ describe('Scheduler Job', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.useFakeTimers();
+    // Default audit-integrity mock so it doesn't hang
+    mockRunAuditIntegrityJob.mockResolvedValue(undefined);
     // Ensure scheduler is stopped before each test
     stopScheduler();
   });
@@ -246,12 +253,13 @@ describe('Scheduler Job', () => {
 
       const status = getSchedulerStatus();
 
-      expect(status).toHaveLength(5);
+      expect(status).toHaveLength(6);
       expect(status.map((s) => s.name)).toContain('scheduled-reports');
       expect(status.map((s) => s.name)).toContain('health-scores');
       expect(status.map((s) => s.name)).toContain('sla-breaches');
       expect(status.map((s) => s.name)).toContain('cloud-sync');
       expect(status.map((s) => s.name)).toContain('cleanup');
+      expect(status.map((s) => s.name)).toContain('audit-integrity');
     });
 
     it('should include interval configuration', () => {
@@ -377,12 +385,13 @@ describe('Scheduler Job', () => {
 
       const results = await triggerAllTasks();
 
-      expect(results).toHaveLength(5);
+      expect(results).toHaveLength(6);
       expect(mockQueueDueScheduledReports).toHaveBeenCalled();
       expect(mockScheduleHealthScoreCalculation).toHaveBeenCalled();
       expect(mockScheduleSlaBreachChecks).toHaveBeenCalled();
       expect(mockScheduleCloudSync).toHaveBeenCalled();
       expect(mockScheduleCleanup).toHaveBeenCalled();
+      expect(mockRunAuditIntegrityJob).toHaveBeenCalled();
     });
 
     it('should report success for each task', async () => {
@@ -410,7 +419,7 @@ describe('Scheduler Job', () => {
       const results = await triggerAllTasks();
 
       // All tasks should still be attempted
-      expect(results).toHaveLength(5);
+      expect(results).toHaveLength(6);
 
       // First task should report success: true because error is caught in runTask
       // and the task is marked as complete even after error

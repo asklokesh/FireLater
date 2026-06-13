@@ -284,14 +284,13 @@ describe('RecertificationService', () => {
 
       const calls = (pool.query as ReturnType<typeof vi.fn>).mock.calls;
 
-      // Verify audit log INSERT with permission_revoked action
+      // Verify audit log INSERT with permission_revoked action (hardcoded in SQL)
       const auditLogCall = calls.find(
         (c: unknown[]) =>
           typeof c[0] === 'string' &&
           c[0].includes('INSERT INTO') &&
           c[0].includes('audit_logs') &&
-          Array.isArray(c[1]) &&
-          (c[1] as unknown[]).includes('permission_revoked')
+          c[0].includes('permission_revoked')
       );
       expect(auditLogCall).toBeDefined();
     });

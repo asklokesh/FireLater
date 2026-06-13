@@ -287,8 +287,7 @@ describe('VendorRiskService', () => {
       await vendorRiskService.getRiskSummary(tenantSlug);
 
       expect(mockQuery).toHaveBeenCalledWith(
-        expect.stringContaining('WHERE is_active = true'),
-        expect.anything()
+        expect.stringContaining('WHERE is_active = true')
       );
     });
 
