@@ -28,6 +28,7 @@ import { migration025UserSecurityColumns } from './025_user_security_columns.js'
 import { migration026MigrationSystem } from './026_migration_system.js';
 import { migration027AuditChain } from './027_audit_chain.js';
 import { migration028SodPolicy } from './028_sod_policy.js';
+import { migration030MakerChecker } from './030_maker_checker.js';
 
 interface Migration {
   name: string;
@@ -63,6 +64,7 @@ const migrations: Migration[] = [
   { name: '026_migration_system', up: migration026MigrationSystem },
   { name: '027_audit_chain', up: migration027AuditChain },
   { name: '028_sod_policy', up: migration028SodPolicy },
+  { name: '030_maker_checker', up: migration030MakerChecker },
 ];
 
 async function ensureMigrationsTable() {
