@@ -29,22 +29,22 @@ import {
 } from '@/hooks/useApi';
 
 const statusColors: Record<string, { bg: string; text: string; label: string }> = {
-  submitted: { bg: 'bg-blue-100', text: 'text-blue-800', label: 'Submitted' },
-  pending_approval: { bg: 'bg-yellow-100', text: 'text-yellow-800', label: 'Pending Approval' },
-  approved: { bg: 'bg-green-100', text: 'text-green-800', label: 'Approved' },
-  rejected: { bg: 'bg-red-100', text: 'text-red-800', label: 'Rejected' },
-  assigned: { bg: 'bg-indigo-100', text: 'text-indigo-800', label: 'Assigned' },
-  in_progress: { bg: 'bg-purple-100', text: 'text-purple-800', label: 'In Progress' },
-  pending: { bg: 'bg-orange-100', text: 'text-orange-800', label: 'Pending' },
-  completed: { bg: 'bg-emerald-100', text: 'text-emerald-800', label: 'Completed' },
-  cancelled: { bg: 'bg-gray-100', text: 'text-gray-800', label: 'Cancelled' },
+  submitted: { bg: 'bg-primary-subtle', text: 'text-primary', label: 'Submitted' },
+  pending_approval: { bg: 'bg-warning-subtle', text: 'text-warning', label: 'Pending Approval' },
+  approved: { bg: 'bg-success-subtle', text: 'text-success', label: 'Approved' },
+  rejected: { bg: 'bg-error-subtle', text: 'text-error', label: 'Rejected' },
+  assigned: { bg: 'bg-primary-subtle', text: 'text-primary', label: 'Assigned' },
+  in_progress: { bg: 'bg-primary-subtle', text: 'text-primary', label: 'In Progress' },
+  pending: { bg: 'bg-warning-subtle', text: 'text-warning', label: 'Pending' },
+  completed: { bg: 'bg-success-subtle', text: 'text-success', label: 'Completed' },
+  cancelled: { bg: 'bg-background', text: 'text-foreground', label: 'Cancelled' },
 };
 
 const priorityColors: Record<string, { bg: string; text: string; label: string }> = {
-  critical: { bg: 'bg-red-100', text: 'text-red-800', label: 'Critical' },
-  high: { bg: 'bg-orange-100', text: 'text-orange-800', label: 'High' },
-  medium: { bg: 'bg-yellow-100', text: 'text-yellow-800', label: 'Medium' },
-  low: { bg: 'bg-blue-100', text: 'text-blue-800', label: 'Low' },
+  critical: { bg: 'bg-error-subtle', text: 'text-error', label: 'Critical' },
+  high: { bg: 'bg-warning-subtle', text: 'text-warning', label: 'High' },
+  medium: { bg: 'bg-warning-subtle', text: 'text-warning', label: 'Medium' },
+  low: { bg: 'bg-primary-subtle', text: 'text-primary', label: 'Low' },
 };
 
 export default function RequestsPage() {

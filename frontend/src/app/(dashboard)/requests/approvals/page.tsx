@@ -28,10 +28,10 @@ import {
 } from '@/hooks/useApi';
 
 const priorityColors: Record<string, { bg: string; text: string; label: string }> = {
-  critical: { bg: 'bg-red-100', text: 'text-red-800', label: 'Critical' },
-  high: { bg: 'bg-orange-100', text: 'text-orange-800', label: 'High' },
-  medium: { bg: 'bg-yellow-100', text: 'text-yellow-800', label: 'Medium' },
-  low: { bg: 'bg-blue-100', text: 'text-blue-800', label: 'Low' },
+  critical: { bg: 'bg-error-subtle', text: 'text-error', label: 'Critical' },
+  high: { bg: 'bg-warning-subtle', text: 'text-warning', label: 'High' },
+  medium: { bg: 'bg-warning-subtle', text: 'text-warning', label: 'Medium' },
+  low: { bg: 'bg-primary-subtle', text: 'text-primary', label: 'Low' },
 };
 
 interface ApprovalModalProps {

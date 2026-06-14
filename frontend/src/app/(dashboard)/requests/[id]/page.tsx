@@ -103,20 +103,20 @@ interface UserData {
 }
 
 const statusConfig: Record<string, { bg: string; text: string; icon: typeof CheckCircle }> = {
-  submitted: { bg: 'bg-blue-100', text: 'text-blue-800', icon: Clock },
-  pending_approval: { bg: 'bg-yellow-100', text: 'text-yellow-800', icon: Clock },
-  approved: { bg: 'bg-green-100', text: 'text-green-800', icon: CheckCircle },
-  rejected: { bg: 'bg-red-100', text: 'text-red-800', icon: XCircle },
-  in_progress: { bg: 'bg-purple-100', text: 'text-purple-800', icon: Play },
-  completed: { bg: 'bg-green-100', text: 'text-green-800', icon: CheckCircle },
-  cancelled: { bg: 'bg-gray-100', text: 'text-gray-800', icon: Ban },
+  submitted: { bg: 'bg-primary-subtle', text: 'text-primary', icon: Clock },
+  pending_approval: { bg: 'bg-warning-subtle', text: 'text-warning', icon: Clock },
+  approved: { bg: 'bg-success-subtle', text: 'text-success', icon: CheckCircle },
+  rejected: { bg: 'bg-error-subtle', text: 'text-error', icon: XCircle },
+  in_progress: { bg: 'bg-primary-subtle', text: 'text-primary', icon: Play },
+  completed: { bg: 'bg-success-subtle', text: 'text-success', icon: CheckCircle },
+  cancelled: { bg: 'bg-background', text: 'text-foreground', icon: Ban },
 };
 
 const priorityConfig: Record<string, { bg: string; text: string }> = {
-  low: { bg: 'bg-gray-100', text: 'text-gray-800' },
-  medium: { bg: 'bg-blue-100', text: 'text-blue-800' },
+  low: { bg: 'bg-background', text: 'text-foreground' },
+  medium: { bg: 'bg-primary-subtle', text: 'text-primary' },
   high: { bg: 'bg-orange-100', text: 'text-orange-800' },
-  critical: { bg: 'bg-red-100', text: 'text-red-800' },
+  critical: { bg: 'bg-error-subtle', text: 'text-error' },
 };
 
 export default function RequestDetailPage() {

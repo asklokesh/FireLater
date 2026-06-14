@@ -90,7 +90,7 @@ const typeColors: Record<string, string> = {
   issues: 'bg-error-subtle text-error',
   changes: 'bg-warning-subtle text-yellow-600',
   applications: 'bg-info-subtle text-primary',
-  sla: 'bg-info-subtle text-purple-600',
+  sla: 'bg-info-subtle text-primary',
   requests: 'bg-success-subtle text-success',
   custom: 'bg-background text-secondary',
 };
