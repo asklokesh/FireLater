@@ -292,8 +292,8 @@ export default function AccessRecertificationPage() {
                       </div>
                       <div>
                         <p className="text-xs text-muted uppercase tracking-wider">Progress</p>
-                        <div className="mt-1 w-full bg-gray-200 rounded-full h-2">
-                          <div className="bg-blue-500 h-2 rounded-full" style={{ width: `${progressPercent}%` }} />
+                        <div className="mt-1 w-full bg-surface-hover rounded-full h-2">
+                          <div className="bg-primary h-2 rounded-full" style={{ width: `${progressPercent}%` }} />
                         </div>
                       </div>
                       <div className="flex gap-2">

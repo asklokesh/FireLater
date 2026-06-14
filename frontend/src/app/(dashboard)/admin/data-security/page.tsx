@@ -260,7 +260,7 @@ export default function DataSecurityPage() {
                 }))
               }
               className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                formData.pii_masking_enabled ? 'bg-primary' : 'bg-gray-300'
+                formData.pii_masking_enabled ? 'bg-primary' : 'bg-muted'
               }`}
             >
               <span
@@ -281,7 +281,7 @@ export default function DataSecurityPage() {
                 }))
               }
               className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                formData.pci_tokenization_enabled ? 'bg-primary' : 'bg-gray-300'
+                formData.pci_tokenization_enabled ? 'bg-primary' : 'bg-muted'
               }`}
             >
               <span
