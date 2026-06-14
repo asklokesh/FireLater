@@ -15,18 +15,18 @@ import {
 import { Button } from '@/components/ui/button';
 import { useChanges, Change } from '@/hooks/useApi';
 
-const statusColors: Record<string, { bg: string; text: string }> = {
-  draft: { bg: 'bg-gray-100', text: 'text-gray-800' },
-  submitted: { bg: 'bg-blue-100', text: 'text-blue-800' },
-  review: { bg: 'bg-indigo-100', text: 'text-indigo-800' },
-  approved: { bg: 'bg-green-100', text: 'text-green-800' },
-  rejected: { bg: 'bg-red-100', text: 'text-red-800' },
-  scheduled: { bg: 'bg-purple-100', text: 'text-purple-800' },
-  implementing: { bg: 'bg-yellow-100', text: 'text-yellow-800' },
-  completed: { bg: 'bg-green-100', text: 'text-green-800' },
-  failed: { bg: 'bg-red-100', text: 'text-red-800' },
-  rolled_back: { bg: 'bg-orange-100', text: 'text-orange-800' },
-  cancelled: { bg: 'bg-gray-100', text: 'text-gray-800' },
+const statusColors: Record<string, { bg: string; text: string; ring: string }> = {
+  draft: { bg: 'bg-surface-hover', text: 'text-secondary', ring: 'ring-border-strong' },
+  submitted: { bg: 'bg-info-subtle', text: 'text-info', ring: 'ring-info/20' },
+  review: { bg: 'bg-warning-subtle', text: 'text-warning', ring: 'ring-warning/20' },
+  approved: { bg: 'bg-success-subtle', text: 'text-success', ring: 'ring-success/20' },
+  rejected: { bg: 'bg-error-subtle', text: 'text-error', ring: 'ring-error/20' },
+  scheduled: { bg: 'bg-info-subtle', text: 'text-info', ring: 'ring-info/20' },
+  implementing: { bg: 'bg-warning-subtle', text: 'text-warning', ring: 'ring-warning/20' },
+  completed: { bg: 'bg-success-subtle', text: 'text-success', ring: 'ring-success/20' },
+  failed: { bg: 'bg-error-subtle', text: 'text-error', ring: 'ring-error/20' },
+  rolled_back: { bg: 'bg-warning-subtle', text: 'text-warning', ring: 'ring-warning/20' },
+  cancelled: { bg: 'bg-surface-hover', text: 'text-secondary', ring: 'ring-border-strong' },
 };
 
 const statusLabels: Record<string, string> = {
@@ -43,17 +43,17 @@ const statusLabels: Record<string, string> = {
   cancelled: 'Cancelled',
 };
 
-const typeColors: Record<string, { bg: string; text: string }> = {
-  standard: { bg: 'bg-blue-100', text: 'text-blue-800' },
-  normal: { bg: 'bg-gray-100', text: 'text-gray-800' },
-  emergency: { bg: 'bg-red-100', text: 'text-red-800' },
+const typeColors: Record<string, { bg: string; text: string; ring: string }> = {
+  standard: { bg: 'bg-info-subtle', text: 'text-info', ring: 'ring-info/20' },
+  normal: { bg: 'bg-surface-hover', text: 'text-secondary', ring: 'ring-border-strong' },
+  emergency: { bg: 'bg-error-subtle', text: 'text-error', ring: 'ring-error/20' },
 };
 
-const riskColors: Record<string, { bg: string; text: string }> = {
-  low: { bg: 'bg-green-100', text: 'text-green-800' },
-  medium: { bg: 'bg-yellow-100', text: 'text-yellow-800' },
-  high: { bg: 'bg-orange-100', text: 'text-orange-800' },
-  critical: { bg: 'bg-red-100', text: 'text-red-800' },
+const riskColors: Record<string, { bg: string; text: string; ring: string }> = {
+  low: { bg: 'bg-success-subtle', text: 'text-success', ring: 'ring-success/20' },
+  medium: { bg: 'bg-warning-subtle', text: 'text-warning', ring: 'ring-warning/20' },
+  high: { bg: 'bg-warning-subtle', text: 'text-warning', ring: 'ring-warning/20' },
+  critical: { bg: 'bg-error-subtle', text: 'text-error', ring: 'ring-error/20' },
 };
 
 export default function ChangesPage() {
@@ -109,10 +109,10 @@ export default function ChangesPage() {
 
   if (error) {
     return (
-      <div className="bg-red-50 border border-red-200 rounded-lg p-6 text-center">
-        <GitBranch className="h-12 w-12 text-red-500 mx-auto mb-4" />
-        <h3 className="text-lg font-medium text-red-800 mb-2">Error loading changes</h3>
-        <p className="text-red-600">Please try refreshing the page</p>
+      <div className="bg-error-subtle border border-error rounded-lg p-6 text-center">
+        <GitBranch className="h-12 w-12 text-error mx-auto mb-4" />
+        <h3 className="text-lg font-medium text-error mb-2">Error loading changes</h3>
+        <p className="text-error">Please try refreshing the page</p>
       </div>
     );
   }
@@ -122,8 +122,8 @@ export default function ChangesPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Changes</h1>
-          <p className="mt-1 text-sm text-gray-500">
+          <h1 className="text-2xl font-bold text-foreground">Changes</h1>
+          <p className="mt-1 text-sm text-secondary">
             Manage and track change requests
           </p>
         </div>
@@ -136,16 +136,16 @@ export default function ChangesPage() {
       </div>
 
       {/* Search and Filters */}
-      <div className="bg-white rounded-lg shadow p-4">
+      <div className="bg-surface border border-border rounded-xl shadow-sm p-4">
         <div className="flex flex-col sm:flex-row gap-4">
           <div className="flex-1 relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted" />
             <input
               type="text"
               placeholder="Search by number or title..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full pl-10 pr-4 py-2 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary"
             />
           </div>
           <Button
@@ -160,16 +160,16 @@ export default function ChangesPage() {
         </div>
 
         {showFilters && (
-          <div className="mt-4 pt-4 border-t border-gray-200 grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div className="mt-4 pt-4 border-t border-border grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
+              <label className="block text-sm font-medium text-foreground mb-1">Status</label>
               <select
                 value={statusFilter}
                 onChange={(e) => {
                   setStatusFilter(e.target.value);
                   setPage(1);
                 }}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary"
               >
                 <option value="all">All Statuses</option>
                 <option value="draft">Draft</option>
@@ -184,14 +184,14 @@ export default function ChangesPage() {
               </select>
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Type</label>
+              <label className="block text-sm font-medium text-foreground mb-1">Type</label>
               <select
                 value={typeFilter}
                 onChange={(e) => {
                   setTypeFilter(e.target.value);
                   setPage(1);
                 }}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary"
               >
                 <option value="all">All Types</option>
                 <option value="standard">Standard</option>
@@ -200,14 +200,14 @@ export default function ChangesPage() {
               </select>
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Risk Level</label>
+              <label className="block text-sm font-medium text-foreground mb-1">Risk Level</label>
               <select
                 value={riskFilter}
                 onChange={(e) => {
                   setRiskFilter(e.target.value);
                   setPage(1);
                 }}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary"
               >
                 <option value="all">All Risk Levels</option>
                 <option value="low">Low</option>
@@ -221,38 +221,38 @@ export default function ChangesPage() {
       </div>
 
       {/* Changes Table */}
-      <div className="bg-white rounded-lg shadow overflow-hidden">
+      <div className="bg-surface border border-border rounded-xl shadow-sm overflow-hidden">
         {isLoading ? (
           <div className="flex items-center justify-center h-64">
-            <Loader2 className="h-8 w-8 animate-spin text-blue-500" />
-            <span className="ml-2 text-gray-500">Loading changes...</span>
+            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            <span className="ml-2 text-secondary">Loading changes...</span>
           </div>
         ) : (
           <>
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
+            <table className="min-w-full divide-y divide-border">
+              <thead className="bg-background">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-muted border-b border-border">
                     Change
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-muted border-b border-border">
                     Type / Risk
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-muted border-b border-border">
                     Status
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-muted border-b border-border">
                     Scheduled
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-muted border-b border-border">
                     Implementer
                   </th>
-                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-4 py-3 text-right text-xs font-medium uppercase tracking-wider text-muted border-b border-border">
                     Actions
                   </th>
                 </tr>
               </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
+              <tbody className="divide-y divide-border">
                 {filteredChanges.map((change: Change) => {
                   const changeType = change.type || 'normal';
                   const riskLevel = change.risk_level || 'medium';
@@ -262,88 +262,88 @@ export default function ChangesPage() {
                   const statusStyle = statusColors[status] || statusColors.draft;
 
                   return (
-                    <tr key={change.id} className="hover:bg-gray-50">
-                      <td className="px-6 py-4">
+                    <tr key={change.id} className="hover:bg-surface-hover transition-colors duration-150 border-b border-border last:border-0">
+                      <td className="px-4 py-3">
                         <div className="flex items-start">
                           <GitBranch className={`h-5 w-5 mr-3 mt-0.5 ${
-                            change.type === 'emergency' ? 'text-red-500' : 'text-gray-400'
+                            change.type === 'emergency' ? 'text-error' : 'text-muted'
                           }`} />
                           <div>
                             <div className="flex items-center space-x-2">
                               <Link
                                 href={`/changes/${change.id}`}
-                                className="text-sm font-medium text-blue-600 hover:text-blue-800"
+                                className="text-sm font-medium text-primary hover:text-primary-hover"
                               >
                                 {change.change_number}
                               </Link>
                             </div>
-                            <p className="text-sm text-gray-900 mt-1">{change.title}</p>
+                            <p className="text-sm text-foreground mt-1">{change.title}</p>
                             {change.application_name && (
-                              <p className="text-xs text-gray-500 mt-1">
+                              <p className="text-xs text-secondary mt-1">
                                 App: {change.application_name}
                               </p>
                             )}
                           </div>
                         </div>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
+                      <td className="px-4 py-3 whitespace-nowrap">
                         <div className="space-y-1">
                           <span
-                            className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${typeStyle.bg} ${typeStyle.text}`}
+                            className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ring-1 ring-inset ${typeStyle.bg} ${typeStyle.text} ${typeStyle.ring}`}
                           >
                             {changeType.charAt(0).toUpperCase() + changeType.slice(1)}
                           </span>
                           <br />
                           <span
-                            className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${riskStyle.bg} ${riskStyle.text}`}
+                            className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ring-1 ring-inset ${riskStyle.bg} ${riskStyle.text} ${riskStyle.ring}`}
                           >
                             {riskLevel.charAt(0).toUpperCase() + riskLevel.slice(1)} Risk
                           </span>
                         </div>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
+                      <td className="px-4 py-3 whitespace-nowrap">
                         <span
-                          className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${statusStyle.bg} ${statusStyle.text}`}
+                          className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ring-1 ring-inset ${statusStyle.bg} ${statusStyle.text} ${statusStyle.ring}`}
                         >
                           {statusLabels[status] || status}
                         </span>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
+                      <td className="px-4 py-3 whitespace-nowrap">
                         {change.planned_start && change.planned_end ? (
-                          <div className="flex items-center text-sm text-gray-900">
-                            <Calendar className="h-4 w-4 mr-2 text-gray-400" />
+                          <div className="flex items-center text-sm text-foreground">
+                            <Calendar className="h-4 w-4 mr-2 text-muted" />
                             <span>{formatDateRange(change.planned_start, change.planned_end)}</span>
                           </div>
                         ) : (
-                          <span className="text-sm text-gray-500 italic">Not scheduled</span>
+                          <span className="text-sm text-secondary italic">Not scheduled</span>
                         )}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
+                      <td className="px-4 py-3 whitespace-nowrap">
                         {change.implementer_name ? (
                           <div className="flex items-center">
-                            <div className="h-8 w-8 rounded-full bg-gray-200 flex items-center justify-center text-sm font-medium text-gray-600">
+                            <div className="h-8 w-8 rounded-full bg-primary-subtle flex items-center justify-center text-sm font-medium text-primary">
                               {change.implementer_name.charAt(0)}
                             </div>
-                            <span className="ml-2 text-sm text-gray-900">
+                            <span className="ml-2 text-sm text-foreground">
                               {change.implementer_name}
                             </span>
                           </div>
                         ) : change.requester_name ? (
                           <div className="flex items-center">
-                            <div className="h-8 w-8 rounded-full bg-gray-200 flex items-center justify-center text-sm font-medium text-gray-600">
+                            <div className="h-8 w-8 rounded-full bg-primary-subtle flex items-center justify-center text-sm font-medium text-primary">
                               {change.requester_name.charAt(0)}
                             </div>
                             <div className="ml-2">
-                              <span className="text-sm text-gray-900">{change.requester_name}</span>
-                              <p className="text-xs text-gray-500">Requester</p>
+                              <span className="text-sm text-foreground">{change.requester_name}</span>
+                              <p className="text-xs text-secondary">Requester</p>
                             </div>
                           </div>
                         ) : (
-                          <span className="text-sm text-gray-500 italic">Unassigned</span>
+                          <span className="text-sm text-secondary italic">Unassigned</span>
                         )}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-right">
-                        <button className="text-gray-400 hover:text-gray-600">
+                      <td className="px-4 py-3 whitespace-nowrap text-right">
+                        <button className="text-muted hover:text-foreground">
                           <MoreHorizontal className="h-5 w-5" />
                         </button>
                       </td>
@@ -355,15 +355,15 @@ export default function ChangesPage() {
 
             {filteredChanges.length === 0 && (
               <div className="text-center py-12">
-                <GitBranch className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                <h3 className="text-lg font-medium text-gray-900 mb-2">No changes found</h3>
-                <p className="text-gray-500">Try adjusting your search or filters</p>
+                <GitBranch className="h-12 w-12 text-muted mx-auto mb-4" />
+                <h3 className="text-lg font-medium text-foreground mb-2">No changes found</h3>
+                <p className="text-secondary">Try adjusting your search or filters</p>
               </div>
             )}
 
             {/* Pagination */}
-            <div className="px-6 py-4 border-t border-gray-200 flex items-center justify-between">
-              <div className="text-sm text-gray-500">
+            <div className="px-4 py-3 border-t border-border flex items-center justify-between">
+              <div className="text-sm text-secondary">
                 Showing {filteredChanges.length} of {pagination.total} changes
               </div>
               <div className="flex space-x-2">
