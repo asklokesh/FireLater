@@ -224,7 +224,7 @@ export default function CloudPage() {
       {activeTab === 'accounts' && (
         accountsLoading ? (
           <div className="flex items-center justify-center h-64">
-            <Loader2 className="h-8 w-8 animate-spin text-blue-500" />
+            <Loader2 className="h-8 w-8 animate-spin text-primary" />
             <span className="ml-2 text-muted">Loading cloud accounts...</span>
           </div>
         ) : accounts.length > 0 ? (
@@ -328,7 +328,7 @@ export default function CloudPage() {
       {activeTab === 'resources' && (
         resourcesLoading ? (
           <div className="flex items-center justify-center h-64">
-            <Loader2 className="h-8 w-8 animate-spin text-blue-500" />
+            <Loader2 className="h-8 w-8 animate-spin text-primary" />
             <span className="ml-2 text-muted">Loading resources...</span>
           </div>
         ) : (
@@ -340,7 +340,7 @@ export default function CloudPage() {
                 return (
                   <div key={type} className="bg-surface rounded-lg shadow p-4">
                     <div className="flex items-center space-x-3">
-                      <Icon className="h-8 w-8 text-blue-500" />
+                      <Icon className="h-8 w-8 text-primary" />
                       <div>
                         <p className="text-sm text-muted capitalize">{type}</p>
                         <p className="text-xl font-semibold text-foreground">{resource.count}</p>
@@ -367,7 +367,7 @@ export default function CloudPage() {
       {activeTab === 'costs' && (
         costsLoading ? (
           <div className="flex items-center justify-center h-64">
-            <Loader2 className="h-8 w-8 animate-spin text-blue-500" />
+            <Loader2 className="h-8 w-8 animate-spin text-primary" />
             <span className="ml-2 text-muted">Loading cost data...</span>
           </div>
         ) : (
@@ -389,7 +389,7 @@ export default function CloudPage() {
                               {formatCurrency(account.monthly_cost || 0)} ({percentage.toFixed(1)}%)
                             </span>
                           </div>
-                          <div className="w-full bg-gray-200 rounded-full h-2">
+                          <div className="w-full bg-surface-hover rounded-full h-2">
                             <div
                               className="bg-primary h-2 rounded-full"
                               style={{ width: `${percentage}%` }}

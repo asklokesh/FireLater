@@ -620,7 +620,7 @@ export default function ProblemDetailPage() {
                     </Button>
                   </div>
                   {problem.workaround ? (
-                    <p className="text-sm text-secondary bg-yellow-50 p-3 rounded border border-yellow-200 whitespace-pre-wrap">{problem.workaround}</p>
+                    <p className="text-sm text-secondary bg-warning-subtle p-3 rounded border border-yellow-200 whitespace-pre-wrap">{problem.workaround}</p>
                   ) : (
                     <p className="text-sm text-muted italic">No workaround available</p>
                   )}
@@ -628,7 +628,7 @@ export default function ProblemDetailPage() {
                 {problem.resolution && (
                   <div>
                     <label className="text-sm font-medium text-secondary mb-2 block">Resolution</label>
-                    <p className="text-sm text-secondary bg-green-50 p-3 rounded border border-green-200 whitespace-pre-wrap">{problem.resolution}</p>
+                    <p className="text-sm text-secondary bg-success-subtle p-3 rounded border border-green-200 whitespace-pre-wrap">{problem.resolution}</p>
                   </div>
                 )}
               </div>
@@ -774,7 +774,7 @@ export default function ProblemDetailPage() {
                     <form onSubmit={handleSubmitComment} className="mb-6">
                       <div className="flex space-x-3">
                         <div className="flex-shrink-0">
-                          <div className="h-8 w-8 rounded-full bg-blue-500 flex items-center justify-center text-white text-sm font-medium">
+                          <div className="h-8 w-8 rounded-full bg-primary flex items-center justify-center text-white text-sm font-medium">
                             U
                           </div>
                         </div>
@@ -993,7 +993,7 @@ export default function ProblemDetailPage() {
                         {fiveWhys.map((entry, index) => (
                           <div key={index} className="bg-surface-hover rounded-xl p-4 border border-border">
                             <div className="flex items-start space-x-3">
-                              <div className="flex-shrink-0 w-8 h-8 rounded-full bg-blue-600 text-white flex items-center justify-center text-sm font-bold">
+                              <div className="flex-shrink-0 w-8 h-8 rounded-full bg-primary text-white flex items-center justify-center text-sm font-bold">
                                 {index + 1}
                               </div>
                               <div className="flex-1 space-y-3">
@@ -1031,7 +1031,7 @@ export default function ProblemDetailPage() {
                     <div className="space-y-4 pt-6 border-t border-border">
                       <div className="flex items-center justify-between">
                         <div className="flex items-center space-x-2">
-                          <GitBranch className="h-5 w-5 text-purple-600" />
+                          <GitBranch className="h-5 w-5 text-info" />
                           <h3 className="text-lg font-semibold text-foreground">Fishbone Diagram (Ishikawa)</h3>
                         </div>
                         <Button
@@ -1055,7 +1055,7 @@ export default function ProblemDetailPage() {
                       <div className="bg-surface-hover rounded-xl p-6 border border-border">
                         {/* Main spine with effect */}
                         <div className="flex items-center justify-center mb-6">
-                          <div className="flex-1 h-1 bg-gray-400"></div>
+                          <div className="flex-1 h-1 bg-border-strong"></div>
                           <div className="px-4 py-2 bg-error-subtle border-2 border-red-400 rounded-xl">
                             <span className="font-semibold text-error">Problem: {problem?.title || 'Effect'}</span>
                           </div>
@@ -1256,7 +1256,7 @@ export default function ProblemDetailPage() {
                     <dd className="mt-1">
                       {problem.assignee_name ? (
                         <div className="flex items-center">
-                          <div className="h-8 w-8 rounded-full bg-gray-200 flex items-center justify-center text-sm font-medium text-secondary">
+                          <div className="h-8 w-8 rounded-full bg-surface-hover flex items-center justify-center text-sm font-medium text-secondary">
                             {problem.assignee_name.charAt(0)}
                           </div>
                           <div className="ml-2">
@@ -1386,7 +1386,7 @@ export default function ProblemDetailPage() {
                     disabled={assignProblem.isPending}
                     className="w-full flex items-center p-3 rounded-xl hover:bg-surface-hover border border-border text-left"
                   >
-                    <div className="h-8 w-8 rounded-full bg-blue-500 flex items-center justify-center text-white text-sm font-medium">
+                    <div className="h-8 w-8 rounded-full bg-primary flex items-center justify-center text-white text-sm font-medium">
                       {user.name.charAt(0)}
                     </div>
                     <div className="ml-3">

@@ -223,16 +223,16 @@ export default function ReportExecutionPage() {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <Loader2 className="h-8 w-8 animate-spin text-blue-500" />
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
       </div>
     );
   }
 
   if (error || !template) {
     return (
-      <div className="bg-red-50 border border-red-200 rounded-lg p-6 text-center">
-        <AlertCircle className="h-12 w-12 text-red-500 mx-auto mb-4" />
-        <h3 className="text-lg font-medium text-red-800 mb-2">{error || 'Report not found'}</h3>
+      <div className="bg-error-subtle border border-red-200 rounded-lg p-6 text-center">
+        <AlertCircle className="h-12 w-12 text-error mx-auto mb-4" />
+        <h3 className="text-lg font-medium text-error mb-2">{error || 'Report not found'}</h3>
         <Link href="/reports">
           <Button variant="outline">Back to Reports</Button>
         </Link>
@@ -251,8 +251,8 @@ export default function ReportExecutionPage() {
             </Button>
           </Link>
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">{template.name}</h1>
-            <p className="mt-1 text-sm text-gray-500">{template.description}</p>
+            <h1 className="text-2xl font-bold text-foreground">{template.name}</h1>
+            <p className="mt-1 text-sm text-muted">{template.description}</p>
           </div>
         </div>
         <div className="flex items-center space-x-2">
@@ -279,10 +279,10 @@ export default function ReportExecutionPage() {
         {/* Left Column - Filters & Settings */}
         <div className="space-y-6">
           {/* Filters */}
-          <div className="bg-white rounded-lg shadow">
-            <div className="px-6 py-4 border-b border-gray-200">
-              <h2 className="text-lg font-medium text-gray-900 flex items-center">
-                <Filter className="h-5 w-5 mr-2 text-gray-400" />
+          <div className="bg-surface rounded-lg shadow">
+            <div className="px-6 py-4 border-b border-border">
+              <h2 className="text-lg font-medium text-foreground flex items-center">
+                <Filter className="h-5 w-5 mr-2 text-muted" />
                 Report Filters
               </h2>
             </div>
@@ -290,23 +290,23 @@ export default function ReportExecutionPage() {
               {template.parameters?.length > 0 ? (
                 template.parameters.map((param) => (
                   <div key={param.name}>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <label className="block text-sm font-medium text-secondary mb-1">
                       {param.label}
-                      {param.required && <span className="text-red-500 ml-1">*</span>}
+                      {param.required && <span className="text-error ml-1">*</span>}
                     </label>
                     {param.type === 'date' && (
                       <input
                         type="date"
                         value={(filterValues[param.name] as string) || ''}
                         onChange={(e) => setFilterValues((p) => ({ ...p, [param.name]: e.target.value }))}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        className="w-full px-3 py-2 border border-border-strong rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary"
                       />
                     )}
                     {param.type === 'select' && (
                       <select
                         value={(filterValues[param.name] as string) || ''}
                         onChange={(e) => setFilterValues((p) => ({ ...p, [param.name]: e.target.value }))}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        className="w-full px-3 py-2 border border-border-strong rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary"
                       >
                         <option value="">Select...</option>
                         {getParameterOptions(param).map((opt) => (
@@ -319,7 +319,7 @@ export default function ReportExecutionPage() {
                         type="text"
                         value={(filterValues[param.name] as string) || ''}
                         onChange={(e) => setFilterValues((p) => ({ ...p, [param.name]: e.target.value }))}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        className="w-full px-3 py-2 border border-border-strong rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary"
                       />
                     )}
                     {param.type === 'number' && (
@@ -327,18 +327,18 @@ export default function ReportExecutionPage() {
                         type="number"
                         value={(filterValues[param.name] as number) || ''}
                         onChange={(e) => setFilterValues((p) => ({ ...p, [param.name]: parseInt(e.target.value) }))}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        className="w-full px-3 py-2 border border-border-strong rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary"
                       />
                     )}
                   </div>
                 ))
               ) : (
-                <p className="text-sm text-gray-500">No filters available</p>
+                <p className="text-sm text-muted">No filters available</p>
               )}
 
               {/* Output Format */}
-              <div className="pt-4 border-t border-gray-200">
-                <label className="block text-sm font-medium text-gray-700 mb-1">Output Format</label>
+              <div className="pt-4 border-t border-border">
+                <label className="block text-sm font-medium text-secondary mb-1">Output Format</label>
                 <div className="flex space-x-2">
                   {(template.output_format || ['pdf', 'csv', 'xlsx']).map((format) => (
                     <button
@@ -346,8 +346,8 @@ export default function ReportExecutionPage() {
                       onClick={() => setOutputFormat(format)}
                       className={`px-4 py-2 rounded-md text-sm font-medium ${
                         outputFormat === format
-                          ? 'bg-blue-100 text-blue-700 border-2 border-blue-500'
-                          : 'bg-gray-100 text-gray-700 border-2 border-transparent hover:bg-gray-200'
+                          ? 'bg-primary-subtle text-primary border-2 border-blue-500'
+                          : 'bg-surface-hover text-secondary border-2 border-transparent hover:bg-surface-hover'
                       }`}
                     >
                       {format.toUpperCase()}
@@ -360,17 +360,17 @@ export default function ReportExecutionPage() {
 
           {/* Current Execution Status */}
           {currentExecution && (
-            <div className="bg-white rounded-lg shadow">
-              <div className="px-6 py-4 border-b border-gray-200">
-                <h2 className="text-lg font-medium text-gray-900">Current Execution</h2>
+            <div className="bg-surface rounded-lg shadow">
+              <div className="px-6 py-4 border-b border-border">
+                <h2 className="text-lg font-medium text-foreground">Current Execution</h2>
               </div>
               <div className="p-6">
                 <div className="flex items-center justify-between mb-4">
                   <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                    currentExecution.status === 'completed' ? 'bg-green-100 text-green-800' :
-                    currentExecution.status === 'failed' ? 'bg-red-100 text-red-800' :
-                    currentExecution.status === 'running' ? 'bg-blue-100 text-blue-800' :
-                    'bg-yellow-100 text-yellow-800'
+                    currentExecution.status === 'completed' ? 'bg-success-subtle text-success' :
+                    currentExecution.status === 'failed' ? 'bg-error-subtle text-error' :
+                    currentExecution.status === 'running' ? 'bg-primary-subtle text-primary' :
+                    'bg-warning-subtle text-warning'
                   }`}>
                     {currentExecution.status === 'running' && (
                       <Loader2 className="h-3 w-3 mr-1 animate-spin" />
@@ -381,7 +381,7 @@ export default function ReportExecutionPage() {
                     {currentExecution.status.charAt(0).toUpperCase() + currentExecution.status.slice(1)}
                   </span>
                   {currentExecution.output_format && (
-                    <span className="text-xs text-gray-500">{currentExecution.output_format.toUpperCase()}</span>
+                    <span className="text-xs text-muted">{currentExecution.output_format.toUpperCase()}</span>
                   )}
                 </div>
 
@@ -393,8 +393,8 @@ export default function ReportExecutionPage() {
                 )}
 
                 {currentExecution.status === 'failed' && currentExecution.error && (
-                  <div className="p-3 bg-red-50 border border-red-200 rounded-md">
-                    <p className="text-sm text-red-700">{currentExecution.error}</p>
+                  <div className="p-3 bg-error-subtle border border-red-200 rounded-md">
+                    <p className="text-sm text-error">{currentExecution.error}</p>
                   </div>
                 )}
               </div>
@@ -406,33 +406,33 @@ export default function ReportExecutionPage() {
         <div className="lg:col-span-2 space-y-6">
           {/* Preview */}
           {previewData && (
-            <div className="bg-white rounded-lg shadow">
-              <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
-                <h2 className="text-lg font-medium text-gray-900">Preview (First 20 rows)</h2>
+            <div className="bg-surface rounded-lg shadow">
+              <div className="px-6 py-4 border-b border-border flex items-center justify-between">
+                <h2 className="text-lg font-medium text-foreground">Preview (First 20 rows)</h2>
                 <Button variant="ghost" size="sm" onClick={() => setPreviewData(null)}>
                   Close
                 </Button>
               </div>
               <div className="overflow-x-auto">
                 {previewData.length > 0 ? (
-                  <table className="min-w-full divide-y divide-gray-200">
-                    <thead className="bg-gray-50">
+                  <table className="min-w-full divide-y divide-border">
+                    <thead className="bg-surface-hover">
                       <tr>
                         {Object.keys(previewData[0]).map((key) => (
                           <th
                             key={key}
-                            className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                            className="px-4 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider"
                           >
                             {key.replace(/_/g, ' ')}
                           </th>
                         ))}
                       </tr>
                     </thead>
-                    <tbody className="bg-white divide-y divide-gray-200">
+                    <tbody className="bg-surface divide-y divide-border">
                       {previewData.slice(0, 20).map((row, idx) => (
-                        <tr key={idx} className="hover:bg-gray-50">
+                        <tr key={idx} className="hover:bg-surface-hover">
                           {Object.values(row).map((value, vIdx) => (
-                            <td key={vIdx} className="px-4 py-3 text-sm text-gray-900 whitespace-nowrap">
+                            <td key={vIdx} className="px-4 py-3 text-sm text-foreground whitespace-nowrap">
                               {typeof value === 'object' ? JSON.stringify(value) : String(value || '-')}
                             </td>
                           ))}
@@ -441,50 +441,50 @@ export default function ReportExecutionPage() {
                     </tbody>
                   </table>
                 ) : (
-                  <div className="p-8 text-center text-gray-500">No data matches the current filters</div>
+                  <div className="p-8 text-center text-muted">No data matches the current filters</div>
                 )}
               </div>
             </div>
           )}
 
           {/* Execution History */}
-          <div className="bg-white rounded-lg shadow">
-            <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
-              <h2 className="text-lg font-medium text-gray-900">Execution History</h2>
+          <div className="bg-surface rounded-lg shadow">
+            <div className="px-6 py-4 border-b border-border flex items-center justify-between">
+              <h2 className="text-lg font-medium text-foreground">Execution History</h2>
               <Button variant="ghost" size="sm" onClick={loadExecutions}>
                 <RefreshCw className="h-4 w-4" />
               </Button>
             </div>
             {executions.length > 0 ? (
-              <div className="divide-y divide-gray-200">
+              <div className="divide-y divide-border">
                 {executions.map((execution) => (
-                  <div key={execution.id} className="p-4 flex items-center justify-between hover:bg-gray-50">
+                  <div key={execution.id} className="p-4 flex items-center justify-between hover:bg-surface-hover">
                     <div className="flex items-center">
                       <div className={`h-10 w-10 rounded-lg flex items-center justify-center ${
-                        execution.status === 'completed' ? 'bg-green-100' :
-                        execution.status === 'failed' ? 'bg-red-100' :
-                        'bg-yellow-100'
+                        execution.status === 'completed' ? 'bg-success-subtle' :
+                        execution.status === 'failed' ? 'bg-error-subtle' :
+                        'bg-warning-subtle'
                       }`}>
                         {execution.status === 'completed' ? (
-                          <FileText className="h-5 w-5 text-green-600" />
+                          <FileText className="h-5 w-5 text-success" />
                         ) : execution.status === 'failed' ? (
-                          <AlertCircle className="h-5 w-5 text-red-600" />
+                          <AlertCircle className="h-5 w-5 text-error" />
                         ) : (
-                          <Loader2 className="h-5 w-5 text-yellow-600 animate-spin" />
+                          <Loader2 className="h-5 w-5 text-warning animate-spin" />
                         )}
                       </div>
                       <div className="ml-4">
                         <div className="flex items-center space-x-2">
                           <span className={`px-2 py-0.5 rounded text-xs font-medium ${
-                            execution.status === 'completed' ? 'bg-green-100 text-green-800' :
-                            execution.status === 'failed' ? 'bg-red-100 text-red-800' :
-                            'bg-yellow-100 text-yellow-800'
+                            execution.status === 'completed' ? 'bg-success-subtle text-success' :
+                            execution.status === 'failed' ? 'bg-error-subtle text-error' :
+                            'bg-warning-subtle text-warning'
                           }`}>
                             {execution.status}
                           </span>
-                          <span className="text-xs text-gray-500">{execution.output_format?.toUpperCase()}</span>
+                          <span className="text-xs text-muted">{execution.output_format?.toUpperCase()}</span>
                         </div>
-                        <p className="text-sm text-gray-500 mt-1">
+                        <p className="text-sm text-muted mt-1">
                           <Clock className="h-3 w-3 inline mr-1" />
                           {formatDate(execution.started_at)}
                         </p>
@@ -499,8 +499,8 @@ export default function ReportExecutionPage() {
                 ))}
               </div>
             ) : (
-              <div className="p-8 text-center text-gray-500">
-                <FileText className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+              <div className="p-8 text-center text-muted">
+                <FileText className="h-12 w-12 text-muted mx-auto mb-4" />
                 <p>No execution history yet</p>
                 <p className="text-sm">Run the report to see results here</p>
               </div>

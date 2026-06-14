@@ -438,7 +438,7 @@ export default function ScheduleEditorPage() {
                     <div
                       key={day.toISOString()}
                       className={`border rounded-xl p-3 min-h-[100px] ${
-                        today ? 'border-blue-500 bg-blue-50' : 'border-border'
+                        today ? 'border-blue-500 bg-primary-subtle' : 'border-border'
                       }`}
                     >
                       <div className="text-xs text-muted">
@@ -449,7 +449,7 @@ export default function ScheduleEditorPage() {
                       </div>
                       {shift && (
                         <div className={`mt-2 p-2 rounded text-xs ${
-                          shift.is_override ? 'bg-yellow-100 text-warning' : 'bg-success-subtle text-success'
+                          shift.is_override ? 'bg-warning-subtle text-warning' : 'bg-success-subtle text-success'
                         }`}>
                           <div className="font-medium">{shift.user_name}</div>
                           {shift.is_override && (
@@ -598,7 +598,7 @@ export default function ScheduleEditorPage() {
                       </div>
                       <button
                         onClick={() => handleRemoveMember(member.id)}
-                        className="bg-error-subtle0 hover:text-red-700"
+                        className="bg-error-subtle0 hover:text-error"
                       >
                         <Trash2 className="h-4 w-4" />
                       </button>
@@ -633,7 +633,7 @@ export default function ScheduleEditorPage() {
                         <div className="font-medium text-foreground">{currentShift.user_name}</div>
                         <div className="text-sm text-muted">{currentShift.user_email}</div>
                         {currentShift.is_override && (
-                          <span className="text-xs bg-yellow-100 text-warning px-2 py-0.5 rounded">
+                          <span className="text-xs bg-warning-subtle text-warning px-2 py-0.5 rounded">
                             Override
                           </span>
                         )}

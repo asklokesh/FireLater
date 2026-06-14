@@ -384,16 +384,16 @@ export default function RequestDetailPage() {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <Loader2 className="h-8 w-8 animate-spin text-blue-500" />
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
       </div>
     );
   }
 
   if (error || !request) {
     return (
-      <div className="bg-red-50 border border-red-200 rounded-lg p-6 text-center">
-        <AlertCircle className="h-12 w-12 text-red-500 mx-auto mb-4" />
-        <h3 className="text-lg font-medium text-red-800 mb-2">{error || 'Request not found'}</h3>
+      <div className="bg-error-subtle border border-red-200 rounded-lg p-6 text-center">
+        <AlertCircle className="h-12 w-12 text-error mx-auto mb-4" />
+        <h3 className="text-lg font-medium text-error mb-2">{error || 'Request not found'}</h3>
         <Link href="/catalog">
           <Button variant="outline">Back to Catalog</Button>
         </Link>
@@ -414,12 +414,12 @@ export default function RequestDetailPage() {
     <div className="space-y-6">
       {/* Action Error Alert */}
       {actionError && (
-        <div className="flex items-center gap-2 p-4 text-sm text-red-800 bg-red-100 rounded-md">
+        <div className="flex items-center gap-2 p-4 text-sm text-error bg-error-subtle rounded-md">
           <AlertCircle className="h-4 w-4" />
           {actionError}
           <button
             onClick={() => setActionError(null)}
-            className="ml-auto text-red-600 hover:text-red-800"
+            className="ml-auto text-error hover:text-error"
           >
             Dismiss
           </button>
@@ -436,7 +436,7 @@ export default function RequestDetailPage() {
           </Link>
           <div>
             <div className="flex items-center space-x-3">
-              <h1 className="text-2xl font-bold text-gray-900">{request.request_id}</h1>
+              <h1 className="text-2xl font-bold text-foreground">{request.request_id}</h1>
               <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${statusCfg.bg} ${statusCfg.text}`}>
                 <StatusIcon className="h-3 w-3 mr-1" />
                 {request.status.replace('_', ' ')}
@@ -445,7 +445,7 @@ export default function RequestDetailPage() {
                 <select
                   value={editForm.priority}
                   onChange={(e) => setEditForm({ ...editForm, priority: e.target.value as 'low' | 'medium' | 'high' | 'critical' })}
-                  className="px-2 py-1 border border-gray-300 rounded-md text-xs focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="px-2 py-1 border border-border-strong rounded-md text-xs focus:outline-none focus:ring-2 focus:ring-primary"
                 >
                   <option value="low">Low</option>
                   <option value="medium">Medium</option>
@@ -458,7 +458,7 @@ export default function RequestDetailPage() {
                 </span>
               )}
             </div>
-            <p className="mt-1 text-lg text-gray-600">{request.catalog_item.name}</p>
+            <p className="mt-1 text-lg text-secondary">{request.catalog_item.name}</p>
           </div>
         </div>
         <div className="flex items-center space-x-2">
@@ -513,8 +513,8 @@ export default function RequestDetailPage() {
         {/* Left Column - Main Info */}
         <div className="lg:col-span-2 space-y-6">
           {/* Tabs */}
-          <div className="bg-white rounded-lg shadow">
-            <div className="border-b border-gray-200">
+          <div className="bg-surface rounded-lg shadow">
+            <div className="border-b border-border">
               <nav className="flex -mb-px">
                 {[
                   { id: 'details', label: 'Details', icon: ShoppingCart },
@@ -527,19 +527,19 @@ export default function RequestDetailPage() {
                     onClick={() => setActiveTab(tab.id as typeof activeTab)}
                     className={`flex items-center px-6 py-4 text-sm font-medium border-b-2 ${
                       activeTab === tab.id
-                        ? 'border-blue-500 text-blue-600'
-                        : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                        ? 'border-blue-500 text-primary'
+                        : 'border-transparent text-muted hover:text-secondary hover:border-border-strong'
                     }`}
                   >
                     <tab.icon className="h-4 w-4 mr-2" />
                     {tab.label}
                     {tab.id === 'approvals' && approvals.filter((a) => a.status === 'pending').length > 0 && (
-                      <span className="ml-2 px-2 py-0.5 text-xs bg-yellow-100 text-yellow-800 rounded-full">
+                      <span className="ml-2 px-2 py-0.5 text-xs bg-warning-subtle text-warning rounded-full">
                         {approvals.filter((a) => a.status === 'pending').length}
                       </span>
                     )}
                     {tab.id === 'comments' && comments.length > 0 && (
-                      <span className="ml-2 px-2 py-0.5 text-xs bg-gray-100 text-gray-600 rounded-full">
+                      <span className="ml-2 px-2 py-0.5 text-xs bg-surface-hover text-secondary rounded-full">
                         {comments.length}
                       </span>
                     )}
@@ -553,49 +553,49 @@ export default function RequestDetailPage() {
               {activeTab === 'details' && (
                 <div className="space-y-6">
                   <div>
-                    <h3 className="text-sm font-medium text-gray-500 mb-2">Description</h3>
-                    <p className="text-gray-900">{request.catalog_item.description}</p>
+                    <h3 className="text-sm font-medium text-muted mb-2">Description</h3>
+                    <p className="text-foreground">{request.catalog_item.description}</p>
                   </div>
 
                   <div>
-                    <h3 className="text-sm font-medium text-gray-500 mb-2">Additional Notes</h3>
+                    <h3 className="text-sm font-medium text-muted mb-2">Additional Notes</h3>
                     {isEditing ? (
                       <textarea
                         value={editForm.notes}
                         onChange={(e) => setEditForm({ ...editForm, notes: e.target.value })}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        className="w-full px-3 py-2 border border-border-strong rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary"
                         rows={3}
                         placeholder="Add additional notes..."
                       />
                     ) : (
-                      <p className="text-gray-900">{request.notes || 'No additional notes'}</p>
+                      <p className="text-foreground">{request.notes || 'No additional notes'}</p>
                     )}
                   </div>
 
                   <div>
-                    <h3 className="text-sm font-medium text-gray-500 mb-2">Form Data</h3>
-                    <div className="bg-gray-50 rounded-lg p-4">
+                    <h3 className="text-sm font-medium text-muted mb-2">Form Data</h3>
+                    <div className="bg-surface-hover rounded-lg p-4">
                       {Object.entries(request.form_data).length > 0 ? (
                         <dl className="space-y-2">
                           {Object.entries(request.form_data).map(([key, value]) => (
                             <div key={key} className="flex justify-between">
-                              <dt className="text-sm text-gray-500 capitalize">{key.replace(/_/g, ' ')}</dt>
-                              <dd className="text-sm font-medium text-gray-900">
+                              <dt className="text-sm text-muted capitalize">{key.replace(/_/g, ' ')}</dt>
+                              <dd className="text-sm font-medium text-foreground">
                                 {typeof value === 'object' ? JSON.stringify(value) : String(value)}
                               </dd>
                             </div>
                           ))}
                         </dl>
                       ) : (
-                        <p className="text-sm text-gray-500">No form data submitted</p>
+                        <p className="text-sm text-muted">No form data submitted</p>
                       )}
                     </div>
                   </div>
 
                   {request.cancel_reason && (
-                    <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-                      <h3 className="text-sm font-medium text-red-800 mb-1">Cancellation Reason</h3>
-                      <p className="text-sm text-red-700">{request.cancel_reason}</p>
+                    <div className="bg-error-subtle border border-red-200 rounded-lg p-4">
+                      <h3 className="text-sm font-medium text-error mb-1">Cancellation Reason</h3>
+                      <p className="text-sm text-error">{request.cancel_reason}</p>
                     </div>
                   )}
                 </div>
@@ -605,28 +605,28 @@ export default function RequestDetailPage() {
               {activeTab === 'approvals' && (
                 <div className="space-y-4">
                   {approvals.length === 0 ? (
-                    <p className="text-gray-500 text-center py-8">No approvals required for this request</p>
+                    <p className="text-muted text-center py-8">No approvals required for this request</p>
                   ) : (
                     approvals.map((approval) => (
-                      <div key={approval.id} className="border border-gray-200 rounded-lg p-4">
+                      <div key={approval.id} className="border border-border rounded-lg p-4">
                         <div className="flex items-center justify-between mb-3">
                           <div>
-                            <h4 className="font-medium text-gray-900">{approval.step_name}</h4>
-                            <p className="text-sm text-gray-500">
+                            <h4 className="font-medium text-foreground">{approval.step_name}</h4>
+                            <p className="text-sm text-muted">
                               {approval.approver_name || 'Pending assignment'}
                             </p>
                           </div>
                           <span className={`px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                            approval.status === 'approved' ? 'bg-green-100 text-green-800' :
-                            approval.status === 'rejected' ? 'bg-red-100 text-red-800' :
-                            'bg-yellow-100 text-yellow-800'
+                            approval.status === 'approved' ? 'bg-success-subtle text-success' :
+                            approval.status === 'rejected' ? 'bg-error-subtle text-error' :
+                            'bg-warning-subtle text-warning'
                           }`}>
                             {approval.status}
                           </span>
                         </div>
 
                         {approval.comments && (
-                          <p className="text-sm text-gray-600 mb-3">{approval.comments}</p>
+                          <p className="text-sm text-secondary mb-3">{approval.comments}</p>
                         )}
 
                         {approval.status === 'pending' && (
@@ -636,7 +636,7 @@ export default function RequestDetailPage() {
                               onChange={(e) => setApprovalComment(e.target.value)}
                               placeholder="Add comments (optional)"
                               rows={2}
-                              className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                              className="w-full px-3 py-2 border border-border-strong rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary"
                             />
                             <div className="flex space-x-2">
                               <Button
@@ -652,7 +652,7 @@ export default function RequestDetailPage() {
                                 disabled={isSubmitting}
                                 variant="outline"
                                 size="sm"
-                                className="text-red-600 border-red-300 hover:bg-red-50"
+                                className="text-error border-red-300 hover:bg-error-subtle"
                               >
                                 <XCircle className="h-4 w-4 mr-1" />
                                 Reject
@@ -662,7 +662,7 @@ export default function RequestDetailPage() {
                         )}
 
                         {(approval.approved_at || approval.rejected_at) && (
-                          <p className="text-xs text-gray-500 mt-2">
+                          <p className="text-xs text-muted mt-2">
                             {approval.status === 'approved' ? 'Approved' : 'Rejected'} on{' '}
                             {formatDate(approval.approved_at || approval.rejected_at || '')}
                           </p>
@@ -683,10 +683,10 @@ export default function RequestDetailPage() {
                       onChange={(e) => setNewComment(e.target.value)}
                       placeholder="Add a comment..."
                       rows={3}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="w-full px-3 py-2 border border-border-strong rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary"
                     />
                     <div className="flex items-center justify-between">
-                      <label className="flex items-center text-sm text-gray-600">
+                      <label className="flex items-center text-sm text-secondary">
                         <input
                           type="checkbox"
                           checked={isInternal}
@@ -705,32 +705,32 @@ export default function RequestDetailPage() {
                   {/* Comments List */}
                   <div className="space-y-4">
                     {comments.length === 0 ? (
-                      <p className="text-gray-500 text-center py-8">No comments yet</p>
+                      <p className="text-muted text-center py-8">No comments yet</p>
                     ) : (
                       comments.map((comment) => (
                         <div
                           key={comment.id}
                           className={`p-4 rounded-lg ${
-                            comment.is_internal ? 'bg-yellow-50 border border-yellow-200' : 'bg-gray-50'
+                            comment.is_internal ? 'bg-warning-subtle border border-yellow-200' : 'bg-surface-hover'
                           }`}
                         >
                           <div className="flex items-center justify-between mb-2">
                             <div className="flex items-center">
-                              <div className="h-8 w-8 rounded-full bg-gray-200 flex items-center justify-center text-sm font-medium text-gray-600">
+                              <div className="h-8 w-8 rounded-full bg-surface-hover flex items-center justify-center text-sm font-medium text-secondary">
                                 {comment.user.name.charAt(0)}
                               </div>
                               <div className="ml-3">
-                                <p className="text-sm font-medium text-gray-900">{comment.user.name}</p>
-                                <p className="text-xs text-gray-500">{formatDate(comment.created_at)}</p>
+                                <p className="text-sm font-medium text-foreground">{comment.user.name}</p>
+                                <p className="text-xs text-muted">{formatDate(comment.created_at)}</p>
                               </div>
                             </div>
                             {comment.is_internal && (
-                              <span className="text-xs bg-yellow-100 text-yellow-800 px-2 py-0.5 rounded">
+                              <span className="text-xs bg-warning-subtle text-warning px-2 py-0.5 rounded">
                                 Internal
                               </span>
                             )}
                           </div>
-                          <p className="text-sm text-gray-700 whitespace-pre-wrap">{comment.content}</p>
+                          <p className="text-sm text-secondary whitespace-pre-wrap">{comment.content}</p>
                         </div>
                       ))
                     )}
@@ -742,7 +742,7 @@ export default function RequestDetailPage() {
               {activeTab === 'history' && (
                 <div className="space-y-4">
                   {history.length === 0 ? (
-                    <p className="text-gray-500 text-center py-8">No history available</p>
+                    <p className="text-muted text-center py-8">No history available</p>
                   ) : (
                     <div className="flow-root">
                       <ul className="-mb-8">
@@ -750,17 +750,17 @@ export default function RequestDetailPage() {
                           <li key={item.id}>
                             <div className="relative pb-8">
                               {idx !== history.length - 1 && (
-                                <span className="absolute top-4 left-4 -ml-px h-full w-0.5 bg-gray-200" />
+                                <span className="absolute top-4 left-4 -ml-px h-full w-0.5 bg-surface-hover" />
                               )}
                               <div className="relative flex space-x-3">
                                 <div>
-                                  <span className="h-8 w-8 rounded-full bg-blue-100 flex items-center justify-center">
-                                    <History className="h-4 w-4 text-blue-600" />
+                                  <span className="h-8 w-8 rounded-full bg-primary-subtle flex items-center justify-center">
+                                    <History className="h-4 w-4 text-primary" />
                                   </span>
                                 </div>
                                 <div className="flex-1 min-w-0">
-                                  <div className="text-sm text-gray-500">
-                                    <span className="font-medium text-gray-900">{item.changed_by_name}</span>
+                                  <div className="text-sm text-muted">
+                                    <span className="font-medium text-foreground">{item.changed_by_name}</span>
                                     {' changed status '}
                                     {item.from_status && (
                                       <>
@@ -773,9 +773,9 @@ export default function RequestDetailPage() {
                                     <span className="font-medium">{item.to_status.replace('_', ' ')}</span>
                                   </div>
                                   {item.notes && (
-                                    <p className="mt-1 text-sm text-gray-600">{item.notes}</p>
+                                    <p className="mt-1 text-sm text-secondary">{item.notes}</p>
                                   )}
-                                  <p className="mt-1 text-xs text-gray-400">{formatDate(item.created_at)}</p>
+                                  <p className="mt-1 text-xs text-muted">{formatDate(item.created_at)}</p>
                                 </div>
                               </div>
                             </div>
@@ -793,47 +793,47 @@ export default function RequestDetailPage() {
         {/* Right Column - Sidebar */}
         <div className="space-y-6">
           {/* Request Info */}
-          <div className="bg-white rounded-lg shadow p-6">
-            <h3 className="text-lg font-medium text-gray-900 mb-4">Request Information</h3>
+          <div className="bg-surface rounded-lg shadow p-6">
+            <h3 className="text-lg font-medium text-foreground mb-4">Request Information</h3>
             <dl className="space-y-4">
               <div>
-                <dt className="text-sm text-gray-500">Requester</dt>
+                <dt className="text-sm text-muted">Requester</dt>
                 <dd className="mt-1 flex items-center">
-                  <User className="h-4 w-4 text-gray-400 mr-2" />
-                  <span className="text-sm font-medium text-gray-900">{request.requester.name}</span>
+                  <User className="h-4 w-4 text-muted mr-2" />
+                  <span className="text-sm font-medium text-foreground">{request.requester.name}</span>
                 </dd>
               </div>
 
               {request.requested_for && request.requested_for.id !== request.requester.id && (
                 <div>
-                  <dt className="text-sm text-gray-500">Requested For</dt>
+                  <dt className="text-sm text-muted">Requested For</dt>
                   <dd className="mt-1 flex items-center">
-                    <User className="h-4 w-4 text-gray-400 mr-2" />
-                    <span className="text-sm font-medium text-gray-900">{request.requested_for.name}</span>
+                    <User className="h-4 w-4 text-muted mr-2" />
+                    <span className="text-sm font-medium text-foreground">{request.requested_for.name}</span>
                   </dd>
                 </div>
               )}
 
               <div>
-                <dt className="text-sm text-gray-500">Created</dt>
+                <dt className="text-sm text-muted">Created</dt>
                 <dd className="mt-1 flex items-center">
-                  <Clock className="h-4 w-4 text-gray-400 mr-2" />
-                  <span className="text-sm text-gray-900">{formatDate(request.created_at)}</span>
+                  <Clock className="h-4 w-4 text-muted mr-2" />
+                  <span className="text-sm text-foreground">{formatDate(request.created_at)}</span>
                 </dd>
               </div>
 
               {request.due_date && (
                 <div>
-                  <dt className="text-sm text-gray-500">Due Date</dt>
+                  <dt className="text-sm text-muted">Due Date</dt>
                   <dd className="mt-1 flex items-center">
-                    <Clock className="h-4 w-4 text-gray-400 mr-2" />
-                    <span className="text-sm text-gray-900">{formatDate(request.due_date)}</span>
+                    <Clock className="h-4 w-4 text-muted mr-2" />
+                    <span className="text-sm text-foreground">{formatDate(request.due_date)}</span>
                   </dd>
                 </div>
               )}
 
               <div>
-                <dt className="text-sm text-gray-500">Cost Center</dt>
+                <dt className="text-sm text-muted">Cost Center</dt>
                 {isEditing ? (
                   <dd className="mt-1">
                     <Input
@@ -844,16 +844,16 @@ export default function RequestDetailPage() {
                     />
                   </dd>
                 ) : (
-                  <dd className="mt-1 text-sm text-gray-900">{request.cost_center || '-'}</dd>
+                  <dd className="mt-1 text-sm text-foreground">{request.cost_center || '-'}</dd>
                 )}
               </div>
 
               {request.completed_at && (
                 <div>
-                  <dt className="text-sm text-gray-500">Completed</dt>
+                  <dt className="text-sm text-muted">Completed</dt>
                   <dd className="mt-1 flex items-center">
-                    <CheckCircle className="h-4 w-4 text-green-500 mr-2" />
-                    <span className="text-sm text-gray-900">{formatDate(request.completed_at)}</span>
+                    <CheckCircle className="h-4 w-4 text-success mr-2" />
+                    <span className="text-sm text-foreground">{formatDate(request.completed_at)}</span>
                   </dd>
                 </div>
               )}
@@ -861,26 +861,26 @@ export default function RequestDetailPage() {
           </div>
 
           {/* Assignment */}
-          <div className="bg-white rounded-lg shadow p-6">
-            <h3 className="text-lg font-medium text-gray-900 mb-4">Assignment</h3>
+          <div className="bg-surface rounded-lg shadow p-6">
+            <h3 className="text-lg font-medium text-foreground mb-4">Assignment</h3>
             {request.assigned_to ? (
               <div className="flex items-center">
-                <div className="h-10 w-10 rounded-full bg-gray-200 flex items-center justify-center text-sm font-medium text-gray-600">
+                <div className="h-10 w-10 rounded-full bg-surface-hover flex items-center justify-center text-sm font-medium text-secondary">
                   {request.assigned_to.name.charAt(0)}
                 </div>
                 <div className="ml-3">
-                  <p className="text-sm font-medium text-gray-900">{request.assigned_to.name}</p>
-                  <p className="text-xs text-gray-500">{request.assigned_to.email}</p>
+                  <p className="text-sm font-medium text-foreground">{request.assigned_to.name}</p>
+                  <p className="text-xs text-muted">{request.assigned_to.email}</p>
                 </div>
               </div>
             ) : (
               <div className="space-y-3">
-                <p className="text-sm text-gray-500">Not assigned</p>
+                <p className="text-sm text-muted">Not assigned</p>
                 <div className="flex space-x-2">
                   <select
                     value={selectedAssignee}
                     onChange={(e) => setSelectedAssignee(e.target.value)}
-                    className="flex-1 px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="flex-1 px-3 py-2 border border-border-strong rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary"
                   >
                     <option value="">Select user...</option>
                     {users.map((user) => (
@@ -898,8 +898,8 @@ export default function RequestDetailPage() {
           </div>
 
           {/* Timeline Summary */}
-          <div className="bg-white rounded-lg shadow p-6">
-            <h3 className="text-lg font-medium text-gray-900 mb-4">Progress</h3>
+          <div className="bg-surface rounded-lg shadow p-6">
+            <h3 className="text-lg font-medium text-foreground mb-4">Progress</h3>
             <div className="space-y-3">
               {['submitted', 'pending_approval', 'approved', 'in_progress', 'completed'].map((status, _idx) => {
                 const isActive = request.status === status;
@@ -914,10 +914,10 @@ export default function RequestDetailPage() {
                 return (
                   <div key={status} className="flex items-center">
                     <div className={`h-3 w-3 rounded-full ${
-                      isActive ? 'bg-blue-500' : isPast ? 'bg-green-500' : 'bg-gray-300'
+                      isActive ? 'bg-primary' : isPast ? 'bg-success' : 'bg-border-strong'
                     }`} />
                     <span className={`ml-3 text-sm ${
-                      isActive ? 'text-blue-600 font-medium' : isPast ? 'text-gray-900' : 'text-gray-400'
+                      isActive ? 'text-primary font-medium' : isPast ? 'text-foreground' : 'text-muted'
                     }`}>
                       {status.replace('_', ' ').charAt(0).toUpperCase() + status.replace('_', ' ').slice(1)}
                     </span>
@@ -926,14 +926,14 @@ export default function RequestDetailPage() {
               })}
               {request.status === 'cancelled' && (
                 <div className="flex items-center">
-                  <div className="h-3 w-3 rounded-full bg-red-500" />
-                  <span className="ml-3 text-sm text-red-600 font-medium">Cancelled</span>
+                  <div className="h-3 w-3 rounded-full bg-error" />
+                  <span className="ml-3 text-sm text-error font-medium">Cancelled</span>
                 </div>
               )}
               {request.status === 'rejected' && (
                 <div className="flex items-center">
-                  <div className="h-3 w-3 rounded-full bg-red-500" />
-                  <span className="ml-3 text-sm text-red-600 font-medium">Rejected</span>
+                  <div className="h-3 w-3 rounded-full bg-error" />
+                  <span className="ml-3 text-sm text-error font-medium">Rejected</span>
                 </div>
               )}
             </div>
@@ -944,9 +944,9 @@ export default function RequestDetailPage() {
       {/* Cancel Modal */}
       {showCancelModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4 p-6">
-            <h2 className="text-lg font-semibold text-gray-900 mb-4">Cancel Request</h2>
-            <p className="text-sm text-gray-600 mb-4">
+          <div className="bg-surface rounded-lg shadow-xl max-w-md w-full mx-4 p-6">
+            <h2 className="text-lg font-semibold text-foreground mb-4">Cancel Request</h2>
+            <p className="text-sm text-secondary mb-4">
               Please provide a reason for cancelling this request.
             </p>
             <textarea
@@ -954,7 +954,7 @@ export default function RequestDetailPage() {
               onChange={(e) => setCancelReason(e.target.value)}
               placeholder="Reason for cancellation..."
               rows={3}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 mb-4"
+              className="w-full px-3 py-2 border border-border-strong rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary mb-4"
             />
             <div className="flex justify-end space-x-3">
               <Button variant="outline" onClick={() => setShowCancelModal(false)}>
@@ -963,7 +963,7 @@ export default function RequestDetailPage() {
               <Button
                 onClick={handleCancel}
                 disabled={!cancelReason.trim() || isSubmitting}
-                className="bg-red-600 hover:bg-red-700"
+                className="bg-error hover:bg-error"
               >
                 Cancel Request
               </Button>

@@ -62,7 +62,7 @@ export default function CatalogItemPage() {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <Loader2 className="h-8 w-8 animate-spin text-blue-500" />
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
       </div>
     );
   }
@@ -264,7 +264,7 @@ export default function CatalogItemPage() {
               </div>
               <div className="flex items-center">
                 {item.approvalRequired ? (
-                  <AlertCircle className="h-5 w-5 text-yellow-500 mr-3" />
+                  <AlertCircle className="h-5 w-5 text-warning mr-3" />
                 ) : (
                   <CheckCircle className="h-5 w-5 text-success mr-3" />
                 )}
@@ -293,7 +293,7 @@ export default function CatalogItemPage() {
             <ul className="space-y-2">
               {item.requirements?.map((req: string, index: number) => (
                 <li key={index} className="flex items-start text-sm">
-                  <AlertCircle className="h-4 w-4 text-yellow-500 mr-2 flex-shrink-0 mt-0.5" />
+                  <AlertCircle className="h-4 w-4 text-warning mr-2 flex-shrink-0 mt-0.5" />
                   <span className="text-secondary">{req}</span>
                 </li>
               ))}

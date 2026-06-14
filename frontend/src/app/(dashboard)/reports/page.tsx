@@ -88,7 +88,7 @@ const typeIcons: Record<string, typeof FileText> = {
 
 const typeColors: Record<string, string> = {
   issues: 'bg-error-subtle text-error',
-  changes: 'bg-warning-subtle text-yellow-600',
+  changes: 'bg-warning-subtle text-warning',
   applications: 'bg-info-subtle text-primary',
   sla: 'bg-info-subtle text-primary',
   requests: 'bg-success-subtle text-success',
@@ -182,8 +182,8 @@ export default function ReportsPage() {
   };
 
   const statusColors: Record<string, string> = {
-    completed: 'text-green-500',
-    failed: 'text-red-500',
+    completed: 'text-success',
+    failed: 'text-error',
     running: 'text-primary animate-spin',
     pending: 'text-muted',
   };
@@ -310,7 +310,7 @@ export default function ReportsPage() {
                           </Link>
                           <button
                             onClick={() => setShowDeleteConfirm(template.id)}
-                            className="w-full text-left px-4 py-2 text-sm text-error hover:bg-red-50"
+                            className="w-full text-left px-4 py-2 text-sm text-error hover:bg-error-subtle"
                           >
                             <Trash2 className="h-4 w-4 inline mr-2" />
                             Delete
@@ -368,7 +368,7 @@ export default function ReportsPage() {
               <p className="mt-1 text-sm text-muted">Run a report to see execution history.</p>
             </div>
           ) : (
-            <table className="min-w-full divide-y divide-gray-200">
+            <table className="min-w-full divide-y divide-border">
               <thead className="bg-background">
                 <tr>
                   <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">
@@ -391,7 +391,7 @@ export default function ReportsPage() {
                   </th>
                 </tr>
               </thead>
-              <tbody className="bg-surface divide-y divide-gray-200">
+              <tbody className="bg-surface divide-y divide-border">
                 {executions.map((execution) => {
                   const StatusIcon = statusIcons[execution.status] || Clock;
                   return (
@@ -410,7 +410,7 @@ export default function ReportsPage() {
                           {execution.status.charAt(0).toUpperCase() + execution.status.slice(1)}
                         </span>
                         {execution.error_message && (
-                          <p className="text-xs text-red-500 mt-1 truncate max-w-xs">
+                          <p className="text-xs text-error mt-1 truncate max-w-xs">
                             {execution.error_message}
                           </p>
                         )}
@@ -466,7 +466,7 @@ export default function ReportsPage() {
               </p>
             </div>
           ) : (
-            <table className="min-w-full divide-y divide-gray-200">
+            <table className="min-w-full divide-y divide-border">
               <thead className="bg-background">
                 <tr>
                   <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">
@@ -489,7 +489,7 @@ export default function ReportsPage() {
                   </th>
                 </tr>
               </thead>
-              <tbody className="bg-surface divide-y divide-gray-200">
+              <tbody className="bg-surface divide-y divide-border">
                 {schedules.map((schedule) => (
                   <tr key={schedule.id} className="hover:bg-background">
                     <td className="px-6 py-4 whitespace-nowrap">
@@ -535,8 +535,8 @@ export default function ReportsPage() {
                           onClick={() => handleToggleSchedule(schedule)}
                           className={`p-1.5 rounded ${
                             schedule.is_active
-                              ? 'text-yellow-600 hover:bg-yellow-50'
-                              : 'text-success hover:bg-green-50'
+                              ? 'text-warning hover:bg-warning-subtle'
+                              : 'text-success hover:bg-success-subtle'
                           }`}
                           title={schedule.is_active ? 'Pause' : 'Activate'}
                         >
@@ -554,7 +554,7 @@ export default function ReportsPage() {
                         </Link>
                         <button
                           onClick={() => setShowDeleteConfirm(schedule.id)}
-                          className="p-1.5 text-red-400 hover:text-error hover:bg-red-50 rounded"
+                          className="p-1.5 text-error/60 hover:text-error hover:bg-error-subtle rounded"
                         >
                           <Trash2 className="h-4 w-4" />
                         </button>
@@ -599,7 +599,7 @@ export default function ReportsPage() {
                       handleDeleteSchedule(showDeleteConfirm);
                     }
                   }}
-                  className="w-full inline-flex justify-center rounded-lg border border-transparent shadow-sm px-4 py-2 bg-primary text-base font-medium text-white hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 sm:ml-3 sm:w-auto sm:text-sm"
+                  className="w-full inline-flex justify-center rounded-lg border border-transparent shadow-sm px-4 py-2 bg-primary text-base font-medium text-white hover:bg-error focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-error sm:ml-3 sm:w-auto sm:text-sm"
                 >
                   Delete
                 </button>

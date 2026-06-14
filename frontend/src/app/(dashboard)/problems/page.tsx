@@ -81,8 +81,8 @@ export default function ProblemsPage() {
 
   if (error) {
     return (
-      <div className="bg-red-50 border border-red-200 rounded-xl p-6 text-center">
-        <AlertTriangle className="h-12 w-12 text-red-500 mx-auto mb-4" />
+      <div className="bg-error-subtle border border-red-200 rounded-xl p-6 text-center">
+        <AlertTriangle className="h-12 w-12 text-error mx-auto mb-4" />
         <h3 className="text-lg font-medium text-error mb-2">Error loading problems</h3>
         <p className="text-error">Please try refreshing the page</p>
       </div>
@@ -111,7 +111,7 @@ export default function ProblemsPage() {
       <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
         <div className="bg-surface rounded-xl shadow-sm p-4">
           <div className="flex items-center">
-            <AlertTriangle className="h-8 w-8 text-yellow-500 mr-3" />
+            <AlertTriangle className="h-8 w-8 text-warning mr-3" />
             <div>
               <p className="text-sm text-muted">Open Problems</p>
               <p className="text-2xl font-bold text-foreground">{problems.filter((p: Problem) => !['resolved', 'closed'].includes(p.status)).length}</p>
@@ -138,7 +138,7 @@ export default function ProblemsPage() {
         </div>
         <div className="bg-surface rounded-xl shadow-sm p-4">
           <div className="flex items-center">
-            <CheckCircle className="h-8 w-8 text-green-500 mr-3" />
+            <CheckCircle className="h-8 w-8 text-success mr-3" />
             <div>
               <p className="text-sm text-muted">Resolved</p>
               <p className="text-2xl font-bold text-foreground">{problems.filter((p: Problem) => p.status === 'resolved').length}</p>
@@ -241,7 +241,7 @@ export default function ProblemsPage() {
           </div>
         ) : (
           <>
-            <table className="min-w-full divide-y divide-gray-200">
+            <table className="min-w-full divide-y divide-border">
               <thead className="bg-background">
                 <tr>
                   <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">
@@ -267,7 +267,7 @@ export default function ProblemsPage() {
                   </th>
                 </tr>
               </thead>
-              <tbody className="bg-surface divide-y divide-gray-200">
+              <tbody className="bg-surface divide-y divide-border">
                 {problems.map((problem: Problem) => {
                   const priority = problem.priority || 'medium';
                   const status = problem.status || 'new';
@@ -281,7 +281,7 @@ export default function ProblemsPage() {
                       <td className="px-6 py-4">
                         <div className="flex items-start">
                           <AlertTriangle className={`h-5 w-5 mr-3 mt-0.5 ${
-                            priority === 'critical' || priority === 'high' ? 'text-red-500' : 'text-yellow-500'
+                            priority === 'critical' || priority === 'high' ? 'text-error' : 'text-warning'
                           }`} />
                           <div>
                             <div className="flex items-center gap-2">
@@ -332,7 +332,7 @@ export default function ProblemsPage() {
                       <td className="px-6 py-4 whitespace-nowrap">
                         {problem.assignee_name ? (
                           <div className="flex items-center">
-                            <div className="h-8 w-8 rounded-full bg-gray-200 flex items-center justify-center text-sm font-medium text-secondary">
+                            <div className="h-8 w-8 rounded-full bg-surface-hover flex items-center justify-center text-sm font-medium text-secondary">
                               {problem.assignee_name.charAt(0)}
                             </div>
                             <span className="ml-2 text-sm text-foreground">

@@ -112,10 +112,10 @@ export default function RequestsPage() {
 
   if (error) {
     return (
-      <div className="bg-red-50 border border-red-200 rounded-lg p-6 text-center">
-        <AlertCircle className="h-12 w-12 text-red-500 mx-auto mb-4" />
-        <h3 className="text-lg font-medium text-red-800 mb-2">Error loading service requests</h3>
-        <p className="text-red-600">Please try refreshing the page</p>
+      <div className="bg-error-subtle border border-red-200 rounded-lg p-6 text-center">
+        <AlertCircle className="h-12 w-12 text-error mx-auto mb-4" />
+        <h3 className="text-lg font-medium text-error mb-2">Error loading service requests</h3>
+        <p className="text-error">Please try refreshing the page</p>
       </div>
     );
   }
@@ -125,8 +125,8 @@ export default function RequestsPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Service Requests</h1>
-          <p className="mt-1 text-sm text-gray-500">
+          <h1 className="text-2xl font-bold text-foreground">Service Requests</h1>
+          <p className="mt-1 text-sm text-muted">
             View and manage all service requests
           </p>
         </div>
@@ -147,10 +147,10 @@ export default function RequestsPage() {
       </div>
 
       {/* Search and Filters */}
-      <div className="bg-white rounded-lg shadow p-4">
+      <div className="bg-surface rounded-lg shadow p-4">
         <div className="flex flex-col sm:flex-row gap-4">
           <div className="flex-1 relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted" />
             <input
               type="text"
               placeholder="Search by request number or catalog item..."
@@ -159,7 +159,7 @@ export default function RequestsPage() {
                 setSearchQuery(e.target.value);
                 setPage(1);
               }}
-              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full pl-10 pr-4 py-2 border border-border-strong rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary"
             />
           </div>
           <Button
@@ -174,16 +174,16 @@ export default function RequestsPage() {
         </div>
 
         {showFilters && (
-          <div className="mt-4 pt-4 border-t border-gray-200 grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="mt-4 pt-4 border-t border-border grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
+              <label className="block text-sm font-medium text-secondary mb-1">Status</label>
               <select
                 value={statusFilter}
                 onChange={(e) => {
                   setStatusFilter(e.target.value);
                   setPage(1);
                 }}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 border border-border-strong rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary"
               >
                 <option value="all">All Status</option>
                 <option value="submitted">Submitted</option>
@@ -198,14 +198,14 @@ export default function RequestsPage() {
               </select>
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Priority</label>
+              <label className="block text-sm font-medium text-secondary mb-1">Priority</label>
               <select
                 value={priorityFilter}
                 onChange={(e) => {
                   setPriorityFilter(e.target.value);
                   setPage(1);
                 }}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 border border-border-strong rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary"
               >
                 <option value="all">All Priorities</option>
                 <option value="critical">Critical</option>
@@ -219,41 +219,41 @@ export default function RequestsPage() {
       </div>
 
       {/* Requests Table */}
-      <div className="bg-white rounded-lg shadow overflow-hidden">
+      <div className="bg-surface rounded-lg shadow overflow-hidden">
         {isLoading ? (
           <div className="flex items-center justify-center h-64">
-            <Loader2 className="h-8 w-8 animate-spin text-blue-500" />
-            <span className="ml-2 text-gray-500">Loading requests...</span>
+            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            <span className="ml-2 text-muted">Loading requests...</span>
           </div>
         ) : (
           <>
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
+            <table className="min-w-full divide-y divide-border">
+              <thead className="bg-surface-hover">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">
                     Request
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">
                     Catalog Item
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">
                     Priority
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">
                     Status
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">
                     Requester
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">
                     Created
                   </th>
-                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-right text-xs font-medium text-muted uppercase tracking-wider">
                     Actions
                   </th>
                 </tr>
               </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
+              <tbody className="bg-surface divide-y divide-border">
                 {requests.map((request: ServiceRequest) => {
                   const priority = request.priority || 'medium';
                   const status = request.status || 'submitted';
@@ -261,19 +261,19 @@ export default function RequestsPage() {
                   const statusStyle = statusColors[status] || statusColors.submitted;
 
                   return (
-                    <tr key={request.id} className="hover:bg-gray-50">
+                    <tr key={request.id} className="hover:bg-surface-hover">
                       <td className="px-6 py-4">
                         <div className="flex items-start">
-                          <FileText className="h-5 w-5 mr-3 mt-0.5 text-gray-400" />
+                          <FileText className="h-5 w-5 mr-3 mt-0.5 text-muted" />
                           <div>
                             <Link
                               href={`/requests/${request.id}`}
-                              className="text-sm font-medium text-blue-600 hover:text-blue-800"
+                              className="text-sm font-medium text-primary hover:text-primary"
                             >
                               {request.request_number}
                             </Link>
                             {request.notes && (
-                              <p className="text-xs text-gray-500 mt-1 truncate max-w-xs">
+                              <p className="text-xs text-muted mt-1 truncate max-w-xs">
                                 {request.notes}
                               </p>
                             )}
@@ -282,9 +282,9 @@ export default function RequestsPage() {
                       </td>
                       <td className="px-6 py-4">
                         <div>
-                          <p className="text-sm text-gray-900">{request.catalog_item_name}</p>
+                          <p className="text-sm text-foreground">{request.catalog_item_name}</p>
                           {request.catalog_item_category && (
-                            <p className="text-xs text-gray-500">{request.catalog_item_category}</p>
+                            <p className="text-xs text-muted">{request.catalog_item_category}</p>
                           )}
                         </div>
                       </td>
@@ -304,19 +304,19 @@ export default function RequestsPage() {
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="flex items-center">
-                          <div className="h-8 w-8 rounded-full bg-gray-200 flex items-center justify-center text-sm font-medium text-gray-600">
+                          <div className="h-8 w-8 rounded-full bg-surface-hover flex items-center justify-center text-sm font-medium text-secondary">
                             {request.requester_name?.charAt(0) || <User className="h-4 w-4" />}
                           </div>
                           <div className="ml-2">
-                            <p className="text-sm text-gray-900">{request.requester_name || 'Unknown'}</p>
+                            <p className="text-sm text-foreground">{request.requester_name || 'Unknown'}</p>
                             {request.requested_for_name && request.requested_for_name !== request.requester_name && (
-                              <p className="text-xs text-gray-500">For: {request.requested_for_name}</p>
+                              <p className="text-xs text-muted">For: {request.requested_for_name}</p>
                             )}
                           </div>
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="flex items-center text-sm text-gray-500">
+                        <div className="flex items-center text-sm text-muted">
                           <Clock className="h-4 w-4 mr-1" />
                           {formatDate(request.created_at)}
                         </div>
@@ -324,7 +324,7 @@ export default function RequestsPage() {
                       <td className="px-6 py-4 whitespace-nowrap text-right">
                         <DropdownMenu
                           trigger={
-                            <button className="text-gray-400 hover:text-gray-600 p-1 rounded hover:bg-gray-100">
+                            <button className="text-muted hover:text-secondary p-1 rounded hover:bg-surface-hover">
                               <MoreHorizontal className="h-5 w-5" />
                             </button>
                           }
@@ -368,9 +368,9 @@ export default function RequestsPage() {
 
             {requests.length === 0 && (
               <div className="text-center py-12">
-                <FileText className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                <h3 className="text-lg font-medium text-gray-900 mb-2">No requests found</h3>
-                <p className="text-gray-500 mb-4">Try adjusting your search or filters</p>
+                <FileText className="h-12 w-12 text-muted mx-auto mb-4" />
+                <h3 className="text-lg font-medium text-foreground mb-2">No requests found</h3>
+                <p className="text-muted mb-4">Try adjusting your search or filters</p>
                 <Link href="/catalog">
                   <Button>Browse Service Catalog</Button>
                 </Link>
@@ -379,8 +379,8 @@ export default function RequestsPage() {
 
             {/* Pagination */}
             {requests.length > 0 && (
-              <div className="px-6 py-4 border-t border-gray-200 flex items-center justify-between">
-                <div className="text-sm text-gray-500">
+              <div className="px-6 py-4 border-t border-border flex items-center justify-between">
+                <div className="text-sm text-muted">
                   Showing {requests.length} of {pagination.total} requests
                 </div>
                 <div className="flex space-x-2">
