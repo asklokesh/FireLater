@@ -41,8 +41,8 @@ export class ErrorBoundary extends Component<Props, State> {
       return (
         <div className="min-h-[400px] flex items-center justify-center p-6">
           <div className="text-center max-w-md">
-            <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-red-100 mb-4">
-              <AlertTriangle className="w-8 h-8 text-red-600" />
+            <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-error-subtle mb-5">
+              <AlertTriangle className="w-7 h-7 text-error" />
             </div>
             <h2 className="text-xl font-semibold text-gray-900 mb-2">
               Something went wrong
@@ -85,22 +85,22 @@ interface ErrorDisplayProps {
 
 export function ErrorDisplay({ error, reset, title, message }: ErrorDisplayProps) {
   return (
-    <div className="min-h-[50vh] flex items-center justify-center p-6">
+    <div className="min-h-[400px] flex items-center justify-center p-6">
       <div className="text-center max-w-md">
-        <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-red-100 mb-4">
-          <AlertTriangle className="w-8 h-8 text-red-600" />
+        <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-error-subtle mb-5">
+          <AlertTriangle className="w-7 h-7 text-error" />
         </div>
-        <h2 className="text-xl font-semibold text-gray-900 mb-2">
+        <h2 className="text-xl font-semibold text-foreground mb-2">
           {title || 'Something went wrong'}
         </h2>
-        <p className="text-gray-600 mb-6">
+        <p className="text-secondary mb-6">
           {message || error?.message || 'An unexpected error occurred. Please try again.'}
         </p>
         <div className="flex items-center justify-center gap-3">
           {reset && (
             <button
               onClick={reset}
-              className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+              className="inline-flex items-center gap-2 px-4 py-2 bg-primary text-primary-fg rounded-lg hover:bg-primary-hover transition-all duration-150 active:scale-[0.98]"
             >
               <RefreshCw className="w-4 h-4" />
               Try Again
@@ -108,7 +108,7 @@ export function ErrorDisplay({ error, reset, title, message }: ErrorDisplayProps
           )}
           <Link
             href="/"
-            className="inline-flex items-center gap-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
+            className="inline-flex items-center gap-2 px-4 py-2 bg-surface-hover text-secondary border border-border rounded-lg hover:bg-surface-hover transition-all duration-150"
           >
             <Home className="w-4 h-4" />
             Go Home
