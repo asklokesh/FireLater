@@ -105,7 +105,7 @@ export default function RegisterPage() {
       <div className="min-h-screen flex items-center justify-center bg-background py-12 px-4">
         <div className="w-full max-w-md text-center bg-surface rounded-2xl border border-border shadow-sm p-8">
           <div className="flex justify-center mb-4">
-            <CheckCircle className="h-16 w-16 text-green-600" />
+            <CheckCircle className="h-16 w-16 text-success" />
           </div>
           <h2 className="text-2xl font-semibold tracking-tight text-foreground mb-2">Registration Successful!</h2>
           <p className="text-secondary">

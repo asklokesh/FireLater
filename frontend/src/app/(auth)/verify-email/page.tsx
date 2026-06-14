@@ -92,7 +92,7 @@ function VerifyEmailContent() {
             </span>
           </div>
           <div className="flex justify-center mb-4">
-            <CheckCircle className="h-16 w-16 text-green-600" />
+            <CheckCircle className="h-16 w-16 text-success" />
           </div>
           <h2 className="text-2xl font-semibold tracking-tight text-foreground mb-2">Email Verified</h2>
           <p className="text-secondary mb-6">
@@ -160,7 +160,7 @@ function VerifyEmailContent() {
 
         {resendSuccess ? (
           <div className="mt-8 bg-success-subtle border border-success/20 rounded-lg p-4 text-center">
-            <CheckCircle className="h-8 w-8 text-green-600 mx-auto mb-2" />
+            <CheckCircle className="h-8 w-8 text-success mx-auto mb-2" />
             <p className="text-success">
               If your email is registered and not yet verified, a new verification link has been sent.
             </p>
