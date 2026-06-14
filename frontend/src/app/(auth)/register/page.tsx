@@ -3,7 +3,7 @@
 import { useState, FormEvent } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { Flame, AlertCircle, CheckCircle } from 'lucide-react';
+import { AlertCircle, CheckCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { authApi } from '@/lib/api';
@@ -102,13 +102,13 @@ export default function RegisterPage() {
 
   if (success) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4">
-        <div className="max-w-md w-full text-center">
+      <div className="min-h-screen flex items-center justify-center bg-background py-12 px-4">
+        <div className="w-full max-w-md text-center bg-surface rounded-2xl border border-border shadow-sm p-8">
           <div className="flex justify-center mb-4">
-            <CheckCircle className="h-16 w-16 text-green-500" />
+            <CheckCircle className="h-16 w-16 text-green-600" />
           </div>
-          <h2 className="text-2xl font-bold text-gray-900 mb-2">Registration Successful!</h2>
-          <p className="text-gray-600">
+          <h2 className="text-2xl font-semibold tracking-tight text-foreground mb-2">Registration Successful!</h2>
+          <p className="text-secondary">
             Your account has been created. Redirecting to login...
           </p>
         </div>
@@ -117,103 +117,127 @@ export default function RegisterPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-md w-full space-y-8">
+    <div className="min-h-screen flex items-center justify-center bg-background py-12 px-4 sm:px-6 lg:px-8">
+      <div className="w-full max-w-md bg-surface rounded-2xl border border-border shadow-sm p-8">
         <div>
-          <div className="flex justify-center">
-            <div className="flex items-center space-x-2">
-              <Flame className="h-10 w-10 text-orange-500" />
-              <span className="text-3xl font-bold text-gray-900">FireLater</span>
-            </div>
+          <div className="flex items-center justify-center gap-2 mb-6">
+            <div className="h-8 w-8 rounded-lg bg-primary" />
+            <span className="text-xl font-semibold tracking-tight text-foreground">
+              FireLater
+            </span>
           </div>
-          <h2 className="mt-6 text-center text-2xl font-bold text-gray-900">
+          <h2 className="text-2xl font-semibold tracking-tight text-foreground mt-6 mb-1">
             Create your account
           </h2>
-          <p className="mt-2 text-center text-sm text-gray-600">
+          <p className="text-sm text-secondary mb-6">
             Start managing your IT services today
           </p>
         </div>
 
-        <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
+        <form className="space-y-6" onSubmit={handleSubmit}>
           {error && (
-            <div className="flex items-center gap-2 p-3 text-sm text-red-800 bg-red-100 rounded-md">
-              <AlertCircle className="h-4 w-4" />
+            <div className="flex items-center gap-2 bg-error-subtle border border-error/20 text-error rounded-lg px-4 py-3 text-sm">
+              <AlertCircle className="h-4 w-4 flex-shrink-0" />
               {error}
             </div>
           )}
 
           <div className="space-y-4">
-            <Input
-              id="tenantName"
-              type="text"
-              label="Organization Name"
-              placeholder="My Company Inc."
-              value={formData.tenantName}
-              onChange={handleChange('tenantName')}
-              error={errors.tenantName}
-              required
-            />
+            <div>
+              <label htmlFor="tenantName" className="text-sm font-medium text-secondary mb-1.5 block">
+                Organization Name
+              </label>
+              <Input
+                id="tenantName"
+                type="text"
+                placeholder="My Company Inc."
+                value={formData.tenantName}
+                onChange={handleChange('tenantName')}
+                error={errors.tenantName}
+                required
+              />
+            </div>
 
-            <Input
-              id="tenantSlug"
-              type="text"
-              label="Organization Slug"
-              placeholder="my-company"
-              value={formData.tenantSlug}
-              onChange={handleChange('tenantSlug')}
-              error={errors.tenantSlug}
-              required
-            />
-            <p className="text-xs text-gray-500 -mt-2">
-              This will be your unique organization identifier (e.g., my-company)
-            </p>
+            <div>
+              <label htmlFor="tenantSlug" className="text-sm font-medium text-secondary mb-1.5 block">
+                Organization Slug
+              </label>
+              <Input
+                id="tenantSlug"
+                type="text"
+                placeholder="my-company"
+                value={formData.tenantSlug}
+                onChange={handleChange('tenantSlug')}
+                error={errors.tenantSlug}
+                required
+              />
+              <p className="text-xs text-muted mt-1.5">
+                This will be your unique organization identifier (e.g., my-company)
+              </p>
+            </div>
 
-            <Input
-              id="adminName"
-              type="text"
-              label="Your Full Name"
-              placeholder="John Doe"
-              value={formData.adminName}
-              onChange={handleChange('adminName')}
-              error={errors.adminName}
-              required
-            />
+            <div>
+              <label htmlFor="adminName" className="text-sm font-medium text-secondary mb-1.5 block">
+                Your Full Name
+              </label>
+              <Input
+                id="adminName"
+                type="text"
+                placeholder="John Doe"
+                value={formData.adminName}
+                onChange={handleChange('adminName')}
+                error={errors.adminName}
+                required
+              />
+            </div>
 
-            <Input
-              id="adminEmail"
-              type="email"
-              label="Email address"
-              placeholder="you@company.com"
-              value={formData.adminEmail}
-              onChange={handleChange('adminEmail')}
-              error={errors.adminEmail}
-              required
-              autoComplete="email"
-            />
+            <div>
+              <label htmlFor="adminEmail" className="text-sm font-medium text-secondary mb-1.5 block">
+                Email address
+              </label>
+              <Input
+                id="adminEmail"
+                type="email"
+                placeholder="you@company.com"
+                value={formData.adminEmail}
+                onChange={handleChange('adminEmail')}
+                error={errors.adminEmail}
+                required
+                autoComplete="email"
+              />
+            </div>
 
-            <Input
-              id="adminPassword"
-              type="password"
-              label="Password"
-              placeholder="Create a strong password"
-              value={formData.adminPassword}
-              onChange={handleChange('adminPassword')}
-              error={errors.adminPassword}
-              required
-              autoComplete="new-password"
-            />
+            <div>
+              <label htmlFor="adminPassword" className="text-sm font-medium text-secondary mb-1.5 block">
+                Password
+              </label>
+              <Input
+                id="adminPassword"
+                type="password"
+                placeholder="Create a strong password"
+                value={formData.adminPassword}
+                onChange={handleChange('adminPassword')}
+                error={errors.adminPassword}
+                required
+                autoComplete="new-password"
+              />
+            </div>
 
-            <Input
-              id="confirmPassword"
-              type="password"
-              label="Confirm Password"
-              placeholder="Confirm your password"
-              value={formData.confirmPassword}
-              onChange={handleChange('confirmPassword')}
-              error={errors.confirmPassword}
-              required
-              autoComplete="new-password"
-            />
+            <div>
+              <label htmlFor="confirmPassword" className="text-sm font-medium text-secondary mb-1.5 block">
+                Confirm Password
+              </label>
+              <Input
+                id="confirmPassword"
+                type="password"
+                placeholder="Confirm your password"
+                value={formData.confirmPassword}
+                onChange={handleChange('confirmPassword')}
+                error={errors.confirmPassword}
+                required
+                autoComplete="new-password"
+              />
+            </div>
           </div>
 
           <div className="flex items-start">
@@ -222,27 +246,27 @@ export default function RegisterPage() {
               name="terms"
               type="checkbox"
               required
-              className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded mt-1"
+              className="h-4 w-4 rounded border-border-strong accent-primary cursor-pointer mt-1"
             />
-            <label htmlFor="terms" className="ml-2 block text-sm text-gray-900">
+            <label htmlFor="terms" className="ml-2 block text-sm text-foreground">
               I agree to the{' '}
-              <a href="#" className="text-blue-600 hover:text-blue-500">
+              <a href="#" className="text-primary hover:text-primary-hover transition-colors">
                 Terms of Service
               </a>{' '}
               and{' '}
-              <a href="#" className="text-blue-600 hover:text-blue-500">
+              <a href="#" className="text-primary hover:text-primary-hover transition-colors">
                 Privacy Policy
               </a>
             </label>
           </div>
 
-          <Button type="submit" className="w-full" isLoading={isLoading}>
+          <Button type="submit" isLoading={isLoading}>
             Create Account
           </Button>
 
-          <p className="text-center text-sm text-gray-600">
+          <p className="text-center text-sm text-secondary">
             Already have an account?{' '}
-            <Link href="/login" className="font-medium text-blue-600 hover:text-blue-500">
+            <Link href="/login" className="font-medium text-primary hover:text-primary-hover transition-colors">
               Sign in
             </Link>
           </p>
