@@ -255,7 +255,7 @@ function ApiKeysTab() {
                       className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
                         key.is_active
                           ? 'bg-success-subtle text-success'
-                          : 'bg-background text-gray-800'
+                          : 'bg-background text-secondary'
                       }`}
                     >
                       {key.is_active ? 'Active' : 'Inactive'}
@@ -515,7 +515,7 @@ function WebhooksTab() {
                       className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${
                         webhook.is_active
                           ? 'bg-success-subtle text-success'
-                          : 'bg-background text-gray-800'
+                          : 'bg-background text-secondary'
                       }`}
                     >
                       {webhook.is_active ? 'Active' : 'Inactive'}

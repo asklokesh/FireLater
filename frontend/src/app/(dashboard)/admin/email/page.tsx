@@ -173,7 +173,7 @@ function ConfigurationsTab({
     sendgrid: 'bg-primary-subtle text-primary',
     mailgun: 'bg-warning-subtle text-warning',
     postmark: 'bg-warning-subtle text-warning',
-    smtp: 'bg-background text-gray-800',
+    smtp: 'bg-background text-secondary',
   };
 
   if (loading) {
@@ -232,7 +232,7 @@ function ConfigurationsTab({
                     className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
                       config.is_active
                         ? 'bg-success-subtle text-success'
-                        : 'bg-background text-gray-800'
+                        : 'bg-background text-secondary'
                     }`}
                   >
                     {config.is_active ? 'Active' : 'Inactive'}
@@ -314,7 +314,7 @@ function LogsTab({
     created_issue: 'bg-success-subtle text-success',
     added_comment: 'bg-primary-subtle text-primary',
     rejected_spam: 'bg-warning-subtle text-warning',
-    rejected_config_disabled: 'bg-background text-gray-800',
+    rejected_config_disabled: 'bg-background text-secondary',
     rejected_no_config: 'bg-warning-subtle text-warning',
     error: 'bg-error-subtle text-error',
   };
@@ -437,7 +437,7 @@ function LogsTab({
                   <td className="px-6 py-4 whitespace-nowrap">
                     <span
                       className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                        actionColors[log.action] || 'bg-background text-gray-800'
+                        actionColors[log.action] || 'bg-background text-secondary'
                       }`}
                     >
                       {actionLabels[log.action] || log.action}
