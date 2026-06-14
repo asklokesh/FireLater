@@ -74,18 +74,18 @@ const resourceTypeIcons: Record<string, typeof Server> = {
 };
 
 const providerColors: Record<string, { bg: string; text: string }> = {
-  aws: { bg: 'bg-orange-100', text: 'text-orange-800' },
-  azure: { bg: 'bg-blue-100', text: 'text-blue-800' },
-  gcp: { bg: 'bg-red-100', text: 'text-error' },
+  aws: { bg: 'bg-orange-100', text: 'text-warning' },
+  azure: { bg: 'bg-primary-subtle', text: 'text-primary' },
+  gcp: { bg: 'bg-error-subtle', text: 'text-error' },
 };
 
 const statusColors: Record<string, { bg: string; text: string; icon: typeof CheckCircle }> = {
-  running: { bg: 'bg-green-100', text: 'text-green-800', icon: CheckCircle },
+  running: { bg: 'bg-success-subtle', text: 'text-success', icon: CheckCircle },
   stopped: { bg: 'bg-background', text: 'text-foreground', icon: XCircle },
-  pending: { bg: 'bg-yellow-100', text: 'text-yellow-800', icon: Clock },
-  terminated: { bg: 'bg-red-100', text: 'text-error', icon: XCircle },
-  available: { bg: 'bg-green-100', text: 'text-green-800', icon: CheckCircle },
-  active: { bg: 'bg-green-100', text: 'text-green-800', icon: CheckCircle },
+  pending: { bg: 'bg-warning-subtle', text: 'text-warning', icon: Clock },
+  terminated: { bg: 'bg-error-subtle', text: 'text-error', icon: XCircle },
+  available: { bg: 'bg-success-subtle', text: 'text-success', icon: CheckCircle },
+  active: { bg: 'bg-success-subtle', text: 'text-success', icon: CheckCircle },
 };
 
 export default function ResourceDetailPage() {
@@ -247,7 +247,7 @@ export default function ResourceDetailPage() {
         {/* Left Column - Main Info */}
         <div className="lg:col-span-2 space-y-6">
           {/* Resource Details */}
-          <div className="bg-white rounded-lg shadow">
+          <div className="bg-surface rounded-lg shadow">
             <div className="px-6 py-4 border-b border-border">
               <h2 className="text-lg font-medium text-foreground">Resource Details</h2>
             </div>
@@ -291,7 +291,7 @@ export default function ResourceDetailPage() {
           </div>
 
           {/* Tags */}
-          <div className="bg-white rounded-lg shadow">
+          <div className="bg-surface rounded-lg shadow">
             <div className="px-6 py-4 border-b border-border">
               <h2 className="text-lg font-medium text-foreground flex items-center">
                 <Tag className="h-5 w-5 mr-2 text-muted" />
@@ -318,7 +318,7 @@ export default function ResourceDetailPage() {
           </div>
 
           {/* Metadata */}
-          <div className="bg-white rounded-lg shadow">
+          <div className="bg-surface rounded-lg shadow">
             <div className="px-6 py-4 border-b border-border">
               <h2 className="text-lg font-medium text-foreground">Metadata</h2>
             </div>
@@ -339,7 +339,7 @@ export default function ResourceDetailPage() {
         {/* Right Column - Sidebar */}
         <div className="space-y-6">
           {/* Application Mapping */}
-          <div className="bg-white rounded-lg shadow">
+          <div className="bg-surface rounded-lg shadow">
             <div className="px-6 py-4 border-b border-border">
               <h2 className="text-lg font-medium text-foreground">Application Mapping</h2>
             </div>
@@ -347,13 +347,13 @@ export default function ResourceDetailPage() {
               {resource.application_id ? (
                 <div className="space-y-4">
                   <div className="flex items-center">
-                    <div className="h-10 w-10 rounded-lg bg-blue-100 flex items-center justify-center">
+                    <div className="h-10 w-10 rounded-lg bg-primary-subtle flex items-center justify-center">
                       <Server className="h-5 w-5 text-primary" />
                     </div>
                     <div className="ml-3">
                       <Link
                         href={`/applications/${resource.application_id}`}
-                        className="text-sm font-medium text-primary hover:text-blue-800"
+                        className="text-sm font-medium text-primary hover:text-primary"
                       >
                         {resource.application_name}
                       </Link>
@@ -390,7 +390,7 @@ export default function ResourceDetailPage() {
           </div>
 
           {/* Quick Stats */}
-          <div className="bg-white rounded-lg shadow">
+          <div className="bg-surface rounded-lg shadow">
             <div className="px-6 py-4 border-b border-border">
               <h2 className="text-lg font-medium text-foreground">Quick Stats</h2>
             </div>
@@ -419,7 +419,7 @@ export default function ResourceDetailPage() {
           </div>
 
           {/* Resource Actions */}
-          <div className="bg-white rounded-lg shadow">
+          <div className="bg-surface rounded-lg shadow">
             <div className="px-6 py-4 border-b border-border">
               <h2 className="text-lg font-medium text-foreground">Actions</h2>
             </div>
@@ -450,7 +450,7 @@ export default function ResourceDetailPage() {
       {/* Map to Application Modal */}
       {showMapModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4 p-6">
+          <div className="bg-surface rounded-lg shadow-xl max-w-md w-full mx-4 p-6">
             <h2 className="text-lg font-semibold text-foreground mb-4">Map to Application</h2>
             <p className="text-sm text-secondary mb-4">
               Select an application to map this resource to. This helps track cloud resources

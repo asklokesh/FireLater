@@ -37,9 +37,9 @@ interface CloudResource {
 }
 
 const providerColors: Record<string, { bg: string; text: string }> = {
-  aws: { bg: 'bg-orange-100', text: 'text-orange-800' },
-  azure: { bg: 'bg-blue-100', text: 'text-blue-800' },
-  gcp: { bg: 'bg-red-100', text: 'text-error' },
+  aws: { bg: 'bg-orange-100', text: 'text-warning' },
+  azure: { bg: 'bg-primary-subtle', text: 'text-primary' },
+  gcp: { bg: 'bg-error-subtle', text: 'text-error' },
 };
 
 const providerNames: Record<string, string> = {
@@ -130,9 +130,9 @@ export default function CloudPage() {
 
       {/* Overview Stats */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <div className="bg-white rounded-lg shadow p-4">
+        <div className="bg-surface rounded-lg shadow p-4">
           <div className="flex items-center">
-            <div className="h-10 w-10 rounded-lg bg-blue-100 flex items-center justify-center">
+            <div className="h-10 w-10 rounded-lg bg-primary-subtle flex items-center justify-center">
               <Cloud className="h-5 w-5 text-primary" />
             </div>
             <div className="ml-4">
@@ -143,9 +143,9 @@ export default function CloudPage() {
             </div>
           </div>
         </div>
-        <div className="bg-white rounded-lg shadow p-4">
+        <div className="bg-surface rounded-lg shadow p-4">
           <div className="flex items-center">
-            <div className="h-10 w-10 rounded-lg bg-green-100 flex items-center justify-center">
+            <div className="h-10 w-10 rounded-lg bg-success-subtle flex items-center justify-center">
               <Server className="h-5 w-5 text-success" />
             </div>
             <div className="ml-4">
@@ -156,9 +156,9 @@ export default function CloudPage() {
             </div>
           </div>
         </div>
-        <div className="bg-white rounded-lg shadow p-4">
+        <div className="bg-surface rounded-lg shadow p-4">
           <div className="flex items-center">
-            <div className="h-10 w-10 rounded-lg bg-purple-100 flex items-center justify-center">
+            <div className="h-10 w-10 rounded-lg bg-info-subtle flex items-center justify-center">
               <DollarSign className="h-5 w-5 text-info" />
             </div>
             <div className="ml-4">
@@ -169,9 +169,9 @@ export default function CloudPage() {
             </div>
           </div>
         </div>
-        <div className="bg-white rounded-lg shadow p-4">
+        <div className="bg-surface rounded-lg shadow p-4">
           <div className="flex items-center">
-            <div className="h-10 w-10 rounded-lg bg-yellow-100 flex items-center justify-center">
+            <div className="h-10 w-10 rounded-lg bg-warning-subtle flex items-center justify-center">
               <AlertTriangle className="h-5 w-5 text-warning" />
             </div>
             <div className="ml-4">
@@ -233,7 +233,7 @@ export default function CloudPage() {
               <Link
                 key={account.id}
                 href={`/cloud/accounts/${account.id}`}
-                className="bg-white rounded-lg shadow hover:shadow-sm transition-shadow p-6"
+                className="bg-surface rounded-lg shadow hover:shadow-sm transition-shadow p-6"
               >
                 <div className="flex items-start justify-between">
                   <div className="flex items-center space-x-3">
@@ -254,8 +254,8 @@ export default function CloudPage() {
                   <span
                     className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
                       account.status === 'connected' || account.status === 'active'
-                        ? 'bg-green-100 text-green-800'
-                        : 'bg-red-100 text-error'
+                        ? 'bg-success-subtle text-success'
+                        : 'bg-error-subtle text-error'
                     }`}
                   >
                     {account.status === 'connected' || account.status === 'active' ? (
@@ -310,7 +310,7 @@ export default function CloudPage() {
             ))}
           </div>
         ) : (
-          <div className="bg-white rounded-lg shadow p-12 text-center">
+          <div className="bg-surface rounded-lg shadow p-12 text-center">
             <Cloud className="h-12 w-12 text-muted mx-auto mb-4" />
             <h3 className="text-lg font-medium text-foreground mb-2">No cloud accounts</h3>
             <p className="text-muted mb-4">Add a cloud account to start monitoring resources</p>
@@ -338,7 +338,7 @@ export default function CloudPage() {
                 const resource = data as CloudResource;
                 const Icon = resourceTypeIcons[type] || Cloud;
                 return (
-                  <div key={type} className="bg-white rounded-lg shadow p-4">
+                  <div key={type} className="bg-surface rounded-lg shadow p-4">
                     <div className="flex items-center space-x-3">
                       <Icon className="h-8 w-8 text-blue-500" />
                       <div>
@@ -353,7 +353,7 @@ export default function CloudPage() {
             </div>
 
             {resources.length === 0 && (
-              <div className="bg-white rounded-lg shadow p-6 text-center">
+              <div className="bg-surface rounded-lg shadow p-6 text-center">
                 <Server className="h-12 w-12 text-muted mx-auto mb-4" />
                 <h3 className="text-lg font-medium text-foreground mb-2">No resources discovered</h3>
                 <p className="text-muted">Resources will appear after cloud accounts are synced</p>
@@ -372,7 +372,7 @@ export default function CloudPage() {
           </div>
         ) : (
           <div className="space-y-6">
-            <div className="bg-white rounded-lg shadow p-6">
+            <div className="bg-surface rounded-lg shadow p-6">
               <h3 className="text-lg font-semibold text-foreground mb-4">Cost Breakdown by Account</h3>
               {accounts.filter((a: CloudAccount) => (a.monthly_cost || 0) > 0).length > 0 ? (
                 <div className="space-y-4">
@@ -404,7 +404,7 @@ export default function CloudPage() {
               )}
             </div>
 
-            <div className="bg-white rounded-lg shadow p-6">
+            <div className="bg-surface rounded-lg shadow p-6">
               <h3 className="text-lg font-semibold text-foreground mb-4">Cost Trend</h3>
               <p className="text-muted text-center py-8">
                 Cost trend chart will be displayed here showing monthly spending over time.

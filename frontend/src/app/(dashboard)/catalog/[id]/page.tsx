@@ -145,13 +145,13 @@ export default function CatalogItemPage() {
         {/* Main Content */}
         <div className="lg:col-span-2 space-y-6">
           {/* Description */}
-          <div className="bg-white rounded-lg shadow p-6">
+          <div className="bg-surface rounded-lg shadow p-6">
             <h2 className="text-lg font-semibold text-foreground mb-4">Description</h2>
             <p className="text-secondary">{item.description}</p>
           </div>
 
           {/* What's Included */}
-          <div className="bg-white rounded-lg shadow p-6">
+          <div className="bg-surface rounded-lg shadow p-6">
             <h2 className="text-lg font-semibold text-foreground mb-4">What&apos;s Included</h2>
             <ul className="space-y-2">
               {item.includes?.map((included: string, index: number) => (
@@ -164,7 +164,7 @@ export default function CatalogItemPage() {
           </div>
 
           {/* Request Form */}
-          <form onSubmit={handleSubmit} className="bg-white rounded-lg shadow p-6 space-y-6">
+          <form onSubmit={handleSubmit} className="bg-surface rounded-lg shadow p-6 space-y-6">
             <h2 className="text-lg font-semibold text-foreground">Request Details</h2>
 
             {item.options?.map((option: CatalogItemOption) => (
@@ -252,7 +252,7 @@ export default function CatalogItemPage() {
         {/* Sidebar */}
         <div className="space-y-6">
           {/* Quick Info */}
-          <div className="bg-white rounded-lg shadow p-6">
+          <div className="bg-surface rounded-lg shadow p-6">
             <h2 className="text-lg font-semibold text-foreground mb-4">Quick Info</h2>
             <dl className="space-y-4">
               <div className="flex items-center">
@@ -288,7 +288,7 @@ export default function CatalogItemPage() {
           </div>
 
           {/* Requirements */}
-          <div className="bg-white rounded-lg shadow p-6">
+          <div className="bg-surface rounded-lg shadow p-6">
             <h2 className="text-lg font-semibold text-foreground mb-4">Requirements</h2>
             <ul className="space-y-2">
               {item.requirements?.map((req: string, index: number) => (
@@ -301,7 +301,7 @@ export default function CatalogItemPage() {
           </div>
 
           {/* Related Items */}
-          <div className="bg-white rounded-lg shadow p-6">
+          <div className="bg-surface rounded-lg shadow p-6">
             <h2 className="text-lg font-semibold text-foreground mb-4">Related Services</h2>
             <ul className="space-y-3">
               {item.relatedItems?.map((related: { id: string; name: string; estimatedTime: string }) => (
