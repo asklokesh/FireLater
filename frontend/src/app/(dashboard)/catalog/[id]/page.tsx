@@ -70,9 +70,9 @@ export default function CatalogItemPage() {
   if (error || !item) {
     return (
       <div className="flex flex-col items-center justify-center h-64">
-        <AlertCircle className="h-12 w-12 text-red-500 mb-4" />
-        <h2 className="text-xl font-semibold text-gray-900 mb-2">Service not found</h2>
-        <p className="text-gray-500 mb-4">The catalog item you&apos;re looking for doesn&apos;t exist or you don&apos;t have access to it.</p>
+        <AlertCircle className="h-12 w-12 text-error mb-4" />
+        <h2 className="text-xl font-semibold text-foreground mb-2">Service not found</h2>
+        <p className="text-muted mb-4">The catalog item you&apos;re looking for doesn&apos;t exist or you don&apos;t have access to it.</p>
         <Button onClick={() => router.push('/catalog')}>Back to Catalog</Button>
       </div>
     );
@@ -92,15 +92,15 @@ export default function CatalogItemPage() {
       <div className="min-h-[60vh] flex items-center justify-center">
         <div className="text-center max-w-md">
           <div className="flex justify-center mb-4">
-            <CheckCircle className="h-16 w-16 text-green-500" />
+            <CheckCircle className="h-16 w-16 text-success" />
           </div>
-          <h2 className="text-2xl font-bold text-gray-900 mb-2">Request Submitted!</h2>
-          <p className="text-gray-600 mb-6">
+          <h2 className="text-2xl font-bold text-foreground mb-2">Request Submitted!</h2>
+          <p className="text-secondary mb-6">
             Your request for &quot;{item.name}&quot; has been submitted successfully.
             You will receive an email confirmation shortly.
           </p>
           {requestNumber && (
-            <p className="text-sm text-gray-500 mb-6">
+            <p className="text-sm text-muted mb-6">
               Request Number: <span className="font-medium">{requestNumber}</span>
             </p>
           )}
@@ -123,21 +123,21 @@ export default function CatalogItemPage() {
       <div className="flex items-center space-x-4">
         <button
           onClick={() => router.back()}
-          className="p-2 hover:bg-gray-100 rounded-md"
+          className="p-2 hover:bg-background rounded-md"
         >
-          <ArrowLeft className="h-5 w-5 text-gray-500" />
+          <ArrowLeft className="h-5 w-5 text-muted" />
         </button>
         <div>
-          <div className="flex items-center space-x-2 text-sm text-gray-500 mb-1">
-            <Link href="/catalog" className="hover:text-gray-700">
+          <div className="flex items-center space-x-2 text-sm text-muted mb-1">
+            <Link href="/catalog" className="hover:text-secondary">
               Service Catalog
             </Link>
             <ChevronRight className="h-4 w-4" />
-            <Link href={`/catalog/category/${item.category.id}`} className="hover:text-gray-700">
+            <Link href={`/catalog/category/${item.category.id}`} className="hover:text-secondary">
               {item.category.name}
             </Link>
           </div>
-          <h1 className="text-2xl font-bold text-gray-900">{item.name}</h1>
+          <h1 className="text-2xl font-bold text-foreground">{item.name}</h1>
         </div>
       </div>
 
@@ -146,18 +146,18 @@ export default function CatalogItemPage() {
         <div className="lg:col-span-2 space-y-6">
           {/* Description */}
           <div className="bg-white rounded-lg shadow p-6">
-            <h2 className="text-lg font-semibold text-gray-900 mb-4">Description</h2>
-            <p className="text-gray-700">{item.description}</p>
+            <h2 className="text-lg font-semibold text-foreground mb-4">Description</h2>
+            <p className="text-secondary">{item.description}</p>
           </div>
 
           {/* What's Included */}
           <div className="bg-white rounded-lg shadow p-6">
-            <h2 className="text-lg font-semibold text-gray-900 mb-4">What&apos;s Included</h2>
+            <h2 className="text-lg font-semibold text-foreground mb-4">What&apos;s Included</h2>
             <ul className="space-y-2">
               {item.includes?.map((included: string, index: number) => (
                 <li key={index} className="flex items-start">
-                  <CheckCircle className="h-5 w-5 text-green-500 mr-2 flex-shrink-0 mt-0.5" />
-                  <span className="text-gray-700">{included}</span>
+                  <CheckCircle className="h-5 w-5 text-success mr-2 flex-shrink-0 mt-0.5" />
+                  <span className="text-secondary">{included}</span>
                 </li>
               ))}
             </ul>
@@ -165,7 +165,7 @@ export default function CatalogItemPage() {
 
           {/* Request Form */}
           <form onSubmit={handleSubmit} className="bg-white rounded-lg shadow p-6 space-y-6">
-            <h2 className="text-lg font-semibold text-gray-900">Request Details</h2>
+            <h2 className="text-lg font-semibold text-foreground">Request Details</h2>
 
             {item.options?.map((option: CatalogItemOption) => (
               <div key={option.id}>
@@ -173,17 +173,17 @@ export default function CatalogItemPage() {
                   <div>
                     <label
                       htmlFor={option.id}
-                      className="block text-sm font-medium text-gray-700 mb-1"
+                      className="block text-sm font-medium text-secondary mb-1"
                     >
                       {option.name}
-                      {option.required && <span className="text-red-500 ml-1">*</span>}
+                      {option.required && <span className="text-error ml-1">*</span>}
                     </label>
                     <select
                       id={option.id}
                       value={formData[option.id] || ''}
                       onChange={handleChange(option.id)}
-                      className={`w-full px-3 py-2 border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                        errors[option.id] ? 'border-red-500' : 'border-gray-300'
+                      className={`w-full px-3 py-2 border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 ${
+                        errors[option.id] ? 'border-red-500' : 'border-border-strong'
                       }`}
                       required={option.required}
                     >
@@ -195,7 +195,7 @@ export default function CatalogItemPage() {
                       ))}
                     </select>
                     {errors[option.id] && (
-                      <p className="mt-1 text-sm text-red-500">{errors[option.id]}</p>
+                      <p className="mt-1 text-sm text-error">{errors[option.id]}</p>
                     )}
                   </div>
                 )}
@@ -204,10 +204,10 @@ export default function CatalogItemPage() {
                   <div>
                     <label
                       htmlFor={option.id}
-                      className="block text-sm font-medium text-gray-700 mb-1"
+                      className="block text-sm font-medium text-secondary mb-1"
                     >
                       {option.name}
-                      {option.required && <span className="text-red-500 ml-1">*</span>}
+                      {option.required && <span className="text-error ml-1">*</span>}
                     </label>
                     <textarea
                       id={option.id}
@@ -215,13 +215,13 @@ export default function CatalogItemPage() {
                       placeholder={option.placeholder}
                       value={formData[option.id] || ''}
                       onChange={handleChange(option.id)}
-                      className={`w-full px-3 py-2 border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                        errors[option.id] ? 'border-red-500' : 'border-gray-300'
+                      className={`w-full px-3 py-2 border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 ${
+                        errors[option.id] ? 'border-red-500' : 'border-border-strong'
                       }`}
                       required={option.required}
                     />
                     {errors[option.id] && (
-                      <p className="mt-1 text-sm text-red-500">{errors[option.id]}</p>
+                      <p className="mt-1 text-sm text-error">{errors[option.id]}</p>
                     )}
                   </div>
                 )}
@@ -241,7 +241,7 @@ export default function CatalogItemPage() {
               </div>
             ))}
 
-            <div className="pt-4 border-t border-gray-200">
+            <div className="pt-4 border-t border-border">
               <Button type="submit" className="w-full" isLoading={submitRequest.isPending}>
                 Submit Request
               </Button>
@@ -253,24 +253,24 @@ export default function CatalogItemPage() {
         <div className="space-y-6">
           {/* Quick Info */}
           <div className="bg-white rounded-lg shadow p-6">
-            <h2 className="text-lg font-semibold text-gray-900 mb-4">Quick Info</h2>
+            <h2 className="text-lg font-semibold text-foreground mb-4">Quick Info</h2>
             <dl className="space-y-4">
               <div className="flex items-center">
-                <Clock className="h-5 w-5 text-gray-400 mr-3" />
+                <Clock className="h-5 w-5 text-muted mr-3" />
                 <div>
-                  <dt className="text-sm text-gray-500">Estimated Time</dt>
-                  <dd className="text-sm font-medium text-gray-900">{item.estimatedTime}</dd>
+                  <dt className="text-sm text-muted">Estimated Time</dt>
+                  <dd className="text-sm font-medium text-foreground">{item.estimatedTime}</dd>
                 </div>
               </div>
               <div className="flex items-center">
                 {item.approvalRequired ? (
                   <AlertCircle className="h-5 w-5 text-yellow-500 mr-3" />
                 ) : (
-                  <CheckCircle className="h-5 w-5 text-green-500 mr-3" />
+                  <CheckCircle className="h-5 w-5 text-success mr-3" />
                 )}
                 <div>
-                  <dt className="text-sm text-gray-500">Approval</dt>
-                  <dd className="text-sm font-medium text-gray-900">
+                  <dt className="text-sm text-muted">Approval</dt>
+                  <dd className="text-sm font-medium text-foreground">
                     {item.approvalRequired ? 'Required' : 'Auto-approved'}
                   </dd>
                 </div>
@@ -278,8 +278,8 @@ export default function CatalogItemPage() {
               <div className="flex items-center">
                 <Star className="h-5 w-5 text-yellow-400 mr-3" />
                 <div>
-                  <dt className="text-sm text-gray-500">Popularity</dt>
-                  <dd className="text-sm font-medium text-gray-900">
+                  <dt className="text-sm text-muted">Popularity</dt>
+                  <dd className="text-sm font-medium text-foreground">
                     {item.popularity} requests this month
                   </dd>
                 </div>
@@ -289,12 +289,12 @@ export default function CatalogItemPage() {
 
           {/* Requirements */}
           <div className="bg-white rounded-lg shadow p-6">
-            <h2 className="text-lg font-semibold text-gray-900 mb-4">Requirements</h2>
+            <h2 className="text-lg font-semibold text-foreground mb-4">Requirements</h2>
             <ul className="space-y-2">
               {item.requirements?.map((req: string, index: number) => (
                 <li key={index} className="flex items-start text-sm">
                   <AlertCircle className="h-4 w-4 text-yellow-500 mr-2 flex-shrink-0 mt-0.5" />
-                  <span className="text-gray-700">{req}</span>
+                  <span className="text-secondary">{req}</span>
                 </li>
               ))}
             </ul>
@@ -302,19 +302,19 @@ export default function CatalogItemPage() {
 
           {/* Related Items */}
           <div className="bg-white rounded-lg shadow p-6">
-            <h2 className="text-lg font-semibold text-gray-900 mb-4">Related Services</h2>
+            <h2 className="text-lg font-semibold text-foreground mb-4">Related Services</h2>
             <ul className="space-y-3">
               {item.relatedItems?.map((related: { id: string; name: string; estimatedTime: string }) => (
                 <li key={related.id}>
                   <Link
                     href={`/catalog/${related.id}`}
-                    className="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100"
+                    className="flex items-center justify-between p-3 bg-background rounded-lg hover:bg-background"
                   >
                     <div>
-                      <p className="text-sm font-medium text-gray-900">{related.name}</p>
-                      <p className="text-xs text-gray-500">{related.estimatedTime}</p>
+                      <p className="text-sm font-medium text-foreground">{related.name}</p>
+                      <p className="text-xs text-muted">{related.estimatedTime}</p>
                     </div>
-                    <ChevronRight className="h-4 w-4 text-gray-400" />
+                    <ChevronRight className="h-4 w-4 text-muted" />
                   </Link>
                 </li>
               ))}

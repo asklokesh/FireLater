@@ -76,14 +76,14 @@ const resourceTypeIcons: Record<string, typeof Server> = {
 const providerColors: Record<string, { bg: string; text: string }> = {
   aws: { bg: 'bg-orange-100', text: 'text-orange-800' },
   azure: { bg: 'bg-blue-100', text: 'text-blue-800' },
-  gcp: { bg: 'bg-red-100', text: 'text-red-800' },
+  gcp: { bg: 'bg-red-100', text: 'text-error' },
 };
 
 const statusColors: Record<string, { bg: string; text: string; icon: typeof CheckCircle }> = {
   running: { bg: 'bg-green-100', text: 'text-green-800', icon: CheckCircle },
-  stopped: { bg: 'bg-gray-100', text: 'text-gray-800', icon: XCircle },
+  stopped: { bg: 'bg-background', text: 'text-foreground', icon: XCircle },
   pending: { bg: 'bg-yellow-100', text: 'text-yellow-800', icon: Clock },
-  terminated: { bg: 'bg-red-100', text: 'text-red-800', icon: XCircle },
+  terminated: { bg: 'bg-red-100', text: 'text-error', icon: XCircle },
   available: { bg: 'bg-green-100', text: 'text-green-800', icon: CheckCircle },
   active: { bg: 'bg-green-100', text: 'text-green-800', icon: CheckCircle },
 };
@@ -194,9 +194,9 @@ export default function ResourceDetailPage() {
 
   if (error || !resource) {
     return (
-      <div className="bg-red-50 border border-red-200 rounded-lg p-6 text-center">
-        <AlertCircle className="h-12 w-12 text-red-500 mx-auto mb-4" />
-        <h3 className="text-lg font-medium text-red-800 mb-2">{error || 'Resource not found'}</h3>
+      <div className="bg-error-subtle border border-red-200 rounded-lg p-6 text-center">
+        <AlertCircle className="h-12 w-12 text-error mx-auto mb-4" />
+        <h3 className="text-lg font-medium text-error mb-2">{error || 'Resource not found'}</h3>
         <Link href="/cloud">
           <Button variant="outline">Back to Cloud Resources</Button>
         </Link>
@@ -225,8 +225,8 @@ export default function ResourceDetailPage() {
                 <ResourceIcon className={`h-5 w-5 ${providerCfg.text}`} />
               </div>
               <div>
-                <h1 className="text-2xl font-bold text-gray-900">{resource.name}</h1>
-                <p className="text-sm text-gray-500">{resource.resource_id}</p>
+                <h1 className="text-2xl font-bold text-foreground">{resource.name}</h1>
+                <p className="text-sm text-muted">{resource.resource_id}</p>
               </div>
             </div>
           </div>
@@ -248,43 +248,43 @@ export default function ResourceDetailPage() {
         <div className="lg:col-span-2 space-y-6">
           {/* Resource Details */}
           <div className="bg-white rounded-lg shadow">
-            <div className="px-6 py-4 border-b border-gray-200">
-              <h2 className="text-lg font-medium text-gray-900">Resource Details</h2>
+            <div className="px-6 py-4 border-b border-border">
+              <h2 className="text-lg font-medium text-foreground">Resource Details</h2>
             </div>
             <div className="p-6">
               <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4">
                 <div>
-                  <dt className="text-sm text-gray-500">Resource Type</dt>
-                  <dd className="mt-1 text-sm font-medium text-gray-900">{resource.resource_type}</dd>
+                  <dt className="text-sm text-muted">Resource Type</dt>
+                  <dd className="mt-1 text-sm font-medium text-foreground">{resource.resource_type}</dd>
                 </div>
                 <div>
-                  <dt className="text-sm text-gray-500">Region</dt>
-                  <dd className="mt-1 text-sm font-medium text-gray-900 flex items-center">
-                    <Globe className="h-4 w-4 text-gray-400 mr-1" />
+                  <dt className="text-sm text-muted">Region</dt>
+                  <dd className="mt-1 text-sm font-medium text-foreground flex items-center">
+                    <Globe className="h-4 w-4 text-muted mr-1" />
                     {resource.region}
                   </dd>
                 </div>
                 <div>
-                  <dt className="text-sm text-gray-500">Cloud Account</dt>
-                  <dd className="mt-1 text-sm font-medium text-gray-900">{resource.account_name}</dd>
+                  <dt className="text-sm text-muted">Cloud Account</dt>
+                  <dd className="mt-1 text-sm font-medium text-foreground">{resource.account_name}</dd>
                 </div>
                 <div>
-                  <dt className="text-sm text-gray-500">Monthly Cost</dt>
-                  <dd className="mt-1 text-sm font-medium text-gray-900 flex items-center">
-                    <DollarSign className="h-4 w-4 text-green-500 mr-1" />
+                  <dt className="text-sm text-muted">Monthly Cost</dt>
+                  <dd className="mt-1 text-sm font-medium text-foreground flex items-center">
+                    <DollarSign className="h-4 w-4 text-success mr-1" />
                     {formatCost(resource.monthly_cost)}
                   </dd>
                 </div>
                 <div>
-                  <dt className="text-sm text-gray-500">Last Synced</dt>
-                  <dd className="mt-1 text-sm font-medium text-gray-900 flex items-center">
-                    <Clock className="h-4 w-4 text-gray-400 mr-1" />
+                  <dt className="text-sm text-muted">Last Synced</dt>
+                  <dd className="mt-1 text-sm font-medium text-foreground flex items-center">
+                    <Clock className="h-4 w-4 text-muted mr-1" />
                     {formatDate(resource.last_synced_at)}
                   </dd>
                 </div>
                 <div>
-                  <dt className="text-sm text-gray-500">Created</dt>
-                  <dd className="mt-1 text-sm font-medium text-gray-900">{formatDate(resource.created_at)}</dd>
+                  <dt className="text-sm text-muted">Created</dt>
+                  <dd className="mt-1 text-sm font-medium text-foreground">{formatDate(resource.created_at)}</dd>
                 </div>
               </dl>
             </div>
@@ -292,9 +292,9 @@ export default function ResourceDetailPage() {
 
           {/* Tags */}
           <div className="bg-white rounded-lg shadow">
-            <div className="px-6 py-4 border-b border-gray-200">
-              <h2 className="text-lg font-medium text-gray-900 flex items-center">
-                <Tag className="h-5 w-5 mr-2 text-gray-400" />
+            <div className="px-6 py-4 border-b border-border">
+              <h2 className="text-lg font-medium text-foreground flex items-center">
+                <Tag className="h-5 w-5 mr-2 text-muted" />
                 Tags
               </h2>
             </div>
@@ -304,7 +304,7 @@ export default function ResourceDetailPage() {
                   {Object.entries(resource.tags).map(([key, value]) => (
                     <span
                       key={key}
-                      className="inline-flex items-center px-3 py-1 rounded-full text-sm bg-gray-100 text-gray-700"
+                      className="inline-flex items-center px-3 py-1 rounded-full text-sm bg-background text-secondary"
                     >
                       <span className="font-medium">{key}:</span>
                       <span className="ml-1">{value}</span>
@@ -312,25 +312,25 @@ export default function ResourceDetailPage() {
                   ))}
                 </div>
               ) : (
-                <p className="text-sm text-gray-500">No tags defined</p>
+                <p className="text-sm text-muted">No tags defined</p>
               )}
             </div>
           </div>
 
           {/* Metadata */}
           <div className="bg-white rounded-lg shadow">
-            <div className="px-6 py-4 border-b border-gray-200">
-              <h2 className="text-lg font-medium text-gray-900">Metadata</h2>
+            <div className="px-6 py-4 border-b border-border">
+              <h2 className="text-lg font-medium text-foreground">Metadata</h2>
             </div>
             <div className="p-6">
               {Object.keys(resource.metadata).length > 0 ? (
-                <div className="bg-gray-50 rounded-lg p-4 overflow-x-auto">
-                  <pre className="text-sm text-gray-700">
+                <div className="bg-background rounded-lg p-4 overflow-x-auto">
+                  <pre className="text-sm text-secondary">
                     {JSON.stringify(resource.metadata, null, 2)}
                   </pre>
                 </div>
               ) : (
-                <p className="text-sm text-gray-500">No metadata available</p>
+                <p className="text-sm text-muted">No metadata available</p>
               )}
             </div>
           </div>
@@ -340,25 +340,25 @@ export default function ResourceDetailPage() {
         <div className="space-y-6">
           {/* Application Mapping */}
           <div className="bg-white rounded-lg shadow">
-            <div className="px-6 py-4 border-b border-gray-200">
-              <h2 className="text-lg font-medium text-gray-900">Application Mapping</h2>
+            <div className="px-6 py-4 border-b border-border">
+              <h2 className="text-lg font-medium text-foreground">Application Mapping</h2>
             </div>
             <div className="p-6">
               {resource.application_id ? (
                 <div className="space-y-4">
                   <div className="flex items-center">
                     <div className="h-10 w-10 rounded-lg bg-blue-100 flex items-center justify-center">
-                      <Server className="h-5 w-5 text-blue-600" />
+                      <Server className="h-5 w-5 text-primary" />
                     </div>
                     <div className="ml-3">
                       <Link
                         href={`/applications/${resource.application_id}`}
-                        className="text-sm font-medium text-blue-600 hover:text-blue-800"
+                        className="text-sm font-medium text-primary hover:text-blue-800"
                       >
                         {resource.application_name}
                       </Link>
                       {resource.environment_name && (
-                        <p className="text-xs text-gray-500">{resource.environment_name}</p>
+                        <p className="text-xs text-muted">{resource.environment_name}</p>
                       )}
                     </div>
                   </div>
@@ -366,7 +366,7 @@ export default function ResourceDetailPage() {
                     variant="outline"
                     onClick={handleUnmap}
                     disabled={isMapping}
-                    className="w-full text-red-600 border-red-300 hover:bg-red-50"
+                    className="w-full text-error border-red-300 hover:bg-error-subtle"
                   >
                     <Unlink className="h-4 w-4 mr-2" />
                     Unmap from Application
@@ -374,7 +374,7 @@ export default function ResourceDetailPage() {
                 </div>
               ) : (
                 <div className="space-y-4">
-                  <p className="text-sm text-gray-500">
+                  <p className="text-sm text-muted">
                     This resource is not mapped to any application.
                   </p>
                   <Button
@@ -391,37 +391,37 @@ export default function ResourceDetailPage() {
 
           {/* Quick Stats */}
           <div className="bg-white rounded-lg shadow">
-            <div className="px-6 py-4 border-b border-gray-200">
-              <h2 className="text-lg font-medium text-gray-900">Quick Stats</h2>
+            <div className="px-6 py-4 border-b border-border">
+              <h2 className="text-lg font-medium text-foreground">Quick Stats</h2>
             </div>
             <div className="p-6 space-y-4">
               <div className="flex items-center justify-between">
-                <span className="text-sm text-gray-500">Provider</span>
+                <span className="text-sm text-muted">Provider</span>
                 <span className={`px-2 py-1 rounded text-xs font-medium ${providerCfg.bg} ${providerCfg.text}`}>
                   {resource.provider.toUpperCase()}
                 </span>
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-sm text-gray-500">Status</span>
+                <span className="text-sm text-muted">Status</span>
                 <span className={`px-2 py-1 rounded text-xs font-medium ${statusCfg.bg} ${statusCfg.text}`}>
                   {resource.status}
                 </span>
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-sm text-gray-500">Region</span>
-                <span className="text-sm font-medium text-gray-900">{resource.region}</span>
+                <span className="text-sm text-muted">Region</span>
+                <span className="text-sm font-medium text-foreground">{resource.region}</span>
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-sm text-gray-500">Monthly Cost</span>
-                <span className="text-sm font-medium text-green-600">{formatCost(resource.monthly_cost)}</span>
+                <span className="text-sm text-muted">Monthly Cost</span>
+                <span className="text-sm font-medium text-success">{formatCost(resource.monthly_cost)}</span>
               </div>
             </div>
           </div>
 
           {/* Resource Actions */}
           <div className="bg-white rounded-lg shadow">
-            <div className="px-6 py-4 border-b border-gray-200">
-              <h2 className="text-lg font-medium text-gray-900">Actions</h2>
+            <div className="px-6 py-4 border-b border-border">
+              <h2 className="text-lg font-medium text-foreground">Actions</h2>
             </div>
             <div className="p-6 space-y-3">
               <Button variant="outline" className="w-full justify-start">
@@ -451,17 +451,17 @@ export default function ResourceDetailPage() {
       {showMapModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4 p-6">
-            <h2 className="text-lg font-semibold text-gray-900 mb-4">Map to Application</h2>
-            <p className="text-sm text-gray-600 mb-4">
+            <h2 className="text-lg font-semibold text-foreground mb-4">Map to Application</h2>
+            <p className="text-sm text-secondary mb-4">
               Select an application to map this resource to. This helps track cloud resources
               associated with your applications.
             </p>
             <div className="mb-4">
-              <label className="block text-sm font-medium text-gray-700 mb-1">Application</label>
+              <label className="block text-sm font-medium text-secondary mb-1">Application</label>
               <select
                 value={selectedAppId}
                 onChange={(e) => setSelectedAppId(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 border border-border-strong rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
               >
                 <option value="">Select an application...</option>
                 {applications.map((app) => (

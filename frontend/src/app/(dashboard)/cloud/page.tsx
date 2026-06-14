@@ -39,7 +39,7 @@ interface CloudResource {
 const providerColors: Record<string, { bg: string; text: string }> = {
   aws: { bg: 'bg-orange-100', text: 'text-orange-800' },
   azure: { bg: 'bg-blue-100', text: 'text-blue-800' },
-  gcp: { bg: 'bg-red-100', text: 'text-red-800' },
+  gcp: { bg: 'bg-red-100', text: 'text-error' },
 };
 
 const providerNames: Record<string, string> = {
@@ -102,10 +102,10 @@ export default function CloudPage() {
 
   if (accountsError) {
     return (
-      <div className="bg-red-50 border border-red-200 rounded-lg p-6 text-center">
-        <Cloud className="h-12 w-12 text-red-500 mx-auto mb-4" />
-        <h3 className="text-lg font-medium text-red-800 mb-2">Error loading cloud data</h3>
-        <p className="text-red-600">Please try refreshing the page</p>
+      <div className="bg-error-subtle border border-red-200 rounded-lg p-6 text-center">
+        <Cloud className="h-12 w-12 text-error mx-auto mb-4" />
+        <h3 className="text-lg font-medium text-error mb-2">Error loading cloud data</h3>
+        <p className="text-error">Please try refreshing the page</p>
       </div>
     );
   }
@@ -115,8 +115,8 @@ export default function CloudPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Cloud Management</h1>
-          <p className="mt-1 text-sm text-gray-500">
+          <h1 className="text-2xl font-bold text-foreground">Cloud Management</h1>
+          <p className="mt-1 text-sm text-muted">
             Monitor cloud resources and costs
           </p>
         </div>
@@ -133,11 +133,11 @@ export default function CloudPage() {
         <div className="bg-white rounded-lg shadow p-4">
           <div className="flex items-center">
             <div className="h-10 w-10 rounded-lg bg-blue-100 flex items-center justify-center">
-              <Cloud className="h-5 w-5 text-blue-600" />
+              <Cloud className="h-5 w-5 text-primary" />
             </div>
             <div className="ml-4">
-              <p className="text-sm text-gray-500">Cloud Accounts</p>
-              <p className="text-2xl font-semibold text-gray-900">
+              <p className="text-sm text-muted">Cloud Accounts</p>
+              <p className="text-2xl font-semibold text-foreground">
                 {accountsLoading ? '-' : accounts.length}
               </p>
             </div>
@@ -146,11 +146,11 @@ export default function CloudPage() {
         <div className="bg-white rounded-lg shadow p-4">
           <div className="flex items-center">
             <div className="h-10 w-10 rounded-lg bg-green-100 flex items-center justify-center">
-              <Server className="h-5 w-5 text-green-600" />
+              <Server className="h-5 w-5 text-success" />
             </div>
             <div className="ml-4">
-              <p className="text-sm text-gray-500">Total Resources</p>
-              <p className="text-2xl font-semibold text-gray-900">
+              <p className="text-sm text-muted">Total Resources</p>
+              <p className="text-2xl font-semibold text-foreground">
                 {accountsLoading ? '-' : totalResources}
               </p>
             </div>
@@ -159,11 +159,11 @@ export default function CloudPage() {
         <div className="bg-white rounded-lg shadow p-4">
           <div className="flex items-center">
             <div className="h-10 w-10 rounded-lg bg-purple-100 flex items-center justify-center">
-              <DollarSign className="h-5 w-5 text-purple-600" />
+              <DollarSign className="h-5 w-5 text-info" />
             </div>
             <div className="ml-4">
-              <p className="text-sm text-gray-500">Monthly Cost</p>
-              <p className="text-2xl font-semibold text-gray-900">
+              <p className="text-sm text-muted">Monthly Cost</p>
+              <p className="text-2xl font-semibold text-foreground">
                 {accountsLoading ? '-' : formatCurrency(totalCost)}
               </p>
             </div>
@@ -172,11 +172,11 @@ export default function CloudPage() {
         <div className="bg-white rounded-lg shadow p-4">
           <div className="flex items-center">
             <div className="h-10 w-10 rounded-lg bg-yellow-100 flex items-center justify-center">
-              <AlertTriangle className="h-5 w-5 text-yellow-600" />
+              <AlertTriangle className="h-5 w-5 text-warning" />
             </div>
             <div className="ml-4">
-              <p className="text-sm text-gray-500">Accounts with Issues</p>
-              <p className="text-2xl font-semibold text-gray-900">
+              <p className="text-sm text-muted">Accounts with Issues</p>
+              <p className="text-2xl font-semibold text-foreground">
                 {accountsLoading ? '-' : accounts.filter((a: CloudAccount) => a.status === 'error').length}
               </p>
             </div>
@@ -185,14 +185,14 @@ export default function CloudPage() {
       </div>
 
       {/* Tabs */}
-      <div className="border-b border-gray-200">
+      <div className="border-b border-border">
         <nav className="-mb-px flex space-x-8">
           <button
             onClick={() => setActiveTab('accounts')}
             className={`py-4 px-1 border-b-2 font-medium text-sm ${
               activeTab === 'accounts'
-                ? 'border-blue-500 text-blue-600'
-                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                ? 'border-blue-500 text-primary'
+                : 'border-transparent text-muted hover:text-secondary hover:border-border-strong'
             }`}
           >
             Cloud Accounts
@@ -201,8 +201,8 @@ export default function CloudPage() {
             onClick={() => setActiveTab('resources')}
             className={`py-4 px-1 border-b-2 font-medium text-sm ${
               activeTab === 'resources'
-                ? 'border-blue-500 text-blue-600'
-                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                ? 'border-blue-500 text-primary'
+                : 'border-transparent text-muted hover:text-secondary hover:border-border-strong'
             }`}
           >
             Resources
@@ -211,8 +211,8 @@ export default function CloudPage() {
             onClick={() => setActiveTab('costs')}
             className={`py-4 px-1 border-b-2 font-medium text-sm ${
               activeTab === 'costs'
-                ? 'border-blue-500 text-blue-600'
-                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                ? 'border-blue-500 text-primary'
+                : 'border-transparent text-muted hover:text-secondary hover:border-border-strong'
             }`}
           >
             Cost Analysis
@@ -225,7 +225,7 @@ export default function CloudPage() {
         accountsLoading ? (
           <div className="flex items-center justify-center h-64">
             <Loader2 className="h-8 w-8 animate-spin text-blue-500" />
-            <span className="ml-2 text-gray-500">Loading cloud accounts...</span>
+            <span className="ml-2 text-muted">Loading cloud accounts...</span>
           </div>
         ) : accounts.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -233,19 +233,19 @@ export default function CloudPage() {
               <Link
                 key={account.id}
                 href={`/cloud/accounts/${account.id}`}
-                className="bg-white rounded-lg shadow hover:shadow-md transition-shadow p-6"
+                className="bg-white rounded-lg shadow hover:shadow-sm transition-shadow p-6"
               >
                 <div className="flex items-start justify-between">
                   <div className="flex items-center space-x-3">
-                    <div className="h-10 w-10 rounded-lg bg-gray-100 flex items-center justify-center">
-                      <Cloud className="h-5 w-5 text-gray-600" />
+                    <div className="h-10 w-10 rounded-lg bg-background flex items-center justify-center">
+                      <Cloud className="h-5 w-5 text-secondary" />
                     </div>
                     <div>
-                      <h3 className="font-semibold text-gray-900">{account.name}</h3>
+                      <h3 className="font-semibold text-foreground">{account.name}</h3>
                       <span
                         className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${
-                          providerColors[account.provider]?.bg || 'bg-gray-100'
-                        } ${providerColors[account.provider]?.text || 'text-gray-800'}`}
+                          providerColors[account.provider]?.bg || 'bg-background'
+                        } ${providerColors[account.provider]?.text || 'text-foreground'}`}
                       >
                         {providerNames[account.provider] || account.provider}
                       </span>
@@ -255,7 +255,7 @@ export default function CloudPage() {
                     className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
                       account.status === 'connected' || account.status === 'active'
                         ? 'bg-green-100 text-green-800'
-                        : 'bg-red-100 text-red-800'
+                        : 'bg-red-100 text-error'
                     }`}
                   >
                     {account.status === 'connected' || account.status === 'active' ? (
@@ -274,19 +274,19 @@ export default function CloudPage() {
 
                 <div className="mt-4 grid grid-cols-2 gap-4">
                   <div>
-                    <p className="text-sm text-gray-500">Resources</p>
-                    <p className="text-lg font-semibold text-gray-900">{account.resource_count || 0}</p>
+                    <p className="text-sm text-muted">Resources</p>
+                    <p className="text-lg font-semibold text-foreground">{account.resource_count || 0}</p>
                   </div>
                   <div>
-                    <p className="text-sm text-gray-500">Monthly Cost</p>
+                    <p className="text-sm text-muted">Monthly Cost</p>
                     <div className="flex items-center">
-                      <p className="text-lg font-semibold text-gray-900">
+                      <p className="text-lg font-semibold text-foreground">
                         {formatCurrency(account.monthly_cost || 0)}
                       </p>
                       {account.cost_trend !== undefined && account.cost_trend !== 0 && (
                         <span
                           className={`ml-2 flex items-center text-xs ${
-                            account.cost_trend > 0 ? 'text-red-600' : 'text-green-600'
+                            account.cost_trend > 0 ? 'text-error' : 'text-success'
                           }`}
                         >
                           {account.cost_trend > 0 ? (
@@ -302,7 +302,7 @@ export default function CloudPage() {
                 </div>
 
                 {account.last_synced_at && (
-                  <p className="mt-4 text-xs text-gray-500">
+                  <p className="mt-4 text-xs text-muted">
                     Last synced: {formatDate(account.last_synced_at)}
                   </p>
                 )}
@@ -311,9 +311,9 @@ export default function CloudPage() {
           </div>
         ) : (
           <div className="bg-white rounded-lg shadow p-12 text-center">
-            <Cloud className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-            <h3 className="text-lg font-medium text-gray-900 mb-2">No cloud accounts</h3>
-            <p className="text-gray-500 mb-4">Add a cloud account to start monitoring resources</p>
+            <Cloud className="h-12 w-12 text-muted mx-auto mb-4" />
+            <h3 className="text-lg font-medium text-foreground mb-2">No cloud accounts</h3>
+            <p className="text-muted mb-4">Add a cloud account to start monitoring resources</p>
             <Link href="/cloud/accounts/new">
               <Button>
                 <Plus className="h-4 w-4 mr-2" />
@@ -329,7 +329,7 @@ export default function CloudPage() {
         resourcesLoading ? (
           <div className="flex items-center justify-center h-64">
             <Loader2 className="h-8 w-8 animate-spin text-blue-500" />
-            <span className="ml-2 text-gray-500">Loading resources...</span>
+            <span className="ml-2 text-muted">Loading resources...</span>
           </div>
         ) : (
           <div className="space-y-6">
@@ -342,9 +342,9 @@ export default function CloudPage() {
                     <div className="flex items-center space-x-3">
                       <Icon className="h-8 w-8 text-blue-500" />
                       <div>
-                        <p className="text-sm text-gray-500 capitalize">{type}</p>
-                        <p className="text-xl font-semibold text-gray-900">{resource.count}</p>
-                        <p className="text-xs text-gray-500">{formatCurrency(resource.cost)}/mo</p>
+                        <p className="text-sm text-muted capitalize">{type}</p>
+                        <p className="text-xl font-semibold text-foreground">{resource.count}</p>
+                        <p className="text-xs text-muted">{formatCurrency(resource.cost)}/mo</p>
                       </div>
                     </div>
                   </div>
@@ -354,9 +354,9 @@ export default function CloudPage() {
 
             {resources.length === 0 && (
               <div className="bg-white rounded-lg shadow p-6 text-center">
-                <Server className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                <h3 className="text-lg font-medium text-gray-900 mb-2">No resources discovered</h3>
-                <p className="text-gray-500">Resources will appear after cloud accounts are synced</p>
+                <Server className="h-12 w-12 text-muted mx-auto mb-4" />
+                <h3 className="text-lg font-medium text-foreground mb-2">No resources discovered</h3>
+                <p className="text-muted">Resources will appear after cloud accounts are synced</p>
               </div>
             )}
           </div>
@@ -368,12 +368,12 @@ export default function CloudPage() {
         costsLoading ? (
           <div className="flex items-center justify-center h-64">
             <Loader2 className="h-8 w-8 animate-spin text-blue-500" />
-            <span className="ml-2 text-gray-500">Loading cost data...</span>
+            <span className="ml-2 text-muted">Loading cost data...</span>
           </div>
         ) : (
           <div className="space-y-6">
             <div className="bg-white rounded-lg shadow p-6">
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">Cost Breakdown by Account</h3>
+              <h3 className="text-lg font-semibold text-foreground mb-4">Cost Breakdown by Account</h3>
               {accounts.filter((a: CloudAccount) => (a.monthly_cost || 0) > 0).length > 0 ? (
                 <div className="space-y-4">
                   {accounts
@@ -384,14 +384,14 @@ export default function CloudPage() {
                       return (
                         <div key={account.id}>
                           <div className="flex items-center justify-between mb-1">
-                            <span className="text-sm font-medium text-gray-900">{account.name}</span>
-                            <span className="text-sm text-gray-500">
+                            <span className="text-sm font-medium text-foreground">{account.name}</span>
+                            <span className="text-sm text-muted">
                               {formatCurrency(account.monthly_cost || 0)} ({percentage.toFixed(1)}%)
                             </span>
                           </div>
                           <div className="w-full bg-gray-200 rounded-full h-2">
                             <div
-                              className="bg-blue-600 h-2 rounded-full"
+                              className="bg-primary h-2 rounded-full"
                               style={{ width: `${percentage}%` }}
                             />
                           </div>
@@ -400,13 +400,13 @@ export default function CloudPage() {
                     })}
                 </div>
               ) : (
-                <p className="text-gray-500 text-center py-4">No cost data available</p>
+                <p className="text-muted text-center py-4">No cost data available</p>
               )}
             </div>
 
             <div className="bg-white rounded-lg shadow p-6">
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">Cost Trend</h3>
-              <p className="text-gray-500 text-center py-8">
+              <h3 className="text-lg font-semibold text-foreground mb-4">Cost Trend</h3>
+              <p className="text-muted text-center py-8">
                 Cost trend chart will be displayed here showing monthly spending over time.
               </p>
             </div>
