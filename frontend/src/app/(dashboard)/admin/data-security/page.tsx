@@ -26,10 +26,10 @@ interface FieldClassification {
 }
 
 const classificationColors: Record<string, { bg: string; text: string }> = {
-  PII: { bg: 'bg-red-100', text: 'text-red-800' },
-  PCI: { bg: 'bg-orange-100', text: 'text-orange-800' },
-  NPI: { bg: 'bg-yellow-100', text: 'text-yellow-800' },
-  SENSITIVE: { bg: 'bg-purple-100', text: 'text-purple-800' },
+  PII: { bg: 'bg-error-subtle', text: 'text-error' },
+  PCI: { bg: 'bg-warning-subtle', text: 'text-warning' },
+  NPI: { bg: 'bg-warning-subtle', text: 'text-warning' },
+  SENSITIVE: { bg: 'bg-info-subtle', text: 'text-info' },
 };
 
 export default function DataSecurityPage() {
@@ -169,7 +169,7 @@ export default function DataSecurityPage() {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <Loader2 className="h-8 w-8 animate-spin text-blue-500" />
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
       </div>
     );
   }
@@ -177,12 +177,12 @@ export default function DataSecurityPage() {
   return (
     <div className="space-y-6">
       {error && (
-        <div className="flex items-start gap-3 p-4 text-sm text-red-800 bg-red-100 rounded-md">
+        <div className="flex items-start gap-3 p-4 text-sm text-error bg-error-subtle rounded-xl">
           <AlertCircle className="h-5 w-5 flex-shrink-0 mt-0.5" />
           <div className="flex-1">{error}</div>
           <button
             onClick={() => setError(null)}
-            className="text-red-600 hover:text-red-800 font-medium"
+            className="text-error hover:text-error font-medium"
           >
             Dismiss
           </button>
@@ -190,7 +190,7 @@ export default function DataSecurityPage() {
       )}
 
       {successMessage && (
-        <div className="flex items-start gap-3 p-4 text-sm text-green-800 bg-green-100 rounded-md">
+        <div className="flex items-start gap-3 p-4 text-sm text-success bg-success-subtle rounded-xl">
           <CheckCircle className="h-5 w-5 flex-shrink-0 mt-0.5" />
           <div className="flex-1">{successMessage}</div>
         </div>
@@ -198,22 +198,22 @@ export default function DataSecurityPage() {
 
       <div>
         <div className="flex items-center gap-3">
-          <Lock className="h-8 w-8 text-blue-600" />
+          <Lock className="h-8 w-8 text-primary" />
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">Data Security</h1>
-            <p className="mt-1 text-sm text-gray-500">
+            <h1 className="text-2xl font-bold text-foreground">Data Security</h1>
+            <p className="mt-1 text-sm text-muted">
               Manage PII masking, PCI tokenization, and data residency controls
             </p>
           </div>
         </div>
       </div>
 
-      <div className="bg-white rounded-lg shadow p-6 space-y-4">
-        <h2 className="text-lg font-semibold text-gray-900">Security Settings</h2>
+      <div className="bg-surface rounded-xl shadow-sm p-6 space-y-4">
+        <h2 className="text-lg font-semibold text-foreground">Security Settings</h2>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-medium text-secondary mb-1">
               Data Residency Region
             </label>
             <input
@@ -226,13 +226,13 @@ export default function DataSecurityPage() {
                   data_residency_region: e.target.value,
                 }))
               }
-              className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 border border-border-strong rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Encryption Key ID <span className="text-gray-500">(optional)</span>
+            <label className="block text-sm font-medium text-secondary mb-1">
+              Encryption Key ID <span className="text-muted">(optional)</span>
             </label>
             <input
               type="text"
@@ -244,14 +244,14 @@ export default function DataSecurityPage() {
                   encryption_key_id: e.target.value,
                 }))
               }
-              className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 border border-border-strong rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
             />
           </div>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
-          <div className="flex items-center justify-between p-3 border border-gray-200 rounded-md">
-            <label className="text-sm font-medium text-gray-700">PII Masking Enabled</label>
+          <div className="flex items-center justify-between p-3 border border-border rounded-xl">
+            <label className="text-sm font-medium text-secondary">PII Masking Enabled</label>
             <button
               onClick={() =>
                 setFormData((prev) => ({
@@ -260,19 +260,19 @@ export default function DataSecurityPage() {
                 }))
               }
               className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                formData.pii_masking_enabled ? 'bg-blue-600' : 'bg-gray-300'
+                formData.pii_masking_enabled ? 'bg-primary' : 'bg-gray-300'
               }`}
             >
               <span
-                className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                className={`inline-block h-4 w-4 transform rounded-full bg-surface transition-transform ${
                   formData.pii_masking_enabled ? 'translate-x-6' : 'translate-x-1'
                 }`}
               />
             </button>
           </div>
 
-          <div className="flex items-center justify-between p-3 border border-gray-200 rounded-md">
-            <label className="text-sm font-medium text-gray-700">PCI Tokenization Enabled</label>
+          <div className="flex items-center justify-between p-3 border border-border rounded-xl">
+            <label className="text-sm font-medium text-secondary">PCI Tokenization Enabled</label>
             <button
               onClick={() =>
                 setFormData((prev) => ({
@@ -281,11 +281,11 @@ export default function DataSecurityPage() {
                 }))
               }
               className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                formData.pci_tokenization_enabled ? 'bg-blue-600' : 'bg-gray-300'
+                formData.pci_tokenization_enabled ? 'bg-primary' : 'bg-gray-300'
               }`}
             >
               <span
-                className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                className={`inline-block h-4 w-4 transform rounded-full bg-surface transition-transform ${
                   formData.pci_tokenization_enabled ? 'translate-x-6' : 'translate-x-1'
                 }`}
               />
@@ -301,9 +301,9 @@ export default function DataSecurityPage() {
         </div>
       </div>
 
-      <div className="bg-white rounded-lg shadow">
-        <div className="flex items-center justify-between p-6 border-b border-gray-200">
-          <h2 className="text-lg font-semibold text-gray-900">Field Classifications</h2>
+      <div className="bg-surface rounded-xl shadow-sm">
+        <div className="flex items-center justify-between p-6 border-b border-border">
+          <h2 className="text-lg font-semibold text-foreground">Field Classifications</h2>
           <Button onClick={() => setShowAddModal(true)} size="sm">
             <Plus className="h-4 w-4 mr-2" />
             Add Classification
@@ -312,43 +312,43 @@ export default function DataSecurityPage() {
 
         <div className="overflow-x-auto">
           {classifications.length > 0 ? (
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
+            <table className="min-w-full divide-y divide-border">
+              <thead className="bg-background">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">
                     Table Name
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">
                     Field Name
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">
                     Classification
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">
                     Masking Strategy
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">
                     Unmask Permission
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">
                     Created At
                   </th>
-                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-right text-xs font-medium text-muted uppercase tracking-wider">
                     Actions
                   </th>
                 </tr>
               </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
+              <tbody className="bg-surface divide-y divide-border">
                 {classifications.map((classification) => {
                   const colors =
                     classificationColors[classification.classification] ||
                     classificationColors.SENSITIVE;
                   return (
-                    <tr key={classification.id} className="hover:bg-gray-50">
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                    <tr key={classification.id} className="hover:bg-background">
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-foreground">
                         {classification.table_name}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-muted">
                         {classification.field_name}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
@@ -358,21 +358,21 @@ export default function DataSecurityPage() {
                           {classification.classification}
                         </span>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-md text-xs font-medium bg-gray-100 text-gray-800">
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-muted">
+                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-xl text-xs font-medium bg-background text-foreground">
                           {classification.masking_strategy}
                         </span>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-muted">
                         {classification.unmask_permission}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-muted">
                         {formatDate(classification.created_at)}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-right">
                         <button
                           onClick={() => handleDeleteClassification(classification.id)}
-                          className="text-red-600 hover:text-red-900"
+                          className="text-error hover:text-red-900"
                         >
                           <Trash2 className="h-4 w-4" />
                         </button>
@@ -384,9 +384,9 @@ export default function DataSecurityPage() {
             </table>
           ) : (
             <div className="text-center py-12">
-              <Lock className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-              <h3 className="text-lg font-medium text-gray-900 mb-2">No classifications yet</h3>
-              <p className="text-gray-500 mb-4">
+              <Lock className="h-12 w-12 text-muted mx-auto mb-4" />
+              <h3 className="text-lg font-medium text-foreground mb-2">No classifications yet</h3>
+              <p className="text-muted mb-4">
                 Add field classifications to control data masking and protection
               </p>
               <Button onClick={() => setShowAddModal(true)} variant="outline" size="sm">
@@ -399,12 +399,12 @@ export default function DataSecurityPage() {
 
       {showAddModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
-          <div className="bg-white rounded-lg shadow-lg max-w-md w-full mx-4 p-6 space-y-4">
-            <h3 className="text-lg font-semibold text-gray-900">Add Field Classification</h3>
+          <div className="bg-surface rounded-xl shadow-sm-lg max-w-md w-full mx-4 p-6 space-y-4">
+            <h3 className="text-lg font-semibold text-foreground">Add Field Classification</h3>
 
             <div className="space-y-3">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-secondary mb-1">
                   Table Name
                 </label>
                 <input
@@ -417,12 +417,12 @@ export default function DataSecurityPage() {
                       table_name: e.target.value,
                     }))
                   }
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 border border-border-strong rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-secondary mb-1">
                   Field Name
                 </label>
                 <input
@@ -435,12 +435,12 @@ export default function DataSecurityPage() {
                       field_name: e.target.value,
                     }))
                   }
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 border border-border-strong rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-secondary mb-1">
                   Classification
                 </label>
                 <select
@@ -451,7 +451,7 @@ export default function DataSecurityPage() {
                       classification: e.target.value as FieldClassification['classification'],
                     }))
                   }
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 border border-border-strong rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
                 >
                   <option value="PII">PII</option>
                   <option value="PCI">PCI</option>
@@ -461,7 +461,7 @@ export default function DataSecurityPage() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-secondary mb-1">
                   Masking Strategy
                 </label>
                 <select
@@ -472,7 +472,7 @@ export default function DataSecurityPage() {
                       masking_strategy: e.target.value as FieldClassification['masking_strategy'],
                     }))
                   }
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 border border-border-strong rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
                 >
                   <option value="full">Full Masking</option>
                   <option value="partial">Partial Masking</option>
@@ -482,7 +482,7 @@ export default function DataSecurityPage() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-secondary mb-1">
                   Unmask Permission
                 </label>
                 <input
@@ -495,7 +495,7 @@ export default function DataSecurityPage() {
                       unmask_permission: e.target.value,
                     }))
                   }
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 border border-border-strong rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
                 />
               </div>
             </div>

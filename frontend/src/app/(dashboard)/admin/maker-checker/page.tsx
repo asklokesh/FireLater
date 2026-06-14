@@ -35,10 +35,10 @@ interface MakerCheckerRequest {
 type FilterStatus = 'pending' | 'approved' | 'rejected' | 'all';
 
 const statusColors: Record<string, { bg: string; text: string; icon: LucideIcon }> = {
-  pending: { bg: 'bg-yellow-100', text: 'text-yellow-800', icon: Clock },
-  approved: { bg: 'bg-green-100', text: 'text-green-800', icon: CheckCircle },
-  rejected: { bg: 'bg-red-100', text: 'text-red-800', icon: XCircle },
-  expired: { bg: 'bg-gray-100', text: 'text-gray-800', icon: Clock },
+  pending: { bg: 'bg-warning-subtle', text: 'text-warning', icon: Clock },
+  approved: { bg: 'bg-success-subtle', text: 'text-success', icon: CheckCircle },
+  rejected: { bg: 'bg-error-subtle', text: 'text-error', icon: XCircle },
+  expired: { bg: 'bg-background', text: 'text-foreground', icon: Clock },
 };
 
 export default function MakerCheckerPage() {
@@ -152,7 +152,7 @@ export default function MakerCheckerPage() {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <Loader2 className="h-8 w-8 animate-spin text-blue-500" />
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
       </div>
     );
   }
@@ -160,12 +160,12 @@ export default function MakerCheckerPage() {
   return (
     <div className="space-y-6">
       {error && (
-        <div className="flex items-start gap-3 p-4 text-sm text-red-800 bg-red-100 rounded-md">
+        <div className="flex items-start gap-3 p-4 text-sm text-error bg-error-subtle rounded-xl">
           <AlertCircle className="h-5 w-5 flex-shrink-0 mt-0.5" />
           <div className="flex-1">{error}</div>
           <button
             onClick={() => setError(null)}
-            className="text-red-600 hover:text-red-800 font-medium"
+            className="text-error hover:text-error font-medium"
           >
             Dismiss
           </button>
@@ -173,7 +173,7 @@ export default function MakerCheckerPage() {
       )}
 
       {successMessage && (
-        <div className="flex items-start gap-3 p-4 text-sm text-green-800 bg-green-100 rounded-md">
+        <div className="flex items-start gap-3 p-4 text-sm text-success bg-success-subtle rounded-xl">
           <CheckCircle className="h-5 w-5 flex-shrink-0 mt-0.5" />
           <div className="flex-1">{successMessage}</div>
         </div>
@@ -181,25 +181,25 @@ export default function MakerCheckerPage() {
 
       <div>
         <div className="flex items-center gap-3">
-          <CheckSquare className="h-8 w-8 text-blue-600" />
+          <CheckSquare className="h-8 w-8 text-primary" />
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">Maker-Checker Approvals</h1>
-            <p className="mt-1 text-sm text-gray-500">
+            <h1 className="text-2xl font-bold text-foreground">Maker-Checker Approvals</h1>
+            <p className="mt-1 text-sm text-muted">
               Dual-approval workflow for high-risk changes (SOX ITGC requirement)
             </p>
           </div>
         </div>
       </div>
 
-      <div className="flex gap-2 border-b border-gray-200">
+      <div className="flex gap-2 border-b border-border">
         {(['pending', 'approved', 'rejected', 'all'] as const).map((status) => (
           <button
             key={status}
             onClick={() => setFilterStatus(status)}
             className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
               filterStatus === status
-                ? 'border-blue-500 text-blue-600'
-                : 'border-transparent text-gray-600 hover:text-gray-900'
+                ? 'border-primary text-primary'
+                : 'border-transparent text-secondary hover:text-foreground'
             }`}
           >
             {status.charAt(0).toUpperCase() + status.slice(1)}
@@ -214,15 +214,15 @@ export default function MakerCheckerPage() {
             const statusConfig = statusColors[request.status];
 
             return (
-              <div key={request.id} className="bg-white rounded-lg shadow p-6 space-y-4">
+              <div key={request.id} className="bg-surface rounded-xl shadow-sm p-6 space-y-4">
                 {/* Header */}
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
                     <div className="flex items-center gap-2">
-                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-info-subtle text-foreground">
                         {request.entity_type}
                       </span>
-                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-background text-foreground">
                         {request.action}
                       </span>
                       <span
@@ -233,37 +233,37 @@ export default function MakerCheckerPage() {
                       </span>
                     </div>
                     {request.entity_title && (
-                      <h3 className="mt-2 text-lg font-semibold text-gray-900">
+                      <h3 className="mt-2 text-lg font-semibold text-foreground">
                         {request.entity_title}
                       </h3>
                     )}
-                    <p className="mt-1 text-sm text-gray-500">
+                    <p className="mt-1 text-sm text-muted">
                       Entity ID: {request.entity_id}
                     </p>
                   </div>
                 </div>
 
                 {/* Submitter and Dates */}
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 py-3 border-t border-b border-gray-200">
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 py-3 border-t border-b border-border">
                   <div>
-                    <p className="text-xs text-gray-500 uppercase">Submitter</p>
-                    <p className="text-sm font-medium text-gray-900">{request.submitter_email}</p>
+                    <p className="text-xs text-muted uppercase">Submitter</p>
+                    <p className="text-sm font-medium text-foreground">{request.submitter_email}</p>
                   </div>
                   <div>
-                    <p className="text-xs text-gray-500 uppercase">Created</p>
-                    <p className="text-sm font-medium text-gray-900">
+                    <p className="text-xs text-muted uppercase">Created</p>
+                    <p className="text-sm font-medium text-foreground">
                       {formatDate(request.created_at)}
                     </p>
                   </div>
                   <div>
-                    <p className="text-xs text-gray-500 uppercase">Expires</p>
-                    <p className="text-sm font-medium text-gray-900">
+                    <p className="text-xs text-muted uppercase">Expires</p>
+                    <p className="text-sm font-medium text-foreground">
                       {request.expires_at ? formatDate(request.expires_at) : 'Never'}
                     </p>
                   </div>
                   <div>
-                    <p className="text-xs text-gray-500 uppercase">Approvals</p>
-                    <p className="text-sm font-medium text-gray-900">
+                    <p className="text-xs text-muted uppercase">Approvals</p>
+                    <p className="text-sm font-medium text-foreground">
                       {request.current_approvals} of {request.required_approvals}
                     </p>
                   </div>
@@ -272,23 +272,23 @@ export default function MakerCheckerPage() {
                 {/* Approvals List */}
                 {request.approvals.length > 0 && (
                   <div className="space-y-2">
-                    <p className="text-sm font-medium text-gray-700">Approval Details:</p>
+                    <p className="text-sm font-medium text-secondary">Approval Details:</p>
                     <div className="space-y-2">
                       {request.approvals.map((approval, idx) => (
                         <div
                           key={idx}
-                          className="flex items-start gap-3 p-3 bg-gray-50 rounded-md"
+                          className="flex items-start gap-3 p-3 bg-background rounded-xl"
                         >
                           <div className="flex-1">
-                            <p className="text-sm font-medium text-gray-900">
+                            <p className="text-sm font-medium text-foreground">
                               {approval.approver_email}
                             </p>
-                            <p className="text-xs text-gray-500 mt-1">
+                            <p className="text-xs text-muted mt-1">
                               {approval.decision === 'approved' ? 'Approved' : 'Rejected'} on{' '}
                               {formatDate(approval.decided_at)}
                             </p>
                             {approval.comment && (
-                              <p className="text-xs text-gray-600 mt-1 italic">
+                              <p className="text-xs text-secondary mt-1 italic">
                                 &quot;{approval.comment}&quot;
                               </p>
                             )}
@@ -296,8 +296,8 @@ export default function MakerCheckerPage() {
                           <span
                             className={`inline-flex items-center px-2 py-1 rounded text-xs font-medium ${
                               approval.decision === 'approved'
-                                ? 'bg-green-100 text-green-800'
-                                : 'bg-red-100 text-red-800'
+                                ? 'bg-success-subtle text-success'
+                                : 'bg-error-subtle text-error'
                             }`}
                           >
                             {approval.decision === 'approved' ? 'Approved' : 'Rejected'}
@@ -310,18 +310,18 @@ export default function MakerCheckerPage() {
 
                 {/* Action Buttons */}
                 {request.status === 'pending' && (
-                  <div className="space-y-3 pt-2 border-t border-gray-200">
+                  <div className="space-y-3 pt-2 border-t border-border">
                     {/* Approve Section */}
                     {approvingRequestId === request.id ? (
-                      <div className="space-y-2 p-3 bg-blue-50 rounded-md">
-                        <label className="block text-sm font-medium text-gray-700">
+                      <div className="space-y-2 p-3 bg-blue-50 rounded-xl">
+                        <label className="block text-sm font-medium text-secondary">
                           Approval Comment (optional)
                         </label>
                         <textarea
                           value={approvingComment}
                           onChange={(e) => setApprovingComment(e.target.value)}
                           placeholder="Add a comment..."
-                          className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          className="w-full px-3 py-2 border border-border-strong rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
                           rows={3}
                         />
                         <div className="flex justify-end gap-2">
@@ -351,7 +351,7 @@ export default function MakerCheckerPage() {
                     ) : (
                       <Button
                         onClick={() => setApprovingRequestId(request.id)}
-                        className="w-full bg-green-600 hover:bg-green-700"
+                        className="w-full bg-primary hover:bg-green-700"
                         disabled={isSubmitting !== null}
                       >
                         Approve
@@ -360,15 +360,15 @@ export default function MakerCheckerPage() {
 
                     {/* Reject Section */}
                     {rejectingRequestId === request.id ? (
-                      <div className="space-y-2 p-3 bg-red-50 rounded-md">
-                        <label className="block text-sm font-medium text-gray-700">
+                      <div className="space-y-2 p-3 bg-red-50 rounded-xl">
+                        <label className="block text-sm font-medium text-secondary">
                           Rejection Reason
                         </label>
                         <textarea
                           value={rejectingReason}
                           onChange={(e) => setRejectingReason(e.target.value)}
                           placeholder="Explain why you're rejecting this request..."
-                          className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-red-500"
+                          className="w-full px-3 py-2 border border-border-strong rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-red-500"
                           rows={3}
                         />
                         <div className="flex justify-end gap-2">
@@ -387,7 +387,7 @@ export default function MakerCheckerPage() {
                             onClick={() => handleReject(request.id)}
                             size="sm"
                             disabled={isSubmitting === request.id || !rejectingReason}
-                            className="bg-red-600 hover:bg-red-700"
+                            className="bg-primary hover:bg-red-700"
                           >
                             {isSubmitting === request.id && (
                               <Loader2 className="h-4 w-4 mr-2 animate-spin" />
@@ -400,7 +400,7 @@ export default function MakerCheckerPage() {
                       <Button
                         variant="outline"
                         onClick={() => setRejectingRequestId(request.id)}
-                        className="w-full text-red-600 border-red-300 hover:bg-red-50"
+                        className="w-full text-error border-red-300 hover:bg-red-50"
                         disabled={isSubmitting !== null}
                       >
                         Reject
@@ -413,12 +413,12 @@ export default function MakerCheckerPage() {
           })}
         </div>
       ) : (
-        <div className="text-center py-12 bg-white rounded-lg shadow">
-          <CheckSquare className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-          <h3 className="text-lg font-medium text-gray-900 mb-2">
+        <div className="text-center py-12 bg-surface rounded-xl shadow-sm">
+          <CheckSquare className="h-12 w-12 text-muted mx-auto mb-4" />
+          <h3 className="text-lg font-medium text-foreground mb-2">
             No {filterStatus !== 'all' ? filterStatus : ''} approvals
           </h3>
-          <p className="text-gray-500">
+          <p className="text-muted">
             {filterStatus === 'pending'
               ? 'No pending requests awaiting approval'
               : `No ${filterStatus} requests at this time`}

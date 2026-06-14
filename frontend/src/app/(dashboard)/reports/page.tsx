@@ -87,12 +87,12 @@ const typeIcons: Record<string, typeof FileText> = {
 };
 
 const typeColors: Record<string, string> = {
-  issues: 'bg-red-100 text-red-600',
-  changes: 'bg-yellow-100 text-yellow-600',
-  applications: 'bg-blue-100 text-blue-600',
-  sla: 'bg-purple-100 text-purple-600',
-  requests: 'bg-green-100 text-green-600',
-  custom: 'bg-gray-100 text-gray-600',
+  issues: 'bg-error-subtle text-error',
+  changes: 'bg-warning-subtle text-yellow-600',
+  applications: 'bg-info-subtle text-primary',
+  sla: 'bg-info-subtle text-purple-600',
+  requests: 'bg-success-subtle text-success',
+  custom: 'bg-background text-secondary',
 };
 
 export default function ReportsPage() {
@@ -184,8 +184,8 @@ export default function ReportsPage() {
   const statusColors: Record<string, string> = {
     completed: 'text-green-500',
     failed: 'text-red-500',
-    running: 'text-blue-500 animate-spin',
-    pending: 'text-gray-400',
+    running: 'text-primary animate-spin',
+    pending: 'text-muted',
   };
 
   return (
@@ -193,8 +193,8 @@ export default function ReportsPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Reports</h1>
-          <p className="mt-1 text-sm text-gray-500">Generate and schedule reports</p>
+          <h1 className="text-2xl font-bold text-foreground">Reports</h1>
+          <p className="mt-1 text-sm text-muted">Generate and schedule reports</p>
         </div>
         <Link href="/reports/builder">
           <Button>
@@ -206,30 +206,30 @@ export default function ReportsPage() {
 
       {/* Search */}
       <div className="relative">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted" />
         <input
           type="text"
           placeholder="Search reports..."
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
-          className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="w-full pl-10 pr-4 py-2 border border-border-strong rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
         />
       </div>
 
       {/* Tabs */}
-      <div className="border-b border-gray-200">
+      <div className="border-b border-border">
         <nav className="-mb-px flex space-x-8">
           <button
             onClick={() => setActiveTab('templates')}
             className={`py-4 px-1 border-b-2 font-medium text-sm ${
               activeTab === 'templates'
-                ? 'border-blue-500 text-blue-600'
-                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                ? 'border-primary text-primary'
+                : 'border-transparent text-muted hover:text-secondary hover:border-border-strong'
             }`}
           >
             Report Templates
             {templates.length > 0 && (
-              <span className="ml-2 bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full text-xs">
+              <span className="ml-2 bg-background text-secondary px-2 py-0.5 rounded-full text-xs">
                 {templates.length}
               </span>
             )}
@@ -238,8 +238,8 @@ export default function ReportsPage() {
             onClick={() => setActiveTab('history')}
             className={`py-4 px-1 border-b-2 font-medium text-sm ${
               activeTab === 'history'
-                ? 'border-blue-500 text-blue-600'
-                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                ? 'border-primary text-primary'
+                : 'border-transparent text-muted hover:text-secondary hover:border-border-strong'
             }`}
           >
             Report History
@@ -248,13 +248,13 @@ export default function ReportsPage() {
             onClick={() => setActiveTab('scheduled')}
             className={`py-4 px-1 border-b-2 font-medium text-sm ${
               activeTab === 'scheduled'
-                ? 'border-blue-500 text-blue-600'
-                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                ? 'border-primary text-primary'
+                : 'border-transparent text-muted hover:text-secondary hover:border-border-strong'
             }`}
           >
             Scheduled Reports
             {schedules.filter((s) => s.is_active).length > 0 && (
-              <span className="ml-2 bg-green-100 text-green-600 px-2 py-0.5 rounded-full text-xs">
+              <span className="ml-2 bg-success-subtle text-success px-2 py-0.5 rounded-full text-xs">
                 {schedules.filter((s) => s.is_active).length} active
               </span>
             )}
@@ -267,13 +267,13 @@ export default function ReportsPage() {
         <div>
           {templatesLoading ? (
             <div className="flex items-center justify-center py-12">
-              <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
+              <Loader2 className="h-8 w-8 animate-spin text-muted" />
             </div>
           ) : filteredTemplates.length === 0 ? (
-            <div className="text-center py-12 bg-white rounded-lg shadow">
-              <FileText className="mx-auto h-12 w-12 text-gray-400" />
-              <h3 className="mt-2 text-sm font-medium text-gray-900">No report templates</h3>
-              <p className="mt-1 text-sm text-gray-500">
+            <div className="text-center py-12 bg-surface rounded-lg shadow">
+              <FileText className="mx-auto h-12 w-12 text-muted" />
+              <h3 className="mt-2 text-sm font-medium text-foreground">No report templates</h3>
+              <p className="mt-1 text-sm text-muted">
                 Get started by creating a new report template.
               </p>
               <div className="mt-6">
@@ -291,26 +291,26 @@ export default function ReportsPage() {
                 const Icon = typeIcons[template.report_type] || FileText;
                 const colorClass = typeColors[template.report_type] || typeColors.custom;
                 return (
-                  <div key={template.id} className="bg-white rounded-lg shadow p-6 relative group">
+                  <div key={template.id} className="bg-surface rounded-lg shadow p-6 relative group">
                     <div className="flex items-start justify-between">
                       <div className={`h-10 w-10 rounded-lg ${colorClass} flex items-center justify-center`}>
                         <Icon className="h-5 w-5" />
                       </div>
                       <div className="relative">
-                        <button className="text-gray-400 hover:text-gray-600 p-1">
+                        <button className="text-muted hover:text-secondary p-1">
                           <MoreHorizontal className="h-5 w-5" />
                         </button>
-                        <div className="absolute right-0 mt-1 w-48 bg-white rounded-md shadow-lg border border-gray-200 hidden group-hover:block z-10">
+                        <div className="absolute right-0 mt-1 w-48 bg-surface rounded-lg shadow-lg border border-border hidden group-hover:block z-10">
                           <Link
                             href={`/reports/${template.id}`}
-                            className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
+                            className="block px-4 py-2 text-sm text-secondary hover:bg-background"
                           >
                             <Edit className="h-4 w-4 inline mr-2" />
                             Edit
                           </Link>
                           <button
                             onClick={() => setShowDeleteConfirm(template.id)}
-                            className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50"
+                            className="w-full text-left px-4 py-2 text-sm text-error hover:bg-red-50"
                           >
                             <Trash2 className="h-4 w-4 inline mr-2" />
                             Delete
@@ -318,11 +318,11 @@ export default function ReportsPage() {
                         </div>
                       </div>
                     </div>
-                    <h3 className="mt-4 font-medium text-gray-900">{template.name}</h3>
-                    <p className="mt-1 text-sm text-gray-500 line-clamp-2">
+                    <h3 className="mt-4 font-medium text-foreground">{template.name}</h3>
+                    <p className="mt-1 text-sm text-muted line-clamp-2">
                       {template.description || 'No description'}
                     </p>
-                    <div className="mt-4 flex items-center text-xs text-gray-500">
+                    <div className="mt-4 flex items-center text-xs text-muted">
                       <Clock className="h-3 w-3 mr-1" />
                       Updated {formatDate(template.updated_at)}
                     </div>
@@ -356,50 +356,50 @@ export default function ReportsPage() {
 
       {/* History Tab */}
       {activeTab === 'history' && (
-        <div className="bg-white rounded-lg shadow overflow-hidden">
+        <div className="bg-surface rounded-lg shadow overflow-hidden">
           {executionsLoading ? (
             <div className="flex items-center justify-center py-12">
-              <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
+              <Loader2 className="h-8 w-8 animate-spin text-muted" />
             </div>
           ) : executions.length === 0 ? (
             <div className="text-center py-12">
-              <Clock className="mx-auto h-12 w-12 text-gray-400" />
-              <h3 className="mt-2 text-sm font-medium text-gray-900">No report history</h3>
-              <p className="mt-1 text-sm text-gray-500">Run a report to see execution history.</p>
+              <Clock className="mx-auto h-12 w-12 text-muted" />
+              <h3 className="mt-2 text-sm font-medium text-foreground">No report history</h3>
+              <p className="mt-1 text-sm text-muted">Run a report to see execution history.</p>
             </div>
           ) : (
             <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
+              <thead className="bg-background">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">
                     Report
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">
                     Status
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">
                     Generated
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">
                     Format
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">
                     Size
                   </th>
-                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-right text-xs font-medium text-muted uppercase tracking-wider">
                     Actions
                   </th>
                 </tr>
               </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
+              <tbody className="bg-surface divide-y divide-gray-200">
                 {executions.map((execution) => {
                   const StatusIcon = statusIcons[execution.status] || Clock;
                   return (
-                    <tr key={execution.id} className="hover:bg-gray-50">
+                    <tr key={execution.id} className="hover:bg-background">
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="flex items-center">
-                          <FileText className="h-5 w-5 text-gray-400 mr-3" />
-                          <span className="text-sm font-medium text-gray-900">
+                          <FileText className="h-5 w-5 text-muted mr-3" />
+                          <span className="text-sm font-medium text-foreground">
                             {execution.template_name || 'Unknown Report'}
                           </span>
                         </div>
@@ -415,17 +415,17 @@ export default function ReportsPage() {
                           </p>
                         )}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-muted">
                         {execution.completed_at
                           ? formatDate(execution.completed_at)
                           : formatDate(execution.created_at)}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800 uppercase">
+                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-background text-foreground uppercase">
                           {execution.output_format}
                         </span>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-muted">
                         {formatFileSize(execution.file_size)}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-right">
@@ -434,7 +434,7 @@ export default function ReportsPage() {
                             href={execution.output_url}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="inline-flex items-center px-3 py-1.5 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
+                            className="inline-flex items-center px-3 py-1.5 border border-border-strong rounded-lg text-sm font-medium text-secondary bg-surface hover:bg-background"
                           >
                             <Download className="h-4 w-4 mr-1" />
                             Download
@@ -452,78 +452,78 @@ export default function ReportsPage() {
 
       {/* Scheduled Tab */}
       {activeTab === 'scheduled' && (
-        <div className="bg-white rounded-lg shadow overflow-hidden">
+        <div className="bg-surface rounded-lg shadow overflow-hidden">
           {schedulesLoading ? (
             <div className="flex items-center justify-center py-12">
-              <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
+              <Loader2 className="h-8 w-8 animate-spin text-muted" />
             </div>
           ) : schedules.length === 0 ? (
             <div className="text-center py-12">
-              <Calendar className="mx-auto h-12 w-12 text-gray-400" />
-              <h3 className="mt-2 text-sm font-medium text-gray-900">No scheduled reports</h3>
-              <p className="mt-1 text-sm text-gray-500">
+              <Calendar className="mx-auto h-12 w-12 text-muted" />
+              <h3 className="mt-2 text-sm font-medium text-foreground">No scheduled reports</h3>
+              <p className="mt-1 text-sm text-muted">
                 Schedule a report from the templates tab.
               </p>
             </div>
           ) : (
             <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
+              <thead className="bg-background">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">
                     Report
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">
                     Schedule
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">
                     Delivery
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">
                     Next Run
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">
                     Status
                   </th>
-                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-right text-xs font-medium text-muted uppercase tracking-wider">
                     Actions
                   </th>
                 </tr>
               </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
+              <tbody className="bg-surface divide-y divide-gray-200">
                 {schedules.map((schedule) => (
-                  <tr key={schedule.id} className="hover:bg-gray-50">
+                  <tr key={schedule.id} className="hover:bg-background">
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <span className="text-sm font-medium text-gray-900">{schedule.name}</span>
+                      <span className="text-sm font-medium text-foreground">{schedule.name}</span>
                       {schedule.template_name && (
-                        <p className="text-xs text-gray-500">{schedule.template_name}</p>
+                        <p className="text-xs text-muted">{schedule.template_name}</p>
                       )}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-muted">
                       {schedule.schedule_type.charAt(0).toUpperCase() + schedule.schedule_type.slice(1)}
                       {schedule.cron_expression && (
-                        <p className="text-xs text-gray-400">{schedule.cron_expression}</p>
+                        <p className="text-xs text-muted">{schedule.cron_expression}</p>
                       )}
                     </td>
                     <td className="px-6 py-4">
-                      <div className="text-sm text-gray-500">
+                      <div className="text-sm text-muted">
                         <span className="capitalize">{schedule.delivery_method}</span>
                         {schedule.recipients.length > 0 && (
-                          <p className="text-xs text-gray-400">
+                          <p className="text-xs text-muted">
                             {schedule.recipients.slice(0, 2).join(', ')}
                             {schedule.recipients.length > 2 && ` +${schedule.recipients.length - 2}`}
                           </p>
                         )}
                       </div>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-muted">
                       {schedule.next_run_at ? formatDate(schedule.next_run_at) : '-'}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span
                         className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
                           schedule.is_active
-                            ? 'bg-green-100 text-green-800'
-                            : 'bg-gray-100 text-gray-800'
+                            ? 'bg-success-subtle text-success'
+                            : 'bg-background text-foreground'
                         }`}
                       >
                         {schedule.is_active ? 'Active' : 'Paused'}
@@ -536,7 +536,7 @@ export default function ReportsPage() {
                           className={`p-1.5 rounded ${
                             schedule.is_active
                               ? 'text-yellow-600 hover:bg-yellow-50'
-                              : 'text-green-600 hover:bg-green-50'
+                              : 'text-success hover:bg-green-50'
                           }`}
                           title={schedule.is_active ? 'Pause' : 'Activate'}
                         >
@@ -548,13 +548,13 @@ export default function ReportsPage() {
                         </button>
                         <Link
                           href={`/reports/${schedule.template_id}/schedule/${schedule.id}`}
-                          className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-50 rounded"
+                          className="p-1.5 text-muted hover:text-secondary hover:bg-background rounded"
                         >
                           <Settings className="h-4 w-4" />
                         </Link>
                         <button
                           onClick={() => setShowDeleteConfirm(schedule.id)}
-                          className="p-1.5 text-red-400 hover:text-red-600 hover:bg-red-50 rounded"
+                          className="p-1.5 text-red-400 hover:text-error hover:bg-red-50 rounded"
                         >
                           <Trash2 className="h-4 w-4" />
                         </button>
@@ -573,17 +573,17 @@ export default function ReportsPage() {
         <div className="fixed inset-0 z-50 overflow-y-auto">
           <div className="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center">
             <div className="fixed inset-0 transition-opacity" onClick={() => setShowDeleteConfirm(null)}>
-              <div className="absolute inset-0 bg-gray-500 opacity-75" />
+              <div className="absolute inset-0 bg-background0 opacity-75" />
             </div>
-            <div className="inline-block bg-white rounded-lg px-4 pt-5 pb-4 text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:p-6 sm:max-w-lg sm:w-full">
+            <div className="inline-block bg-surface rounded-lg px-4 pt-5 pb-4 text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:p-6 sm:max-w-lg sm:w-full">
               <div className="sm:flex sm:items-start">
-                <div className="mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-red-100 sm:mx-0 sm:h-10 sm:w-10">
-                  <Trash2 className="h-6 w-6 text-red-600" />
+                <div className="mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-error-subtle sm:mx-0 sm:h-10 sm:w-10">
+                  <Trash2 className="h-6 w-6 text-error" />
                 </div>
                 <div className="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left">
-                  <h3 className="text-lg leading-6 font-medium text-gray-900">Delete Confirmation</h3>
+                  <h3 className="text-lg leading-6 font-medium text-foreground">Delete Confirmation</h3>
                   <div className="mt-2">
-                    <p className="text-sm text-gray-500">
+                    <p className="text-sm text-muted">
                       Are you sure you want to delete this item? This action cannot be undone.
                     </p>
                   </div>
@@ -599,14 +599,14 @@ export default function ReportsPage() {
                       handleDeleteSchedule(showDeleteConfirm);
                     }
                   }}
-                  className="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-red-600 text-base font-medium text-white hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 sm:ml-3 sm:w-auto sm:text-sm"
+                  className="w-full inline-flex justify-center rounded-lg border border-transparent shadow-sm px-4 py-2 bg-primary text-base font-medium text-white hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 sm:ml-3 sm:w-auto sm:text-sm"
                 >
                   Delete
                 </button>
                 <button
                   type="button"
                   onClick={() => setShowDeleteConfirm(null)}
-                  className="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 sm:mt-0 sm:w-auto sm:text-sm"
+                  className="mt-3 w-full inline-flex justify-center rounded-lg border border-border-strong shadow-sm px-4 py-2 bg-surface text-base font-medium text-secondary hover:bg-background focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary/20 focus:border-primary sm:mt-0 sm:w-auto sm:text-sm"
                 >
                   Cancel
                 </button>

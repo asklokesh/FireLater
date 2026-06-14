@@ -126,35 +126,35 @@ export default function AuditLogsPage() {
 
   const getActionColor = (action: string) => {
     const actionLower = action.toLowerCase();
-    if (actionLower.includes('create')) return 'bg-green-100 text-green-800';
-    if (actionLower.includes('delete') || actionLower.includes('remove')) return 'bg-red-100 text-red-800';
-    if (actionLower.includes('update') || actionLower.includes('modify')) return 'bg-blue-100 text-blue-800';
-    if (actionLower.includes('view') || actionLower.includes('read')) return 'bg-gray-100 text-gray-800';
-    return 'bg-purple-100 text-purple-800';
+    if (actionLower.includes('create')) return 'bg-success-subtle text-success';
+    if (actionLower.includes('delete') || actionLower.includes('remove')) return 'bg-error-subtle text-error';
+    if (actionLower.includes('update') || actionLower.includes('modify')) return 'bg-info-subtle text-foreground';
+    if (actionLower.includes('view') || actionLower.includes('read')) return 'bg-background text-foreground';
+    return 'bg-info-subtle text-info';
   };
 
   return (
     <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center gap-3">
-        <ScrollText className="h-8 w-8 text-gray-700" />
+        <ScrollText className="h-8 w-8 text-secondary" />
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Audit Logs</h1>
-          <p className="mt-1 text-sm text-gray-500">
+          <h1 className="text-2xl font-bold text-foreground">Audit Logs</h1>
+          <p className="mt-1 text-sm text-secondary">
             Track system activities and verify log integrity
           </p>
         </div>
       </div>
 
       {/* Tabs */}
-      <div className="border-b border-gray-200">
+      <div className="border-b border-border">
         <div className="flex gap-8">
           <button
             onClick={() => setActiveTab('trail')}
             className={`px-1 py-3 text-sm font-medium border-b-2 transition-colors ${
               activeTab === 'trail'
-                ? 'border-blue-600 text-blue-600'
-                : 'border-transparent text-gray-600 hover:text-gray-900'
+                ? 'border-primary text-primary'
+                : 'border-transparent text-secondary hover:text-foreground'
             }`}
           >
             Audit Trail
@@ -163,8 +163,8 @@ export default function AuditLogsPage() {
             onClick={() => setActiveTab('verify')}
             className={`px-1 py-3 text-sm font-medium border-b-2 transition-colors ${
               activeTab === 'verify'
-                ? 'border-blue-600 text-blue-600'
-                : 'border-transparent text-gray-600 hover:text-gray-900'
+                ? 'border-primary text-primary'
+                : 'border-transparent text-secondary hover:text-foreground'
             }`}
           >
             Chain Verification
@@ -176,10 +176,10 @@ export default function AuditLogsPage() {
       {activeTab === 'trail' && (
         <div className="space-y-4">
           {/* Filters */}
-          <div className="bg-white rounded-lg shadow p-4">
+          <div className="bg-surface rounded-xl shadow-sm p-4">
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-secondary mb-1">
                   <Calendar className="h-4 w-4 inline mr-1" />
                   From Date
                 </label>
@@ -190,11 +190,11 @@ export default function AuditLogsPage() {
                     setFromDate(e.target.value);
                     setPage(1);
                   }}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 border border-border-strong rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-secondary mb-1">
                   <Calendar className="h-4 w-4 inline mr-1" />
                   To Date
                 </label>
@@ -205,11 +205,11 @@ export default function AuditLogsPage() {
                     setToDate(e.target.value);
                     setPage(1);
                   }}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 border border-border-strong rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-secondary mb-1">
                   <Zap className="h-4 w-4 inline mr-1" />
                   Action
                 </label>
@@ -221,11 +221,11 @@ export default function AuditLogsPage() {
                     setActionFilter(e.target.value);
                     setPage(1);
                   }}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 border border-border-strong rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-secondary mb-1">
                   <User className="h-4 w-4 inline mr-1" />
                   User Email
                 </label>
@@ -237,7 +237,7 @@ export default function AuditLogsPage() {
                     setUserSearch(e.target.value);
                     setPage(1);
                   }}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 border border-border-strong rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
                 />
               </div>
             </div>
@@ -245,7 +245,7 @@ export default function AuditLogsPage() {
 
           {/* Error Alert */}
           {error && (
-            <div className="flex items-center gap-2 p-4 text-sm text-red-800 bg-red-100 rounded-md">
+            <div className="flex items-center gap-2 p-4 text-sm text-error bg-error-subtle rounded-lg">
               <AlertCircle className="h-4 w-4 flex-shrink-0" />
               {error}
             </div>
@@ -254,46 +254,46 @@ export default function AuditLogsPage() {
           {/* Loading State */}
           {isLoading ? (
             <div className="flex items-center justify-center h-64">
-              <Loader2 className="h-8 w-8 animate-spin text-blue-500" />
+              <Loader2 className="h-8 w-8 animate-spin text-primary" />
             </div>
           ) : (
             <>
               {/* Table */}
-              <div className="bg-white rounded-lg shadow overflow-hidden">
-                <table className="min-w-full divide-y divide-gray-200">
-                  <thead className="bg-gray-50">
+              <div className="bg-surface rounded-xl shadow-sm overflow-hidden">
+                <table className="min-w-full divide-y divide-border">
+                  <thead className="bg-background">
                     <tr>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <th className="px-6 py-3 text-left text-xs font-medium text-secondary uppercase tracking-wider">
                         Timestamp
                       </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <th className="px-6 py-3 text-left text-xs font-medium text-secondary uppercase tracking-wider">
                         User
                       </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <th className="px-6 py-3 text-left text-xs font-medium text-secondary uppercase tracking-wider">
                         Action
                       </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <th className="px-6 py-3 text-left text-xs font-medium text-secondary uppercase tracking-wider">
                         Entity Type
                       </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <th className="px-6 py-3 text-left text-xs font-medium text-secondary uppercase tracking-wider">
                         Entity Name
                       </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <th className="px-6 py-3 text-left text-xs font-medium text-secondary uppercase tracking-wider">
                         Hash
                       </th>
                     </tr>
                   </thead>
-                  <tbody className="bg-white divide-y divide-gray-200">
+                  <tbody className="bg-surface divide-y divide-border">
                     {logs.map((entry) => (
-                      <tr key={entry.id} className="hover:bg-gray-50">
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                      <tr key={entry.id} className="hover:bg-surface-hover">
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-secondary">
                           {formatDate(entry.created_at)}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm">
                           {entry.user_email ? (
-                            <span className="text-gray-900 font-medium">{entry.user_email}</span>
+                            <span className="text-foreground font-medium">{entry.user_email}</span>
                           ) : (
-                            <span className="text-gray-400">System</span>
+                            <span className="text-muted">System</span>
                           )}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
@@ -305,21 +305,21 @@ export default function AuditLogsPage() {
                             {entry.action}
                           </span>
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-secondary">
                           {entry.entity_type || '-'}
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-secondary">
                           {entry.entity_name || (entry.entity_id ? `ID: ${entry.entity_id.substring(0, 8)}...` : '-')}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
                           <div className="flex items-center gap-2">
-                            <code className="text-xs text-gray-500 font-mono">
+                            <code className="text-xs text-secondary font-mono">
                               {truncateHash(entry.hash)}
                             </code>
                             {entry.hash && (
                               <button
                                 onClick={() => copyToClipboard(entry.hash || '')}
-                                className="text-gray-400 hover:text-gray-600"
+                                className="text-muted hover:text-secondary"
                                 title="Copy hash"
                               >
                                 <Copy className="h-4 w-4" />
@@ -334,15 +334,15 @@ export default function AuditLogsPage() {
 
                 {logs.length === 0 && (
                   <div className="text-center py-12">
-                    <ScrollText className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                    <h3 className="text-lg font-medium text-gray-900 mb-2">No audit log entries found</h3>
-                    <p className="text-gray-500">Try adjusting your filters</p>
+                    <ScrollText className="h-12 w-12 text-muted mx-auto mb-4" />
+                    <h3 className="text-lg font-medium text-foreground mb-2">No audit log entries found</h3>
+                    <p className="text-secondary">Try adjusting your filters</p>
                   </div>
                 )}
 
                 {/* Pagination */}
-                <div className="px-6 py-4 border-t border-gray-200 flex items-center justify-between">
-                  <div className="text-sm text-gray-500">
+                <div className="px-6 py-4 border-t border-border flex items-center justify-between">
+                  <div className="text-sm text-secondary">
                     Showing {logs.length} of {total} entries
                   </div>
                   <div className="flex space-x-2">
@@ -372,11 +372,11 @@ export default function AuditLogsPage() {
 
       {activeTab === 'verify' && (
         <div className="space-y-4">
-          <div className="bg-white rounded-lg shadow p-6">
+          <div className="bg-surface rounded-xl shadow-sm p-6">
             <div className="flex items-start justify-between mb-6">
               <div>
-                <h2 className="text-lg font-semibold text-gray-900">Verify Log Chain Integrity</h2>
-                <p className="mt-1 text-sm text-gray-500">
+                <h2 className="text-lg font-semibold text-foreground">Verify Log Chain Integrity</h2>
+                <p className="mt-1 text-sm text-secondary">
                   Verify that all audit logs form an unbroken cryptographic chain
                 </p>
               </div>
@@ -397,7 +397,7 @@ export default function AuditLogsPage() {
             </div>
 
             {verifyError && (
-              <div className="mb-4 p-4 text-sm text-red-800 bg-red-100 rounded-md flex items-start gap-3">
+              <div className="mb-4 p-4 text-sm text-error bg-error-subtle rounded-lg flex items-start gap-3">
                 <AlertCircle className="h-5 w-5 flex-shrink-0 mt-0.5" />
                 <div>{verifyError}</div>
               </div>
@@ -407,10 +407,10 @@ export default function AuditLogsPage() {
               <div className="space-y-4">
                 {/* Status Banner */}
                 <div
-                  className={`p-4 rounded-md flex items-start gap-3 ${
+                  className={`p-4 rounded-lg flex items-start gap-3 ${
                     verifyResult.valid
-                      ? 'bg-green-100 text-green-800'
-                      : 'bg-red-100 text-red-800'
+                      ? 'bg-success-subtle text-success'
+                      : 'bg-error-subtle text-error'
                   }`}
                 >
                   {verifyResult.valid ? (
@@ -434,21 +434,21 @@ export default function AuditLogsPage() {
 
                 {/* Stats */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div className="bg-gray-50 rounded-lg p-4">
-                    <p className="text-sm text-gray-600 mb-1">Total Entries</p>
-                    <p className="text-2xl font-bold text-gray-900">{verifyResult.totalEntries}</p>
+                  <div className="bg-background rounded-xl p-4">
+                    <p className="text-sm text-secondary mb-1">Total Entries</p>
+                    <p className="text-2xl font-bold text-foreground">{verifyResult.totalEntries}</p>
                   </div>
-                  <div className="bg-gray-50 rounded-lg p-4">
-                    <p className="text-sm text-gray-600 mb-1">First Entry</p>
-                    <p className="text-sm font-mono text-gray-900">
+                  <div className="bg-background rounded-xl p-4">
+                    <p className="text-sm text-secondary mb-1">First Entry</p>
+                    <p className="text-sm font-mono text-foreground">
                       {verifyResult.firstEntry
                         ? formatDate(verifyResult.firstEntry.created_at)
                         : 'N/A'}
                     </p>
                   </div>
-                  <div className="bg-gray-50 rounded-lg p-4">
-                    <p className="text-sm text-gray-600 mb-1">Last Entry</p>
-                    <p className="text-sm font-mono text-gray-900">
+                  <div className="bg-background rounded-xl p-4">
+                    <p className="text-sm text-secondary mb-1">Last Entry</p>
+                    <p className="text-sm font-mono text-foreground">
                       {verifyResult.lastEntry
                         ? formatDate(verifyResult.lastEntry.created_at)
                         : 'N/A'}

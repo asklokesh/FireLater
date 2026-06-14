@@ -139,15 +139,15 @@ export default function VendorRiskPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div className="flex items-center space-x-3">
-          <Building2 className="h-8 w-8 text-gray-900" />
+          <Building2 className="h-8 w-8 text-foreground" />
           <div>
-            <h1 className="text-2xl font-semibold text-gray-900">Vendor Risk Register</h1>
-            <p className="mt-1 text-sm text-gray-500">Third-party vendor risk management (FFIEC, GLBA, SOC2)</p>
+            <h1 className="text-2xl font-semibold text-foreground">Vendor Risk Register</h1>
+            <p className="mt-1 text-sm text-muted">Third-party vendor risk management (FFIEC, GLBA, SOC2)</p>
           </div>
         </div>
         <button
           onClick={() => setShowAddModal(true)}
-          className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700"
+          className="inline-flex items-center px-4 py-2 border border-transparent rounded-xl shadow-sm-sm text-sm font-medium text-white bg-primary hover:hover:bg-primary-hover"
         >
           <Plus className="h-4 w-4 mr-2" />
           Add Vendor
@@ -162,29 +162,29 @@ export default function VendorRiskPage() {
       </div>
 
       {error && (
-        <div className="bg-red-50 border border-red-200 rounded-lg p-4 flex items-start space-x-3">
-          <AlertCircle className="h-5 w-5 text-red-600 mt-0.5" />
+        <div className="bg-error-subtle border border-error rounded-xl p-4 flex items-start space-x-3">
+          <AlertCircle className="h-5 w-5 text-error mt-0.5" />
           <div className="flex-1">
-            <p className="text-sm font-medium text-red-800">{error}</p>
-            <button onClick={() => setError(null)} className="text-xs text-red-600 mt-1">
+            <p className="text-sm font-medium text-error">{error}</p>
+            <button onClick={() => setError(null)} className="text-xs text-error mt-1">
               Dismiss
             </button>
           </div>
         </div>
       )}
 
-      <div className="bg-white shadow rounded-lg p-4 flex items-center space-x-4">
+      <div className="bg-surface shadow-sm rounded-xl p-4 flex items-center space-x-4">
         <input
           type="text"
           placeholder="Search vendors by name..."
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
-          className="flex-1 px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+          className="flex-1 px-3 py-2 border border-border-strong rounded-xl shadow-sm-sm focus:border-primary focus:ring-primary/20 focus:border-primary sm:text-sm"
         />
         <select
           value={riskFilter}
           onChange={(e) => setRiskFilter(e.target.value)}
-          className="px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+          className="px-3 py-2 border border-border-strong rounded-xl shadow-sm-sm focus:border-primary focus:ring-primary/20 focus:border-primary sm:text-sm"
         >
           <option value="">All Risk Tiers</option>
           <option value="critical">Critical</option>
@@ -196,20 +196,20 @@ export default function VendorRiskPage() {
 
       {loading ? (
         <div className="flex items-center justify-center py-12">
-          <RefreshCw className="h-8 w-8 text-gray-400 animate-spin" />
+          <RefreshCw className="h-8 w-8 text-muted animate-spin" />
         </div>
       ) : filteredVendors.length === 0 ? (
-        <div className="text-center py-12 bg-white border rounded-lg">
-          <Building2 className="mx-auto h-12 w-12 text-gray-400" />
-          <h3 className="mt-2 text-sm font-medium text-gray-900">No vendors found</h3>
-          <p className="mt-1 text-sm text-gray-500">Get started by adding your first vendor.</p>
+        <div className="text-center py-12 bg-surface border rounded-xl">
+          <Building2 className="mx-auto h-12 w-12 text-muted" />
+          <h3 className="mt-2 text-sm font-medium text-foreground">No vendors found</h3>
+          <p className="mt-1 text-sm text-muted">Get started by adding your first vendor.</p>
         </div>
       ) : (
         <div className="space-y-2">
           {filteredVendors.map((vendor) => (
-            <div key={vendor.id} className="bg-white border rounded-lg overflow-hidden">
+            <div key={vendor.id} className="bg-surface border rounded-xl overflow-hidden">
               <div
-                className="px-6 py-4 hover:bg-gray-50 cursor-pointer flex items-center justify-between"
+                className="px-6 py-4 hover:bg-surface-hover cursor-pointer flex items-center justify-between"
                 onClick={() => {
                   if (expandedVendor === vendor.id) {
                     setExpandedVendor(null);
@@ -224,15 +224,15 @@ export default function VendorRiskPage() {
                 <div className="flex items-center space-x-4 flex-1">
                   <div className="flex-shrink-0">
                     {expandedVendor === vendor.id ? (
-                      <ChevronUp className="h-5 w-5 text-gray-400" />
+                      <ChevronUp className="h-5 w-5 text-muted" />
                     ) : (
-                      <ChevronDown className="h-5 w-5 text-gray-400" />
+                      <ChevronDown className="h-5 w-5 text-muted" />
                     )}
                   </div>
                   <div className="flex-1">
-                    <h3 className="text-sm font-medium text-gray-900">{vendor.name}</h3>
+                    <h3 className="text-sm font-medium text-foreground">{vendor.name}</h3>
                     {vendor.description && (
-                      <p className="text-sm text-gray-500 mt-1">{vendor.description}</p>
+                      <p className="text-sm text-muted mt-1">{vendor.description}</p>
                     )}
                   </div>
                   <div className="flex items-center space-x-3">
@@ -240,7 +240,7 @@ export default function VendorRiskPage() {
                     {vendor.criticality && (
                       <CriticalityBadge criticality={vendor.criticality} />
                     )}
-                    <div className="text-sm text-gray-500">
+                    <div className="text-sm text-muted">
                       {vendor.primary_contact_email && `${vendor.primary_contact_name || 'Contact'}: ${vendor.primary_contact_email}`}
                     </div>
                     <button
@@ -250,8 +250,8 @@ export default function VendorRiskPage() {
                       }}
                       className={`px-3 py-1 text-xs font-medium rounded-full ${
                         vendor.is_active
-                          ? 'bg-green-100 text-green-800'
-                          : 'bg-gray-100 text-gray-800'
+                          ? 'bg-success-subtle text-success'
+                          : 'bg-background text-foreground'
                       }`}
                     >
                       {vendor.is_active ? 'Active' : 'Inactive'}
@@ -261,26 +261,26 @@ export default function VendorRiskPage() {
               </div>
 
               {expandedVendor === vendor.id && (
-                <div className="border-t border-gray-200 px-6 py-4 bg-gray-50 space-y-4">
+                <div className="border-t border-border px-6 py-4 bg-surface-hover space-y-4">
                   <div className="grid grid-cols-2 gap-4">
                     {vendor.website && (
                       <div>
-                        <p className="text-xs font-medium text-gray-700">Website</p>
-                        <p className="text-sm text-blue-600 mt-1">{vendor.website}</p>
+                        <p className="text-xs font-medium text-secondary">Website</p>
+                        <p className="text-sm text-primary mt-1">{vendor.website}</p>
                       </div>
                     )}
                     {vendor.contract_review_date && (
                       <div>
-                        <p className="text-xs font-medium text-gray-700">Last Contract Review</p>
-                        <p className="text-sm text-gray-900 mt-1">
+                        <p className="text-xs font-medium text-secondary">Last Contract Review</p>
+                        <p className="text-sm text-foreground mt-1">
                           {new Date(vendor.contract_review_date).toLocaleDateString()}
                         </p>
                       </div>
                     )}
                     {vendor.assessment_review_date && (
                       <div>
-                        <p className="text-xs font-medium text-gray-700">Last Assessment Review</p>
-                        <p className="text-sm text-gray-900 mt-1">
+                        <p className="text-xs font-medium text-secondary">Last Assessment Review</p>
+                        <p className="text-sm text-foreground mt-1">
                           {new Date(vendor.assessment_review_date).toLocaleDateString()}
                         </p>
                       </div>
@@ -289,17 +289,17 @@ export default function VendorRiskPage() {
 
                   {vendor.notes && (
                     <div>
-                      <p className="text-xs font-medium text-gray-700">Notes</p>
-                      <p className="text-sm text-gray-600 mt-1">{vendor.notes}</p>
+                      <p className="text-xs font-medium text-secondary">Notes</p>
+                      <p className="text-sm text-secondary mt-1">{vendor.notes}</p>
                     </div>
                   )}
 
-                  <div className="border-t border-gray-200 pt-4">
+                  <div className="border-t border-border pt-4">
                     <div className="flex items-center justify-between mb-3">
-                      <h4 className="text-sm font-medium text-gray-900">Reviews</h4>
+                      <h4 className="text-sm font-medium text-foreground">Reviews</h4>
                       <button
                         onClick={() => setShowAddReview(vendor.id)}
-                        className="text-xs px-2 py-1 border border-blue-600 text-blue-600 rounded hover:bg-blue-50"
+                        className="text-xs px-2 py-1 border border-primary text-primary rounded hover:bg-surface-hover"
                       >
                         Add Review
                       </button>
@@ -315,17 +315,17 @@ export default function VendorRiskPage() {
                     {vendorReviews[vendor.id]?.length > 0 ? (
                       <div className="space-y-2">
                         {vendorReviews[vendor.id].map((review) => (
-                          <div key={review.id} className="bg-white border border-gray-200 rounded p-3 text-sm">
+                          <div key={review.id} className="bg-surface border border-border rounded p-3 text-sm">
                             <div className="flex items-center justify-between">
-                              <span className="font-medium text-gray-900 capitalize">{review.review_type.replace(/_/g, ' ')}</span>
-                              <span className="text-gray-500">{new Date(review.due_date).toLocaleDateString()}</span>
+                              <span className="font-medium text-foreground capitalize">{review.review_type.replace(/_/g, ' ')}</span>
+                              <span className="text-muted">{new Date(review.due_date).toLocaleDateString()}</span>
                             </div>
-                            <div className="text-xs text-gray-500 mt-1">Reviewer: {review.reviewer_email}</div>
+                            <div className="text-xs text-muted mt-1">Reviewer: {review.reviewer_email}</div>
                           </div>
                         ))}
                       </div>
                     ) : (
-                      <p className="text-sm text-gray-500">No reviews scheduled yet.</p>
+                      <p className="text-sm text-muted">No reviews scheduled yet.</p>
                     )}
                   </div>
                 </div>
@@ -352,24 +352,24 @@ function StatCard({
   highlight?: 'red' | 'orange';
 }) {
   const colors = {
-    red: 'bg-red-50 border-red-200',
-    orange: 'bg-orange-50 border-orange-200',
+    red: 'bg-error-subtle border-error',
+    orange: 'bg-warning-subtle border-warning',
   };
 
   return (
-    <div className={`border rounded-lg p-4 ${highlight ? colors[highlight] : 'bg-white border-gray-200'}`}>
-      <p className="text-sm text-gray-600">{label}</p>
-      <p className="text-3xl font-semibold text-gray-900 mt-2">{value}</p>
+    <div className={`border rounded-xl p-4 ${highlight ? colors[highlight] : 'bg-surface border-border'}`}>
+      <p className="text-sm text-secondary">{label}</p>
+      <p className="text-3xl font-semibold text-foreground mt-2">{value}</p>
     </div>
   );
 }
 
 function RiskTierBadge({ tier }: { tier: string }) {
   const colors: Record<string, string> = {
-    critical: 'bg-red-100 text-red-800',
-    high: 'bg-orange-100 text-orange-800',
-    medium: 'bg-yellow-100 text-yellow-800',
-    low: 'bg-green-100 text-green-800',
+    critical: 'bg-error-subtle text-error',
+    high: 'bg-warning-subtle text-warning',
+    medium: 'bg-warning-subtle text-warning',
+    low: 'bg-success-subtle text-success',
   };
 
   return (
@@ -381,10 +381,10 @@ function RiskTierBadge({ tier }: { tier: string }) {
 
 function CriticalityBadge({ criticality }: { criticality: string }) {
   const colors: Record<string, string> = {
-    mission_critical: 'bg-red-100 text-red-800',
-    important: 'bg-orange-100 text-orange-800',
-    standard: 'bg-blue-100 text-blue-800',
-    non_critical: 'bg-gray-100 text-gray-800',
+    mission_critical: 'bg-error-subtle text-error',
+    important: 'bg-warning-subtle text-warning',
+    standard: 'bg-info-subtle text-foreground',
+    non_critical: 'bg-background text-foreground',
   };
 
   const label = criticality.replace(/_/g, ' ').split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
@@ -414,15 +414,15 @@ function ReviewForm({
         e.preventDefault();
         onSubmit(formData);
       }}
-      className="bg-blue-50 border border-blue-200 rounded p-4 space-y-3 mb-3"
+      className="bg-info-subtle border border-border rounded p-4 space-y-3 mb-3"
     >
       <div className="grid grid-cols-2 gap-3">
         <div>
-          <label className="text-xs font-medium text-gray-700">Review Type</label>
+          <label className="text-xs font-medium text-secondary">Review Type</label>
           <select
             value={formData.review_type}
             onChange={(e) => setFormData({ ...formData, review_type: e.target.value })}
-            className="mt-1 block w-full rounded-md border-gray-300 text-sm"
+            className="mt-1 block w-full rounded-xl border-border-strong text-sm"
           >
             <option value="contract">Contract Review</option>
             <option value="security_assessment">Security Assessment</option>
@@ -431,12 +431,12 @@ function ReviewForm({
           </select>
         </div>
         <div>
-          <label className="text-xs font-medium text-gray-700">Due Date</label>
+          <label className="text-xs font-medium text-secondary">Due Date</label>
           <input
             type="date"
             value={formData.due_date}
             onChange={(e) => setFormData({ ...formData, due_date: e.target.value })}
-            className="mt-1 block w-full rounded-md border-gray-300 text-sm"
+            className="mt-1 block w-full rounded-xl border-border-strong text-sm"
           />
         </div>
       </div>
@@ -444,13 +444,13 @@ function ReviewForm({
         <button
           type="button"
           onClick={onCancel}
-          className="text-xs px-3 py-1 border border-gray-300 rounded hover:bg-gray-50"
+          className="text-xs px-3 py-1 border border-border-strong rounded hover:bg-surface-hover"
         >
           Cancel
         </button>
         <button
           type="submit"
-          className="text-xs px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700"
+          className="text-xs px-3 py-1 bg-primary text-white rounded hover:hover:bg-primary-hover"
         >
           Add Review
         </button>
@@ -495,51 +495,51 @@ function AddVendorModal({
     <div className="fixed inset-0 z-50 overflow-y-auto">
       <div className="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:block sm:p-0">
         <div className="fixed inset-0 transition-opacity" onClick={onClose}>
-          <div className="absolute inset-0 bg-gray-500 opacity-75" />
+          <div className="absolute inset-0 bg-black opacity-75" />
         </div>
 
-        <div className="inline-block align-bottom bg-white rounded-lg px-4 pt-5 pb-4 text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full sm:p-6">
-          <h3 className="text-lg font-medium text-gray-900 mb-4">Add New Vendor</h3>
+        <div className="inline-block align-bottom bg-surface rounded-xl px-4 pt-5 pb-4 text-left overflow-hidden shadow-sm-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full sm:p-6">
+          <h3 className="text-lg font-medium text-foreground mb-4">Add New Vendor</h3>
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700">Name</label>
+              <label className="block text-sm font-medium text-secondary">Name</label>
               <input
                 type="text"
                 required
                 value={formData.name}
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+                className="mt-1 block w-full rounded-xl border-border-strong shadow-sm-sm focus:border-primary focus:ring-primary/20 focus:border-primary sm:text-sm"
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700">Description</label>
+              <label className="block text-sm font-medium text-secondary">Description</label>
               <textarea
                 value={formData.description}
                 onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                 rows={3}
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+                className="mt-1 block w-full rounded-xl border-border-strong shadow-sm-sm focus:border-primary focus:ring-primary/20 focus:border-primary sm:text-sm"
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700">Website</label>
+              <label className="block text-sm font-medium text-secondary">Website</label>
               <input
                 type="url"
                 value={formData.website}
                 onChange={(e) => setFormData({ ...formData, website: e.target.value })}
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+                className="mt-1 block w-full rounded-xl border-border-strong shadow-sm-sm focus:border-primary focus:ring-primary/20 focus:border-primary sm:text-sm"
               />
             </div>
 
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700">Risk Tier</label>
+                <label className="block text-sm font-medium text-secondary">Risk Tier</label>
                 <select
                   value={formData.risk_tier}
                   onChange={(e) => setFormData({ ...formData, risk_tier: e.target.value as Vendor['risk_tier'] })}
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+                  className="mt-1 block w-full rounded-xl border-border-strong shadow-sm-sm focus:border-primary focus:ring-primary/20 focus:border-primary sm:text-sm"
                 >
                   <option value="critical">Critical</option>
                   <option value="high">High</option>
@@ -549,11 +549,11 @@ function AddVendorModal({
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700">Criticality</label>
+                <label className="block text-sm font-medium text-secondary">Criticality</label>
                 <select
                   value={formData.criticality}
                   onChange={(e) => setFormData({ ...formData, criticality: e.target.value })}
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+                  className="mt-1 block w-full rounded-xl border-border-strong shadow-sm-sm focus:border-primary focus:ring-primary/20 focus:border-primary sm:text-sm"
                 >
                   <option value="">None</option>
                   <option value="mission_critical">Mission Critical</option>
@@ -565,32 +565,32 @@ function AddVendorModal({
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700">Primary Contact Name</label>
+              <label className="block text-sm font-medium text-secondary">Primary Contact Name</label>
               <input
                 type="text"
                 value={formData.primary_contact_name}
                 onChange={(e) => setFormData({ ...formData, primary_contact_name: e.target.value })}
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+                className="mt-1 block w-full rounded-xl border-border-strong shadow-sm-sm focus:border-primary focus:ring-primary/20 focus:border-primary sm:text-sm"
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700">Primary Contact Email</label>
+              <label className="block text-sm font-medium text-secondary">Primary Contact Email</label>
               <input
                 type="email"
                 value={formData.primary_contact_email}
                 onChange={(e) => setFormData({ ...formData, primary_contact_email: e.target.value })}
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+                className="mt-1 block w-full rounded-xl border-border-strong shadow-sm-sm focus:border-primary focus:ring-primary/20 focus:border-primary sm:text-sm"
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700">Notes</label>
+              <label className="block text-sm font-medium text-secondary">Notes</label>
               <textarea
                 value={formData.notes}
                 onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
                 rows={3}
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+                className="mt-1 block w-full rounded-xl border-border-strong shadow-sm-sm focus:border-primary focus:ring-primary/20 focus:border-primary sm:text-sm"
               />
             </div>
 
@@ -598,14 +598,14 @@ function AddVendorModal({
               <button
                 type="button"
                 onClick={onClose}
-                className="px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
+                className="px-4 py-2 border border-border-strong rounded-xl shadow-sm-sm text-sm font-medium text-secondary bg-surface hover:bg-surface-hover"
               >
                 Cancel
               </button>
               <button
                 type="submit"
                 disabled={loading}
-                className="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-50"
+                className="px-4 py-2 border border-transparent rounded-xl shadow-sm-sm text-sm font-medium text-white bg-primary hover:hover:bg-primary-hover disabled:opacity-50"
               >
                 {loading ? 'Adding...' : 'Add Vendor'}
               </button>

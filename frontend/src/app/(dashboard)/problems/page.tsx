@@ -18,20 +18,20 @@ import { Button } from '@/components/ui/button';
 import { useProblems, Problem } from '@/hooks/useApi';
 
 const statusColors: Record<string, { bg: string; text: string }> = {
-  new: { bg: 'bg-blue-100', text: 'text-blue-800' },
-  assigned: { bg: 'bg-indigo-100', text: 'text-indigo-800' },
-  investigating: { bg: 'bg-yellow-100', text: 'text-yellow-800' },
-  root_cause_identified: { bg: 'bg-orange-100', text: 'text-orange-800' },
-  known_error: { bg: 'bg-purple-100', text: 'text-purple-800' },
-  resolved: { bg: 'bg-green-100', text: 'text-green-800' },
-  closed: { bg: 'bg-gray-100', text: 'text-gray-800' },
+  new: { bg: 'bg-info-subtle', text: 'text-foreground' },
+  assigned: { bg: 'bg-info-subtle', text: 'text-info' },
+  investigating: { bg: 'bg-warning-subtle', text: 'text-warning' },
+  root_cause_identified: { bg: 'bg-warning-subtle', text: 'text-warning' },
+  known_error: { bg: 'bg-info-subtle', text: 'text-info' },
+  resolved: { bg: 'bg-success-subtle', text: 'text-success' },
+  closed: { bg: 'bg-background', text: 'text-foreground' },
 };
 
 const priorityColors: Record<string, { bg: string; text: string; label: string }> = {
-  critical: { bg: 'bg-red-100', text: 'text-red-800', label: 'Critical' },
-  high: { bg: 'bg-orange-100', text: 'text-orange-800', label: 'High' },
-  medium: { bg: 'bg-yellow-100', text: 'text-yellow-800', label: 'Medium' },
-  low: { bg: 'bg-blue-100', text: 'text-blue-800', label: 'Low' },
+  critical: { bg: 'bg-error-subtle', text: 'text-error', label: 'Critical' },
+  high: { bg: 'bg-warning-subtle', text: 'text-warning', label: 'High' },
+  medium: { bg: 'bg-warning-subtle', text: 'text-warning', label: 'Medium' },
+  low: { bg: 'bg-info-subtle', text: 'text-foreground', label: 'Low' },
 };
 
 const statusLabels: Record<string, string> = {
@@ -45,8 +45,8 @@ const statusLabels: Record<string, string> = {
 };
 
 const typeColors: Record<string, { bg: string; text: string }> = {
-  reactive: { bg: 'bg-red-100', text: 'text-red-800' },
-  proactive: { bg: 'bg-green-100', text: 'text-green-800' },
+  reactive: { bg: 'bg-error-subtle', text: 'text-error' },
+  proactive: { bg: 'bg-success-subtle', text: 'text-success' },
 };
 
 export default function ProblemsPage() {
@@ -81,10 +81,10 @@ export default function ProblemsPage() {
 
   if (error) {
     return (
-      <div className="bg-red-50 border border-red-200 rounded-lg p-6 text-center">
+      <div className="bg-red-50 border border-red-200 rounded-xl p-6 text-center">
         <AlertTriangle className="h-12 w-12 text-red-500 mx-auto mb-4" />
-        <h3 className="text-lg font-medium text-red-800 mb-2">Error loading problems</h3>
-        <p className="text-red-600">Please try refreshing the page</p>
+        <h3 className="text-lg font-medium text-error mb-2">Error loading problems</h3>
+        <p className="text-error">Please try refreshing the page</p>
       </div>
     );
   }
@@ -94,8 +94,8 @@ export default function ProblemsPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Problems</h1>
-          <p className="mt-1 text-sm text-gray-500">
+          <h1 className="text-2xl font-bold text-foreground">Problems</h1>
+          <p className="mt-1 text-sm text-muted">
             Root cause analysis and known error management
           </p>
         </div>
@@ -109,49 +109,49 @@ export default function ProblemsPage() {
 
       {/* Quick Stats */}
       <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
-        <div className="bg-white rounded-lg shadow p-4">
+        <div className="bg-surface rounded-xl shadow-sm p-4">
           <div className="flex items-center">
             <AlertTriangle className="h-8 w-8 text-yellow-500 mr-3" />
             <div>
-              <p className="text-sm text-gray-500">Open Problems</p>
-              <p className="text-2xl font-bold text-gray-900">{problems.filter((p: Problem) => !['resolved', 'closed'].includes(p.status)).length}</p>
+              <p className="text-sm text-muted">Open Problems</p>
+              <p className="text-2xl font-bold text-foreground">{problems.filter((p: Problem) => !['resolved', 'closed'].includes(p.status)).length}</p>
             </div>
           </div>
         </div>
-        <div className="bg-white rounded-lg shadow p-4">
+        <div className="bg-surface rounded-xl shadow-sm p-4">
           <div className="flex items-center">
             <Lightbulb className="h-8 w-8 text-purple-500 mr-3" />
             <div>
-              <p className="text-sm text-gray-500">Known Errors</p>
-              <p className="text-2xl font-bold text-gray-900">{problems.filter((p: Problem) => p.is_known_error).length}</p>
+              <p className="text-sm text-muted">Known Errors</p>
+              <p className="text-2xl font-bold text-foreground">{problems.filter((p: Problem) => p.is_known_error).length}</p>
             </div>
           </div>
         </div>
-        <div className="bg-white rounded-lg shadow p-4">
+        <div className="bg-surface rounded-xl shadow-sm p-4">
           <div className="flex items-center">
-            <Search className="h-8 w-8 text-blue-500 mr-3" />
+            <Search className="h-8 w-8 text-primary mr-3" />
             <div>
-              <p className="text-sm text-gray-500">Investigating</p>
-              <p className="text-2xl font-bold text-gray-900">{problems.filter((p: Problem) => p.status === 'investigating').length}</p>
+              <p className="text-sm text-muted">Investigating</p>
+              <p className="text-2xl font-bold text-foreground">{problems.filter((p: Problem) => p.status === 'investigating').length}</p>
             </div>
           </div>
         </div>
-        <div className="bg-white rounded-lg shadow p-4">
+        <div className="bg-surface rounded-xl shadow-sm p-4">
           <div className="flex items-center">
             <CheckCircle className="h-8 w-8 text-green-500 mr-3" />
             <div>
-              <p className="text-sm text-gray-500">Resolved</p>
-              <p className="text-2xl font-bold text-gray-900">{problems.filter((p: Problem) => p.status === 'resolved').length}</p>
+              <p className="text-sm text-muted">Resolved</p>
+              <p className="text-2xl font-bold text-foreground">{problems.filter((p: Problem) => p.status === 'resolved').length}</p>
             </div>
           </div>
         </div>
       </div>
 
       {/* Search and Filters */}
-      <div className="bg-white rounded-lg shadow p-4">
+      <div className="bg-surface rounded-xl shadow-sm p-4">
         <div className="flex flex-col sm:flex-row gap-4">
           <div className="flex-1 relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted" />
             <input
               type="text"
               placeholder="Search by number or title..."
@@ -160,7 +160,7 @@ export default function ProblemsPage() {
                 setSearchQuery(e.target.value);
                 setPage(1);
               }}
-              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full pl-10 pr-4 py-2 border border-border-strong rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
             />
           </div>
           <Button
@@ -175,16 +175,16 @@ export default function ProblemsPage() {
         </div>
 
         {showFilters && (
-          <div className="mt-4 pt-4 border-t border-gray-200 grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div className="mt-4 pt-4 border-t border-border grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
+              <label className="block text-sm font-medium text-secondary mb-1">Status</label>
               <select
                 value={statusFilter}
                 onChange={(e) => {
                   setStatusFilter(e.target.value);
                   setPage(1);
                 }}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 border border-border-strong rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
               >
                 <option value="all">All Status</option>
                 <option value="new">New</option>
@@ -197,14 +197,14 @@ export default function ProblemsPage() {
               </select>
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Priority</label>
+              <label className="block text-sm font-medium text-secondary mb-1">Priority</label>
               <select
                 value={priorityFilter}
                 onChange={(e) => {
                   setPriorityFilter(e.target.value);
                   setPage(1);
                 }}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 border border-border-strong rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
               >
                 <option value="all">All Priorities</option>
                 <option value="critical">Critical</option>
@@ -214,14 +214,14 @@ export default function ProblemsPage() {
               </select>
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Problem Type</label>
+              <label className="block text-sm font-medium text-secondary mb-1">Problem Type</label>
               <select
                 value={typeFilter}
                 onChange={(e) => {
                   setTypeFilter(e.target.value);
                   setPage(1);
                 }}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 border border-border-strong rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
               >
                 <option value="all">All Types</option>
                 <option value="reactive">Reactive</option>
@@ -233,41 +233,41 @@ export default function ProblemsPage() {
       </div>
 
       {/* Problems Table */}
-      <div className="bg-white rounded-lg shadow overflow-hidden">
+      <div className="bg-surface rounded-xl shadow-sm overflow-hidden">
         {isLoading ? (
           <div className="flex items-center justify-center h-64">
-            <Loader2 className="h-8 w-8 animate-spin text-blue-500" />
-            <span className="ml-2 text-gray-500">Loading problems...</span>
+            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            <span className="ml-2 text-muted">Loading problems...</span>
           </div>
         ) : (
           <>
             <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
+              <thead className="bg-background">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">
                     Problem
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">
                     Priority / Type
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">
                     Status
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">
                     Assigned To
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">
                     Linked Issues
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">
                     Updated
                   </th>
-                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-right text-xs font-medium text-muted uppercase tracking-wider">
                     Actions
                   </th>
                 </tr>
               </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
+              <tbody className="bg-surface divide-y divide-gray-200">
                 {problems.map((problem: Problem) => {
                   const priority = problem.priority || 'medium';
                   const status = problem.status || 'new';
@@ -277,7 +277,7 @@ export default function ProblemsPage() {
                   const typeStyle = typeColors[problemType] || typeColors.reactive;
 
                   return (
-                    <tr key={problem.id} className="hover:bg-gray-50">
+                    <tr key={problem.id} className="hover:bg-background">
                       <td className="px-6 py-4">
                         <div className="flex items-start">
                           <AlertTriangle className={`h-5 w-5 mr-3 mt-0.5 ${
@@ -287,20 +287,20 @@ export default function ProblemsPage() {
                             <div className="flex items-center gap-2">
                               <Link
                                 href={`/problems/${problem.id}`}
-                                className="text-sm font-medium text-blue-600 hover:text-blue-800"
+                                className="text-sm font-medium text-primary hover:text-foreground"
                               >
                                 {problem.problem_number}
                               </Link>
                               {problem.is_known_error && (
-                                <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-purple-100 text-purple-800">
+                                <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-info-subtle text-info">
                                   <Lightbulb className="h-3 w-3 mr-1" />
                                   KEDB
                                 </span>
                               )}
                             </div>
-                            <p className="text-sm text-gray-900 mt-1">{problem.title}</p>
+                            <p className="text-sm text-foreground mt-1">{problem.title}</p>
                             {problem.application_name && (
-                              <p className="text-xs text-gray-500 mt-1">
+                              <p className="text-xs text-muted mt-1">
                                 App: {problem.application_name}
                               </p>
                             )}
@@ -332,30 +332,30 @@ export default function ProblemsPage() {
                       <td className="px-6 py-4 whitespace-nowrap">
                         {problem.assignee_name ? (
                           <div className="flex items-center">
-                            <div className="h-8 w-8 rounded-full bg-gray-200 flex items-center justify-center text-sm font-medium text-gray-600">
+                            <div className="h-8 w-8 rounded-full bg-gray-200 flex items-center justify-center text-sm font-medium text-secondary">
                               {problem.assignee_name.charAt(0)}
                             </div>
-                            <span className="ml-2 text-sm text-gray-900">
+                            <span className="ml-2 text-sm text-foreground">
                               {problem.assignee_name}
                             </span>
                           </div>
                         ) : (
-                          <span className="text-sm text-gray-500 italic">Unassigned</span>
+                          <span className="text-sm text-muted italic">Unassigned</span>
                         )}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <span className="text-sm text-gray-900">
+                        <span className="text-sm text-foreground">
                           {problem.linked_issues_count || 0} issues
                         </span>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="flex items-center text-sm text-gray-500">
+                        <div className="flex items-center text-sm text-muted">
                           <Clock className="h-4 w-4 mr-1" />
                           {formatDate(problem.updated_at)}
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-right">
-                        <button className="text-gray-400 hover:text-gray-600">
+                        <button className="text-muted hover:text-secondary">
                           <MoreHorizontal className="h-5 w-5" />
                         </button>
                       </td>
@@ -367,15 +367,15 @@ export default function ProblemsPage() {
 
             {problems.length === 0 && (
               <div className="text-center py-12">
-                <AlertTriangle className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                <h3 className="text-lg font-medium text-gray-900 mb-2">No problems found</h3>
-                <p className="text-gray-500">Try adjusting your search or filters</p>
+                <AlertTriangle className="h-12 w-12 text-muted mx-auto mb-4" />
+                <h3 className="text-lg font-medium text-foreground mb-2">No problems found</h3>
+                <p className="text-muted">Try adjusting your search or filters</p>
               </div>
             )}
 
             {/* Pagination */}
-            <div className="px-6 py-4 border-t border-gray-200 flex items-center justify-between">
-              <div className="text-sm text-gray-500">
+            <div className="px-6 py-4 border-t border-border flex items-center justify-between">
+              <div className="text-sm text-muted">
                 Showing {problems.length} of {pagination.total} problems
               </div>
               <div className="flex space-x-2">
