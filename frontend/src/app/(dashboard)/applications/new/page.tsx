@@ -109,8 +109,8 @@ export default function NewApplicationPage() {
           </Button>
         </Link>
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">New Application</h1>
-          <p className="mt-1 text-sm text-gray-500">
+          <h1 className="text-2xl font-bold text-foreground">New Application</h1>
+          <p className="mt-1 text-sm text-muted">
             Register a new application in the system
           </p>
         </div>
@@ -120,16 +120,16 @@ export default function NewApplicationPage() {
       <form onSubmit={handleSubmit} className="space-y-6">
         {/* Error Alert */}
         {error && (
-          <div className="bg-red-50 border border-red-200 rounded-lg p-4 flex items-start">
-            <AlertCircle className="h-5 w-5 text-red-500 mr-3 flex-shrink-0 mt-0.5" />
-            <p className="text-sm text-red-700">{error}</p>
+          <div className="bg-error-subtle border border-border rounded-lg p-4 flex items-start">
+            <AlertCircle className="h-5 w-5 text-error mr-3 flex-shrink-0 mt-0.5" />
+            <p className="text-sm text-error">{error}</p>
           </div>
         )}
 
         {/* Basic Information */}
-        <div className="bg-white rounded-lg shadow">
-          <div className="px-6 py-4 border-b border-gray-200">
-            <h2 className="text-lg font-medium text-gray-900">Basic Information</h2>
+        <div className="bg-surface rounded-xl shadow-sm">
+          <div className="px-6 py-4 border-b border-border">
+            <h2 className="text-lg font-medium text-foreground">Basic Information</h2>
           </div>
           <div className="p-6 space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -141,9 +141,9 @@ export default function NewApplicationPage() {
                 required
               />
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-secondary mb-1">
                   Short Name
-                  <span className="text-red-500 ml-1">*</span>
+                  <span className="text-error ml-1">*</span>
                 </label>
                 <input
                   type="text"
@@ -151,50 +151,50 @@ export default function NewApplicationPage() {
                   onChange={(e) => setFormData((p) => ({ ...p, shortName: e.target.value.toUpperCase().replace(/[^A-Z0-9_-]/g, '') }))}
                   placeholder="CUST-PORTAL"
                   maxLength={20}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 border border-border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary"
                   required
                 />
-                <p className="mt-1 text-xs text-gray-500">Uppercase letters, numbers, hyphens only</p>
+                <p className="mt-1 text-xs text-muted">Uppercase letters, numbers, hyphens only</p>
               </div>
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
+              <label className="block text-sm font-medium text-secondary mb-1">Description</label>
               <textarea
                 value={formData.description}
                 onChange={(e) => setFormData((p) => ({ ...p, description: e.target.value }))}
                 rows={3}
                 placeholder="Describe the application's purpose and functionality..."
-                className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 border border-border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary"
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Version</label>
+              <label className="block text-sm font-medium text-secondary mb-1">Version</label>
               <input
                 type="text"
                 value={formData.version}
                 onChange={(e) => setFormData((p) => ({ ...p, version: e.target.value }))}
                 placeholder="1.0.0"
-                className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 border border-border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary"
               />
             </div>
           </div>
         </div>
 
         {/* Classification */}
-        <div className="bg-white rounded-lg shadow">
-          <div className="px-6 py-4 border-b border-gray-200">
-            <h2 className="text-lg font-medium text-gray-900">Classification</h2>
+        <div className="bg-surface rounded-xl shadow-sm">
+          <div className="px-6 py-4 border-b border-border">
+            <h2 className="text-lg font-medium text-foreground">Classification</h2>
           </div>
           <div className="p-6 space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Environment</label>
+                <label className="block text-sm font-medium text-secondary mb-1">Environment</label>
                 <select
                   value={formData.environment}
                   onChange={(e) => setFormData((p) => ({ ...p, environment: e.target.value }))}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 border border-border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary"
                 >
                   <option value="production">Production</option>
                   <option value="staging">Staging</option>
@@ -204,11 +204,11 @@ export default function NewApplicationPage() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Criticality</label>
+                <label className="block text-sm font-medium text-secondary mb-1">Criticality</label>
                 <select
                   value={formData.criticality}
                   onChange={(e) => setFormData((p) => ({ ...p, criticality: e.target.value }))}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 border border-border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary"
                 >
                   <option value="critical">Critical - Business critical, no downtime allowed</option>
                   <option value="high">High - Important for daily operations</option>
@@ -219,11 +219,11 @@ export default function NewApplicationPage() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
+              <label className="block text-sm font-medium text-secondary mb-1">Status</label>
               <select
                 value={formData.status}
                 onChange={(e) => setFormData((p) => ({ ...p, status: e.target.value }))}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 border border-border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary"
               >
                 <option value="operational">Operational</option>
                 <option value="degraded">Degraded</option>
@@ -236,18 +236,18 @@ export default function NewApplicationPage() {
         </div>
 
         {/* Ownership */}
-        <div className="bg-white rounded-lg shadow">
-          <div className="px-6 py-4 border-b border-gray-200">
-            <h2 className="text-lg font-medium text-gray-900">Ownership</h2>
+        <div className="bg-surface rounded-xl shadow-sm">
+          <div className="px-6 py-4 border-b border-border">
+            <h2 className="text-lg font-medium text-foreground">Ownership</h2>
           </div>
           <div className="p-6 space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Application Owner</label>
+                <label className="block text-sm font-medium text-secondary mb-1">Application Owner</label>
                 <select
                   value={formData.ownerId}
                   onChange={(e) => setFormData((p) => ({ ...p, ownerId: e.target.value }))}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 border border-border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary"
                 >
                   <option value="">Select owner...</option>
                   {users.map((user) => (
@@ -259,11 +259,11 @@ export default function NewApplicationPage() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Support Group</label>
+                <label className="block text-sm font-medium text-secondary mb-1">Support Group</label>
                 <select
                   value={formData.supportGroupId}
                   onChange={(e) => setFormData((p) => ({ ...p, supportGroupId: e.target.value }))}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 border border-border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary"
                 >
                   <option value="">Select support group...</option>
                   {groups.map((group) => (
@@ -275,9 +275,9 @@ export default function NewApplicationPage() {
               </div>
             </div>
 
-            <div className="flex items-start p-3 bg-blue-50 rounded-lg">
-              <Info className="h-5 w-5 text-blue-500 mr-2 flex-shrink-0 mt-0.5" />
-              <p className="text-sm text-blue-700">
+            <div className="flex items-start p-3 bg-primary-subtle rounded-lg">
+              <Info className="h-5 w-5 text-primary mr-2 flex-shrink-0 mt-0.5" />
+              <p className="text-sm text-primary">
                 The application owner is responsible for approving changes and managing the application lifecycle.
                 The support group handles incidents and support requests.
               </p>
@@ -286,9 +286,9 @@ export default function NewApplicationPage() {
         </div>
 
         {/* URLs */}
-        <div className="bg-white rounded-lg shadow">
-          <div className="px-6 py-4 border-b border-gray-200">
-            <h2 className="text-lg font-medium text-gray-900">URLs & Links</h2>
+        <div className="bg-surface rounded-xl shadow-sm">
+          <div className="px-6 py-4 border-b border-border">
+            <h2 className="text-lg font-medium text-foreground">URLs & Links</h2>
           </div>
           <div className="p-6 space-y-4">
             <Input

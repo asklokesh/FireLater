@@ -49,19 +49,19 @@ import {
 } from '@/hooks/useApi';
 
 const statusColors: Record<string, { bg: string; text: string }> = {
-  new: { bg: 'bg-blue-100', text: 'text-blue-800' },
-  assigned: { bg: 'bg-indigo-100', text: 'text-indigo-800' },
-  in_progress: { bg: 'bg-yellow-100', text: 'text-yellow-800' },
-  pending: { bg: 'bg-purple-100', text: 'text-purple-800' },
-  resolved: { bg: 'bg-green-100', text: 'text-green-800' },
-  closed: { bg: 'bg-gray-100', text: 'text-gray-800' },
+  new: { bg: 'bg-primary-subtle', text: 'text-primary' },
+  assigned: { bg: 'bg-primary-subtle', text: 'text-primary' },
+  in_progress: { bg: 'bg-warning-subtle', text: 'text-warning' },
+  pending: { bg: 'bg-primary-subtle', text: 'text-primary' },
+  resolved: { bg: 'bg-success-subtle', text: 'text-success' },
+  closed: { bg: 'bg-surface-hover', text: 'text-foreground' },
 };
 
 const priorityColors: Record<string, { bg: string; text: string; label: string }> = {
-  critical: { bg: 'bg-red-100', text: 'text-red-800', label: 'Critical' },
-  high: { bg: 'bg-orange-100', text: 'text-orange-800', label: 'High' },
-  medium: { bg: 'bg-yellow-100', text: 'text-yellow-800', label: 'Medium' },
-  low: { bg: 'bg-blue-100', text: 'text-blue-800', label: 'Low' },
+  critical: { bg: 'bg-error-subtle', text: 'text-error', label: 'Critical' },
+  high: { bg: 'bg-warning-subtle', text: 'text-warning', label: 'High' },
+  medium: { bg: 'bg-warning-subtle', text: 'text-warning', label: 'Medium' },
+  low: { bg: 'bg-primary-subtle', text: 'text-primary', label: 'Low' },
 };
 
 const statusLabels: Record<string, string> = {
@@ -284,7 +284,7 @@ export default function IssueDetailPage() {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <Loader2 className="h-8 w-8 animate-spin text-blue-500" />
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
       </div>
     );
   }
@@ -292,9 +292,9 @@ export default function IssueDetailPage() {
   if (fetchError || !issue) {
     return (
       <div className="flex flex-col items-center justify-center h-64">
-        <AlertCircle className="h-12 w-12 text-red-500 mb-4" />
-        <h2 className="text-xl font-semibold text-gray-900 mb-2">Issue not found</h2>
-        <p className="text-gray-500 mb-4">The issue you&apos;re looking for doesn&apos;t exist or you don&apos;t have access to it.</p>
+        <AlertCircle className="h-12 w-12 text-error mb-4" />
+        <h2 className="text-xl font-semibold text-foreground mb-2">Issue not found</h2>
+        <p className="text-muted mb-4">The issue you&apos;re looking for doesn&apos;t exist or you don&apos;t have access to it.</p>
         <Button onClick={() => router.push('/issues')}>Back to Issues</Button>
       </div>
     );
@@ -312,13 +312,13 @@ export default function IssueDetailPage() {
         <div className="flex items-center space-x-4">
           <button
             onClick={() => router.back()}
-            className="p-2 hover:bg-gray-100 rounded-md"
+            className="p-2 hover:bg-surface-hover rounded-md"
           >
-            <ArrowLeft className="h-5 w-5 text-gray-500" />
+            <ArrowLeft className="h-5 w-5 text-muted" />
           </button>
           <div>
             <div className="flex items-center space-x-3">
-              <h1 className="text-2xl font-bold text-gray-900">{issue.issue_number}</h1>
+              <h1 className="text-2xl font-bold text-foreground">{issue.issue_number}</h1>
               <span
                 className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${priorityColor.bg} ${priorityColor.text}`}
               >
@@ -331,7 +331,7 @@ export default function IssueDetailPage() {
               </span>
             </div>
             {!isEditing ? (
-              <p className="mt-1 text-lg text-gray-700">{issue.title}</p>
+              <p className="mt-1 text-lg text-secondary">{issue.title}</p>
             ) : null}
           </div>
         </div>
@@ -361,7 +361,7 @@ export default function IssueDetailPage() {
       </div>
 
       {error && (
-        <div className="flex items-center gap-2 p-4 text-sm text-red-800 bg-red-100 rounded-md">
+        <div className="flex items-center gap-2 p-4 text-sm text-error bg-error-subtle rounded-md">
           <AlertCircle className="h-4 w-4" />
           {error}
         </div>
@@ -371,7 +371,7 @@ export default function IssueDetailPage() {
         {/* Main Content */}
         <div className="lg:col-span-2 space-y-6">
           {/* Title & Description */}
-          <div className="bg-white rounded-lg shadow p-6">
+          <div className="bg-surface rounded-xl shadow-sm p-6">
             {isEditing ? (
               <div className="space-y-4">
                 <Input
@@ -383,30 +383,30 @@ export default function IssueDetailPage() {
                   required
                 />
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-secondary mb-1">
                     Description
                   </label>
                   <textarea
                     rows={5}
                     value={editForm.description}
                     onChange={(e) => setEditForm({ ...editForm, description: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-3 py-2 border border-border-strong rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary"
                     placeholder="Describe the issue..."
                   />
                 </div>
               </div>
             ) : (
               <>
-                <h2 className="text-lg font-semibold text-gray-900 mb-4">Description</h2>
-                <p className="text-gray-700 whitespace-pre-wrap">{issue.description || 'No description provided'}</p>
+                <h2 className="text-lg font-semibold text-foreground mb-4">Description</h2>
+                <p className="text-secondary whitespace-pre-wrap">{issue.description || 'No description provided'}</p>
               </>
             )}
           </div>
 
           {/* Quick Actions - only show when not editing */}
           {!isEditing && (
-            <div className="bg-white rounded-lg shadow p-6">
-              <h2 className="text-lg font-semibold text-gray-900 mb-4">Actions</h2>
+            <div className="bg-surface rounded-xl shadow-sm p-6">
+              <h2 className="text-lg font-semibold text-foreground mb-4">Actions</h2>
               <div className="flex flex-wrap gap-2">
                 {currentStatus === 'new' && (
                   <>
@@ -467,14 +467,14 @@ export default function IssueDetailPage() {
           )}
 
           {/* Activity / Comments */}
-          <div className="bg-white rounded-lg shadow p-6">
-            <h2 className="text-lg font-semibold text-gray-900 mb-4">Activity</h2>
+          <div className="bg-surface rounded-xl shadow-sm p-6">
+            <h2 className="text-lg font-semibold text-foreground mb-4">Activity</h2>
 
             {/* Add Comment */}
             <form onSubmit={handleSubmitComment} className="mb-6">
               <div className="flex space-x-3">
                 <div className="flex-shrink-0">
-                  <div className="h-8 w-8 rounded-full bg-blue-500 flex items-center justify-center text-white text-sm font-medium">
+                  <div className="h-8 w-8 rounded-full bg-primary-subtle0 flex items-center justify-center text-white text-sm font-medium">
                     U
                   </div>
                 </div>
@@ -484,12 +484,12 @@ export default function IssueDetailPage() {
                     onChange={(e) => setNewComment(e.target.value)}
                     placeholder="Add a comment..."
                     rows={3}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+                    className="w-full px-3 py-2 border border-border-strong rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary resize-none"
                   />
                   <div className="mt-2 flex justify-between items-center">
                     <button
                       type="button"
-                      className="text-gray-400 hover:text-gray-600"
+                      className="text-muted hover:text-secondary"
                     >
                       <Paperclip className="h-5 w-5" />
                     </button>
@@ -506,27 +506,27 @@ export default function IssueDetailPage() {
             <div className="space-y-4">
               {commentsLoading ? (
                 <div className="flex items-center justify-center py-4">
-                  <Loader2 className="h-5 w-5 animate-spin text-gray-400" />
-                  <span className="ml-2 text-sm text-gray-500">Loading comments...</span>
+                  <Loader2 className="h-5 w-5 animate-spin text-muted" />
+                  <span className="ml-2 text-sm text-muted">Loading comments...</span>
                 </div>
               ) : comments.length > 0 ? (
                 comments.map((comment: IssueComment) => (
                   <div key={comment.id} className="flex space-x-3">
                     <div className="flex-shrink-0 mt-1">
-                      <MessageSquare className="h-4 w-4 text-blue-500" />
+                      <MessageSquare className="h-4 w-4 text-primary" />
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center justify-between">
-                        <p className="text-sm font-medium text-gray-900">
+                        <p className="text-sm font-medium text-foreground">
                           {comment.user_name || 'Unknown User'}
                         </p>
-                        <p className="text-xs text-gray-500">
+                        <p className="text-xs text-muted">
                           {formatRelativeTime(comment.created_at)}
                         </p>
                       </div>
-                      <p className="text-sm text-gray-700 mt-1 whitespace-pre-wrap">{comment.content}</p>
+                      <p className="text-sm text-secondary mt-1 whitespace-pre-wrap">{comment.content}</p>
                       {comment.is_internal && (
-                        <span className="inline-flex items-center px-2 py-0.5 mt-1 rounded text-xs font-medium bg-yellow-100 text-yellow-800">
+                        <span className="inline-flex items-center px-2 py-0.5 mt-1 rounded text-xs font-medium bg-warning-subtle text-warning">
                           Internal Note
                         </span>
                       )}
@@ -534,7 +534,7 @@ export default function IssueDetailPage() {
                   </div>
                 ))
               ) : (
-                <p className="text-sm text-gray-500">No comments yet</p>
+                <p className="text-sm text-muted">No comments yet</p>
               )}
             </div>
           </div>
@@ -543,16 +543,16 @@ export default function IssueDetailPage() {
         {/* Sidebar */}
         <div className="space-y-6">
           {/* Details Card */}
-          <div className="bg-white rounded-lg shadow p-6">
-            <h2 className="text-lg font-semibold text-gray-900 mb-4">Details</h2>
+          <div className="bg-surface rounded-xl shadow-sm p-6">
+            <h2 className="text-lg font-semibold text-foreground mb-4">Details</h2>
             {isEditing ? (
               <div className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Priority</label>
+                  <label className="block text-sm font-medium text-secondary mb-1">Priority</label>
                   <select
                     value={editForm.priority}
                     onChange={(e) => setEditForm({ ...editForm, priority: e.target.value as 'critical' | 'high' | 'medium' | 'low' })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-3 py-2 border border-border-strong rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary"
                   >
                     <option value="critical">Critical</option>
                     <option value="high">High</option>
@@ -561,11 +561,11 @@ export default function IssueDetailPage() {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Severity</label>
+                  <label className="block text-sm font-medium text-secondary mb-1">Severity</label>
                   <select
                     value={editForm.severity}
                     onChange={(e) => setEditForm({ ...editForm, severity: e.target.value as '' | 'S1' | 'S2' | 'S3' | 'S4' })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-3 py-2 border border-border-strong rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary"
                   >
                     <option value="">Select severity</option>
                     <option value="S1">S1 - Critical</option>
@@ -575,11 +575,11 @@ export default function IssueDetailPage() {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Assigned To</label>
+                  <label className="block text-sm font-medium text-secondary mb-1">Assigned To</label>
                   <select
                     value={editForm.assignedTo}
                     onChange={(e) => setEditForm({ ...editForm, assignedTo: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-3 py-2 border border-border-strong rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary"
                   >
                     <option value="">Unassigned</option>
                     {users.map((user: { id: string; name: string }) => (
@@ -588,11 +588,11 @@ export default function IssueDetailPage() {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Assignment Group</label>
+                  <label className="block text-sm font-medium text-secondary mb-1">Assignment Group</label>
                   <select
                     value={editForm.assignedGroup}
                     onChange={(e) => setEditForm({ ...editForm, assignedGroup: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-3 py-2 border border-border-strong rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary"
                   >
                     <option value="">No group</option>
                     {groups.map((group: { id: string; name: string }) => (
@@ -601,11 +601,11 @@ export default function IssueDetailPage() {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Application</label>
+                  <label className="block text-sm font-medium text-secondary mb-1">Application</label>
                   <select
                     value={editForm.applicationId}
                     onChange={(e) => setEditForm({ ...editForm, applicationId: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-3 py-2 border border-border-strong rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary"
                   >
                     <option value="">No application</option>
                     {applications.map((app: { id: string; name: string }) => (
@@ -617,49 +617,49 @@ export default function IssueDetailPage() {
             ) : (
               <dl className="space-y-4">
                 <div>
-                  <dt className="text-sm font-medium text-gray-500">Assigned To</dt>
+                  <dt className="text-sm font-medium text-muted">Assigned To</dt>
                   <dd className="mt-1">
                     {issue.assignee_name ? (
                       <div className="flex items-center">
-                        <div className="h-8 w-8 rounded-full bg-gray-200 flex items-center justify-center text-sm font-medium text-gray-600">
+                        <div className="h-8 w-8 rounded-full bg-surface-hover flex items-center justify-center text-sm font-medium text-secondary">
                           {issue.assignee_name.charAt(0)}
                         </div>
                         <div className="ml-2">
-                          <p className="text-sm font-medium text-gray-900">
+                          <p className="text-sm font-medium text-foreground">
                             {issue.assignee_name}
                           </p>
                           {issue.assignee_email && (
-                            <p className="text-xs text-gray-500">{issue.assignee_email}</p>
+                            <p className="text-xs text-muted">{issue.assignee_email}</p>
                           )}
                         </div>
                       </div>
                     ) : (
-                      <span className="text-sm text-gray-500 italic">Unassigned</span>
+                      <span className="text-sm text-muted italic">Unassigned</span>
                     )}
                   </dd>
                 </div>
 
                 <div>
-                  <dt className="text-sm font-medium text-gray-500">Assignment Group</dt>
-                  <dd className="mt-1 text-sm text-gray-900">
+                  <dt className="text-sm font-medium text-muted">Assignment Group</dt>
+                  <dd className="mt-1 text-sm text-foreground">
                     {issue.assigned_group_name || '-'}
                   </dd>
                 </div>
 
                 {issue.reporter_name && (
                   <div>
-                    <dt className="text-sm font-medium text-gray-500">Reporter</dt>
+                    <dt className="text-sm font-medium text-muted">Reporter</dt>
                     <dd className="mt-1">
                       <div className="flex items-center">
-                        <div className="h-8 w-8 rounded-full bg-gray-200 flex items-center justify-center text-sm font-medium text-gray-600">
+                        <div className="h-8 w-8 rounded-full bg-surface-hover flex items-center justify-center text-sm font-medium text-secondary">
                           {issue.reporter_name.charAt(0)}
                         </div>
                         <div className="ml-2">
-                          <p className="text-sm font-medium text-gray-900">
+                          <p className="text-sm font-medium text-foreground">
                             {issue.reporter_name}
                           </p>
                           {issue.reporter_email && (
-                            <p className="text-xs text-gray-500">{issue.reporter_email}</p>
+                            <p className="text-xs text-muted">{issue.reporter_email}</p>
                           )}
                         </div>
                       </div>
@@ -668,12 +668,12 @@ export default function IssueDetailPage() {
                 )}
 
                 <div>
-                  <dt className="text-sm font-medium text-gray-500">Application</dt>
-                  <dd className="mt-1 text-sm text-gray-900">
+                  <dt className="text-sm font-medium text-muted">Application</dt>
+                  <dd className="mt-1 text-sm text-foreground">
                     {issue.application_id && issue.application_name ? (
                       <Link
                         href={`/applications/${issue.application_id}`}
-                        className="text-blue-600 hover:text-blue-800"
+                        className="text-primary hover:text-primary"
                       >
                         {issue.application_name}
                       </Link>
@@ -683,8 +683,8 @@ export default function IssueDetailPage() {
                   </dd>
                 </div>
 
-                <div className="border-t border-gray-200 pt-4">
-                  <dt className="text-sm font-medium text-gray-500">Priority</dt>
+                <div className="border-t border-border pt-4">
+                  <dt className="text-sm font-medium text-muted">Priority</dt>
                   <dd className="mt-1">
                     <span
                       className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${priorityColor.bg} ${priorityColor.text}`}
@@ -696,29 +696,29 @@ export default function IssueDetailPage() {
 
                 {issue.severity && (
                   <div>
-                    <dt className="text-sm font-medium text-gray-500">Severity</dt>
-                    <dd className="mt-1 text-sm text-gray-900">{issue.severity}</dd>
+                    <dt className="text-sm font-medium text-muted">Severity</dt>
+                    <dd className="mt-1 text-sm text-foreground">{issue.severity}</dd>
                   </div>
                 )}
 
                 {issue.urgency && (
                   <div>
-                    <dt className="text-sm font-medium text-gray-500">Urgency</dt>
-                    <dd className="mt-1 text-sm text-gray-900 capitalize">{issue.urgency}</dd>
+                    <dt className="text-sm font-medium text-muted">Urgency</dt>
+                    <dd className="mt-1 text-sm text-foreground capitalize">{issue.urgency}</dd>
                   </div>
                 )}
 
                 {issue.impact && (
                   <div>
-                    <dt className="text-sm font-medium text-gray-500">Impact</dt>
-                    <dd className="mt-1 text-sm text-gray-900 capitalize">{issue.impact}</dd>
+                    <dt className="text-sm font-medium text-muted">Impact</dt>
+                    <dd className="mt-1 text-sm text-foreground capitalize">{issue.impact}</dd>
                   </div>
                 )}
 
                 {issue.sla_breached && (
                   <div>
-                    <dt className="text-sm font-medium text-gray-500">SLA Status</dt>
-                    <dd className="mt-1 text-sm text-red-600 font-medium">Breached</dd>
+                    <dt className="text-sm font-medium text-muted">SLA Status</dt>
+                    <dd className="mt-1 text-sm text-error font-medium">Breached</dd>
                   </div>
                 )}
               </dl>
@@ -727,41 +727,41 @@ export default function IssueDetailPage() {
 
           {/* Dates Card - only show when not editing */}
           {!isEditing && (
-            <div className="bg-white rounded-lg shadow p-6">
-              <h2 className="text-lg font-semibold text-gray-900 mb-4">Timeline</h2>
+            <div className="bg-surface rounded-xl shadow-sm p-6">
+              <h2 className="text-lg font-semibold text-foreground mb-4">Timeline</h2>
               <dl className="space-y-4">
                 <div>
-                  <dt className="text-sm font-medium text-gray-500">Created</dt>
-                  <dd className="mt-1 text-sm text-gray-900">{formatDate(issue.created_at)}</dd>
+                  <dt className="text-sm font-medium text-muted">Created</dt>
+                  <dd className="mt-1 text-sm text-foreground">{formatDate(issue.created_at)}</dd>
                 </div>
                 <div>
-                  <dt className="text-sm font-medium text-gray-500">Last Updated</dt>
-                  <dd className="mt-1 text-sm text-gray-900">{formatDate(issue.updated_at)}</dd>
+                  <dt className="text-sm font-medium text-muted">Last Updated</dt>
+                  <dd className="mt-1 text-sm text-foreground">{formatDate(issue.updated_at)}</dd>
                 </div>
                 {issue.first_response_at && (
                   <div>
-                    <dt className="text-sm font-medium text-gray-500">First Response</dt>
-                    <dd className="mt-1 text-sm text-gray-900">{formatDate(issue.first_response_at)}</dd>
+                    <dt className="text-sm font-medium text-muted">First Response</dt>
+                    <dd className="mt-1 text-sm text-foreground">{formatDate(issue.first_response_at)}</dd>
                   </div>
                 )}
                 {issue.sla_breached_at && (
                   <div>
-                    <dt className="text-sm font-medium text-gray-500">SLA Breached At</dt>
-                    <dd className="mt-1 text-sm text-red-600 font-medium">
+                    <dt className="text-sm font-medium text-muted">SLA Breached At</dt>
+                    <dd className="mt-1 text-sm text-error font-medium">
                       {formatDate(issue.sla_breached_at)}
                     </dd>
                   </div>
                 )}
                 {issue.resolved_at && (
                   <div>
-                    <dt className="text-sm font-medium text-gray-500">Resolved</dt>
-                    <dd className="mt-1 text-sm text-gray-900">{formatDate(issue.resolved_at)}</dd>
+                    <dt className="text-sm font-medium text-muted">Resolved</dt>
+                    <dd className="mt-1 text-sm text-foreground">{formatDate(issue.resolved_at)}</dd>
                   </div>
                 )}
                 {issue.closed_at && (
                   <div>
-                    <dt className="text-sm font-medium text-gray-500">Closed</dt>
-                    <dd className="mt-1 text-sm text-gray-900">{formatDate(issue.closed_at)}</dd>
+                    <dt className="text-sm font-medium text-muted">Closed</dt>
+                    <dd className="mt-1 text-sm text-foreground">{formatDate(issue.closed_at)}</dd>
                   </div>
                 )}
               </dl>
@@ -770,9 +770,9 @@ export default function IssueDetailPage() {
 
           {/* Linked Problem - only show when not editing */}
           {!isEditing && (
-            <div className="bg-white rounded-lg shadow p-6">
+            <div className="bg-surface rounded-xl shadow-sm p-6">
               <div className="flex items-center justify-between mb-4">
-                <h2 className="text-lg font-semibold text-gray-900">Linked Problem</h2>
+                <h2 className="text-lg font-semibold text-foreground">Linked Problem</h2>
                 {!linkedProblem && (
                   <Button
                     size="sm"
@@ -788,38 +788,38 @@ export default function IssueDetailPage() {
                 <div className="space-y-3">
                   <Link
                     href={`/problems/${linkedProblem.id}`}
-                    className="block p-3 border border-gray-200 rounded-lg hover:bg-gray-50"
+                    className="block p-3 border border-border rounded-lg hover:bg-surface-hover"
                   >
                     <div className="flex items-start space-x-3">
-                      <AlertTriangle className="h-5 w-5 text-yellow-500 mt-0.5" />
+                      <AlertTriangle className="h-5 w-5 text-warning mt-0.5" />
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-blue-600 hover:text-blue-800">
+                        <p className="text-sm font-medium text-primary hover:text-primary">
                           {linkedProblem.problem_number}
                         </p>
-                        <p className="text-sm text-gray-900 truncate">{linkedProblem.title}</p>
+                        <p className="text-sm text-foreground truncate">{linkedProblem.title}</p>
                         <div className="flex items-center space-x-2 mt-1">
                           <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
-                            linkedProblem.status === 'known_error' ? 'bg-purple-100 text-purple-800' :
-                            linkedProblem.status === 'resolved' ? 'bg-green-100 text-green-800' :
-                            'bg-yellow-100 text-yellow-800'
+                            linkedProblem.status === 'known_error' ? 'bg-primary-subtle text-primary' :
+                            linkedProblem.status === 'resolved' ? 'bg-success-subtle text-success' :
+                            'bg-warning-subtle text-warning'
                           }`}>
                             {linkedProblem.status.replace(/_/g, ' ')}
                           </span>
                           {linkedProblem.is_known_error && (
-                            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
+                            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-primary-subtle text-primary">
                               Known Error
                             </span>
                           )}
                         </div>
                         {linkedProblem.workaround && (
-                          <p className="text-xs text-gray-500 mt-2">
+                          <p className="text-xs text-muted mt-2">
                             <span className="font-medium">Workaround:</span> {linkedProblem.workaround.substring(0, 100)}...
                           </p>
                         )}
                       </div>
                     </div>
                   </Link>
-                  <div className="flex items-center justify-between text-xs text-gray-500">
+                  <div className="flex items-center justify-between text-xs text-muted">
                     <span>
                       Relationship: {linkedProblem.relationship_type?.replace(/_/g, ' ') || 'caused by'}
                     </span>
@@ -828,7 +828,7 @@ export default function IssueDetailPage() {
                       variant="ghost"
                       onClick={handleUnlinkFromProblem}
                       disabled={unlinkFromProblem.isPending}
-                      className="text-red-600 hover:text-red-800 hover:bg-red-50"
+                      className="text-error hover:text-error hover:bg-error-subtle"
                     >
                       <Unlink className="h-4 w-4 mr-1" />
                       Unlink
@@ -836,7 +836,7 @@ export default function IssueDetailPage() {
                   </div>
                 </div>
               ) : (
-                <div className="text-sm text-gray-500">
+                <div className="text-sm text-muted">
                   No linked problem. Link this issue to a problem for root cause analysis.
                 </div>
               )}
@@ -845,9 +845,9 @@ export default function IssueDetailPage() {
 
           {/* Knowledge Base Articles - only show when not editing */}
           {!isEditing && (
-            <div className="bg-white rounded-lg shadow p-6">
+            <div className="bg-surface rounded-xl shadow-sm p-6">
               <div className="flex items-center justify-between mb-4">
-                <h2 className="text-lg font-semibold text-gray-900">Knowledge Base</h2>
+                <h2 className="text-lg font-semibold text-foreground">Knowledge Base</h2>
                 <Button
                   size="sm"
                   variant="outline"
@@ -863,23 +863,23 @@ export default function IssueDetailPage() {
                     <Link
                       key={article.id}
                       href={`/knowledge-base/${article.id}`}
-                      className="block p-3 border border-gray-200 rounded-lg hover:bg-gray-50"
+                      className="block p-3 border border-border rounded-lg hover:bg-surface-hover"
                     >
                       <div className="flex items-start space-x-3">
-                        <BookOpen className="h-5 w-5 text-blue-500 mt-0.5" />
+                        <BookOpen className="h-5 w-5 text-primary mt-0.5" />
                         <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium text-blue-600 hover:text-blue-800">
+                          <p className="text-sm font-medium text-primary hover:text-primary">
                             {article.title}
                           </p>
                           {article.summary && (
-                            <p className="text-xs text-gray-500 mt-1 line-clamp-2">{article.summary}</p>
+                            <p className="text-xs text-muted mt-1 line-clamp-2">{article.summary}</p>
                           )}
                           <div className="flex items-center space-x-2 mt-1">
                             <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
-                              article.type === 'troubleshooting' ? 'bg-orange-100 text-orange-800' :
-                              article.type === 'how_to' ? 'bg-green-100 text-green-800' :
-                              article.type === 'known_error' ? 'bg-purple-100 text-purple-800' :
-                              'bg-gray-100 text-gray-800'
+                              article.type === 'troubleshooting' ? 'bg-warning-subtle text-warning' :
+                              article.type === 'how_to' ? 'bg-success-subtle text-success' :
+                              article.type === 'known_error' ? 'bg-primary-subtle text-primary' :
+                              'bg-surface-hover text-foreground'
                             }`}>
                               {article.type.replace(/_/g, ' ')}
                             </span>
@@ -890,7 +890,7 @@ export default function IssueDetailPage() {
                   ))}
                 </div>
               ) : (
-                <div className="text-sm text-gray-500">
+                <div className="text-sm text-muted">
                   No linked articles. Link KB articles to help resolve this issue.
                 </div>
               )}
@@ -904,36 +904,36 @@ export default function IssueDetailPage() {
         <div className="fixed inset-0 z-50 overflow-y-auto">
           <div className="flex min-h-screen items-center justify-center p-4">
             <div className="fixed inset-0 bg-black bg-opacity-30" onClick={() => setShowAssignModal(false)} />
-            <div className="relative bg-white rounded-lg shadow-xl max-w-md w-full p-6">
+            <div className="relative bg-surface rounded-xl shadow-sm-xl max-w-md w-full p-6">
               <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-semibold text-gray-900">Assign Issue</h3>
+                <h3 className="text-lg font-semibold text-foreground">Assign Issue</h3>
                 <button
                   onClick={() => setShowAssignModal(false)}
-                  className="text-gray-400 hover:text-gray-500"
+                  className="text-muted hover:text-muted"
                 >
                   <X className="h-5 w-5" />
                 </button>
               </div>
-              <p className="text-sm text-gray-500 mb-4">Select a user to assign this issue to:</p>
+              <p className="text-sm text-muted mb-4">Select a user to assign this issue to:</p>
               <div className="max-h-64 overflow-y-auto space-y-2">
                 {users.map((user: { id: string; name: string; email: string }) => (
                   <button
                     key={user.id}
                     onClick={() => handleAssign(user.id)}
                     disabled={assignIssue.isPending}
-                    className="w-full flex items-center p-3 rounded-lg hover:bg-gray-50 border border-gray-200 text-left"
+                    className="w-full flex items-center p-3 rounded-lg hover:bg-surface-hover border border-border text-left"
                   >
-                    <div className="h-8 w-8 rounded-full bg-blue-500 flex items-center justify-center text-white text-sm font-medium">
+                    <div className="h-8 w-8 rounded-full bg-primary-subtle0 flex items-center justify-center text-white text-sm font-medium">
                       {user.name.charAt(0)}
                     </div>
                     <div className="ml-3">
-                      <p className="text-sm font-medium text-gray-900">{user.name}</p>
-                      <p className="text-xs text-gray-500">{user.email}</p>
+                      <p className="text-sm font-medium text-foreground">{user.name}</p>
+                      <p className="text-xs text-muted">{user.email}</p>
                     </div>
                   </button>
                 ))}
                 {users.length === 0 && (
-                  <p className="text-sm text-gray-500 text-center py-4">No users available</p>
+                  <p className="text-sm text-muted text-center py-4">No users available</p>
                 )}
               </div>
               <div className="mt-4 flex justify-end">
@@ -951,29 +951,29 @@ export default function IssueDetailPage() {
         <div className="fixed inset-0 z-50 overflow-y-auto">
           <div className="flex min-h-screen items-center justify-center p-4">
             <div className="fixed inset-0 bg-black bg-opacity-30" onClick={() => setShowLinkProblemModal(false)} />
-            <div className="relative bg-white rounded-lg shadow-xl max-w-lg w-full p-6">
+            <div className="relative bg-surface rounded-xl shadow-sm-xl max-w-lg w-full p-6">
               <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-semibold text-gray-900">Link to Problem</h3>
+                <h3 className="text-lg font-semibold text-foreground">Link to Problem</h3>
                 <button
                   onClick={() => setShowLinkProblemModal(false)}
-                  className="text-gray-400 hover:text-gray-500"
+                  className="text-muted hover:text-muted"
                 >
                   <X className="h-5 w-5" />
                 </button>
               </div>
-              <p className="text-sm text-gray-500 mb-4">
+              <p className="text-sm text-muted mb-4">
                 Link this issue to an existing problem for root cause analysis. This helps identify recurring issues.
               </p>
 
               <div className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-secondary mb-1">
                     Select Problem
                   </label>
                   <select
                     value={selectedProblemId}
                     onChange={(e) => setSelectedProblemId(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-3 py-2 border border-border-strong rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary"
                   >
                     <option value="">Choose a problem...</option>
                     {problems.map((problem: { id: string; problem_number: string; title: string; status: string }) => (
@@ -983,20 +983,20 @@ export default function IssueDetailPage() {
                     ))}
                   </select>
                   {problems.length === 0 && (
-                    <p className="mt-1 text-xs text-gray-500">
-                      No problems found. <Link href="/problems/new" className="text-blue-600 hover:text-blue-800">Create a new problem</Link>
+                    <p className="mt-1 text-xs text-muted">
+                      No problems found. <Link href="/problems/new" className="text-primary hover:text-primary">Create a new problem</Link>
                     </p>
                   )}
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-secondary mb-1">
                     Relationship Type
                   </label>
                   <select
                     value={linkRelationshipType}
                     onChange={(e) => setLinkRelationshipType(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-3 py-2 border border-border-strong rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary"
                   >
                     <option value="caused_by">Caused by (this issue is a symptom of the problem)</option>
                     <option value="related_to">Related to (this issue is related but not directly caused)</option>
@@ -1036,29 +1036,29 @@ export default function IssueDetailPage() {
         <div className="fixed inset-0 z-50 overflow-y-auto">
           <div className="flex min-h-screen items-center justify-center p-4">
             <div className="fixed inset-0 bg-black bg-opacity-30" onClick={() => setShowLinkKBModal(false)} />
-            <div className="relative bg-white rounded-lg shadow-xl max-w-lg w-full p-6">
+            <div className="relative bg-surface rounded-xl shadow-sm-xl max-w-lg w-full p-6">
               <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-semibold text-gray-900">Link Knowledge Base Article</h3>
+                <h3 className="text-lg font-semibold text-foreground">Link Knowledge Base Article</h3>
                 <button
                   onClick={() => setShowLinkKBModal(false)}
-                  className="text-gray-400 hover:text-gray-500"
+                  className="text-muted hover:text-muted"
                 >
                   <X className="h-5 w-5" />
                 </button>
               </div>
-              <p className="text-sm text-gray-500 mb-4">
+              <p className="text-sm text-muted mb-4">
                 Link a published KB article to help resolve this issue.
               </p>
 
               <div className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-secondary mb-1">
                     Select Article
                   </label>
                   <select
                     value={selectedKBArticleId}
                     onChange={(e) => setSelectedKBArticleId(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-3 py-2 border border-border-strong rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary"
                   >
                     <option value="">Choose an article...</option>
                     {allKBArticles
@@ -1070,8 +1070,8 @@ export default function IssueDetailPage() {
                       ))}
                   </select>
                   {allKBArticles.length === 0 && (
-                    <p className="mt-1 text-xs text-gray-500">
-                      No published articles found. <Link href="/knowledge-base/new" className="text-blue-600 hover:text-blue-800">Create a new article</Link>
+                    <p className="mt-1 text-xs text-muted">
+                      No published articles found. <Link href="/knowledge-base/new" className="text-primary hover:text-primary">Create a new article</Link>
                     </p>
                   )}
                 </div>

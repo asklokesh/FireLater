@@ -322,16 +322,16 @@ export default function ScheduleEditorPage() {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <Loader2 className="h-8 w-8 animate-spin text-blue-500" />
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
       </div>
     );
   }
 
   if (error || !schedule) {
     return (
-      <div className="bg-red-50 border border-red-200 rounded-lg p-6 text-center">
-        <AlertCircle className="h-12 w-12 text-red-500 mx-auto mb-4" />
-        <h3 className="text-lg font-medium text-red-800 mb-2">{error || 'Schedule not found'}</h3>
+      <div className="bg-error-subtle border border-red-200 rounded-xl p-6 text-center">
+        <AlertCircle className="h-12 w-12 bg-error-subtle0 mx-auto mb-4" />
+        <h3 className="text-lg font-medium text-error mb-2">{error || 'Schedule not found'}</h3>
         <Link href="/oncall">
           <Button variant="outline">Back to On-Call</Button>
         </Link>
@@ -356,7 +356,7 @@ export default function ScheduleEditorPage() {
           </Link>
           <div>
             <div className="flex items-center space-x-3">
-              <h1 className="text-2xl font-bold text-gray-900">
+              <h1 className="text-2xl font-bold text-foreground">
                 {isEditing ? (
                   <Input
                     value={editForm.name}
@@ -368,12 +368,12 @@ export default function ScheduleEditorPage() {
                 )}
               </h1>
               <span className={`px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                schedule.is_active ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
+                schedule.is_active ? 'bg-success-subtle text-success' : 'bg-background text-foreground'
               }`}>
                 {schedule.is_active ? 'Active' : 'Inactive'}
               </span>
             </div>
-            <p className="mt-1 text-sm text-gray-500">
+            <p className="mt-1 text-sm text-muted">
               {rotationTypeLabels[schedule.rotation_type]} rotation | {schedule.timezone}
             </p>
           </div>
@@ -403,17 +403,17 @@ export default function ScheduleEditorPage() {
         {/* Left Column - Calendar */}
         <div className="lg:col-span-2 space-y-6">
           {/* Calendar Header */}
-          <div className="bg-white rounded-lg shadow">
-            <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
+          <div className="bg-surface rounded-xl shadow-sm">
+            <div className="px-6 py-4 border-b border-border flex items-center justify-between">
               <div className="flex items-center space-x-4">
-                <button onClick={() => navigateWeek('prev')} className="p-1 hover:bg-gray-100 rounded">
-                  <ChevronLeft className="h-5 w-5 text-gray-600" />
+                <button onClick={() => navigateWeek('prev')} className="p-1 hover:bg-background rounded">
+                  <ChevronLeft className="h-5 w-5 text-secondary" />
                 </button>
-                <h2 className="text-lg font-medium text-gray-900">
+                <h2 className="text-lg font-medium text-foreground">
                   {weekDays[0].toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
                 </h2>
-                <button onClick={() => navigateWeek('next')} className="p-1 hover:bg-gray-100 rounded">
-                  <ChevronRight className="h-5 w-5 text-gray-600" />
+                <button onClick={() => navigateWeek('next')} className="p-1 hover:bg-background rounded">
+                  <ChevronRight className="h-5 w-5 text-secondary" />
                 </button>
               </div>
               <div className="flex items-center space-x-2">
@@ -437,19 +437,19 @@ export default function ScheduleEditorPage() {
                   return (
                     <div
                       key={day.toISOString()}
-                      className={`border rounded-lg p-3 min-h-[100px] ${
-                        today ? 'border-blue-500 bg-blue-50' : 'border-gray-200'
+                      className={`border rounded-xl p-3 min-h-[100px] ${
+                        today ? 'border-blue-500 bg-primary-subtle' : 'border-border'
                       }`}
                     >
-                      <div className="text-xs text-gray-500">
+                      <div className="text-xs text-muted">
                         {day.toLocaleDateString('en-US', { weekday: 'short' })}
                       </div>
-                      <div className={`text-lg font-medium ${today ? 'text-blue-600' : 'text-gray-900'}`}>
+                      <div className={`text-lg font-medium ${today ? 'text-primary' : 'text-foreground'}`}>
                         {day.getDate()}
                       </div>
                       {shift && (
                         <div className={`mt-2 p-2 rounded text-xs ${
-                          shift.is_override ? 'bg-yellow-100 text-yellow-800' : 'bg-green-100 text-green-800'
+                          shift.is_override ? 'bg-warning-subtle text-warning' : 'bg-success-subtle text-success'
                         }`}>
                           <div className="font-medium">{shift.user_name}</div>
                           {shift.is_override && (
@@ -466,24 +466,24 @@ export default function ScheduleEditorPage() {
 
           {/* Edit Form (when editing) */}
           {isEditing && (
-            <div className="bg-white rounded-lg shadow p-6">
-              <h3 className="text-lg font-medium text-gray-900 mb-4">Schedule Settings</h3>
+            <div className="bg-surface rounded-xl shadow-sm p-6">
+              <h3 className="text-lg font-medium text-foreground mb-4">Schedule Settings</h3>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
+                  <label className="block text-sm font-medium text-secondary mb-1">Description</label>
                   <textarea
                     value={editForm.description}
                     onChange={(e) => setEditForm((p) => ({ ...p, description: e.target.value }))}
                     rows={2}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-3 py-2 border border-border-strong rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Timezone</label>
+                  <label className="block text-sm font-medium text-secondary mb-1">Timezone</label>
                   <select
                     value={editForm.timezone}
                     onChange={(e) => setEditForm((p) => ({ ...p, timezone: e.target.value }))}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-3 py-2 border border-border-strong rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
                   >
                     <option value="America/New_York">Eastern Time</option>
                     <option value="America/Chicago">Central Time</option>
@@ -493,11 +493,11 @@ export default function ScheduleEditorPage() {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Rotation Type</label>
+                  <label className="block text-sm font-medium text-secondary mb-1">Rotation Type</label>
                   <select
                     value={editForm.rotation_type}
                     onChange={(e) => setEditForm((p) => ({ ...p, rotation_type: e.target.value as typeof editForm.rotation_type }))}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-3 py-2 border border-border-strong rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
                   >
                     <option value="daily">Daily</option>
                     <option value="weekly">Weekly</option>
@@ -505,21 +505,21 @@ export default function ScheduleEditorPage() {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Handoff Time</label>
+                  <label className="block text-sm font-medium text-secondary mb-1">Handoff Time</label>
                   <input
                     type="time"
                     value={editForm.handoff_time}
                     onChange={(e) => setEditForm((p) => ({ ...p, handoff_time: e.target.value }))}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-3 py-2 border border-border-strong rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
                   />
                 </div>
                 {editForm.rotation_type === 'weekly' && (
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Handoff Day</label>
+                    <label className="block text-sm font-medium text-secondary mb-1">Handoff Day</label>
                     <select
                       value={editForm.handoff_day}
                       onChange={(e) => setEditForm((p) => ({ ...p, handoff_day: parseInt(e.target.value) }))}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="w-full px-3 py-2 border border-border-strong rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
                     >
                       <option value={0}>Sunday</option>
                       <option value={1}>Monday</option>
@@ -532,11 +532,11 @@ export default function ScheduleEditorPage() {
                   </div>
                 )}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Assignment Group</label>
+                  <label className="block text-sm font-medium text-secondary mb-1">Assignment Group</label>
                   <select
                     value={editForm.group_id}
                     onChange={(e) => setEditForm((p) => ({ ...p, group_id: e.target.value }))}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-3 py-2 border border-border-strong rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
                   >
                     <option value="">No group</option>
                     {groups.map((group) => (
@@ -550,9 +550,9 @@ export default function ScheduleEditorPage() {
                     id="is_active"
                     checked={editForm.is_active}
                     onChange={(e) => setEditForm((p) => ({ ...p, is_active: e.target.checked }))}
-                    className="h-4 w-4 text-blue-600 rounded mr-2"
+                    className="h-4 w-4 text-primary rounded mr-2"
                   />
-                  <label htmlFor="is_active" className="text-sm font-medium text-gray-700">
+                  <label htmlFor="is_active" className="text-sm font-medium text-secondary">
                     Schedule is active
                   </label>
                 </div>
@@ -563,9 +563,9 @@ export default function ScheduleEditorPage() {
 
         {/* Right Column - Rotation Members */}
         <div className="space-y-6">
-          <div className="bg-white rounded-lg shadow">
-            <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
-              <h3 className="text-lg font-medium text-gray-900">Rotation Members</h3>
+          <div className="bg-surface rounded-xl shadow-sm">
+            <div className="px-6 py-4 border-b border-border flex items-center justify-between">
+              <h3 className="text-lg font-medium text-foreground">Rotation Members</h3>
               <Button size="sm" onClick={() => setShowAddMember(true)}>
                 <Plus className="h-4 w-4" />
               </Button>
@@ -573,8 +573,8 @@ export default function ScheduleEditorPage() {
             <div className="p-6">
               {rotationMembers.length === 0 ? (
                 <div className="text-center py-8">
-                  <Users className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                  <p className="text-gray-500">No members in rotation</p>
+                  <Users className="h-12 w-12 text-muted mx-auto mb-4" />
+                  <p className="text-muted">No members in rotation</p>
                   <Button variant="outline" className="mt-4" onClick={() => setShowAddMember(true)}>
                     <Plus className="h-4 w-4 mr-2" />
                     Add Member
@@ -585,20 +585,20 @@ export default function ScheduleEditorPage() {
                   {rotationMembers.sort((a, b) => a.position - b.position).map((member, idx) => (
                     <div
                       key={member.id}
-                      className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
+                      className="flex items-center justify-between p-3 bg-surface-hover rounded-xl"
                     >
                       <div className="flex items-center">
-                        <div className="h-8 w-8 rounded-full bg-blue-100 flex items-center justify-center text-sm font-medium text-blue-600">
+                        <div className="h-8 w-8 rounded-full bg-primary-subtle flex items-center justify-center text-sm font-medium text-primary">
                           {idx + 1}
                         </div>
                         <div className="ml-3">
-                          <div className="text-sm font-medium text-gray-900">{member.user_name}</div>
-                          <div className="text-xs text-gray-500">{member.user_email}</div>
+                          <div className="text-sm font-medium text-foreground">{member.user_name}</div>
+                          <div className="text-xs text-muted">{member.user_email}</div>
                         </div>
                       </div>
                       <button
                         onClick={() => handleRemoveMember(member.id)}
-                        className="text-red-500 hover:text-red-700"
+                        className="bg-error-subtle0 hover:text-error"
                       >
                         <Trash2 className="h-4 w-4" />
                       </button>
@@ -610,9 +610,9 @@ export default function ScheduleEditorPage() {
           </div>
 
           {/* Who's On-Call Now */}
-          <div className="bg-white rounded-lg shadow">
-            <div className="px-6 py-4 border-b border-gray-200">
-              <h3 className="text-lg font-medium text-gray-900">Currently On-Call</h3>
+          <div className="bg-surface rounded-xl shadow-sm">
+            <div className="px-6 py-4 border-b border-border">
+              <h3 className="text-lg font-medium text-foreground">Currently On-Call</h3>
             </div>
             <div className="p-6">
               {shifts.find((s) => {
@@ -626,14 +626,14 @@ export default function ScheduleEditorPage() {
                   })!;
                   return (
                     <div className="flex items-center">
-                      <div className="h-12 w-12 rounded-full bg-green-100 flex items-center justify-center">
-                        <Phone className="h-6 w-6 text-green-600" />
+                      <div className="h-12 w-12 rounded-full bg-success-subtle flex items-center justify-center">
+                        <Phone className="h-6 w-6 text-success" />
                       </div>
                       <div className="ml-4">
-                        <div className="font-medium text-gray-900">{currentShift.user_name}</div>
-                        <div className="text-sm text-gray-500">{currentShift.user_email}</div>
+                        <div className="font-medium text-foreground">{currentShift.user_name}</div>
+                        <div className="text-sm text-muted">{currentShift.user_email}</div>
                         {currentShift.is_override && (
-                          <span className="text-xs bg-yellow-100 text-yellow-800 px-2 py-0.5 rounded">
+                          <span className="text-xs bg-warning-subtle text-warning px-2 py-0.5 rounded">
                             Override
                           </span>
                         )}
@@ -642,40 +642,40 @@ export default function ScheduleEditorPage() {
                   );
                 })()
               ) : (
-                <p className="text-gray-500 text-center">No one currently on-call</p>
+                <p className="text-muted text-center">No one currently on-call</p>
               )}
             </div>
           </div>
 
           {/* Schedule Info */}
-          <div className="bg-white rounded-lg shadow">
-            <div className="px-6 py-4 border-b border-gray-200">
-              <h3 className="text-lg font-medium text-gray-900">Schedule Info</h3>
+          <div className="bg-surface rounded-xl shadow-sm">
+            <div className="px-6 py-4 border-b border-border">
+              <h3 className="text-lg font-medium text-foreground">Schedule Info</h3>
             </div>
             <div className="p-6 space-y-4">
               <div className="flex items-center justify-between text-sm">
-                <span className="text-gray-500">Rotation</span>
-                <span className="font-medium text-gray-900 flex items-center">
-                  <RefreshCw className="h-4 w-4 mr-1 text-gray-400" />
+                <span className="text-muted">Rotation</span>
+                <span className="font-medium text-foreground flex items-center">
+                  <RefreshCw className="h-4 w-4 mr-1 text-muted" />
                   {rotationTypeLabels[schedule.rotation_type]}
                 </span>
               </div>
               <div className="flex items-center justify-between text-sm">
-                <span className="text-gray-500">Handoff</span>
-                <span className="font-medium text-gray-900 flex items-center">
-                  <Clock className="h-4 w-4 mr-1 text-gray-400" />
+                <span className="text-muted">Handoff</span>
+                <span className="font-medium text-foreground flex items-center">
+                  <Clock className="h-4 w-4 mr-1 text-muted" />
                   {schedule.handoff_time}
                 </span>
               </div>
               <div className="flex items-center justify-between text-sm">
-                <span className="text-gray-500">Timezone</span>
-                <span className="font-medium text-gray-900">{schedule.timezone}</span>
+                <span className="text-muted">Timezone</span>
+                <span className="font-medium text-foreground">{schedule.timezone}</span>
               </div>
               {schedule.group_name && (
                 <div className="flex items-center justify-between text-sm">
-                  <span className="text-gray-500">Group</span>
-                  <span className="font-medium text-gray-900 flex items-center">
-                    <Users className="h-4 w-4 mr-1 text-gray-400" />
+                  <span className="text-muted">Group</span>
+                  <span className="font-medium text-foreground flex items-center">
+                    <Users className="h-4 w-4 mr-1 text-muted" />
                     {schedule.group_name}
                   </span>
                 </div>
@@ -688,14 +688,14 @@ export default function ScheduleEditorPage() {
       {/* Add Member Modal */}
       {showAddMember && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4 p-6">
-            <h2 className="text-lg font-semibold text-gray-900 mb-4">Add Rotation Member</h2>
+          <div className="bg-surface rounded-xl shadow-sm-xl max-w-md w-full mx-4 p-6">
+            <h2 className="text-lg font-semibold text-foreground mb-4">Add Rotation Member</h2>
             <div className="mb-4">
-              <label className="block text-sm font-medium text-gray-700 mb-1">Select User</label>
+              <label className="block text-sm font-medium text-secondary mb-1">Select User</label>
               <select
                 value={selectedUserId}
                 onChange={(e) => setSelectedUserId(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 border border-border-strong rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
               >
                 <option value="">Select a user...</option>
                 {availableUsers.map((user) => (
@@ -721,18 +721,18 @@ export default function ScheduleEditorPage() {
       {/* Override Modal */}
       {showOverrideModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4 p-6">
-            <h2 className="text-lg font-semibold text-gray-900 mb-4">Create Override</h2>
-            <p className="text-sm text-gray-600 mb-4">
+          <div className="bg-surface rounded-xl shadow-sm-xl max-w-md w-full mx-4 p-6">
+            <h2 className="text-lg font-semibold text-foreground mb-4">Create Override</h2>
+            <p className="text-sm text-secondary mb-4">
               Create a temporary override to assign someone else to be on-call for a specific period.
             </p>
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">User</label>
+                <label className="block text-sm font-medium text-secondary mb-1">User</label>
                 <select
                   value={overrideForm.userId}
                   onChange={(e) => setOverrideForm((p) => ({ ...p, userId: e.target.value }))}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 border border-border-strong rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
                 >
                   <option value="">Select a user...</option>
                   {users.map((user) => (
@@ -744,52 +744,52 @@ export default function ScheduleEditorPage() {
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Start Date</label>
+                  <label className="block text-sm font-medium text-secondary mb-1">Start Date</label>
                   <input
                     type="date"
                     value={overrideForm.startDate}
                     onChange={(e) => setOverrideForm((p) => ({ ...p, startDate: e.target.value }))}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-3 py-2 border border-border-strong rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Start Time</label>
+                  <label className="block text-sm font-medium text-secondary mb-1">Start Time</label>
                   <input
                     type="time"
                     value={overrideForm.startTime}
                     onChange={(e) => setOverrideForm((p) => ({ ...p, startTime: e.target.value }))}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-3 py-2 border border-border-strong rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
                   />
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">End Date</label>
+                  <label className="block text-sm font-medium text-secondary mb-1">End Date</label>
                   <input
                     type="date"
                     value={overrideForm.endDate}
                     onChange={(e) => setOverrideForm((p) => ({ ...p, endDate: e.target.value }))}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-3 py-2 border border-border-strong rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">End Time</label>
+                  <label className="block text-sm font-medium text-secondary mb-1">End Time</label>
                   <input
                     type="time"
                     value={overrideForm.endTime}
                     onChange={(e) => setOverrideForm((p) => ({ ...p, endTime: e.target.value }))}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-3 py-2 border border-border-strong rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
                   />
                 </div>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Notes (optional)</label>
+                <label className="block text-sm font-medium text-secondary mb-1">Notes (optional)</label>
                 <textarea
                   value={overrideForm.notes}
                   onChange={(e) => setOverrideForm((p) => ({ ...p, notes: e.target.value }))}
                   rows={2}
                   placeholder="Reason for override..."
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 border border-border-strong rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
                 />
               </div>
             </div>

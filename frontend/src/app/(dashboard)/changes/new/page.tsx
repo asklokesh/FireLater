@@ -128,13 +128,13 @@ export default function NewChangePage() {
       <div className="flex items-center space-x-4">
         <button
           onClick={() => router.back()}
-          className="p-2 hover:bg-gray-100 rounded-md"
+          className="p-2 hover:bg-surface-hover rounded-lg"
         >
-          <ArrowLeft className="h-5 w-5 text-gray-500" />
+          <ArrowLeft className="h-5 w-5 text-secondary" />
         </button>
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Create Change Request</h1>
-          <p className="mt-1 text-sm text-gray-500">
+          <h1 className="text-2xl font-bold text-foreground">Create Change Request</h1>
+          <p className="mt-1 text-sm text-secondary">
             Submit a new change request for approval
           </p>
         </div>
@@ -143,14 +143,14 @@ export default function NewChangePage() {
       {/* Form */}
       <form onSubmit={handleSubmit} className="space-y-6">
         {error && (
-          <div className="flex items-center gap-2 p-4 text-sm text-red-800 bg-red-100 rounded-md">
+          <div className="flex items-center gap-2 p-4 text-sm text-error bg-error-subtle rounded-lg">
             <AlertCircle className="h-4 w-4" />
             {error}
           </div>
         )}
 
-        <div className="bg-white rounded-lg shadow p-6 space-y-6">
-          <h2 className="text-lg font-semibold text-gray-900">Change Details</h2>
+        <div className="bg-surface border border-border rounded-xl p-6 space-y-6">
+          <h2 className="text-lg font-semibold text-foreground">Change Details</h2>
 
           <Input
             id="title"
@@ -166,9 +166,9 @@ export default function NewChangePage() {
           <div>
             <label
               htmlFor="description"
-              className="block text-sm font-medium text-gray-700 mb-1"
+              className="block text-sm font-medium text-foreground mb-1"
             >
-              Description <span className="text-red-500">*</span>
+              Description <span className="text-error">*</span>
             </label>
             <textarea
               id="description"
@@ -176,20 +176,20 @@ export default function NewChangePage() {
               placeholder="Detailed description of the change, including scope, steps, and expected outcome"
               value={formData.description}
               onChange={handleChange('description')}
-              className={`w-full px-3 py-2 border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                errors.description ? 'border-red-500' : 'border-gray-300'
+              className={`w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary ${
+                errors.description ? 'border-error' : 'border-border'
               }`}
               required
             />
             {errors.description && (
-              <p className="mt-1 text-sm text-red-500">{errors.description}</p>
+              <p className="mt-1 text-sm text-error">{errors.description}</p>
             )}
           </div>
 
           <div>
             <label
               htmlFor="justification"
-              className="block text-sm font-medium text-gray-700 mb-1"
+              className="block text-sm font-medium text-foreground mb-1"
             >
               Business Justification
             </label>
@@ -199,14 +199,14 @@ export default function NewChangePage() {
               placeholder="Why is this change needed?"
               value={formData.justification}
               onChange={handleChange('justification')}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary"
             />
           </div>
 
           <div>
             <label
               htmlFor="applicationId"
-              className="block text-sm font-medium text-gray-700 mb-1"
+              className="block text-sm font-medium text-foreground mb-1"
             >
               Application
             </label>
@@ -214,7 +214,7 @@ export default function NewChangePage() {
               id="applicationId"
               value={formData.applicationId}
               onChange={handleChange('applicationId')}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary"
             >
               <option value="">Select an application (optional)</option>
               {applications.map((app: { id: string; name: string }) => (
@@ -226,14 +226,14 @@ export default function NewChangePage() {
           </div>
         </div>
 
-        <div className="bg-white rounded-lg shadow p-6 space-y-6">
-          <h2 className="text-lg font-semibold text-gray-900">Classification</h2>
+        <div className="bg-surface border border-border rounded-xl p-6 space-y-6">
+          <h2 className="text-lg font-semibold text-foreground">Classification</h2>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
               <label
                 htmlFor="type"
-                className="block text-sm font-medium text-gray-700 mb-1"
+                className="block text-sm font-medium text-foreground mb-1"
               >
                 Change Type
               </label>
@@ -241,7 +241,7 @@ export default function NewChangePage() {
                 id="type"
                 value={formData.type}
                 onChange={handleChange('type')}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary"
               >
                 <option value="standard">Standard (Pre-approved)</option>
                 <option value="normal">Normal (Requires CAB approval)</option>
@@ -252,7 +252,7 @@ export default function NewChangePage() {
             <div>
               <label
                 htmlFor="riskLevel"
-                className="block text-sm font-medium text-gray-700 mb-1"
+                className="block text-sm font-medium text-foreground mb-1"
               >
                 Risk Level
               </label>
@@ -260,7 +260,7 @@ export default function NewChangePage() {
                 id="riskLevel"
                 value={formData.riskLevel}
                 onChange={handleChange('riskLevel')}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary"
               >
                 <option value="low">Low</option>
                 <option value="medium">Medium</option>
@@ -272,7 +272,7 @@ export default function NewChangePage() {
             <div>
               <label
                 htmlFor="impact"
-                className="block text-sm font-medium text-gray-700 mb-1"
+                className="block text-sm font-medium text-foreground mb-1"
               >
                 Impact
               </label>
@@ -280,7 +280,7 @@ export default function NewChangePage() {
                 id="impact"
                 value={formData.impact}
                 onChange={handleChange('impact')}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary"
               >
                 <option value="none">None</option>
                 <option value="minor">Minor</option>
@@ -292,64 +292,64 @@ export default function NewChangePage() {
           </div>
         </div>
 
-        <div className="bg-white rounded-lg shadow p-6 space-y-6">
-          <h2 className="text-lg font-semibold text-gray-900">Schedule</h2>
+        <div className="bg-surface border border-border rounded-xl p-6 space-y-6">
+          <h2 className="text-lg font-semibold text-foreground">Schedule</h2>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label
                 htmlFor="plannedStart"
-                className="block text-sm font-medium text-gray-700 mb-1"
+                className="block text-sm font-medium text-foreground mb-1"
               >
-                Planned Start <span className="text-red-500">*</span>
+                Planned Start <span className="text-error">*</span>
               </label>
               <input
                 type="datetime-local"
                 id="plannedStart"
                 value={formData.plannedStart}
                 onChange={handleChange('plannedStart')}
-                className={`w-full px-3 py-2 border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                  errors.plannedStart ? 'border-red-500' : 'border-gray-300'
+                className={`w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary ${
+                  errors.plannedStart ? 'border-error' : 'border-border'
                 }`}
                 required
               />
               {errors.plannedStart && (
-                <p className="mt-1 text-sm text-red-500">{errors.plannedStart}</p>
+                <p className="mt-1 text-sm text-error">{errors.plannedStart}</p>
               )}
             </div>
 
             <div>
               <label
                 htmlFor="plannedEnd"
-                className="block text-sm font-medium text-gray-700 mb-1"
+                className="block text-sm font-medium text-foreground mb-1"
               >
-                Planned End <span className="text-red-500">*</span>
+                Planned End <span className="text-error">*</span>
               </label>
               <input
                 type="datetime-local"
                 id="plannedEnd"
                 value={formData.plannedEnd}
                 onChange={handleChange('plannedEnd')}
-                className={`w-full px-3 py-2 border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                  errors.plannedEnd ? 'border-red-500' : 'border-gray-300'
+                className={`w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary ${
+                  errors.plannedEnd ? 'border-error' : 'border-border'
                 }`}
                 required
               />
               {errors.plannedEnd && (
-                <p className="mt-1 text-sm text-red-500">{errors.plannedEnd}</p>
+                <p className="mt-1 text-sm text-error">{errors.plannedEnd}</p>
               )}
             </div>
           </div>
         </div>
 
-        <div className="bg-white rounded-lg shadow p-6 space-y-6">
-          <h2 className="text-lg font-semibold text-gray-900">Assignment</h2>
+        <div className="bg-surface border border-border rounded-xl p-6 space-y-6">
+          <h2 className="text-lg font-semibold text-foreground">Assignment</h2>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label
                 htmlFor="assignedGroup"
-                className="block text-sm font-medium text-gray-700 mb-1"
+                className="block text-sm font-medium text-foreground mb-1"
               >
                 Assignment Group
               </label>
@@ -357,7 +357,7 @@ export default function NewChangePage() {
                 id="assignedGroup"
                 value={formData.assignedGroup}
                 onChange={handleChange('assignedGroup')}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary"
               >
                 <option value="">Select a group</option>
                 {groups.map((group: { id: string; name: string }) => (
@@ -375,13 +375,13 @@ export default function NewChangePage() {
           </div>
         </div>
 
-        <div className="bg-white rounded-lg shadow p-6 space-y-6">
-          <h2 className="text-lg font-semibold text-gray-900">Implementation Plans</h2>
+        <div className="bg-surface border border-border rounded-xl p-6 space-y-6">
+          <h2 className="text-lg font-semibold text-foreground">Implementation Plans</h2>
 
           <div>
             <label
               htmlFor="implementationPlan"
-              className="block text-sm font-medium text-gray-700 mb-1"
+              className="block text-sm font-medium text-foreground mb-1"
             >
               Implementation Plan
             </label>
@@ -391,16 +391,16 @@ export default function NewChangePage() {
               placeholder="Step-by-step instructions for implementing the change"
               value={formData.implementationPlan}
               onChange={handleChange('implementationPlan')}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary"
             />
           </div>
 
           <div>
             <label
               htmlFor="rollbackPlan"
-              className="block text-sm font-medium text-gray-700 mb-1"
+              className="block text-sm font-medium text-foreground mb-1"
             >
-              Rollback Plan <span className="text-red-500">*</span>
+              Rollback Plan <span className="text-error">*</span>
             </label>
             <textarea
               id="rollbackPlan"
@@ -408,20 +408,20 @@ export default function NewChangePage() {
               placeholder="Steps to rollback the change if issues occur"
               value={formData.rollbackPlan}
               onChange={handleChange('rollbackPlan')}
-              className={`w-full px-3 py-2 border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                errors.rollbackPlan ? 'border-red-500' : 'border-gray-300'
+              className={`w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary ${
+                errors.rollbackPlan ? 'border-error' : 'border-border'
               }`}
               required
             />
             {errors.rollbackPlan && (
-              <p className="mt-1 text-sm text-red-500">{errors.rollbackPlan}</p>
+              <p className="mt-1 text-sm text-error">{errors.rollbackPlan}</p>
             )}
           </div>
 
           <div>
             <label
               htmlFor="testPlan"
-              className="block text-sm font-medium text-gray-700 mb-1"
+              className="block text-sm font-medium text-foreground mb-1"
             >
               Test Plan
             </label>
@@ -431,7 +431,7 @@ export default function NewChangePage() {
               placeholder="Steps to verify the change was successful"
               value={formData.testPlan}
               onChange={handleChange('testPlan')}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary"
             />
           </div>
         </div>

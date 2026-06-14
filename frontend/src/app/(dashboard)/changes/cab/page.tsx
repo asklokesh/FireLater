@@ -62,17 +62,17 @@ import {
 } from '@/hooks/useApi';
 
 const statusColors: Record<CabMeetingStatus, { bg: string; text: string; label: string }> = {
-  scheduled: { bg: 'bg-blue-100', text: 'text-blue-800', label: 'Scheduled' },
-  in_progress: { bg: 'bg-yellow-100', text: 'text-yellow-800', label: 'In Progress' },
-  completed: { bg: 'bg-green-100', text: 'text-green-800', label: 'Completed' },
-  cancelled: { bg: 'bg-gray-100', text: 'text-gray-800', label: 'Cancelled' },
+  scheduled: { bg: 'bg-primary-subtle', text: 'text-primary', label: 'Scheduled' },
+  in_progress: { bg: 'bg-warning-subtle', text: 'text-warning', label: 'In Progress' },
+  completed: { bg: 'bg-success-subtle', text: 'text-success', label: 'Completed' },
+  cancelled: { bg: 'bg-surface-hover', text: 'text-foreground', label: 'Cancelled' },
 };
 
 const riskColors: Record<string, { bg: string; text: string }> = {
-  low: { bg: 'bg-green-100', text: 'text-green-800' },
-  medium: { bg: 'bg-yellow-100', text: 'text-yellow-800' },
-  high: { bg: 'bg-orange-100', text: 'text-orange-800' },
-  critical: { bg: 'bg-red-100', text: 'text-red-800' },
+  low: { bg: 'bg-success-subtle', text: 'text-success' },
+  medium: { bg: 'bg-warning-subtle', text: 'text-warning' },
+  high: { bg: 'bg-warning-subtle', text: 'text-warning' },
+  critical: { bg: 'bg-error-subtle', text: 'text-error' },
 };
 
 const roleLabels: Record<CabAttendeeRole, string> = {
@@ -82,9 +82,9 @@ const roleLabels: Record<CabAttendeeRole, string> = {
 };
 
 const decisionColors: Record<CabDecision, { bg: string; text: string; label: string }> = {
-  approved: { bg: 'bg-green-100', text: 'text-green-800', label: 'Approved' },
-  rejected: { bg: 'bg-red-100', text: 'text-red-800', label: 'Rejected' },
-  deferred: { bg: 'bg-yellow-100', text: 'text-yellow-800', label: 'Deferred' },
+  approved: { bg: 'bg-success-subtle', text: 'text-success', label: 'Approved' },
+  rejected: { bg: 'bg-error-subtle', text: 'text-error', label: 'Rejected' },
+  deferred: { bg: 'bg-warning-subtle', text: 'text-warning', label: 'Deferred' },
 };
 
 type TabType = 'overview' | 'attendees' | 'agenda' | 'decisions' | 'action-items' | 'minutes';
@@ -235,13 +235,13 @@ export default function CabMeetingsPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <div className="flex items-center space-x-2 text-sm text-gray-500 mb-1">
-            <Link href="/changes" className="hover:text-gray-700">Changes</Link>
+          <div className="flex items-center space-x-2 text-sm text-muted mb-1">
+            <Link href="/changes" className="hover:text-secondary">Changes</Link>
             <ChevronRight className="h-4 w-4" />
             <span>CAB Meetings</span>
           </div>
-          <h1 className="text-2xl font-bold text-gray-900">CAB Meetings</h1>
-          <p className="mt-1 text-sm text-gray-500">
+          <h1 className="text-2xl font-bold text-foreground">CAB Meetings</h1>
+          <p className="mt-1 text-sm text-muted">
             Manage Change Advisory Board meetings, agendas, and decisions
           </p>
         </div>
@@ -252,13 +252,13 @@ export default function CabMeetingsPage() {
       </div>
 
       {/* Filters */}
-      <div className="bg-white rounded-lg shadow">
-        <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
+      <div className="bg-surface rounded-xl shadow-sm">
+        <div className="px-6 py-4 border-b border-border flex items-center justify-between">
           <div className="flex items-center space-x-4">
             <select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
-              className="px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="px-3 py-2 border border-border-strong rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary"
             >
               <option value="all">All Statuses</option>
               <option value="scheduled">Scheduled</option>
@@ -274,23 +274,23 @@ export default function CabMeetingsPage() {
         </div>
 
         {showFilters && (
-          <div className="px-6 py-3 border-b border-gray-200 bg-gray-50 flex items-center space-x-4">
+          <div className="px-6 py-3 border-b border-border bg-surface-hover flex items-center space-x-4">
             <div className="flex items-center space-x-2">
-              <label className="text-sm text-gray-600">From:</label>
+              <label className="text-sm text-secondary">From:</label>
               <input
                 type="date"
                 value={startDate}
                 onChange={(e) => setStartDate(e.target.value)}
-                className="px-2 py-1 border border-gray-300 rounded text-sm"
+                className="px-2 py-1 border border-border-strong rounded text-sm"
               />
             </div>
             <div className="flex items-center space-x-2">
-              <label className="text-sm text-gray-600">To:</label>
+              <label className="text-sm text-secondary">To:</label>
               <input
                 type="date"
                 value={endDate}
                 onChange={(e) => setEndDate(e.target.value)}
-                className="px-2 py-1 border border-gray-300 rounded text-sm"
+                className="px-2 py-1 border border-border-strong rounded text-sm"
               />
             </div>
             <Button
@@ -310,18 +310,18 @@ export default function CabMeetingsPage() {
         {/* Meetings Table */}
         {isLoading ? (
           <div className="flex items-center justify-center h-64">
-            <Loader2 className="h-8 w-8 animate-spin text-blue-500" />
+            <Loader2 className="h-8 w-8 animate-spin text-primary" />
           </div>
         ) : error ? (
           <div className="flex flex-col items-center justify-center h-64">
-            <AlertCircle className="h-12 w-12 text-red-500 mb-4" />
-            <p className="text-gray-500">Failed to load meetings</p>
+            <AlertCircle className="h-12 w-12 text-error mb-4" />
+            <p className="text-muted">Failed to load meetings</p>
           </div>
         ) : meetings.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-64">
-            <Calendar className="h-12 w-12 text-gray-400 mb-4" />
-            <h3 className="text-lg font-medium text-gray-900">No meetings found</h3>
-            <p className="text-gray-500 mt-1">Schedule a CAB meeting to get started</p>
+            <Calendar className="h-12 w-12 text-muted mb-4" />
+            <h3 className="text-lg font-medium text-foreground">No meetings found</h3>
+            <p className="text-muted mt-1">Schedule a CAB meeting to get started</p>
             <Button className="mt-4" onClick={() => setShowCreateModal(true)}>
               <Plus className="h-4 w-4 mr-2" />
               Schedule Meeting
@@ -330,47 +330,47 @@ export default function CabMeetingsPage() {
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full">
-              <thead className="bg-gray-50">
+              <thead className="bg-surface-hover">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">
                     Meeting
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">
                     Date/Time
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">
                     Status
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">
                     Organizer
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">
                     Attendees
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">
                     Changes
                   </th>
-                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-right text-xs font-medium text-muted uppercase tracking-wider">
                     Actions
                   </th>
                 </tr>
               </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
+              <tbody className="bg-surface divide-y divide-border">
                 {meetings.map((meeting: CabMeeting) => {
                   const status = statusColors[meeting.status] || statusColors.scheduled;
                   return (
                     <tr
                       key={meeting.id}
-                      className="hover:bg-gray-50 cursor-pointer"
+                      className="hover:bg-surface-hover cursor-pointer"
                       onClick={() => openMeetingDetail(meeting)}
                     >
                       <td className="px-6 py-4">
                         <div className="flex items-center">
-                          <Calendar className="h-5 w-5 text-gray-400 mr-3" />
+                          <Calendar className="h-5 w-5 text-muted mr-3" />
                           <div>
-                            <div className="text-sm font-medium text-gray-900">{meeting.title}</div>
+                            <div className="text-sm font-medium text-foreground">{meeting.title}</div>
                             {(meeting.location || meeting.meeting_link) && (
-                              <div className="text-xs text-gray-500 flex items-center mt-1">
+                              <div className="text-xs text-muted flex items-center mt-1">
                                 {meeting.location && (
                                   <span className="flex items-center mr-3">
                                     <MapPin className="h-3 w-3 mr-1" />
@@ -389,7 +389,7 @@ export default function CabMeetingsPage() {
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm text-gray-900">{formatDate(meeting.meeting_date)}</div>
+                        <div className="text-sm text-foreground">{formatDate(meeting.meeting_date)}</div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${status.bg} ${status.text}`}>
@@ -397,16 +397,16 @@ export default function CabMeetingsPage() {
                         </span>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm text-gray-900">{meeting.organizer_name || '-'}</div>
+                        <div className="text-sm text-foreground">{meeting.organizer_name || '-'}</div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="flex items-center text-sm text-gray-500">
+                        <div className="flex items-center text-sm text-muted">
                           <Users className="h-4 w-4 mr-1" />
                           {meeting.attendee_count || 0}
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="flex items-center text-sm text-gray-500">
+                        <div className="flex items-center text-sm text-muted">
                           <FileText className="h-4 w-4 mr-1" />
                           {meeting.changes_count || 0}
                         </div>
@@ -417,7 +417,7 @@ export default function CabMeetingsPage() {
                             e.stopPropagation();
                             openMeetingDetail(meeting);
                           }}
-                          className="text-blue-600 hover:text-blue-900"
+                          className="text-primary hover:text-primary"
                         >
                           View
                         </button>
@@ -434,15 +434,15 @@ export default function CabMeetingsPage() {
       {/* Create Meeting Modal */}
       {showCreateModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg shadow-xl max-w-lg w-full mx-4 p-6">
+          <div className="bg-surface rounded-xl shadow-sm-xl max-w-lg w-full mx-4 p-6">
             <div className="flex items-center justify-between mb-6">
-              <h2 className="text-lg font-semibold text-gray-900">Schedule CAB Meeting</h2>
+              <h2 className="text-lg font-semibold text-foreground">Schedule CAB Meeting</h2>
               <button
                 onClick={() => {
                   setShowCreateModal(false);
                   resetForm();
                 }}
-                className="text-gray-400 hover:text-gray-600"
+                className="text-muted hover:text-secondary"
               >
                 <X className="h-5 w-5" />
               </button>
@@ -450,8 +450,8 @@ export default function CabMeetingsPage() {
 
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Title <span className="text-red-500">*</span>
+                <label className="block text-sm font-medium text-secondary mb-1">
+                  Title <span className="text-error">*</span>
                 </label>
                 <Input
                   value={formData.title}
@@ -461,11 +461,11 @@ export default function CabMeetingsPage() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
+                <label className="block text-sm font-medium text-secondary mb-1">Description</label>
                 <textarea
                   value={formData.description}
                   onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 border border-border-strong rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary"
                   rows={3}
                   placeholder="Meeting description..."
                 />
@@ -473,29 +473,29 @@ export default function CabMeetingsPage() {
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Start Date/Time <span className="text-red-500">*</span>
+                  <label className="block text-sm font-medium text-secondary mb-1">
+                    Start Date/Time <span className="text-error">*</span>
                   </label>
                   <input
                     type="datetime-local"
                     value={formData.meetingDate}
                     onChange={(e) => setFormData({ ...formData, meetingDate: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-3 py-2 border border-border-strong rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">End Date/Time</label>
+                  <label className="block text-sm font-medium text-secondary mb-1">End Date/Time</label>
                   <input
                     type="datetime-local"
                     value={formData.endDate}
                     onChange={(e) => setFormData({ ...formData, endDate: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-3 py-2 border border-border-strong rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Location</label>
+                <label className="block text-sm font-medium text-secondary mb-1">Location</label>
                 <Input
                   value={formData.location}
                   onChange={(e) => setFormData({ ...formData, location: e.target.value })}
@@ -504,7 +504,7 @@ export default function CabMeetingsPage() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Meeting Link</label>
+                <label className="block text-sm font-medium text-secondary mb-1">Meeting Link</label>
                 <Input
                   value={formData.meetingLink}
                   onChange={(e) => setFormData({ ...formData, meetingLink: e.target.value })}
@@ -612,8 +612,8 @@ function MeetingDetailModal({
   if (isLoading) {
     return (
       <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-        <div className="bg-white rounded-lg shadow-xl p-8">
-          <Loader2 className="h-8 w-8 animate-spin text-blue-500" />
+        <div className="bg-surface rounded-xl shadow-sm-xl p-8">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
         </div>
       </div>
     );
@@ -634,13 +634,13 @@ function MeetingDetailModal({
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full mx-4 max-h-[90vh] flex flex-col">
+      <div className="bg-surface rounded-xl shadow-sm-xl max-w-4xl w-full mx-4 max-h-[90vh] flex flex-col">
         {/* Header */}
-        <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between flex-shrink-0">
+        <div className="px-6 py-4 border-b border-border flex items-center justify-between flex-shrink-0">
           <div className="flex items-center space-x-3">
-            <Calendar className="h-6 w-6 text-blue-500" />
+            <Calendar className="h-6 w-6 text-primary" />
             <div>
-              <h2 className="text-lg font-semibold text-gray-900">{meeting.title}</h2>
+              <h2 className="text-lg font-semibold text-foreground">{meeting.title}</h2>
               <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${status.bg} ${status.text}`}>
                 {status.label}
               </span>
@@ -682,7 +682,7 @@ function MeetingDetailModal({
         </div>
 
         {/* Tabs */}
-        <div className="border-b border-gray-200 flex-shrink-0">
+        <div className="border-b border-border flex-shrink-0">
           <nav className="flex px-6 -mb-px overflow-x-auto">
             {tabs.map((tab) => (
               <button
@@ -690,8 +690,8 @@ function MeetingDetailModal({
                 onClick={() => setActiveTab(tab.id)}
                 className={`py-3 px-4 border-b-2 text-sm font-medium whitespace-nowrap flex items-center ${
                   activeTab === tab.id
-                    ? 'border-blue-500 text-blue-600'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                    ? 'border-blue-500 text-primary'
+                    : 'border-transparent text-muted hover:text-secondary hover:border-border-strong'
                 }`}
               >
                 <tab.icon className="h-4 w-4 mr-2" />
@@ -719,7 +719,7 @@ function MeetingDetailModal({
         </div>
 
         {/* Footer */}
-        <div className="px-6 py-4 border-t border-gray-200 flex justify-between flex-shrink-0">
+        <div className="px-6 py-4 border-t border-border flex justify-between flex-shrink-0">
           <Button variant="danger" size="sm" onClick={onDelete}>
             <Trash2 className="h-4 w-4 mr-1" />
             Delete Meeting
@@ -768,50 +768,50 @@ function OverviewTab({
     return (
       <div className="space-y-4">
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Title</label>
+          <label className="block text-sm font-medium text-secondary mb-1">Title</label>
           <Input
             value={formData.title}
             onChange={(e) => setFormData({ ...formData, title: e.target.value })}
           />
         </div>
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
+          <label className="block text-sm font-medium text-secondary mb-1">Description</label>
           <textarea
             value={formData.description}
             onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full px-3 py-2 border border-border-strong rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary"
             rows={3}
           />
         </div>
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Start Date/Time</label>
+            <label className="block text-sm font-medium text-secondary mb-1">Start Date/Time</label>
             <input
               type="datetime-local"
               value={formData.meetingDate}
               onChange={(e) => setFormData({ ...formData, meetingDate: e.target.value })}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 border border-border-strong rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary"
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">End Date/Time</label>
+            <label className="block text-sm font-medium text-secondary mb-1">End Date/Time</label>
             <input
               type="datetime-local"
               value={formData.endDate}
               onChange={(e) => setFormData({ ...formData, endDate: e.target.value })}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 border border-border-strong rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary"
             />
           </div>
         </div>
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Location</label>
+          <label className="block text-sm font-medium text-secondary mb-1">Location</label>
           <Input
             value={formData.location}
             onChange={(e) => setFormData({ ...formData, location: e.target.value })}
           />
         </div>
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Meeting Link</label>
+          <label className="block text-sm font-medium text-secondary mb-1">Meeting Link</label>
           <Input
             value={formData.meetingLink}
             onChange={(e) => setFormData({ ...formData, meetingLink: e.target.value })}
@@ -825,58 +825,58 @@ function OverviewTab({
     <div className="space-y-6">
       {/* Quick Stats */}
       <div className="grid grid-cols-4 gap-4">
-        <div className="bg-blue-50 rounded-lg p-4">
-          <div className="text-2xl font-bold text-blue-700">{meeting.changes_count || 0}</div>
-          <div className="text-sm text-blue-600">Total Changes</div>
+        <div className="bg-primary-subtle rounded-lg p-4">
+          <div className="text-2xl font-bold text-primary">{meeting.changes_count || 0}</div>
+          <div className="text-sm text-primary">Total Changes</div>
         </div>
-        <div className="bg-green-50 rounded-lg p-4">
-          <div className="text-2xl font-bold text-green-700">{meeting.attendee_count || 0}</div>
-          <div className="text-sm text-green-600">Attendees</div>
+        <div className="bg-success-subtle rounded-lg p-4">
+          <div className="text-2xl font-bold text-success">{meeting.attendee_count || 0}</div>
+          <div className="text-sm text-success">Attendees</div>
         </div>
-        <div className="bg-yellow-50 rounded-lg p-4">
-          <div className="text-2xl font-bold text-yellow-700">-</div>
-          <div className="text-sm text-yellow-600">Pending</div>
+        <div className="bg-warning-subtle rounded-lg p-4">
+          <div className="text-2xl font-bold text-warning">-</div>
+          <div className="text-sm text-warning">Pending</div>
         </div>
-        <div className="bg-purple-50 rounded-lg p-4">
-          <div className="text-2xl font-bold text-purple-700">-</div>
-          <div className="text-sm text-purple-600">Action Items</div>
+        <div className="bg-info-subtle rounded-lg p-4">
+          <div className="text-2xl font-bold text-info">-</div>
+          <div className="text-sm text-info">Action Items</div>
         </div>
       </div>
 
       {/* Meeting Details */}
-      <div className="bg-gray-50 rounded-lg p-4">
-        <h3 className="text-sm font-medium text-gray-900 mb-4">Meeting Details</h3>
+      <div className="bg-surface-hover rounded-lg p-4">
+        <h3 className="text-sm font-medium text-foreground mb-4">Meeting Details</h3>
         <dl className="grid grid-cols-2 gap-4">
           <div>
-            <dt className="text-sm text-gray-500">Date & Time</dt>
-            <dd className="mt-1 flex items-center text-sm text-gray-900">
-              <Calendar className="h-4 w-4 mr-2 text-gray-400" />
+            <dt className="text-sm text-muted">Date & Time</dt>
+            <dd className="mt-1 flex items-center text-sm text-foreground">
+              <Calendar className="h-4 w-4 mr-2 text-muted" />
               {formatDate(meeting.meeting_date)}
             </dd>
           </div>
           {meeting.end_date && (
             <div>
-              <dt className="text-sm text-gray-500">End Time</dt>
-              <dd className="mt-1 flex items-center text-sm text-gray-900">
-                <Clock className="h-4 w-4 mr-2 text-gray-400" />
+              <dt className="text-sm text-muted">End Time</dt>
+              <dd className="mt-1 flex items-center text-sm text-foreground">
+                <Clock className="h-4 w-4 mr-2 text-muted" />
                 {formatDate(meeting.end_date)}
               </dd>
             </div>
           )}
           {meeting.location && (
             <div>
-              <dt className="text-sm text-gray-500">Location</dt>
-              <dd className="mt-1 flex items-center text-sm text-gray-900">
-                <MapPin className="h-4 w-4 mr-2 text-gray-400" />
+              <dt className="text-sm text-muted">Location</dt>
+              <dd className="mt-1 flex items-center text-sm text-foreground">
+                <MapPin className="h-4 w-4 mr-2 text-muted" />
                 {meeting.location}
               </dd>
             </div>
           )}
           {meeting.meeting_link && (
             <div>
-              <dt className="text-sm text-gray-500">Meeting Link</dt>
-              <dd className="mt-1 flex items-center text-sm text-blue-600">
-                <Video className="h-4 w-4 mr-2 text-gray-400" />
+              <dt className="text-sm text-muted">Meeting Link</dt>
+              <dd className="mt-1 flex items-center text-sm text-primary">
+                <Video className="h-4 w-4 mr-2 text-muted" />
                 <a href={meeting.meeting_link} target="_blank" rel="noopener noreferrer" className="hover:underline">
                   Join Meeting
                 </a>
@@ -884,9 +884,9 @@ function OverviewTab({
             </div>
           )}
           <div>
-            <dt className="text-sm text-gray-500">Organizer</dt>
-            <dd className="mt-1 flex items-center text-sm text-gray-900">
-              <Users className="h-4 w-4 mr-2 text-gray-400" />
+            <dt className="text-sm text-muted">Organizer</dt>
+            <dd className="mt-1 flex items-center text-sm text-foreground">
+              <Users className="h-4 w-4 mr-2 text-muted" />
               {meeting.organizer_name || '-'}
             </dd>
           </div>
@@ -896,8 +896,8 @@ function OverviewTab({
       {/* Description */}
       {meeting.description && (
         <div>
-          <h3 className="text-sm font-medium text-gray-900 mb-2">Description</h3>
-          <p className="text-sm text-gray-700 whitespace-pre-wrap">{meeting.description}</p>
+          <h3 className="text-sm font-medium text-foreground mb-2">Description</h3>
+          <p className="text-sm text-secondary whitespace-pre-wrap">{meeting.description}</p>
         </div>
       )}
     </div>
@@ -955,14 +955,14 @@ function AttendeesTab({ meetingId, meeting }: { meetingId: string; meeting: CabM
       )}
 
       {showAddUser && (
-        <div className="bg-gray-50 rounded-lg p-4">
+        <div className="bg-surface-hover rounded-lg p-4">
           <div className="flex items-end space-x-4">
             <div className="flex-1">
-              <label className="block text-sm font-medium text-gray-700 mb-1">User</label>
+              <label className="block text-sm font-medium text-secondary mb-1">User</label>
               <select
                 value={selectedUserId}
                 onChange={(e) => setSelectedUserId(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 border border-border-strong rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary"
               >
                 <option value="">Select a user...</option>
                 {users.map((user: { id: string; name: string }) => (
@@ -971,11 +971,11 @@ function AttendeesTab({ meetingId, meeting }: { meetingId: string; meeting: CabM
               </select>
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Role</label>
+              <label className="block text-sm font-medium text-secondary mb-1">Role</label>
               <select
                 value={selectedRole}
                 onChange={(e) => setSelectedRole(e.target.value as CabAttendeeRole)}
-                className="px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="px-3 py-2 border border-border-strong rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary"
               >
                 <option value="chair">Chair</option>
                 <option value="member">Member</option>
@@ -992,32 +992,32 @@ function AttendeesTab({ meetingId, meeting }: { meetingId: string; meeting: CabM
 
       {isLoading ? (
         <div className="flex justify-center py-8">
-          <Loader2 className="h-6 w-6 animate-spin text-blue-500" />
+          <Loader2 className="h-6 w-6 animate-spin text-primary" />
         </div>
       ) : attendees.length === 0 ? (
-        <div className="text-center py-8 text-gray-500">
+        <div className="text-center py-8 text-muted">
           No attendees added yet
         </div>
       ) : (
         <div className="space-y-2">
           {attendees.map((attendee) => (
-            <div key={attendee.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+            <div key={attendee.id} className="flex items-center justify-between p-3 bg-surface-hover rounded-lg">
               <div className="flex items-center space-x-3">
-                <div className="h-8 w-8 rounded-full bg-blue-500 flex items-center justify-center text-white text-sm font-medium">
+                <div className="h-8 w-8 rounded-full bg-primary flex items-center justify-center text-white text-sm font-medium">
                   {attendee.user_name?.charAt(0) || 'U'}
                 </div>
                 <div>
-                  <div className="text-sm font-medium text-gray-900">{attendee.user_name || 'Unknown'}</div>
-                  <div className="text-xs text-gray-500">{attendee.user_email || ''}</div>
+                  <div className="text-sm font-medium text-foreground">{attendee.user_name || 'Unknown'}</div>
+                  <div className="text-xs text-muted">{attendee.user_email || ''}</div>
                 </div>
-                <span className="px-2 py-1 rounded-full text-xs font-medium bg-gray-200 text-gray-700">
+                <span className="px-2 py-1 rounded-full text-xs font-medium bg-surface-hover text-secondary">
                   {roleLabels[attendee.role]}
                 </span>
               </div>
               {canEdit && (
                 <button
                   onClick={() => handleRemoveAttendee(attendee.id)}
-                  className="text-red-600 hover:text-red-800"
+                  className="text-error hover:text-error"
                 >
                   <Trash2 className="h-4 w-4" />
                 </button>
@@ -1090,7 +1090,7 @@ function AgendaTab({ meetingId, meeting }: { meetingId: string; meeting: CabMeet
       {/* Changes to Review */}
       <div>
         <div className="flex items-center justify-between mb-4">
-          <h3 className="text-sm font-medium text-gray-900">Changes to Review</h3>
+          <h3 className="text-sm font-medium text-foreground">Changes to Review</h3>
           {canEdit && (
             <Button size="sm" onClick={() => setShowAddChange(true)}>
               <Plus className="h-4 w-4 mr-1" />
@@ -1100,14 +1100,14 @@ function AgendaTab({ meetingId, meeting }: { meetingId: string; meeting: CabMeet
         </div>
 
         {showAddChange && (
-          <div className="bg-gray-50 rounded-lg p-4 mb-4">
+          <div className="bg-surface-hover rounded-lg p-4 mb-4">
             <div className="flex items-end space-x-4">
               <div className="flex-1">
-                <label className="block text-sm font-medium text-gray-700 mb-1">Change</label>
+                <label className="block text-sm font-medium text-secondary mb-1">Change</label>
                 <select
                   value={selectedChangeId}
                   onChange={(e) => setSelectedChangeId(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 border border-border-strong rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary"
                 >
                   <option value="">Select a change...</option>
                   {availableChanges.map((change: { id: string; change_number?: string; title: string }) => (
@@ -1127,10 +1127,10 @@ function AgendaTab({ meetingId, meeting }: { meetingId: string; meeting: CabMeet
 
         {isLoading ? (
           <div className="flex justify-center py-8">
-            <Loader2 className="h-6 w-6 animate-spin text-blue-500" />
+            <Loader2 className="h-6 w-6 animate-spin text-primary" />
           </div>
         ) : changes.length === 0 ? (
-          <div className="text-center py-8 text-gray-500">
+          <div className="text-center py-8 text-muted">
             No changes added to this meeting
           </div>
         ) : (
@@ -1138,12 +1138,12 @@ function AgendaTab({ meetingId, meeting }: { meetingId: string; meeting: CabMeet
             {changes.map((change, index) => {
               const risk = riskColors[change.change_risk_level || 'medium'] || riskColors.medium;
               return (
-                <div key={change.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                <div key={change.id} className="flex items-center justify-between p-3 bg-surface-hover rounded-lg">
                   <div className="flex items-center space-x-3">
-                    <span className="text-sm text-gray-500 w-6">{index + 1}.</span>
+                    <span className="text-sm text-muted w-6">{index + 1}.</span>
                     <div>
                       <div className="flex items-center space-x-2">
-                        <span className="text-sm font-medium text-blue-600">{change.change_number}</span>
+                        <span className="text-sm font-medium text-primary">{change.change_number}</span>
                         <span className={`px-2 py-0.5 rounded text-xs font-medium ${risk.bg} ${risk.text}`}>
                           {change.change_risk_level || 'medium'}
                         </span>
@@ -1153,14 +1153,14 @@ function AgendaTab({ meetingId, meeting }: { meetingId: string; meeting: CabMeet
                           </span>
                         )}
                       </div>
-                      <div className="text-sm text-gray-900">{change.change_title}</div>
-                      <div className="text-xs text-gray-500">Requester: {change.requester_name || '-'}</div>
+                      <div className="text-sm text-foreground">{change.change_title}</div>
+                      <div className="text-xs text-muted">Requester: {change.requester_name || '-'}</div>
                     </div>
                   </div>
                   {canEdit && !change.decision && (
                     <button
                       onClick={() => handleRemoveChange(change.change_id)}
-                      className="text-red-600 hover:text-red-800"
+                      className="text-error hover:text-error"
                     >
                       <Trash2 className="h-4 w-4" />
                     </button>
@@ -1175,7 +1175,7 @@ function AgendaTab({ meetingId, meeting }: { meetingId: string; meeting: CabMeet
       {/* Agenda Text */}
       <div>
         <div className="flex items-center justify-between mb-4">
-          <h3 className="text-sm font-medium text-gray-900">Meeting Agenda</h3>
+          <h3 className="text-sm font-medium text-foreground">Meeting Agenda</h3>
           <div className="flex space-x-2">
             {canEdit && !editingAgenda && (
               <>
@@ -1204,16 +1204,16 @@ function AgendaTab({ meetingId, meeting }: { meetingId: string; meeting: CabMeet
           <textarea
             value={agendaText}
             onChange={(e) => setAgendaText(e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono"
+            className="w-full px-3 py-2 border border-border-strong rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary font-mono"
             rows={15}
             placeholder="Enter meeting agenda..."
           />
         ) : (
-          <div className="bg-gray-50 rounded-lg p-4 min-h-[200px]">
+          <div className="bg-surface-hover rounded-lg p-4 min-h-[200px]">
             {meeting.agenda ? (
-              <pre className="text-sm text-gray-700 whitespace-pre-wrap font-sans">{meeting.agenda}</pre>
+              <pre className="text-sm text-secondary whitespace-pre-wrap font-sans">{meeting.agenda}</pre>
             ) : (
-              <p className="text-sm text-gray-500 italic">No agenda generated yet. Click &quot;Generate&quot; to create one from the changes list.</p>
+              <p className="text-sm text-muted italic">No agenda generated yet. Click &quot;Generate&quot; to create one from the changes list.</p>
             )}
           </div>
         )}
@@ -1254,8 +1254,8 @@ function DecisionsTab({ meetingId, meeting }: { meetingId: string; meeting: CabM
   return (
     <div className="space-y-4">
       {!canEdit && meeting.status !== 'completed' && (
-        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-          <p className="text-sm text-yellow-700">
+        <div className="bg-warning-subtle border border-yellow-200 rounded-lg p-4">
+          <p className="text-sm text-warning">
             Start the meeting to record decisions.
           </p>
         </div>
@@ -1263,10 +1263,10 @@ function DecisionsTab({ meetingId, meeting }: { meetingId: string; meeting: CabM
 
       {isLoading ? (
         <div className="flex justify-center py-8">
-          <Loader2 className="h-6 w-6 animate-spin text-blue-500" />
+          <Loader2 className="h-6 w-6 animate-spin text-primary" />
         </div>
       ) : changes.length === 0 ? (
-        <div className="text-center py-8 text-gray-500">
+        <div className="text-center py-8 text-muted">
           No changes to review. Add changes in the Agenda tab.
         </div>
       ) : (
@@ -1278,18 +1278,18 @@ function DecisionsTab({ meetingId, meeting }: { meetingId: string; meeting: CabM
             return (
               <div
                 key={change.id}
-                className={`p-4 border rounded-lg ${isSelected ? 'border-blue-500 bg-blue-50' : 'border-gray-200'}`}
+                className={`p-4 border rounded-lg ${isSelected ? 'border-blue-500 bg-primary-subtle' : 'border-border'}`}
               >
                 <div className="flex items-start justify-between">
                   <div>
                     <div className="flex items-center space-x-2">
-                      <span className="text-sm font-medium text-blue-600">{change.change_number}</span>
+                      <span className="text-sm font-medium text-primary">{change.change_number}</span>
                       <span className={`px-2 py-0.5 rounded text-xs font-medium ${risk.bg} ${risk.text}`}>
                         {change.change_risk_level || 'medium'} risk
                       </span>
                     </div>
-                    <h4 className="text-sm font-medium text-gray-900 mt-1">{change.change_title}</h4>
-                    <p className="text-xs text-gray-500 mt-1">Requester: {change.requester_name || '-'}</p>
+                    <h4 className="text-sm font-medium text-foreground mt-1">{change.change_title}</h4>
+                    <p className="text-xs text-muted mt-1">Requester: {change.requester_name || '-'}</p>
                   </div>
 
                   {change.decision ? (
@@ -1301,10 +1301,10 @@ function DecisionsTab({ meetingId, meeting }: { meetingId: string; meeting: CabM
                         {decisionColors[change.decision].label}
                       </span>
                       {change.decided_by_name && (
-                        <p className="text-xs text-gray-500 mt-1">by {change.decided_by_name}</p>
+                        <p className="text-xs text-muted mt-1">by {change.decided_by_name}</p>
                       )}
                       {change.decision_notes && (
-                        <p className="text-xs text-gray-500 mt-1 italic">&quot;{change.decision_notes}&quot;</p>
+                        <p className="text-xs text-muted mt-1 italic">&quot;{change.decision_notes}&quot;</p>
                       )}
                     </div>
                   ) : canEdit ? (
@@ -1320,15 +1320,15 @@ function DecisionsTab({ meetingId, meeting }: { meetingId: string; meeting: CabM
                       Record Decision
                     </Button>
                   ) : (
-                    <span className="text-sm text-gray-500">Pending</span>
+                    <span className="text-sm text-muted">Pending</span>
                   )}
                 </div>
 
                 {isSelected && (
-                  <div className="mt-4 pt-4 border-t border-gray-200">
+                  <div className="mt-4 pt-4 border-t border-border">
                     <div className="space-y-3">
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">Decision</label>
+                        <label className="block text-sm font-medium text-secondary mb-2">Decision</label>
                         <div className="flex space-x-2">
                           <Button
                             variant={decision === 'approved' ? 'primary' : 'outline'}
@@ -1357,11 +1357,11 @@ function DecisionsTab({ meetingId, meeting }: { meetingId: string; meeting: CabM
                         </div>
                       </div>
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Notes</label>
+                        <label className="block text-sm font-medium text-secondary mb-1">Notes</label>
                         <textarea
                           value={notes}
                           onChange={(e) => setNotes(e.target.value)}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          className="w-full px-3 py-2 border border-border-strong rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary"
                           rows={2}
                           placeholder="Add notes about the decision..."
                         />
@@ -1457,10 +1457,10 @@ function ActionItemsTab({ meetingId }: { meetingId: string }) {
       </div>
 
       {showAddForm && (
-        <div className="bg-gray-50 rounded-lg p-4">
+        <div className="bg-surface-hover rounded-lg p-4">
           <div className="space-y-3">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
+              <label className="block text-sm font-medium text-secondary mb-1">Description</label>
               <Input
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
@@ -1469,11 +1469,11 @@ function ActionItemsTab({ meetingId }: { meetingId: string }) {
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Assignee</label>
+                <label className="block text-sm font-medium text-secondary mb-1">Assignee</label>
                 <select
                   value={assigneeId}
                   onChange={(e) => setAssigneeId(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 border border-border-strong rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary"
                 >
                   <option value="">Unassigned</option>
                   {users.map((user: { id: string; name: string }) => (
@@ -1482,12 +1482,12 @@ function ActionItemsTab({ meetingId }: { meetingId: string }) {
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Due Date</label>
+                <label className="block text-sm font-medium text-secondary mb-1">Due Date</label>
                 <input
                   type="date"
                   value={dueDate}
                   onChange={(e) => setDueDate(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 border border-border-strong rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary"
                 />
               </div>
             </div>
@@ -1504,27 +1504,27 @@ function ActionItemsTab({ meetingId }: { meetingId: string }) {
 
       {isLoading ? (
         <div className="flex justify-center py-8">
-          <Loader2 className="h-6 w-6 animate-spin text-blue-500" />
+          <Loader2 className="h-6 w-6 animate-spin text-primary" />
         </div>
       ) : actionItems.length === 0 ? (
-        <div className="text-center py-8 text-gray-500">
+        <div className="text-center py-8 text-muted">
           No action items yet
         </div>
       ) : (
         <div className="space-y-2">
           {actionItems.map((item) => (
-            <div key={item.id} className="flex items-start space-x-3 p-3 bg-gray-50 rounded-lg">
+            <div key={item.id} className="flex items-start space-x-3 p-3 bg-surface-hover rounded-lg">
               <button
                 onClick={() => handleToggleStatus(item)}
-                className={`mt-0.5 flex-shrink-0 ${item.status === 'completed' ? 'text-green-500' : 'text-gray-400'}`}
+                className={`mt-0.5 flex-shrink-0 ${item.status === 'completed' ? 'text-success' : 'text-muted'}`}
               >
                 <CheckCircle className="h-5 w-5" />
               </button>
               <div className="flex-1 min-w-0">
-                <p className={`text-sm ${item.status === 'completed' ? 'text-gray-500 line-through' : 'text-gray-900'}`}>
+                <p className={`text-sm ${item.status === 'completed' ? 'text-muted line-through' : 'text-foreground'}`}>
                   {item.description}
                 </p>
-                <div className="flex items-center space-x-4 mt-1 text-xs text-gray-500">
+                <div className="flex items-center space-x-4 mt-1 text-xs text-muted">
                   {item.assignee_name && (
                     <span className="flex items-center">
                       <Users className="h-3 w-3 mr-1" />
@@ -1541,7 +1541,7 @@ function ActionItemsTab({ meetingId }: { meetingId: string }) {
               </div>
               <button
                 onClick={() => handleDelete(item.id)}
-                className="text-red-600 hover:text-red-800"
+                className="text-error hover:text-error"
               >
                 <Trash2 className="h-4 w-4" />
               </button>
@@ -1581,7 +1581,7 @@ function MinutesTab({ meetingId, meeting }: { meetingId: string; meeting: CabMee
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h3 className="text-sm font-medium text-gray-900">Meeting Minutes</h3>
+        <h3 className="text-sm font-medium text-foreground">Meeting Minutes</h3>
         <div className="flex space-x-2">
           {!isEditing ? (
             <>
@@ -1611,16 +1611,16 @@ function MinutesTab({ meetingId, meeting }: { meetingId: string; meeting: CabMee
         <textarea
           value={minutesText}
           onChange={(e) => setMinutesText(e.target.value)}
-          className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono"
+          className="w-full px-3 py-2 border border-border-strong rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary font-mono"
           rows={20}
           placeholder="Enter meeting minutes..."
         />
       ) : (
-        <div className="bg-gray-50 rounded-lg p-4 min-h-[300px]">
+        <div className="bg-surface-hover rounded-lg p-4 min-h-[300px]">
           {meeting.minutes ? (
-            <pre className="text-sm text-gray-700 whitespace-pre-wrap font-sans">{meeting.minutes}</pre>
+            <pre className="text-sm text-secondary whitespace-pre-wrap font-sans">{meeting.minutes}</pre>
           ) : (
-            <p className="text-sm text-gray-500 italic">No minutes recorded yet. Click &quot;Edit&quot; to add minutes.</p>
+            <p className="text-sm text-muted italic">No minutes recorded yet. Click &quot;Edit&quot; to add minutes.</p>
           )}
         </div>
       )}

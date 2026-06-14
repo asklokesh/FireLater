@@ -216,7 +216,7 @@ export default function RolesPage() {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <Loader2 className="h-8 w-8 animate-spin text-blue-500" />
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
       </div>
     );
   }
@@ -226,8 +226,8 @@ export default function RolesPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Roles & Permissions</h1>
-          <p className="mt-1 text-sm text-gray-500">
+          <h1 className="text-2xl font-bold text-foreground">Roles & Permissions</h1>
+          <p className="mt-1 text-sm text-muted">
             Manage user roles and their associated permissions
           </p>
         </div>
@@ -239,36 +239,36 @@ export default function RolesPage() {
 
       {/* Stats */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="bg-white rounded-lg shadow p-4">
+        <div className="bg-surface rounded-lg shadow p-4">
           <div className="flex items-center">
-            <div className="h-10 w-10 rounded-lg bg-blue-100 flex items-center justify-center">
-              <Shield className="h-5 w-5 text-blue-600" />
+            <div className="h-10 w-10 rounded-lg bg-primary-subtle flex items-center justify-center">
+              <Shield className="h-5 w-5 text-primary" />
             </div>
             <div className="ml-4">
-              <p className="text-sm text-gray-500">Total Roles</p>
-              <p className="text-2xl font-semibold text-gray-900">{roles.length}</p>
+              <p className="text-sm text-muted">Total Roles</p>
+              <p className="text-2xl font-semibold text-foreground">{roles.length}</p>
             </div>
           </div>
         </div>
-        <div className="bg-white rounded-lg shadow p-4">
+        <div className="bg-surface rounded-lg shadow p-4">
           <div className="flex items-center">
-            <div className="h-10 w-10 rounded-lg bg-purple-100 flex items-center justify-center">
-              <Lock className="h-5 w-5 text-purple-600" />
+            <div className="h-10 w-10 rounded-lg bg-info-subtle flex items-center justify-center">
+              <Lock className="h-5 w-5 text-info" />
             </div>
             <div className="ml-4">
-              <p className="text-sm text-gray-500">System Roles</p>
-              <p className="text-2xl font-semibold text-gray-900">{systemRoleCount}</p>
+              <p className="text-sm text-muted">System Roles</p>
+              <p className="text-2xl font-semibold text-foreground">{systemRoleCount}</p>
             </div>
           </div>
         </div>
-        <div className="bg-white rounded-lg shadow p-4">
+        <div className="bg-surface rounded-lg shadow p-4">
           <div className="flex items-center">
-            <div className="h-10 w-10 rounded-lg bg-green-100 flex items-center justify-center">
-              <Shield className="h-5 w-5 text-green-600" />
+            <div className="h-10 w-10 rounded-lg bg-success-subtle flex items-center justify-center">
+              <Shield className="h-5 w-5 text-success" />
             </div>
             <div className="ml-4">
-              <p className="text-sm text-gray-500">Custom Roles</p>
-              <p className="text-2xl font-semibold text-gray-900">{customRoleCount}</p>
+              <p className="text-sm text-muted">Custom Roles</p>
+              <p className="text-2xl font-semibold text-foreground">{customRoleCount}</p>
             </div>
           </div>
         </div>
@@ -277,42 +277,42 @@ export default function RolesPage() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Roles List */}
         <div className="lg:col-span-1">
-          <div className="bg-white rounded-lg shadow">
-            <div className="px-4 py-3 border-b border-gray-200">
-              <h2 className="text-lg font-medium text-gray-900">Roles</h2>
+          <div className="bg-surface rounded-lg shadow">
+            <div className="px-4 py-3 border-b border-border">
+              <h2 className="text-lg font-medium text-foreground">Roles</h2>
             </div>
-            <div className="divide-y divide-gray-200">
+            <div className="divide-y divide-border">
               {roles.map((role) => (
                 <div
                   key={role.id}
-                  className={`p-4 cursor-pointer hover:bg-gray-50 ${
-                    selectedRole?.id === role.id ? 'bg-blue-50' : ''
+                  className={`p-4 cursor-pointer hover:bg-surface-hover ${
+                    selectedRole?.id === role.id ? 'bg-primary-subtle' : ''
                   }`}
                   onClick={() => loadRoleDetails(role.id)}
                 >
                   <div className="flex items-center justify-between">
                     <div className="flex items-center">
                       <div className={`h-8 w-8 rounded-lg flex items-center justify-center ${
-                        role.is_system ? 'bg-purple-100' : 'bg-blue-100'
+                        role.is_system ? 'bg-info-subtle' : 'bg-primary-subtle'
                       }`}>
                         {role.is_system ? (
-                          <Lock className="h-4 w-4 text-purple-600" />
+                          <Lock className="h-4 w-4 text-info" />
                         ) : (
-                          <Shield className="h-4 w-4 text-blue-600" />
+                          <Shield className="h-4 w-4 text-primary" />
                         )}
                       </div>
                       <div className="ml-3">
-                        <p className="text-sm font-medium text-gray-900">{role.display_name}</p>
-                        <p className="text-xs text-gray-500">{role.name}</p>
+                        <p className="text-sm font-medium text-foreground">{role.display_name}</p>
+                        <p className="text-xs text-muted">{role.name}</p>
                       </div>
                     </div>
                     <div className="flex items-center space-x-2">
-                      <span className="text-xs text-gray-500">
+                      <span className="text-xs text-muted">
                         <Users className="h-3 w-3 inline mr-1" />
                         {role.user_count}
                       </span>
                       {role.is_system && (
-                        <span className="px-2 py-0.5 text-xs font-medium bg-purple-100 text-purple-800 rounded-full">
+                        <span className="px-2 py-0.5 text-xs font-medium bg-info-subtle text-info rounded-full">
                           System
                         </span>
                       )}
@@ -326,31 +326,31 @@ export default function RolesPage() {
 
         {/* Role Details */}
         <div className="lg:col-span-2">
-          <div className="bg-white rounded-lg shadow">
+          <div className="bg-surface rounded-lg shadow">
             {isLoadingRole ? (
               <div className="flex items-center justify-center h-64">
-                <Loader2 className="h-6 w-6 animate-spin text-blue-500" />
+                <Loader2 className="h-6 w-6 animate-spin text-primary" />
               </div>
             ) : selectedRole ? (
               <>
-                <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
+                <div className="px-6 py-4 border-b border-border flex items-center justify-between">
                   <div>
-                    <h2 className="text-lg font-semibold text-gray-900">{selectedRole.display_name}</h2>
-                    <p className="text-sm text-gray-500">{selectedRole.description || 'No description'}</p>
+                    <h2 className="text-lg font-semibold text-foreground">{selectedRole.display_name}</h2>
+                    <p className="text-sm text-muted">{selectedRole.description || 'No description'}</p>
                   </div>
                   <div className="relative">
                     <button
                       onClick={() => setShowDropdown(showDropdown === selectedRole.id ? null : selectedRole.id)}
-                      className="text-gray-400 hover:text-gray-600"
+                      className="text-muted hover:text-secondary"
                     >
                       <MoreHorizontal className="h-5 w-5" />
                     </button>
                     {showDropdown === selectedRole.id && (
-                      <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg border border-gray-200 z-10">
+                      <div className="absolute right-0 mt-2 w-48 bg-surface rounded-md shadow-lg border border-border z-10">
                         <div className="py-1">
                           <button
                             onClick={() => openEditModal(selectedRole)}
-                            className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center"
+                            className="w-full text-left px-4 py-2 text-sm text-secondary hover:bg-surface-hover flex items-center"
                           >
                             <Edit className="h-4 w-4 mr-2" />
                             Edit Role
@@ -362,7 +362,7 @@ export default function RolesPage() {
                 </div>
 
                 <div className="p-6">
-                  <h3 className="text-sm font-medium text-gray-900 mb-4">Permissions ({selectedRole.permissions.length})</h3>
+                  <h3 className="text-sm font-medium text-foreground mb-4">Permissions ({selectedRole.permissions.length})</h3>
 
                   <div className="space-y-2">
                     {Object.keys(groupedPermissions).map((resource) => {
@@ -372,31 +372,31 @@ export default function RolesPage() {
                       const isExpanded = expandedResources[resource];
 
                       return (
-                        <div key={resource} className="border border-gray-200 rounded-lg overflow-hidden">
+                        <div key={resource} className="border border-border rounded-lg overflow-hidden">
                           <button
                             onClick={() => setExpandedResources((prev) => ({
                               ...prev,
                               [resource]: !prev[resource],
                             }))}
-                            className="w-full flex items-center justify-between px-4 py-3 bg-gray-50 hover:bg-gray-100"
+                            className="w-full flex items-center justify-between px-4 py-3 bg-surface-hover hover:bg-surface-hover"
                           >
                             <div className="flex items-center">
                               {isExpanded ? (
-                                <ChevronDown className="h-4 w-4 text-gray-500 mr-2" />
+                                <ChevronDown className="h-4 w-4 text-muted mr-2" />
                               ) : (
-                                <ChevronRight className="h-4 w-4 text-gray-500 mr-2" />
+                                <ChevronRight className="h-4 w-4 text-muted mr-2" />
                               )}
-                              <span className="font-medium text-gray-900">
+                              <span className="font-medium text-foreground">
                                 {resourceLabels[resource] || resource}
                               </span>
                             </div>
                             <div className="flex items-center">
                               {hasAny ? (
-                                <span className="px-2 py-0.5 text-xs font-medium bg-green-100 text-green-800 rounded-full">
+                                <span className="px-2 py-0.5 text-xs font-medium bg-success-subtle text-success rounded-full">
                                   {rolePerms.length}/{resourcePerms.length}
                                 </span>
                               ) : (
-                                <span className="px-2 py-0.5 text-xs font-medium bg-gray-100 text-gray-600 rounded-full">
+                                <span className="px-2 py-0.5 text-xs font-medium bg-surface-hover text-secondary rounded-full">
                                   None
                                 </span>
                               )}
@@ -404,7 +404,7 @@ export default function RolesPage() {
                           </button>
 
                           {isExpanded && (
-                            <div className="px-4 py-3 bg-white">
+                            <div className="px-4 py-3 bg-surface">
                               <div className="flex flex-wrap gap-2">
                                 {resourcePerms.map((perm) => {
                                   const hasPermission = rolePerms.some((p) => p.id === perm.id);
@@ -413,8 +413,8 @@ export default function RolesPage() {
                                       key={perm.id}
                                       className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
                                         hasPermission
-                                          ? 'bg-green-100 text-green-800'
-                                          : 'bg-gray-100 text-gray-500'
+                                          ? 'bg-success-subtle text-success'
+                                          : 'bg-surface-hover text-muted'
                                       }`}
                                     >
                                       {hasPermission && <Check className="h-3 w-3 mr-1" />}
@@ -432,7 +432,7 @@ export default function RolesPage() {
                 </div>
               </>
             ) : (
-              <div className="flex flex-col items-center justify-center h-64 text-gray-500">
+              <div className="flex flex-col items-center justify-center h-64 text-muted">
                 <Shield className="h-12 w-12 mb-4" />
                 <p>Select a role to view its permissions</p>
               </div>
@@ -444,17 +444,17 @@ export default function RolesPage() {
       {/* Create Role Modal */}
       {showCreateModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-hidden flex flex-col">
-            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
-              <h2 className="text-lg font-semibold text-gray-900">Create Role</h2>
-              <button onClick={() => setShowCreateModal(false)} className="text-gray-400 hover:text-gray-600">
+          <div className="bg-surface rounded-lg shadow-xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-hidden flex flex-col">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-border">
+              <h2 className="text-lg font-semibold text-foreground">Create Role</h2>
+              <button onClick={() => setShowCreateModal(false)} className="text-muted hover:text-secondary">
                 <X className="h-5 w-5" />
               </button>
             </div>
             <form onSubmit={handleCreate} className="flex flex-col flex-1 overflow-hidden">
               <div className="flex-1 overflow-auto p-6 space-y-4">
                 {formError && (
-                  <div className="p-3 text-sm text-red-800 bg-red-100 rounded-md">
+                  <div className="p-3 text-sm text-error bg-error-subtle rounded-md">
                     {formError}
                   </div>
                 )}
@@ -476,52 +476,52 @@ export default function RolesPage() {
                 />
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
+                  <label className="block text-sm font-medium text-secondary mb-1">Description</label>
                   <textarea
                     value={formData.description}
                     onChange={(e) => setFormData((p) => ({ ...p, description: e.target.value }))}
                     placeholder="Optional description..."
                     rows={2}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-3 py-2 border border-border-strong rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Permissions</label>
-                  <div className="space-y-2 max-h-64 overflow-auto border border-gray-200 rounded-lg p-3">
+                  <label className="block text-sm font-medium text-secondary mb-2">Permissions</label>
+                  <div className="space-y-2 max-h-64 overflow-auto border border-border rounded-lg p-3">
                     {Object.keys(groupedPermissions).map((resource) => {
                       const resourcePerms = groupedPermissions[resource];
                       const selectedCount = resourcePerms.filter((p) => formData.permissionIds.includes(p.id)).length;
                       const allSelected = selectedCount === resourcePerms.length;
 
                       return (
-                        <div key={resource} className="border border-gray-200 rounded-lg overflow-hidden">
+                        <div key={resource} className="border border-border rounded-lg overflow-hidden">
                           <button
                             type="button"
                             onClick={() => toggleResource(resource)}
-                            className="w-full flex items-center justify-between px-3 py-2 bg-gray-50 hover:bg-gray-100"
+                            className="w-full flex items-center justify-between px-3 py-2 bg-surface-hover hover:bg-surface-hover"
                           >
                             <div className="flex items-center">
                               <input
                                 type="checkbox"
                                 checked={allSelected}
                                 onChange={() => toggleResource(resource)}
-                                className="h-4 w-4 text-blue-600 rounded mr-2"
+                                className="h-4 w-4 text-primary rounded mr-2"
                               />
-                              <span className="font-medium text-sm text-gray-900">
+                              <span className="font-medium text-sm text-foreground">
                                 {resourceLabels[resource] || resource}
                               </span>
                             </div>
-                            <span className="text-xs text-gray-500">{selectedCount}/{resourcePerms.length}</span>
+                            <span className="text-xs text-muted">{selectedCount}/{resourcePerms.length}</span>
                           </button>
-                          <div className="px-3 py-2 bg-white flex flex-wrap gap-2">
+                          <div className="px-3 py-2 bg-surface flex flex-wrap gap-2">
                             {resourcePerms.map((perm) => (
                               <label
                                 key={perm.id}
                                 className={`inline-flex items-center px-2.5 py-1 rounded text-xs cursor-pointer ${
                                   formData.permissionIds.includes(perm.id)
-                                    ? 'bg-blue-100 text-blue-800'
-                                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                                    ? 'bg-primary-subtle text-primary'
+                                    : 'bg-surface-hover text-secondary hover:bg-surface-hover'
                                 }`}
                               >
                                 <input
@@ -542,7 +542,7 @@ export default function RolesPage() {
                 </div>
               </div>
 
-              <div className="px-6 py-4 border-t border-gray-200 flex justify-end space-x-3">
+              <div className="px-6 py-4 border-t border-border flex justify-end space-x-3">
                 <Button type="button" variant="outline" onClick={() => setShowCreateModal(false)}>
                   Cancel
                 </Button>
@@ -558,23 +558,23 @@ export default function RolesPage() {
       {/* Edit Role Modal */}
       {showEditModal && selectedRole && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-hidden flex flex-col">
-            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
-              <h2 className="text-lg font-semibold text-gray-900">Edit Role: {selectedRole.display_name}</h2>
-              <button onClick={() => setShowEditModal(false)} className="text-gray-400 hover:text-gray-600">
+          <div className="bg-surface rounded-lg shadow-xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-hidden flex flex-col">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-border">
+              <h2 className="text-lg font-semibold text-foreground">Edit Role: {selectedRole.display_name}</h2>
+              <button onClick={() => setShowEditModal(false)} className="text-muted hover:text-secondary">
                 <X className="h-5 w-5" />
               </button>
             </div>
             <form onSubmit={handleUpdate} className="flex flex-col flex-1 overflow-hidden">
               <div className="flex-1 overflow-auto p-6 space-y-4">
                 {formError && (
-                  <div className="p-3 text-sm text-red-800 bg-red-100 rounded-md">
+                  <div className="p-3 text-sm text-error bg-error-subtle rounded-md">
                     {formError}
                   </div>
                 )}
 
                 {selectedRole.is_system && (
-                  <div className="p-3 text-sm text-amber-800 bg-amber-100 rounded-md flex items-center">
+                  <div className="p-3 text-sm text-amber-800 bg-warning-subtle rounded-md flex items-center">
                     <Lock className="h-4 w-4 mr-2" />
                     System role permissions cannot be modified
                   </div>
@@ -588,53 +588,53 @@ export default function RolesPage() {
                 />
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
+                  <label className="block text-sm font-medium text-secondary mb-1">Description</label>
                   <textarea
                     value={formData.description}
                     onChange={(e) => setFormData((p) => ({ ...p, description: e.target.value }))}
                     placeholder="Optional description..."
                     rows={2}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-3 py-2 border border-border-strong rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary"
                   />
                 </div>
 
                 {!selectedRole.is_system && (
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Permissions</label>
-                    <div className="space-y-2 max-h-64 overflow-auto border border-gray-200 rounded-lg p-3">
+                    <label className="block text-sm font-medium text-secondary mb-2">Permissions</label>
+                    <div className="space-y-2 max-h-64 overflow-auto border border-border rounded-lg p-3">
                       {Object.keys(groupedPermissions).map((resource) => {
                         const resourcePerms = groupedPermissions[resource];
                         const selectedCount = resourcePerms.filter((p) => formData.permissionIds.includes(p.id)).length;
                         const allSelected = selectedCount === resourcePerms.length;
 
                         return (
-                          <div key={resource} className="border border-gray-200 rounded-lg overflow-hidden">
+                          <div key={resource} className="border border-border rounded-lg overflow-hidden">
                             <button
                               type="button"
                               onClick={() => toggleResource(resource)}
-                              className="w-full flex items-center justify-between px-3 py-2 bg-gray-50 hover:bg-gray-100"
+                              className="w-full flex items-center justify-between px-3 py-2 bg-surface-hover hover:bg-surface-hover"
                             >
                               <div className="flex items-center">
                                 <input
                                   type="checkbox"
                                   checked={allSelected}
                                   onChange={() => toggleResource(resource)}
-                                  className="h-4 w-4 text-blue-600 rounded mr-2"
+                                  className="h-4 w-4 text-primary rounded mr-2"
                                 />
-                                <span className="font-medium text-sm text-gray-900">
+                                <span className="font-medium text-sm text-foreground">
                                   {resourceLabels[resource] || resource}
                                 </span>
                               </div>
-                              <span className="text-xs text-gray-500">{selectedCount}/{resourcePerms.length}</span>
+                              <span className="text-xs text-muted">{selectedCount}/{resourcePerms.length}</span>
                             </button>
-                            <div className="px-3 py-2 bg-white flex flex-wrap gap-2">
+                            <div className="px-3 py-2 bg-surface flex flex-wrap gap-2">
                               {resourcePerms.map((perm) => (
                                 <label
                                   key={perm.id}
                                   className={`inline-flex items-center px-2.5 py-1 rounded text-xs cursor-pointer ${
                                     formData.permissionIds.includes(perm.id)
-                                      ? 'bg-blue-100 text-blue-800'
-                                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                                      ? 'bg-primary-subtle text-primary'
+                                      : 'bg-surface-hover text-secondary hover:bg-surface-hover'
                                   }`}
                                 >
                                   <input
@@ -656,7 +656,7 @@ export default function RolesPage() {
                 )}
               </div>
 
-              <div className="px-6 py-4 border-t border-gray-200 flex justify-end space-x-3">
+              <div className="px-6 py-4 border-t border-border flex justify-end space-x-3">
                 <Button type="button" variant="outline" onClick={() => setShowEditModal(false)}>
                   Cancel
                 </Button>

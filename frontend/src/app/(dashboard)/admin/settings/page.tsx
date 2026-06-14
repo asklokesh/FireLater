@@ -109,7 +109,7 @@ export default function SettingsPage() {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <Loader2 className="h-8 w-8 animate-spin text-blue-500" />
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
       </div>
     );
   }
@@ -119,8 +119,8 @@ export default function SettingsPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Settings</h1>
-          <p className="mt-1 text-sm text-gray-500">
+          <h1 className="text-2xl font-bold text-foreground">Settings</h1>
+          <p className="mt-1 text-sm text-secondary">
             Configure your tenant settings
           </p>
         </div>
@@ -140,10 +140,10 @@ export default function SettingsPage() {
                 <li key={section.id}>
                   <button
                     onClick={() => setActiveSection(section.id)}
-                    className={`w-full flex items-center px-3 py-2 text-sm font-medium rounded-md ${
+                    className={`w-full flex items-center px-3 py-2 text-sm font-medium rounded-lg ${
                       activeSection === section.id
-                        ? 'bg-blue-50 text-blue-700'
-                        : 'text-gray-700 hover:bg-gray-50'
+                        ? 'bg-info-subtle text-primary'
+                        : 'text-secondary hover:bg-surface-hover'
                     }`}
                   >
                     <Icon className="h-5 w-5 mr-3" />
@@ -156,11 +156,11 @@ export default function SettingsPage() {
         </nav>
 
         {/* Content */}
-        <div className="flex-1 bg-white rounded-lg shadow">
+        <div className="flex-1 bg-surface rounded-xl shadow-sm">
           {activeSection === 'general' && (
             <div className="p-6 space-y-6">
               <div>
-                <h2 className="text-lg font-semibold text-gray-900 mb-4">General Settings</h2>
+                <h2 className="text-lg font-semibold text-foreground mb-4">General Settings</h2>
                 <div className="space-y-4">
                   <Input
                     id="tenantName"
@@ -179,11 +179,11 @@ export default function SettingsPage() {
                     disabled
                   />
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <label className="block text-sm font-medium text-secondary mb-1">
                       Timezone
                     </label>
                     <select
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="w-full px-3 py-2 border border-border-strong rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
                       value={settings.timezone || 'UTC'}
                       onChange={(e) => updateSetting('timezone', e.target.value)}
                     >
@@ -198,11 +198,11 @@ export default function SettingsPage() {
                     </select>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <label className="block text-sm font-medium text-secondary mb-1">
                       Date Format
                     </label>
                     <select
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="w-full px-3 py-2 border border-border-strong rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
                       value={settings.dateFormat || 'MM/DD/YYYY'}
                       onChange={(e) => updateSetting('dateFormat', e.target.value)}
                     >
@@ -218,12 +218,12 @@ export default function SettingsPage() {
 
           {activeSection === 'notifications' && (
             <div className="p-6 space-y-6">
-              <h2 className="text-lg font-semibold text-gray-900 mb-4">Notification Settings</h2>
+              <h2 className="text-lg font-semibold text-foreground mb-4">Notification Settings</h2>
               <div className="space-y-4">
-                <div className="flex items-center justify-between py-3 border-b border-gray-200">
+                <div className="flex items-center justify-between py-3 border-b border-border">
                   <div>
-                    <p className="font-medium text-gray-900">Email Notifications</p>
-                    <p className="text-sm text-gray-500">Receive email updates for important events</p>
+                    <p className="font-medium text-foreground">Email Notifications</p>
+                    <p className="text-sm text-secondary">Receive email updates for important events</p>
                   </div>
                   <label className="relative inline-flex items-center cursor-pointer">
                     <input
@@ -232,13 +232,13 @@ export default function SettingsPage() {
                       checked={settings.notifications?.email ?? true}
                       onChange={(e) => updateSetting('notifications.email', e.target.checked)}
                     />
-                    <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                    <div className="w-11 h-6 bg-background peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary/20 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-surface after:border-border-strong after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
                   </label>
                 </div>
-                <div className="flex items-center justify-between py-3 border-b border-gray-200">
+                <div className="flex items-center justify-between py-3 border-b border-border">
                   <div>
-                    <p className="font-medium text-gray-900">Slack Notifications</p>
-                    <p className="text-sm text-gray-500">Send notifications to Slack channels</p>
+                    <p className="font-medium text-foreground">Slack Notifications</p>
+                    <p className="text-sm text-secondary">Send notifications to Slack channels</p>
                   </div>
                   <label className="relative inline-flex items-center cursor-pointer">
                     <input
@@ -247,13 +247,13 @@ export default function SettingsPage() {
                       checked={settings.notifications?.slack ?? false}
                       onChange={(e) => updateSetting('notifications.slack', e.target.checked)}
                     />
-                    <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                    <div className="w-11 h-6 bg-background peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary/20 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-surface after:border-border-strong after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
                   </label>
                 </div>
-                <div className="flex items-center justify-between py-3 border-b border-gray-200">
+                <div className="flex items-center justify-between py-3 border-b border-border">
                   <div>
-                    <p className="font-medium text-gray-900">SLA Breach Alerts</p>
-                    <p className="text-sm text-gray-500">Get notified before SLA breaches</p>
+                    <p className="font-medium text-foreground">SLA Breach Alerts</p>
+                    <p className="text-sm text-secondary">Get notified before SLA breaches</p>
                   </div>
                   <label className="relative inline-flex items-center cursor-pointer">
                     <input
@@ -262,7 +262,7 @@ export default function SettingsPage() {
                       checked={settings.notifications?.slaBreachAlerts ?? true}
                       onChange={(e) => updateSetting('notifications.slaBreachAlerts', e.target.checked)}
                     />
-                    <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                    <div className="w-11 h-6 bg-background peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary/20 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-surface after:border-border-strong after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
                   </label>
                 </div>
               </div>
@@ -271,23 +271,23 @@ export default function SettingsPage() {
 
           {activeSection === 'security' && (
             <div className="p-6 space-y-6">
-              <h2 className="text-lg font-semibold text-gray-900 mb-4">Security Settings</h2>
+              <h2 className="text-lg font-semibold text-foreground mb-4">Security Settings</h2>
               <div className="space-y-4">
-                <div className="flex items-center justify-between py-3 border-b border-gray-200">
+                <div className="flex items-center justify-between py-3 border-b border-border">
                   <div>
-                    <p className="font-medium text-gray-900">Two-Factor Authentication</p>
-                    <p className="text-sm text-gray-500">Require 2FA for all users</p>
+                    <p className="font-medium text-foreground">Two-Factor Authentication</p>
+                    <p className="text-sm text-secondary">Require 2FA for all users</p>
                   </div>
                   <label className="relative inline-flex items-center cursor-pointer">
                     <input type="checkbox" className="sr-only peer" />
-                    <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                    <div className="w-11 h-6 bg-background peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary/20 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-surface after:border-border-strong after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
                   </label>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-secondary mb-1">
                     Session Timeout (minutes)
                   </label>
-                  <select className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                  <select className="w-full px-3 py-2 border border-border-strong rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/20">
                     <option value="30">30 minutes</option>
                     <option value="60">1 hour</option>
                     <option value="120">2 hours</option>
@@ -296,10 +296,10 @@ export default function SettingsPage() {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-secondary mb-1">
                     Password Policy
                   </label>
-                  <select className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                  <select className="w-full px-3 py-2 border border-border-strong rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/20">
                     <option value="standard">Standard (8+ characters)</option>
                     <option value="strong">Strong (12+ chars, mixed case, numbers)</option>
                     <option value="strict">Strict (16+ chars, special characters)</option>
@@ -311,45 +311,45 @@ export default function SettingsPage() {
 
           {activeSection === 'integrations' && (
             <div className="p-6 space-y-6">
-              <h2 className="text-lg font-semibold text-gray-900 mb-4">Integrations</h2>
+              <h2 className="text-lg font-semibold text-foreground mb-4">Integrations</h2>
               <div className="space-y-4">
-                <div className="p-4 border border-gray-200 rounded-lg">
+                <div className="p-4 border border-border rounded-xl">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center space-x-3">
-                      <div className="h-10 w-10 rounded-lg bg-blue-100 flex items-center justify-center">
-                        <Cloud className="h-5 w-5 text-blue-600" />
+                      <div className="h-10 w-10 rounded-xl bg-info-subtle flex items-center justify-center">
+                        <Cloud className="h-5 w-5 text-primary" />
                       </div>
                       <div>
-                        <p className="font-medium text-gray-900">AWS</p>
-                        <p className="text-sm text-gray-500">Amazon Web Services integration</p>
+                        <p className="font-medium text-foreground">AWS</p>
+                        <p className="text-sm text-secondary">Amazon Web Services integration</p>
                       </div>
                     </div>
                     <Button variant="outline" size="sm">Configure</Button>
                   </div>
                 </div>
-                <div className="p-4 border border-gray-200 rounded-lg">
+                <div className="p-4 border border-border rounded-xl">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center space-x-3">
-                      <div className="h-10 w-10 rounded-lg bg-green-100 flex items-center justify-center">
-                        <Database className="h-5 w-5 text-green-600" />
+                      <div className="h-10 w-10 rounded-xl bg-success-subtle flex items-center justify-center">
+                        <Database className="h-5 w-5 text-success" />
                       </div>
                       <div>
-                        <p className="font-medium text-gray-900">Slack</p>
-                        <p className="text-sm text-gray-500">Slack workspace integration</p>
+                        <p className="font-medium text-foreground">Slack</p>
+                        <p className="text-sm text-secondary">Slack workspace integration</p>
                       </div>
                     </div>
                     <Button variant="outline" size="sm">Connect</Button>
                   </div>
                 </div>
-                <div className="p-4 border border-gray-200 rounded-lg">
+                <div className="p-4 border border-border rounded-xl">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center space-x-3">
-                      <div className="h-10 w-10 rounded-lg bg-purple-100 flex items-center justify-center">
-                        <Globe className="h-5 w-5 text-purple-600" />
+                      <div className="h-10 w-10 rounded-xl bg-info-subtle flex items-center justify-center">
+                        <Globe className="h-5 w-5 text-primary" />
                       </div>
                       <div>
-                        <p className="font-medium text-gray-900">PagerDuty</p>
-                        <p className="text-sm text-gray-500">PagerDuty incident management</p>
+                        <p className="font-medium text-foreground">PagerDuty</p>
+                        <p className="text-sm text-secondary">PagerDuty incident management</p>
                       </div>
                     </div>
                     <Button variant="outline" size="sm">Connect</Button>
@@ -361,7 +361,7 @@ export default function SettingsPage() {
 
           {activeSection === 'email' && (
             <div className="p-6 space-y-6">
-              <h2 className="text-lg font-semibold text-gray-900 mb-4">Email Settings</h2>
+              <h2 className="text-lg font-semibold text-foreground mb-4">Email Settings</h2>
               <div className="space-y-4">
                 <Input
                   id="senderEmail"
@@ -378,10 +378,10 @@ export default function SettingsPage() {
                   defaultValue="FireLater IT Support"
                 />
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-secondary mb-1">
                     Email Provider
                   </label>
-                  <select className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                  <select className="w-full px-3 py-2 border border-border-strong rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/20">
                     <option value="sendgrid">SendGrid</option>
                     <option value="ses">Amazon SES</option>
                     <option value="mailgun">Mailgun</option>
@@ -394,20 +394,20 @@ export default function SettingsPage() {
 
           {activeSection === 'appearance' && (
             <div className="p-6 space-y-6">
-              <h2 className="text-lg font-semibold text-gray-900 mb-4">Appearance</h2>
+              <h2 className="text-lg font-semibold text-foreground mb-4">Appearance</h2>
               <div className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-secondary mb-1">
                     Theme
                   </label>
-                  <select className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                  <select className="w-full px-3 py-2 border border-border-strong rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/20">
                     <option value="light">Light</option>
                     <option value="dark">Dark</option>
                     <option value="system">System</option>
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-secondary mb-1">
                     Primary Color
                   </label>
                   <div className="flex space-x-2">
@@ -415,7 +415,7 @@ export default function SettingsPage() {
                       <button
                         key={color}
                         className={`h-8 w-8 rounded-full bg-${color}-500 border-2 ${
-                          color === 'blue' ? 'border-gray-900' : 'border-transparent'
+                          color === 'blue' ? 'border-foreground' : 'border-transparent'
                         }`}
                         style={{
                           backgroundColor:

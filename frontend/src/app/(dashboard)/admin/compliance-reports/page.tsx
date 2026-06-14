@@ -67,9 +67,9 @@ const cadenceLabels: Record<string, string> = {
 };
 
 const statusColors: Record<string, { bg: string; text: string; icon: typeof CheckCircle }> = {
-  success: { bg: 'bg-green-100', text: 'text-green-800', icon: CheckCircle },
-  pending: { bg: 'bg-yellow-100', text: 'text-yellow-800', icon: Clock },
-  failed: { bg: 'bg-red-100', text: 'text-red-800', icon: AlertCircle },
+  success: { bg: 'bg-success-subtle', text: 'text-success', icon: CheckCircle },
+  pending: { bg: 'bg-warning-subtle', text: 'text-warning', icon: Clock },
+  failed: { bg: 'bg-error-subtle', text: 'text-error', icon: AlertCircle },
 };
 
 export default function ComplianceReportsPage() {
@@ -225,7 +225,7 @@ export default function ComplianceReportsPage() {
   if (isLoading && activeTab !== 'generate') {
     return (
       <div className="flex items-center justify-center h-64">
-        <Loader2 className="h-8 w-8 animate-spin text-blue-500" />
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
       </div>
     );
   }
@@ -233,10 +233,10 @@ export default function ComplianceReportsPage() {
   return (
     <div className="space-y-6">
       {error && (
-        <div className="flex items-center gap-2 p-4 text-sm text-red-800 bg-red-100 rounded-md">
+        <div className="flex items-center gap-2 p-4 text-sm text-error bg-error-subtle rounded-xl">
           <XCircle className="h-4 w-4" />
           {error}
-          <button onClick={() => setError(null)} className="ml-auto text-red-600 hover:text-red-800">
+          <button onClick={() => setError(null)} className="ml-auto text-error hover:text-error">
             Dismiss
           </button>
         </div>
@@ -244,20 +244,20 @@ export default function ComplianceReportsPage() {
 
       <div>
         <div className="flex items-center gap-2 mb-2">
-          <BarChart2 className="h-6 w-6 text-gray-700" />
-          <h1 className="text-2xl font-bold text-gray-900">Compliance Reports</h1>
+          <BarChart2 className="h-6 w-6 text-secondary" />
+          <h1 className="text-2xl font-bold text-foreground">Compliance Reports</h1>
         </div>
-        <p className="text-sm text-gray-500">SOX ITGC, PCI-DSS, FFIEC, and DORA compliance reporting</p>
+        <p className="text-sm text-muted">SOX ITGC, PCI-DSS, FFIEC, and DORA compliance reporting</p>
       </div>
 
-      <div className="bg-white rounded-lg shadow">
-        <div className="border-b border-gray-200 flex">
+      <div className="bg-surface rounded-xl shadow-sm">
+        <div className="border-b border-border flex">
           <button
             onClick={() => setActiveTab('generate')}
             className={`flex-1 px-6 py-3 text-sm font-medium border-b-2 ${
               activeTab === 'generate'
-                ? 'border-blue-500 text-blue-600'
-                : 'border-transparent text-gray-600 hover:text-gray-900'
+                ? 'border-primary text-primary'
+                : 'border-transparent text-secondary hover:text-foreground'
             }`}
           >
             Generate Report
@@ -266,8 +266,8 @@ export default function ComplianceReportsPage() {
             onClick={() => setActiveTab('schedules')}
             className={`flex-1 px-6 py-3 text-sm font-medium border-b-2 ${
               activeTab === 'schedules'
-                ? 'border-blue-500 text-blue-600'
-                : 'border-transparent text-gray-600 hover:text-gray-900'
+                ? 'border-primary text-primary'
+                : 'border-transparent text-secondary hover:text-foreground'
             }`}
           >
             Schedules
@@ -276,8 +276,8 @@ export default function ComplianceReportsPage() {
             onClick={() => setActiveTab('history')}
             className={`flex-1 px-6 py-3 text-sm font-medium border-b-2 ${
               activeTab === 'history'
-                ? 'border-blue-500 text-blue-600'
-                : 'border-transparent text-gray-600 hover:text-gray-900'
+                ? 'border-primary text-primary'
+                : 'border-transparent text-secondary hover:text-foreground'
             }`}
           >
             Run History
@@ -289,11 +289,11 @@ export default function ComplianceReportsPage() {
             <div className="space-y-6">
               <form onSubmit={handleGenerateReport} className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Report Type</label>
+                  <label className="block text-sm font-medium text-secondary mb-1">Report Type</label>
                   <select
                     value={reportType}
                     onChange={(e) => setReportType(e.target.value as ReportType)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-3 py-2 border border-border-strong rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
                   >
                     {Object.entries(reportTypeLabels).map(([key, label]) => (
                       <option key={key} value={key}>
@@ -305,21 +305,21 @@ export default function ComplianceReportsPage() {
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">From Date</label>
+                    <label className="block text-sm font-medium text-secondary mb-1">From Date</label>
                     <input
                       type="date"
                       value={fromDate}
                       onChange={(e) => setFromDate(e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="w-full px-3 py-2 border border-border-strong rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">To Date</label>
+                    <label className="block text-sm font-medium text-secondary mb-1">To Date</label>
                     <input
                       type="date"
                       value={toDate}
                       onChange={(e) => setToDate(e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="w-full px-3 py-2 border border-border-strong rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
                     />
                   </div>
                 </div>
@@ -331,11 +331,11 @@ export default function ComplianceReportsPage() {
               </form>
 
               {reportResult && (
-                <div className="space-y-4 border-t border-gray-200 pt-6">
+                <div className="space-y-4 border-t border-border pt-6">
                   <div className="flex items-center justify-between">
                     <div>
-                      <h3 className="font-medium text-gray-900">Report Generated</h3>
-                      <p className="text-sm text-gray-500">{formatDate(reportResult.generatedAt)}</p>
+                      <h3 className="font-medium text-foreground">Report Generated</h3>
+                      <p className="text-sm text-muted">{formatDate(reportResult.generatedAt)}</p>
                     </div>
                     <Button variant="outline" onClick={handleExportCSV}>
                       <Download className="h-4 w-4 mr-2" />
@@ -343,36 +343,36 @@ export default function ComplianceReportsPage() {
                     </Button>
                   </div>
 
-                  <div className="bg-gray-50 rounded-lg p-4 space-y-3">
-                    <h4 className="font-medium text-gray-900">Summary</h4>
+                  <div className="bg-background rounded-xl p-4 space-y-3">
+                    <h4 className="font-medium text-foreground">Summary</h4>
                     {Object.entries(reportResult.summary).map(([key, value]) => (
                       <div key={key} className="flex justify-between text-sm">
-                        <span className="text-gray-600">{key}:</span>
-                        <span className="font-medium text-gray-900">{String(value)}</span>
+                        <span className="text-secondary">{key}:</span>
+                        <span className="font-medium text-foreground">{String(value)}</span>
                       </div>
                     ))}
                   </div>
 
                   {reportResult.data.length > 0 && (
                     <div className="overflow-x-auto">
-                      <table className="min-w-full divide-y divide-gray-200 border border-gray-200 rounded-lg">
-                        <thead className="bg-gray-50">
+                      <table className="min-w-full divide-y divide-border border border-border rounded-xl">
+                        <thead className="bg-background">
                           <tr>
                             {Object.keys(reportResult.data[0]).map((key) => (
                               <th
                                 key={key}
-                                className="px-4 py-2 text-left text-xs font-medium text-gray-700 uppercase tracking-wider"
+                                className="px-4 py-2 text-left text-xs font-medium text-secondary uppercase tracking-wider"
                               >
                                 {key}
                               </th>
                             ))}
                           </tr>
                         </thead>
-                        <tbody className="divide-y divide-gray-200">
+                        <tbody className="divide-y divide-border">
                           {reportResult.data.map((row, idx) => (
-                            <tr key={idx} className="hover:bg-gray-50">
+                            <tr key={idx} className="hover:bg-surface-hover">
                               {Object.values(row).map((cell, cellIdx) => (
-                                <td key={cellIdx} className="px-4 py-2 text-sm text-gray-900">
+                                <td key={cellIdx} className="px-4 py-2 text-sm text-foreground">
                                   {String(cell)}
                                 </td>
                               ))}
@@ -398,46 +398,46 @@ export default function ComplianceReportsPage() {
 
               {schedules.length === 0 ? (
                 <div className="text-center py-12">
-                  <Calendar className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                  <p className="text-gray-500">No schedules created yet</p>
+                  <Calendar className="h-12 w-12 text-muted mx-auto mb-4" />
+                  <p className="text-muted">No schedules created yet</p>
                 </div>
               ) : (
                 <div className="overflow-x-auto">
-                  <table className="min-w-full divide-y divide-gray-200">
-                    <thead className="bg-gray-50">
+                  <table className="min-w-full divide-y divide-border">
+                    <thead className="bg-background">
                       <tr>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">
                           Name
                         </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">
                           Report Type
                         </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">
                           Cadence
                         </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">
                           Recipients
                         </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">
                           Last Run
                         </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">
                           Status
                         </th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-gray-200">
+                    <tbody className="divide-y divide-border">
                       {schedules.map((schedule) => (
-                        <tr key={schedule.id} className="hover:bg-gray-50">
-                          <td className="px-6 py-4 text-sm font-medium text-gray-900">{schedule.name}</td>
-                          <td className="px-6 py-4 text-sm text-gray-600">
+                        <tr key={schedule.id} className="hover:bg-surface-hover">
+                          <td className="px-6 py-4 text-sm font-medium text-foreground">{schedule.name}</td>
+                          <td className="px-6 py-4 text-sm text-secondary">
                             {reportTypeLabels[schedule.report_type]}
                           </td>
-                          <td className="px-6 py-4 text-sm text-gray-600">
+                          <td className="px-6 py-4 text-sm text-secondary">
                             {cadenceLabels[schedule.cadence]}
                           </td>
-                          <td className="px-6 py-4 text-sm text-gray-600">{schedule.recipients.join(', ')}</td>
-                          <td className="px-6 py-4 text-sm text-gray-600">
+                          <td className="px-6 py-4 text-sm text-secondary">{schedule.recipients.join(', ')}</td>
+                          <td className="px-6 py-4 text-sm text-secondary">
                             {schedule.last_run_at ? formatDate(schedule.last_run_at) : '-'}
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap">
@@ -445,8 +445,8 @@ export default function ComplianceReportsPage() {
                               onClick={() => handleToggleSchedule(schedule.id, schedule.is_active)}
                               className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium cursor-pointer ${
                                 schedule.is_active
-                                  ? 'bg-green-100 text-green-800'
-                                  : 'bg-gray-100 text-gray-800'
+                                  ? 'bg-success-subtle text-success'
+                                  : 'bg-background text-foreground'
                               }`}
                             >
                               {schedule.is_active ? 'Active' : 'Inactive'}
@@ -465,41 +465,41 @@ export default function ComplianceReportsPage() {
             <div className="space-y-4">
               {runs.length === 0 ? (
                 <div className="text-center py-12">
-                  <Clock className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                  <p className="text-gray-500">No report runs yet</p>
+                  <Clock className="h-12 w-12 text-muted mx-auto mb-4" />
+                  <p className="text-muted">No report runs yet</p>
                 </div>
               ) : (
                 <div className="overflow-x-auto">
-                  <table className="min-w-full divide-y divide-gray-200">
-                    <thead className="bg-gray-50">
+                  <table className="min-w-full divide-y divide-border">
+                    <thead className="bg-background">
                       <tr>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">
                           Report Type
                         </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">
                           Generated At
                         </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">
                           Duration
                         </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">
                           Status
                         </th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-gray-200">
+                    <tbody className="divide-y divide-border">
                       {runs.map((run) => {
                         const StatusIcon = statusColors[run.status]?.icon || Clock;
                         const statusConfig = statusColors[run.status];
                         return (
-                          <tr key={run.id} className="hover:bg-gray-50">
-                            <td className="px-6 py-4 text-sm text-gray-900">
+                          <tr key={run.id} className="hover:bg-surface-hover">
+                            <td className="px-6 py-4 text-sm text-foreground">
                               {reportTypeLabels[run.report_type]}
                             </td>
-                            <td className="px-6 py-4 text-sm text-gray-600">
+                            <td className="px-6 py-4 text-sm text-secondary">
                               {formatDate(run.generated_at)}
                             </td>
-                            <td className="px-6 py-4 text-sm text-gray-600">
+                            <td className="px-6 py-4 text-sm text-secondary">
                               {run.duration_ms ? `${run.duration_ms}ms` : '-'}
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap">
@@ -524,23 +524,23 @@ export default function ComplianceReportsPage() {
 
       {showScheduleModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg shadow-lg max-w-md w-full mx-4">
-            <div className="px-6 py-4 border-b border-gray-200">
-              <h2 className="text-lg font-semibold text-gray-900">Create Schedule</h2>
+          <div className="bg-surface rounded-xl shadow-sm-lg max-w-md w-full mx-4">
+            <div className="px-6 py-4 border-b border-border">
+              <h2 className="text-lg font-semibold text-foreground">Create Schedule</h2>
             </div>
             <form onSubmit={handleCreateSchedule} className="p-6 space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Name</label>
+                <label className="block text-sm font-medium text-secondary mb-1">Name</label>
                 <input
                   type="text"
                   required
                   value={scheduleForm.name}
                   onChange={(e) => setScheduleForm({ ...scheduleForm, name: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 border border-border-strong rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Report Type</label>
+                <label className="block text-sm font-medium text-secondary mb-1">Report Type</label>
                 <select
                   value={scheduleForm.reportType}
                   onChange={(e) =>
@@ -549,7 +549,7 @@ export default function ComplianceReportsPage() {
                       reportType: e.target.value as ReportType,
                     })
                   }
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 border border-border-strong rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
                 >
                   {Object.entries(reportTypeLabels).map(([key, label]) => (
                     <option key={key} value={key}>
@@ -559,7 +559,7 @@ export default function ComplianceReportsPage() {
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Cadence</label>
+                <label className="block text-sm font-medium text-secondary mb-1">Cadence</label>
                 <select
                   value={scheduleForm.cadence}
                   onChange={(e) =>
@@ -568,7 +568,7 @@ export default function ComplianceReportsPage() {
                       cadence: e.target.value as 'daily' | 'weekly' | 'monthly' | 'quarterly',
                     })
                   }
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 border border-border-strong rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
                 >
                   {Object.entries(cadenceLabels).map(([key, label]) => (
                     <option key={key} value={key}>
@@ -578,14 +578,14 @@ export default function ComplianceReportsPage() {
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Recipients (comma-separated emails)</label>
+                <label className="block text-sm font-medium text-secondary mb-1">Recipients (comma-separated emails)</label>
                 <input
                   type="text"
                   required
                   value={scheduleForm.recipients}
                   onChange={(e) => setScheduleForm({ ...scheduleForm, recipients: e.target.value })}
                   placeholder="user1@example.com, user2@example.com"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 border border-border-strong rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
                 />
               </div>
               <div className="flex gap-3 pt-4">

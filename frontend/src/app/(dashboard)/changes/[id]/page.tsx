@@ -29,17 +29,17 @@ import { useChange, useChangeComments, useAddChangeComment, useUpdateChange, use
 import { changesApi } from '@/lib/api';
 
 const statusColors: Record<string, { bg: string; text: string }> = {
-  draft: { bg: 'bg-gray-100', text: 'text-gray-800' },
-  submitted: { bg: 'bg-blue-100', text: 'text-blue-800' },
-  review: { bg: 'bg-indigo-100', text: 'text-indigo-800' },
-  approved: { bg: 'bg-green-100', text: 'text-green-800' },
-  rejected: { bg: 'bg-red-100', text: 'text-red-800' },
-  scheduled: { bg: 'bg-purple-100', text: 'text-purple-800' },
-  implementing: { bg: 'bg-yellow-100', text: 'text-yellow-800' },
-  completed: { bg: 'bg-green-100', text: 'text-green-800' },
-  failed: { bg: 'bg-red-100', text: 'text-red-800' },
-  rolled_back: { bg: 'bg-orange-100', text: 'text-orange-800' },
-  cancelled: { bg: 'bg-gray-100', text: 'text-gray-800' },
+  draft: { bg: 'bg-surface-hover', text: 'text-foreground' },
+  submitted: { bg: 'bg-primary-subtle', text: 'text-primary' },
+  review: { bg: 'bg-primary-subtle', text: 'text-primary' },
+  approved: { bg: 'bg-success-subtle', text: 'text-success' },
+  rejected: { bg: 'bg-error-subtle', text: 'text-error' },
+  scheduled: { bg: 'bg-primary-subtle', text: 'text-primary' },
+  implementing: { bg: 'bg-warning-subtle', text: 'text-warning' },
+  completed: { bg: 'bg-success-subtle', text: 'text-success' },
+  failed: { bg: 'bg-error-subtle', text: 'text-error' },
+  rolled_back: { bg: 'bg-warning-subtle', text: 'text-warning' },
+  cancelled: { bg: 'bg-surface-hover', text: 'text-foreground' },
 };
 
 const statusLabels: Record<string, string> = {
@@ -57,16 +57,16 @@ const statusLabels: Record<string, string> = {
 };
 
 const typeColors: Record<string, { bg: string; text: string }> = {
-  standard: { bg: 'bg-blue-100', text: 'text-blue-800' },
-  normal: { bg: 'bg-gray-100', text: 'text-gray-800' },
-  emergency: { bg: 'bg-red-100', text: 'text-red-800' },
+  standard: { bg: 'bg-primary-subtle', text: 'text-primary' },
+  normal: { bg: 'bg-surface-hover', text: 'text-foreground' },
+  emergency: { bg: 'bg-error-subtle', text: 'text-error' },
 };
 
 const riskColors: Record<string, { bg: string; text: string }> = {
-  low: { bg: 'bg-green-100', text: 'text-green-800' },
-  medium: { bg: 'bg-yellow-100', text: 'text-yellow-800' },
-  high: { bg: 'bg-orange-100', text: 'text-orange-800' },
-  critical: { bg: 'bg-red-100', text: 'text-red-800' },
+  low: { bg: 'bg-success-subtle', text: 'text-success' },
+  medium: { bg: 'bg-warning-subtle', text: 'text-warning' },
+  high: { bg: 'bg-warning-subtle', text: 'text-warning' },
+  critical: { bg: 'bg-error-subtle', text: 'text-error' },
 };
 
 export default function ChangeDetailPage() {
@@ -285,7 +285,7 @@ export default function ChangeDetailPage() {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <Loader2 className="h-8 w-8 animate-spin text-blue-500" />
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
       </div>
     );
   }
@@ -293,9 +293,9 @@ export default function ChangeDetailPage() {
   if (fetchError || !change) {
     return (
       <div className="flex flex-col items-center justify-center h-64">
-        <AlertCircle className="h-12 w-12 text-red-500 mb-4" />
-        <h2 className="text-xl font-semibold text-gray-900 mb-2">Change not found</h2>
-        <p className="text-gray-500 mb-4">The change request you&apos;re looking for doesn&apos;t exist or you don&apos;t have access to it.</p>
+        <AlertCircle className="h-12 w-12 text-error mb-4" />
+        <h2 className="text-xl font-semibold text-foreground mb-2">Change not found</h2>
+        <p className="text-muted mb-4">The change request you&apos;re looking for doesn&apos;t exist or you don&apos;t have access to it.</p>
         <Button onClick={() => router.push('/changes')}>Back to Changes</Button>
       </div>
     );
@@ -315,13 +315,13 @@ export default function ChangeDetailPage() {
         <div className="flex items-center space-x-4">
           <button
             onClick={() => router.back()}
-            className="p-2 hover:bg-gray-100 rounded-md"
+            className="p-2 hover:bg-surface-hover rounded-md"
           >
-            <ArrowLeft className="h-5 w-5 text-gray-500" />
+            <ArrowLeft className="h-5 w-5 text-muted" />
           </button>
           <div>
             <div className="flex items-center space-x-3">
-              <h1 className="text-2xl font-bold text-gray-900">{change.change_number}</h1>
+              <h1 className="text-2xl font-bold text-foreground">{change.change_number}</h1>
               <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${typeStyle.bg} ${typeStyle.text}`}>
                 {changeType.charAt(0).toUpperCase() + changeType.slice(1)}
               </span>
@@ -340,7 +340,7 @@ export default function ChangeDetailPage() {
                 placeholder="Change title"
               />
             ) : (
-              <p className="mt-1 text-lg text-gray-700">{change.title}</p>
+              <p className="mt-1 text-lg text-secondary">{change.title}</p>
             )}
           </div>
         </div>
@@ -375,10 +375,10 @@ export default function ChangeDetailPage() {
       </div>
 
       {error && (
-        <div className="bg-red-50 border border-red-200 rounded-md p-4">
+        <div className="bg-error-subtle border border-error rounded-md p-4">
           <div className="flex">
-            <AlertCircle className="h-5 w-5 text-red-400 mr-2" />
-            <p className="text-sm text-red-700">{error}</p>
+            <AlertCircle className="h-5 w-5 text-error mr-2" />
+            <p className="text-sm text-error">{error}</p>
           </div>
         </div>
       )}
@@ -387,41 +387,41 @@ export default function ChangeDetailPage() {
         {/* Main Content */}
         <div className="lg:col-span-2 space-y-6">
           {/* Description */}
-          <div className="bg-white rounded-lg shadow p-6">
-            <h2 className="text-lg font-semibold text-gray-900 mb-4">Description</h2>
+          <div className="bg-surface rounded-xl shadow-sm p-6">
+            <h2 className="text-lg font-semibold text-foreground mb-4">Description</h2>
             {isEditing ? (
               <textarea
                 value={editForm.description}
                 onChange={(e) => setEditForm({ ...editForm, description: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 border border-border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary"
                 rows={4}
                 placeholder="Describe the change..."
               />
             ) : (
-              <p className="text-gray-700 whitespace-pre-wrap">{change.description || 'No description provided.'}</p>
+              <p className="text-secondary whitespace-pre-wrap">{change.description || 'No description provided.'}</p>
             )}
           </div>
 
           {/* Justification */}
-          <div className="bg-white rounded-lg shadow p-6">
-            <h2 className="text-lg font-semibold text-gray-900 mb-4">Justification</h2>
+          <div className="bg-surface rounded-xl shadow-sm p-6">
+            <h2 className="text-lg font-semibold text-foreground mb-4">Justification</h2>
             {isEditing ? (
               <textarea
                 value={editForm.justification}
                 onChange={(e) => setEditForm({ ...editForm, justification: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 border border-border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary"
                 rows={3}
                 placeholder="Why is this change needed?"
               />
             ) : (
-              <p className="text-gray-700 whitespace-pre-wrap">{change.justification || 'No justification provided.'}</p>
+              <p className="text-secondary whitespace-pre-wrap">{change.justification || 'No justification provided.'}</p>
             )}
           </div>
 
           {/* Quick Actions */}
           {!isEditing && (
-            <div className="bg-white rounded-lg shadow p-6">
-              <h2 className="text-lg font-semibold text-gray-900 mb-4">Actions</h2>
+            <div className="bg-surface rounded-xl shadow-sm p-6">
+              <h2 className="text-lg font-semibold text-foreground mb-4">Actions</h2>
               <div className="flex flex-wrap gap-2">
                 {status === 'draft' && (
                   <Button size="sm" onClick={() => handleAction('submit')} disabled={actionLoading !== null}>
@@ -476,80 +476,80 @@ export default function ChangeDetailPage() {
                   </Button>
                 )}
                 {['completed', 'failed', 'rolled_back', 'cancelled'].includes(status) && (
-                  <span className="text-sm text-gray-500">This change is {statusLabels[status] || status}.</span>
+                  <span className="text-sm text-muted">This change is {statusLabels[status] || status}.</span>
                 )}
               </div>
             </div>
           )}
 
           {/* Implementation Plans */}
-          <div className="bg-white rounded-lg shadow p-6">
-            <h2 className="text-lg font-semibold text-gray-900 mb-4">Implementation Plan</h2>
+          <div className="bg-surface rounded-xl shadow-sm p-6">
+            <h2 className="text-lg font-semibold text-foreground mb-4">Implementation Plan</h2>
             {isEditing ? (
               <textarea
                 value={editForm.implementationPlan}
                 onChange={(e) => setEditForm({ ...editForm, implementationPlan: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 border border-border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary"
                 rows={4}
                 placeholder="Steps to implement this change..."
               />
             ) : (
-              <p className="text-gray-700 whitespace-pre-wrap">{change.implementation_plan || 'No implementation plan provided.'}</p>
+              <p className="text-secondary whitespace-pre-wrap">{change.implementation_plan || 'No implementation plan provided.'}</p>
             )}
           </div>
 
-          <div className="bg-white rounded-lg shadow p-6">
-            <h2 className="text-lg font-semibold text-gray-900 mb-4">Rollback Plan</h2>
+          <div className="bg-surface rounded-xl shadow-sm p-6">
+            <h2 className="text-lg font-semibold text-foreground mb-4">Rollback Plan</h2>
             {isEditing ? (
               <textarea
                 value={editForm.rollbackPlan}
                 onChange={(e) => setEditForm({ ...editForm, rollbackPlan: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 border border-border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary"
                 rows={4}
                 placeholder="Steps to rollback if something goes wrong..."
               />
             ) : (
-              <p className="text-gray-700 whitespace-pre-wrap">{change.rollback_plan || 'No rollback plan provided.'}</p>
+              <p className="text-secondary whitespace-pre-wrap">{change.rollback_plan || 'No rollback plan provided.'}</p>
             )}
           </div>
 
-          <div className="bg-white rounded-lg shadow p-6">
-            <h2 className="text-lg font-semibold text-gray-900 mb-4">Test Plan</h2>
+          <div className="bg-surface rounded-xl shadow-sm p-6">
+            <h2 className="text-lg font-semibold text-foreground mb-4">Test Plan</h2>
             {isEditing ? (
               <textarea
                 value={editForm.testPlan}
                 onChange={(e) => setEditForm({ ...editForm, testPlan: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 border border-border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary"
                 rows={4}
                 placeholder="How will this change be tested?"
               />
             ) : (
-              <p className="text-gray-700 whitespace-pre-wrap">{change.test_plan || 'No test plan provided.'}</p>
+              <p className="text-secondary whitespace-pre-wrap">{change.test_plan || 'No test plan provided.'}</p>
             )}
           </div>
 
           {/* Approvals */}
           {!isEditing && change.approvals && change.approvals.length > 0 && (
-            <div className="bg-white rounded-lg shadow p-6">
-              <h2 className="text-lg font-semibold text-gray-900 mb-4">Approvals</h2>
+            <div className="bg-surface rounded-xl shadow-sm p-6">
+              <h2 className="text-lg font-semibold text-foreground mb-4">Approvals</h2>
               <div className="space-y-4">
                 {change.approvals.map((approval) => (
-                  <div key={approval.id} className="flex items-start space-x-3 p-3 bg-gray-50 rounded-lg">
+                  <div key={approval.id} className="flex items-start space-x-3 p-3 bg-surface-hover rounded-lg">
                     <div className="flex-shrink-0">
                       {approval.status === 'approved' ? (
-                        <CheckCircle className="h-5 w-5 text-green-500" />
+                        <CheckCircle className="h-5 w-5 text-success" />
                       ) : approval.status === 'rejected' ? (
-                        <XCircle className="h-5 w-5 text-red-500" />
+                        <XCircle className="h-5 w-5 text-error" />
                       ) : (
-                        <Clock className="h-5 w-5 text-yellow-500" />
+                        <Clock className="h-5 w-5 text-warning" />
                       )}
                     </div>
                     <div className="flex-1">
                       <div className="flex items-center justify-between">
-                        <p className="text-sm font-medium text-gray-900">{approval.approver?.name || 'Unknown'}</p>
-                        <p className="text-xs text-gray-500">{formatDate(approval.approved_at)}</p>
+                        <p className="text-sm font-medium text-foreground">{approval.approver?.name || 'Unknown'}</p>
+                        <p className="text-xs text-muted">{formatDate(approval.approved_at)}</p>
                       </div>
-                      {approval.comments && <p className="text-sm text-gray-500 mt-1">{approval.comments}</p>}
+                      {approval.comments && <p className="text-sm text-muted mt-1">{approval.comments}</p>}
                     </div>
                   </div>
                 ))}
@@ -559,28 +559,28 @@ export default function ChangeDetailPage() {
 
           {/* Outcome Notes */}
           {!isEditing && change.outcome_notes && (
-            <div className="bg-white rounded-lg shadow p-6">
-              <h2 className="text-lg font-semibold text-gray-900 mb-4">
+            <div className="bg-surface rounded-xl shadow-sm p-6">
+              <h2 className="text-lg font-semibold text-foreground mb-4">
                 <div className="flex items-center">
-                  {change.outcome === 'successful' && <CheckCircle className="h-5 w-5 text-green-500 mr-2" />}
-                  {change.outcome === 'failed' && <XCircle className="h-5 w-5 text-red-500 mr-2" />}
-                  {change.outcome === 'rolled_back' && <RotateCcw className="h-5 w-5 text-orange-500 mr-2" />}
+                  {change.outcome === 'successful' && <CheckCircle className="h-5 w-5 text-success mr-2" />}
+                  {change.outcome === 'failed' && <XCircle className="h-5 w-5 text-error mr-2" />}
+                  {change.outcome === 'rolled_back' && <RotateCcw className="h-5 w-5 text-warning mr-2" />}
                   Outcome Notes
                 </div>
               </h2>
-              <p className="text-gray-700 whitespace-pre-wrap">{change.outcome_notes}</p>
+              <p className="text-secondary whitespace-pre-wrap">{change.outcome_notes}</p>
             </div>
           )}
 
           {/* Activity / Comments */}
           {!isEditing && (
-            <div className="bg-white rounded-lg shadow p-6">
-              <h2 className="text-lg font-semibold text-gray-900 mb-4">Comments</h2>
+            <div className="bg-surface rounded-xl shadow-sm p-6">
+              <h2 className="text-lg font-semibold text-foreground mb-4">Comments</h2>
 
               <form onSubmit={handleSubmitComment} className="mb-6">
                 <div className="flex space-x-3">
                   <div className="flex-shrink-0">
-                    <div className="h-8 w-8 rounded-full bg-blue-500 flex items-center justify-center text-white text-sm font-medium">
+                    <div className="h-8 w-8 rounded-full bg-primary flex items-center justify-center text-white text-sm font-medium">
                       U
                     </div>
                   </div>
@@ -590,7 +590,7 @@ export default function ChangeDetailPage() {
                       onChange={(e) => setNewComment(e.target.value)}
                       placeholder="Add a comment..."
                       rows={3}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+                      className="w-full px-3 py-2 border border-border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary resize-none"
                     />
                     <div className="mt-2 flex justify-end">
                       <Button type="submit" size="sm" disabled={!newComment.trim() || addComment.isPending}>
@@ -605,23 +605,23 @@ export default function ChangeDetailPage() {
               <div className="space-y-4">
                 {commentsLoading ? (
                   <div className="flex items-center justify-center py-4">
-                    <Loader2 className="h-5 w-5 animate-spin text-gray-400" />
-                    <span className="ml-2 text-sm text-gray-500">Loading comments...</span>
+                    <Loader2 className="h-5 w-5 animate-spin text-muted" />
+                    <span className="ml-2 text-sm text-muted">Loading comments...</span>
                   </div>
                 ) : comments.length > 0 ? (
                   comments.map((comment: ChangeComment) => (
                     <div key={comment.id} className="flex space-x-3">
                       <div className="flex-shrink-0 mt-1">
-                        <MessageSquare className="h-4 w-4 text-blue-500" />
+                        <MessageSquare className="h-4 w-4 text-primary" />
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center justify-between">
-                          <p className="text-sm font-medium text-gray-900">{comment.user_name || 'Unknown User'}</p>
-                          <p className="text-xs text-gray-500">{formatRelativeTime(comment.created_at)}</p>
+                          <p className="text-sm font-medium text-foreground">{comment.user_name || 'Unknown User'}</p>
+                          <p className="text-xs text-muted">{formatRelativeTime(comment.created_at)}</p>
                         </div>
-                        <p className="text-sm text-gray-700 mt-1 whitespace-pre-wrap">{comment.content}</p>
+                        <p className="text-sm text-secondary mt-1 whitespace-pre-wrap">{comment.content}</p>
                         {comment.is_internal && (
-                          <span className="inline-flex items-center px-2 py-0.5 mt-1 rounded text-xs font-medium bg-yellow-100 text-yellow-800">
+                          <span className="inline-flex items-center px-2 py-0.5 mt-1 rounded text-xs font-medium bg-warning-subtle text-warning">
                             Internal Note
                           </span>
                         )}
@@ -629,7 +629,7 @@ export default function ChangeDetailPage() {
                     </div>
                   ))
                 ) : (
-                  <p className="text-sm text-gray-500">No comments yet</p>
+                  <p className="text-sm text-muted">No comments yet</p>
                 )}
               </div>
             </div>
@@ -639,74 +639,74 @@ export default function ChangeDetailPage() {
         {/* Sidebar */}
         <div className="space-y-6">
           {/* Schedule Card */}
-          <div className="bg-white rounded-lg shadow p-6">
-            <h2 className="text-lg font-semibold text-gray-900 mb-4">Schedule</h2>
+          <div className="bg-surface rounded-xl shadow-sm p-6">
+            <h2 className="text-lg font-semibold text-foreground mb-4">Schedule</h2>
             <dl className="space-y-4">
               <div>
-                <dt className="text-sm font-medium text-gray-500">Planned Start</dt>
+                <dt className="text-sm font-medium text-muted">Planned Start</dt>
                 {isEditing ? (
                   <input
                     type="datetime-local"
                     value={editForm.plannedStart}
                     onChange={(e) => setEditForm({ ...editForm, plannedStart: e.target.value })}
-                    className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="mt-1 w-full px-3 py-2 border border-border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary"
                   />
                 ) : (
-                  <dd className="mt-1 flex items-center text-sm text-gray-900">
-                    <Calendar className="h-4 w-4 mr-2 text-gray-400" />
+                  <dd className="mt-1 flex items-center text-sm text-foreground">
+                    <Calendar className="h-4 w-4 mr-2 text-muted" />
                     {formatDate(change.planned_start)}
                   </dd>
                 )}
               </div>
               <div>
-                <dt className="text-sm font-medium text-gray-500">Planned End</dt>
+                <dt className="text-sm font-medium text-muted">Planned End</dt>
                 {isEditing ? (
                   <input
                     type="datetime-local"
                     value={editForm.plannedEnd}
                     onChange={(e) => setEditForm({ ...editForm, plannedEnd: e.target.value })}
-                    className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="mt-1 w-full px-3 py-2 border border-border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary"
                   />
                 ) : (
-                  <dd className="mt-1 flex items-center text-sm text-gray-900">
-                    <Calendar className="h-4 w-4 mr-2 text-gray-400" />
+                  <dd className="mt-1 flex items-center text-sm text-foreground">
+                    <Calendar className="h-4 w-4 mr-2 text-muted" />
                     {formatDate(change.planned_end)}
                   </dd>
                 )}
               </div>
               {!isEditing && change.actual_start && (
                 <div>
-                  <dt className="text-sm font-medium text-gray-500">Actual Start</dt>
-                  <dd className="mt-1 text-sm text-gray-900">{formatDate(change.actual_start)}</dd>
+                  <dt className="text-sm font-medium text-muted">Actual Start</dt>
+                  <dd className="mt-1 text-sm text-foreground">{formatDate(change.actual_start)}</dd>
                 </div>
               )}
               {!isEditing && change.actual_end && (
                 <div>
-                  <dt className="text-sm font-medium text-gray-500">Actual End</dt>
-                  <dd className="mt-1 text-sm text-gray-900">{formatDate(change.actual_end)}</dd>
+                  <dt className="text-sm font-medium text-muted">Actual End</dt>
+                  <dd className="mt-1 text-sm text-foreground">{formatDate(change.actual_end)}</dd>
                 </div>
               )}
               {!isEditing && change.downtime_minutes && (
                 <div>
-                  <dt className="text-sm font-medium text-gray-500">Estimated Downtime</dt>
-                  <dd className="mt-1 text-sm text-gray-900">{change.downtime_minutes} minutes</dd>
+                  <dt className="text-sm font-medium text-muted">Estimated Downtime</dt>
+                  <dd className="mt-1 text-sm text-foreground">{change.downtime_minutes} minutes</dd>
                 </div>
               )}
             </dl>
           </div>
 
           {/* Details Card */}
-          <div className="bg-white rounded-lg shadow p-6">
-            <h2 className="text-lg font-semibold text-gray-900 mb-4">Details</h2>
+          <div className="bg-surface rounded-xl shadow-sm p-6">
+            <h2 className="text-lg font-semibold text-foreground mb-4">Details</h2>
             <dl className="space-y-4">
               {isEditing ? (
                 <>
                   <div>
-                    <dt className="text-sm font-medium text-gray-500">Type</dt>
+                    <dt className="text-sm font-medium text-muted">Type</dt>
                     <select
                       value={editForm.type}
                       onChange={(e) => setEditForm({ ...editForm, type: e.target.value as 'standard' | 'normal' | 'emergency' })}
-                      className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="mt-1 w-full px-3 py-2 border border-border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary"
                     >
                       <option value="standard">Standard</option>
                       <option value="normal">Normal</option>
@@ -714,11 +714,11 @@ export default function ChangeDetailPage() {
                     </select>
                   </div>
                   <div>
-                    <dt className="text-sm font-medium text-gray-500">Risk Level</dt>
+                    <dt className="text-sm font-medium text-muted">Risk Level</dt>
                     <select
                       value={editForm.riskLevel}
                       onChange={(e) => setEditForm({ ...editForm, riskLevel: e.target.value as 'low' | 'medium' | 'high' | 'critical' })}
-                      className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="mt-1 w-full px-3 py-2 border border-border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary"
                     >
                       <option value="low">Low</option>
                       <option value="medium">Medium</option>
@@ -727,11 +727,11 @@ export default function ChangeDetailPage() {
                     </select>
                   </div>
                   <div>
-                    <dt className="text-sm font-medium text-gray-500">Impact</dt>
+                    <dt className="text-sm font-medium text-muted">Impact</dt>
                     <select
                       value={editForm.impact}
                       onChange={(e) => setEditForm({ ...editForm, impact: e.target.value as '' | 'none' | 'minor' | 'moderate' | 'significant' | 'major' })}
-                      className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="mt-1 w-full px-3 py-2 border border-border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary"
                     >
                       <option value="">Select impact...</option>
                       <option value="none">None</option>
@@ -742,11 +742,11 @@ export default function ChangeDetailPage() {
                     </select>
                   </div>
                   <div>
-                    <dt className="text-sm font-medium text-gray-500">Implementer</dt>
+                    <dt className="text-sm font-medium text-muted">Implementer</dt>
                     <select
                       value={editForm.implementerId}
                       onChange={(e) => setEditForm({ ...editForm, implementerId: e.target.value })}
-                      className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="mt-1 w-full px-3 py-2 border border-border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary"
                     >
                       <option value="">Select implementer...</option>
                       {users.map((user: { id: string; name: string }) => (
@@ -755,11 +755,11 @@ export default function ChangeDetailPage() {
                     </select>
                   </div>
                   <div>
-                    <dt className="text-sm font-medium text-gray-500">Assignment Group</dt>
+                    <dt className="text-sm font-medium text-muted">Assignment Group</dt>
                     <select
                       value={editForm.assignedGroup}
                       onChange={(e) => setEditForm({ ...editForm, assignedGroup: e.target.value })}
-                      className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="mt-1 w-full px-3 py-2 border border-border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary"
                     >
                       <option value="">Select group...</option>
                       {groups.map((group: { id: string; name: string }) => (
@@ -768,11 +768,11 @@ export default function ChangeDetailPage() {
                     </select>
                   </div>
                   <div>
-                    <dt className="text-sm font-medium text-gray-500">Application</dt>
+                    <dt className="text-sm font-medium text-muted">Application</dt>
                     <select
                       value={editForm.applicationId}
                       onChange={(e) => setEditForm({ ...editForm, applicationId: e.target.value })}
-                      className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="mt-1 w-full px-3 py-2 border border-border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary"
                     >
                       <option value="">Select application...</option>
                       {applications.map((app: { id: string; name: string }) => (
@@ -785,48 +785,48 @@ export default function ChangeDetailPage() {
                 <>
                   {change.requester_name && (
                     <div>
-                      <dt className="text-sm font-medium text-gray-500">Requested By</dt>
+                      <dt className="text-sm font-medium text-muted">Requested By</dt>
                       <dd className="mt-1 flex items-center">
-                        <div className="h-8 w-8 rounded-full bg-gray-200 flex items-center justify-center text-sm font-medium text-gray-600">
+                        <div className="h-8 w-8 rounded-full bg-surface-hover flex items-center justify-center text-sm font-medium text-secondary">
                           {change.requester_name.charAt(0)}
                         </div>
                         <div className="ml-2">
-                          <p className="text-sm font-medium text-gray-900">{change.requester_name}</p>
-                          {change.requester_email && <p className="text-xs text-gray-500">{change.requester_email}</p>}
+                          <p className="text-sm font-medium text-foreground">{change.requester_name}</p>
+                          {change.requester_email && <p className="text-xs text-muted">{change.requester_email}</p>}
                         </div>
                       </dd>
                     </div>
                   )}
                   {change.implementer_name && (
                     <div>
-                      <dt className="text-sm font-medium text-gray-500">Implementer</dt>
+                      <dt className="text-sm font-medium text-muted">Implementer</dt>
                       <dd className="mt-1 flex items-center">
-                        <div className="h-8 w-8 rounded-full bg-gray-200 flex items-center justify-center text-sm font-medium text-gray-600">
+                        <div className="h-8 w-8 rounded-full bg-surface-hover flex items-center justify-center text-sm font-medium text-secondary">
                           {change.implementer_name.charAt(0)}
                         </div>
                         <div className="ml-2">
-                          <p className="text-sm font-medium text-gray-900">{change.implementer_name}</p>
-                          {change.implementer_email && <p className="text-xs text-gray-500">{change.implementer_email}</p>}
+                          <p className="text-sm font-medium text-foreground">{change.implementer_name}</p>
+                          {change.implementer_email && <p className="text-xs text-muted">{change.implementer_email}</p>}
                         </div>
                       </dd>
                     </div>
                   )}
                   {change.assigned_group_name && (
                     <div>
-                      <dt className="text-sm font-medium text-gray-500">Assignment Group</dt>
-                      <dd className="mt-1 flex items-center text-sm text-gray-900">
-                        <Users className="h-4 w-4 mr-2 text-gray-400" />
+                      <dt className="text-sm font-medium text-muted">Assignment Group</dt>
+                      <dd className="mt-1 flex items-center text-sm text-foreground">
+                        <Users className="h-4 w-4 mr-2 text-muted" />
                         {change.assigned_group_name}
                       </dd>
                     </div>
                   )}
                   {change.application_name && (
                     <div>
-                      <dt className="text-sm font-medium text-gray-500">Application</dt>
+                      <dt className="text-sm font-medium text-muted">Application</dt>
                       <dd className="mt-1">
                         <Link
                           href={`/applications/${change.application_id}`}
-                          className="text-sm text-blue-600 hover:text-blue-800"
+                          className="text-sm text-primary hover:text-primary-hover"
                         >
                           {change.application_name}
                         </Link>
@@ -835,38 +835,38 @@ export default function ChangeDetailPage() {
                   )}
                   {change.environment_name && (
                     <div>
-                      <dt className="text-sm font-medium text-gray-500">Environment</dt>
-                      <dd className="mt-1 text-sm text-gray-900">{change.environment_name}</dd>
+                      <dt className="text-sm font-medium text-muted">Environment</dt>
+                      <dd className="mt-1 text-sm text-foreground">{change.environment_name}</dd>
                     </div>
                   )}
                   {change.impact && (
                     <div>
-                      <dt className="text-sm font-medium text-gray-500">Impact</dt>
-                      <dd className="mt-1 text-sm text-gray-900 capitalize">{change.impact}</dd>
+                      <dt className="text-sm font-medium text-muted">Impact</dt>
+                      <dd className="mt-1 text-sm text-foreground capitalize">{change.impact}</dd>
                     </div>
                   )}
                   {change.urgency && (
                     <div>
-                      <dt className="text-sm font-medium text-gray-500">Urgency</dt>
-                      <dd className="mt-1 text-sm text-gray-900 capitalize">{change.urgency}</dd>
+                      <dt className="text-sm font-medium text-muted">Urgency</dt>
+                      <dd className="mt-1 text-sm text-foreground capitalize">{change.urgency}</dd>
                     </div>
                   )}
                   {change.cab_required && (
                     <div>
-                      <dt className="text-sm font-medium text-gray-500">CAB Review</dt>
-                      <dd className="mt-1 flex items-center text-sm text-gray-900">
-                        <AlertTriangle className="h-4 w-4 mr-2 text-yellow-500" />
+                      <dt className="text-sm font-medium text-muted">CAB Review</dt>
+                      <dd className="mt-1 flex items-center text-sm text-foreground">
+                        <AlertTriangle className="h-4 w-4 mr-2 text-warning" />
                         Required {change.cab_date && `(${formatDate(change.cab_date)})`}
                       </dd>
                     </div>
                   )}
-                  <div className="border-t border-gray-200 pt-4">
-                    <dt className="text-sm font-medium text-gray-500">Created</dt>
-                    <dd className="mt-1 text-sm text-gray-900">{formatDate(change.created_at)}</dd>
+                  <div className="border-t border-border pt-4">
+                    <dt className="text-sm font-medium text-muted">Created</dt>
+                    <dd className="mt-1 text-sm text-foreground">{formatDate(change.created_at)}</dd>
                   </div>
                   <div>
-                    <dt className="text-sm font-medium text-gray-500">Last Updated</dt>
-                    <dd className="mt-1 text-sm text-gray-900">{formatDate(change.updated_at)}</dd>
+                    <dt className="text-sm font-medium text-muted">Last Updated</dt>
+                    <dd className="mt-1 text-sm text-foreground">{formatDate(change.updated_at)}</dd>
                   </div>
                 </>
               )}

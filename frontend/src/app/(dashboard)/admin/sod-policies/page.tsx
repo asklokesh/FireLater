@@ -121,15 +121,15 @@ export default function SodPoliciesPage() {
   const getSeverityColor = (severity: SeverityLevel) => {
     switch (severity) {
       case 'critical':
-        return 'bg-red-100 text-red-800';
+        return 'bg-error-subtle text-error';
       case 'high':
-        return 'bg-orange-100 text-orange-800';
+        return 'bg-warning-subtle text-warning';
       case 'medium':
-        return 'bg-yellow-100 text-yellow-800';
+        return 'bg-warning-subtle text-warning';
       case 'low':
-        return 'bg-blue-100 text-blue-800';
+        return 'bg-info-subtle text-primary';
       default:
-        return 'bg-gray-100 text-gray-800';
+        return 'bg-background text-foreground';
     }
   };
 
@@ -151,10 +151,10 @@ export default function SodPoliciesPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <GitBranch className="h-8 w-8 text-gray-700" />
+          <GitBranch className="h-8 w-8 text-secondary" />
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">Segregation of Duties Policies</h1>
-            <p className="mt-1 text-sm text-gray-500">
+            <h1 className="text-2xl font-bold text-foreground">Segregation of Duties Policies</h1>
+            <p className="mt-1 text-sm text-muted">
               Prevent conflicting role combinations to meet SOX ITGC requirements
             </p>
           </div>
@@ -167,12 +167,12 @@ export default function SodPoliciesPage() {
 
       {/* Error Alert */}
       {error && (
-        <div className="flex items-center gap-2 p-4 text-sm text-red-800 bg-red-100 rounded-md">
+        <div className="flex items-center gap-2 p-4 text-sm text-error bg-error-subtle rounded-xl">
           <AlertCircle className="h-4 w-4 flex-shrink-0" />
           {error}
           <button
             onClick={() => setError(null)}
-            className="ml-auto text-red-600 hover:text-red-800"
+            className="ml-auto text-error hover:text-error"
           >
             Dismiss
           </button>
@@ -182,43 +182,43 @@ export default function SodPoliciesPage() {
       {/* Loading State */}
       {isLoading ? (
         <div className="flex items-center justify-center h-64">
-          <Loader2 className="h-8 w-8 animate-spin text-blue-500" />
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
         </div>
       ) : (
-        <div className="bg-white rounded-lg shadow overflow-hidden">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
+        <div className="bg-surface rounded-xl shadow-sm overflow-hidden">
+          <table className="min-w-full divide-y divide-border">
+            <thead className="bg-background">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">
                   Role A
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">
                   Role B
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">
                   Description
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">
                   Severity
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">
                   Status
                 </th>
-                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-right text-xs font-medium text-muted uppercase tracking-wider">
                   Actions
                 </th>
               </tr>
             </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
+            <tbody className="bg-surface divide-y divide-border">
               {policies.map((policy) => (
-                <tr key={policy.id} className="hover:bg-gray-50">
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                <tr key={policy.id} className="hover:bg-surface-hover">
+                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-foreground">
                     {policy.role_a}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-foreground">
                     {policy.role_b}
                   </td>
-                  <td className="px-6 py-4 text-sm text-gray-600 max-w-xs truncate">
+                  <td className="px-6 py-4 text-sm text-secondary max-w-xs truncate">
                     {policy.description || '-'}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
@@ -232,11 +232,11 @@ export default function SodPoliciesPage() {
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     {policy.is_active ? (
-                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-success-subtle text-success">
                         Active
                       </span>
                     ) : (
-                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-background text-foreground">
                         Inactive
                       </span>
                     )}
@@ -244,18 +244,18 @@ export default function SodPoliciesPage() {
                   <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium flex items-center justify-end gap-2">
                     <button
                       onClick={() => handleToggleActive(policy.id, policy.is_active)}
-                      className="text-gray-400 hover:text-gray-600"
+                      className="text-muted hover:text-secondary"
                       title={policy.is_active ? 'Disable policy' : 'Enable policy'}
                     >
                       {policy.is_active ? (
-                        <ToggleRight className="h-5 w-5 text-green-600" />
+                        <ToggleRight className="h-5 w-5 text-success" />
                       ) : (
                         <ToggleLeft className="h-5 w-5" />
                       )}
                     </button>
                     <button
                       onClick={() => setDeleteConfirm(policy.id)}
-                      className="text-gray-400 hover:text-red-600"
+                      className="text-muted hover:text-error"
                       title="Delete policy"
                     >
                       <Trash2 className="h-5 w-5" />
@@ -268,9 +268,9 @@ export default function SodPoliciesPage() {
 
           {policies.length === 0 && (
             <div className="text-center py-12">
-              <GitBranch className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-              <h3 className="text-lg font-medium text-gray-900 mb-2">No policies found</h3>
-              <p className="text-gray-500 mb-4">Create your first SoD policy to get started</p>
+              <GitBranch className="h-12 w-12 text-muted mx-auto mb-4" />
+              <h3 className="text-lg font-medium text-foreground mb-2">No policies found</h3>
+              <p className="text-muted mb-4">Create your first SoD policy to get started</p>
               <Button onClick={() => setShowCreateModal(true)} size="sm">
                 <Plus className="h-4 w-4 mr-2" />
                 Add Policy
@@ -283,15 +283,15 @@ export default function SodPoliciesPage() {
       {/* Create Modal */}
       {showCreateModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg shadow-xl max-w-md w-full max-h-[90vh] overflow-hidden flex flex-col">
-            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
-              <h2 className="text-lg font-semibold text-gray-900">Create SoD Policy</h2>
+          <div className="bg-surface rounded-xl shadow-sm-xl max-w-md w-full max-h-[90vh] overflow-hidden flex flex-col">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-border">
+              <h2 className="text-lg font-semibold text-foreground">Create SoD Policy</h2>
               <button
                 onClick={() => {
                   setShowCreateModal(false);
                   setSubmitError(null);
                 }}
-                className="text-gray-400 hover:text-gray-600"
+                className="text-muted hover:text-secondary"
               >
                 <X className="h-5 w-5" />
               </button>
@@ -300,14 +300,14 @@ export default function SodPoliciesPage() {
             <form onSubmit={handleCreatePolicy} className="flex flex-col flex-1 overflow-hidden">
               <div className="flex-1 overflow-auto p-6 space-y-4">
                 {submitError && (
-                  <div className="p-3 text-sm text-red-800 bg-red-100 rounded-md flex items-start gap-2">
+                  <div className="p-3 text-sm text-error bg-error-subtle rounded-xl flex items-start gap-2">
                     <AlertCircle className="h-4 w-4 flex-shrink-0 mt-0.5" />
                     <div>{submitError}</div>
                   </div>
                 )}
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-secondary mb-1">
                     Role A
                   </label>
                   <Input
@@ -322,7 +322,7 @@ export default function SodPoliciesPage() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-secondary mb-1">
                     Role B
                   </label>
                   <Input
@@ -337,7 +337,7 @@ export default function SodPoliciesPage() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-secondary mb-1">
                     Description
                   </label>
                   <textarea
@@ -347,12 +347,12 @@ export default function SodPoliciesPage() {
                     }
                     placeholder="Explain why these roles conflict (optional)"
                     rows={2}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-3 py-2 border border-border-strong rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-secondary mb-1">
                     Severity
                   </label>
                   <select
@@ -363,7 +363,7 @@ export default function SodPoliciesPage() {
                         severity: e.target.value as SeverityLevel,
                       }))
                     }
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-3 py-2 border border-border-strong rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
                   >
                     <option value="critical">Critical</option>
                     <option value="high">High</option>
@@ -380,18 +380,18 @@ export default function SodPoliciesPage() {
                     onChange={(e) =>
                       setFormData((prev) => ({ ...prev, is_active: e.target.checked }))
                     }
-                    className="h-4 w-4 text-blue-600 rounded border-gray-300"
+                    className="h-4 w-4 text-primary rounded border-border-strong"
                   />
                   <label
                     htmlFor="is_active"
-                    className="text-sm font-medium text-gray-700 cursor-pointer"
+                    className="text-sm font-medium text-secondary cursor-pointer"
                   >
                     Activate policy immediately
                   </label>
                 </div>
               </div>
 
-              <div className="px-6 py-4 border-t border-gray-200 flex justify-end space-x-3">
+              <div className="px-6 py-4 border-t border-border flex justify-end space-x-3">
                 <Button
                   type="button"
                   variant="outline"
@@ -414,15 +414,15 @@ export default function SodPoliciesPage() {
       {/* Delete Confirmation */}
       {deleteConfirm && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg shadow-xl max-w-sm w-full">
+          <div className="bg-surface rounded-xl shadow-sm-xl max-w-sm w-full">
             <div className="p-6">
-              <div className="flex items-center justify-center w-12 h-12 rounded-full bg-red-100 mx-auto mb-4">
-                <AlertCircle className="h-6 w-6 text-red-600" />
+              <div className="flex items-center justify-center w-12 h-12 rounded-full bg-error-subtle mx-auto mb-4">
+                <AlertCircle className="h-6 w-6 text-error" />
               </div>
-              <h3 className="text-lg font-medium text-gray-900 text-center mb-2">
+              <h3 className="text-lg font-medium text-foreground text-center mb-2">
                 Delete Policy
               </h3>
-              <p className="text-sm text-gray-600 text-center mb-6">
+              <p className="text-sm text-secondary text-center mb-6">
                 Are you sure you want to delete this SoD policy? This action cannot be undone.
               </p>
               <div className="flex gap-3">
@@ -437,7 +437,7 @@ export default function SodPoliciesPage() {
                 <Button
                   type="button"
                   onClick={() => handleDeletePolicy(deleteConfirm)}
-                  className="flex-1 bg-red-600 hover:bg-red-700"
+                  className="flex-1 bg-primary hover:bg-error"
                 >
                   Delete
                 </Button>

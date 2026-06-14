@@ -77,29 +77,29 @@ interface RcaData {
 }
 
 const FISHBONE_CATEGORIES = [
-  { key: 'people', label: 'People', color: 'bg-blue-100 text-blue-800 border-blue-300' },
-  { key: 'process', label: 'Process', color: 'bg-green-100 text-green-800 border-green-300' },
-  { key: 'equipment', label: 'Equipment', color: 'bg-yellow-100 text-yellow-800 border-yellow-300' },
-  { key: 'materials', label: 'Materials', color: 'bg-orange-100 text-orange-800 border-orange-300' },
-  { key: 'environment', label: 'Environment', color: 'bg-purple-100 text-purple-800 border-purple-300' },
-  { key: 'management', label: 'Management', color: 'bg-red-100 text-red-800 border-red-300' },
+  { key: 'people', label: 'People', color: 'bg-primary-subtle text-primary border-blue-300' },
+  { key: 'process', label: 'Process', color: 'bg-success-subtle text-success border-green-300' },
+  { key: 'equipment', label: 'Equipment', color: 'bg-warning-subtle text-warning border-yellow-300' },
+  { key: 'materials', label: 'Materials', color: 'bg-warning-subtle text-warning border-orange-300' },
+  { key: 'environment', label: 'Environment', color: 'bg-primary-subtle text-primary border-purple-300' },
+  { key: 'management', label: 'Management', color: 'bg-error-subtle text-error border-red-300' },
 ] as const;
 
 const statusColors: Record<string, { bg: string; text: string }> = {
-  new: { bg: 'bg-blue-100', text: 'text-blue-800' },
-  assigned: { bg: 'bg-indigo-100', text: 'text-indigo-800' },
-  investigating: { bg: 'bg-yellow-100', text: 'text-yellow-800' },
-  root_cause_identified: { bg: 'bg-orange-100', text: 'text-orange-800' },
-  known_error: { bg: 'bg-purple-100', text: 'text-purple-800' },
-  resolved: { bg: 'bg-green-100', text: 'text-green-800' },
-  closed: { bg: 'bg-gray-100', text: 'text-gray-800' },
+  new: { bg: 'bg-primary-subtle', text: 'text-primary' },
+  assigned: { bg: 'bg-primary-subtle', text: 'text-primary' },
+  investigating: { bg: 'bg-warning-subtle', text: 'text-warning' },
+  root_cause_identified: { bg: 'bg-warning-subtle', text: 'text-warning' },
+  known_error: { bg: 'bg-primary-subtle', text: 'text-primary' },
+  resolved: { bg: 'bg-success-subtle', text: 'text-success' },
+  closed: { bg: 'bg-background', text: 'text-foreground' },
 };
 
 const priorityColors: Record<string, { bg: string; text: string; label: string }> = {
-  critical: { bg: 'bg-red-100', text: 'text-red-800', label: 'Critical' },
-  high: { bg: 'bg-orange-100', text: 'text-orange-800', label: 'High' },
-  medium: { bg: 'bg-yellow-100', text: 'text-yellow-800', label: 'Medium' },
-  low: { bg: 'bg-blue-100', text: 'text-blue-800', label: 'Low' },
+  critical: { bg: 'bg-error-subtle', text: 'text-error', label: 'Critical' },
+  high: { bg: 'bg-warning-subtle', text: 'text-warning', label: 'High' },
+  medium: { bg: 'bg-warning-subtle', text: 'text-warning', label: 'Medium' },
+  low: { bg: 'bg-primary-subtle', text: 'text-primary', label: 'Low' },
 };
 
 const statusLabels: Record<string, string> = {
@@ -472,7 +472,7 @@ export default function ProblemDetailPage() {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <Loader2 className="h-8 w-8 animate-spin text-blue-500" />
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
       </div>
     );
   }
@@ -480,9 +480,9 @@ export default function ProblemDetailPage() {
   if (fetchError || !problem) {
     return (
       <div className="flex flex-col items-center justify-center h-64">
-        <AlertTriangle className="h-12 w-12 text-red-500 mb-4" />
-        <h2 className="text-xl font-semibold text-gray-900 mb-2">Problem not found</h2>
-        <p className="text-gray-500 mb-4">The problem you&apos;re looking for doesn&apos;t exist or you don&apos;t have access to it.</p>
+        <AlertTriangle className="h-12 w-12 text-error mb-4" />
+        <h2 className="text-xl font-semibold text-foreground mb-2">Problem not found</h2>
+        <p className="text-muted mb-4">The problem you&apos;re looking for doesn&apos;t exist or you don&apos;t have access to it.</p>
         <Button onClick={() => router.push('/problems')}>Back to Problems</Button>
       </div>
     );
@@ -500,13 +500,13 @@ export default function ProblemDetailPage() {
         <div className="flex items-center space-x-4">
           <button
             onClick={() => router.back()}
-            className="p-2 hover:bg-gray-100 rounded-md"
+            className="p-2 hover:bg-background rounded-md"
           >
-            <ArrowLeft className="h-5 w-5 text-gray-500" />
+            <ArrowLeft className="h-5 w-5 text-muted" />
           </button>
           <div>
             <div className="flex items-center space-x-3">
-              <h1 className="text-2xl font-bold text-gray-900">{problem.problem_number}</h1>
+              <h1 className="text-2xl font-bold text-foreground">{problem.problem_number}</h1>
               <span
                 className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${priorityColor.bg} ${priorityColor.text}`}
               >
@@ -518,7 +518,7 @@ export default function ProblemDetailPage() {
                 {statusLabels[currentStatus] || currentStatus}
               </span>
               {problem.is_known_error && (
-                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
+                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-primary-subtle text-primary">
                   <Lightbulb className="h-3 w-3 mr-1" />
                   KEDB
                 </span>
@@ -532,7 +532,7 @@ export default function ProblemDetailPage() {
                 placeholder="Problem title"
               />
             ) : (
-              <p className="mt-1 text-lg text-gray-700">{problem.title}</p>
+              <p className="mt-1 text-lg text-secondary">{problem.title}</p>
             )}
           </div>
         </div>
@@ -567,7 +567,7 @@ export default function ProblemDetailPage() {
       </div>
 
       {error && (
-        <div className="flex items-center gap-2 p-4 text-sm text-red-800 bg-red-100 rounded-md">
+        <div className="flex items-center gap-2 p-4 text-sm text-error bg-error-subtle rounded-md">
           <AlertTriangle className="h-4 w-4" />
           {error}
         </div>
@@ -577,58 +577,58 @@ export default function ProblemDetailPage() {
         {/* Main Content */}
         <div className="lg:col-span-2 space-y-6">
           {/* Description */}
-          <div className="bg-white rounded-lg shadow p-6">
-            <h2 className="text-lg font-semibold text-gray-900 mb-4">Description</h2>
+          <div className="bg-surface rounded-xl shadow-sm p-6">
+            <h2 className="text-lg font-semibold text-foreground mb-4">Description</h2>
             {isEditing ? (
               <textarea
                 value={editForm.description}
                 onChange={(e) => setEditForm({ ...editForm, description: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 border border-border-strong rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
                 rows={4}
                 placeholder="Describe the problem..."
               />
             ) : (
-              <p className="text-gray-700 whitespace-pre-wrap">{problem.description || 'No description provided'}</p>
+              <p className="text-secondary whitespace-pre-wrap">{problem.description || 'No description provided'}</p>
             )}
           </div>
 
           {/* Root Cause & Workaround */}
           {!isEditing && (
-            <div className="bg-white rounded-lg shadow p-6">
-              <h2 className="text-lg font-semibold text-gray-900 mb-4">Root Cause Analysis</h2>
+            <div className="bg-surface rounded-xl shadow-sm p-6">
+              <h2 className="text-lg font-semibold text-foreground mb-4">Root Cause Analysis</h2>
               <div className="space-y-4">
                 <div>
                   <div className="flex items-center justify-between mb-2">
-                    <label className="text-sm font-medium text-gray-700">Root Cause</label>
+                    <label className="text-sm font-medium text-secondary">Root Cause</label>
                     <Button size="sm" variant="outline" onClick={() => { setRootCause(problem.root_cause || ''); setShowRootCauseModal(true); }}>
                       <Edit className="h-3 w-3 mr-1" />
                       {problem.root_cause ? 'Edit' : 'Add'}
                     </Button>
                   </div>
                   {problem.root_cause ? (
-                    <p className="text-sm text-gray-700 bg-gray-50 p-3 rounded whitespace-pre-wrap">{problem.root_cause}</p>
+                    <p className="text-sm text-secondary bg-surface-hover p-3 rounded whitespace-pre-wrap">{problem.root_cause}</p>
                   ) : (
-                    <p className="text-sm text-gray-500 italic">Root cause not yet identified</p>
+                    <p className="text-sm text-muted italic">Root cause not yet identified</p>
                   )}
                 </div>
                 <div>
                   <div className="flex items-center justify-between mb-2">
-                    <label className="text-sm font-medium text-gray-700">Workaround</label>
+                    <label className="text-sm font-medium text-secondary">Workaround</label>
                     <Button size="sm" variant="outline" onClick={() => { setWorkaround(problem.workaround || ''); setShowWorkaroundModal(true); }}>
                       <Edit className="h-3 w-3 mr-1" />
                       {problem.workaround ? 'Edit' : 'Add'}
                     </Button>
                   </div>
                   {problem.workaround ? (
-                    <p className="text-sm text-gray-700 bg-yellow-50 p-3 rounded border border-yellow-200 whitespace-pre-wrap">{problem.workaround}</p>
+                    <p className="text-sm text-secondary bg-warning-subtle p-3 rounded border border-yellow-200 whitespace-pre-wrap">{problem.workaround}</p>
                   ) : (
-                    <p className="text-sm text-gray-500 italic">No workaround available</p>
+                    <p className="text-sm text-muted italic">No workaround available</p>
                   )}
                 </div>
                 {problem.resolution && (
                   <div>
-                    <label className="text-sm font-medium text-gray-700 mb-2 block">Resolution</label>
-                    <p className="text-sm text-gray-700 bg-green-50 p-3 rounded border border-green-200 whitespace-pre-wrap">{problem.resolution}</p>
+                    <label className="text-sm font-medium text-secondary mb-2 block">Resolution</label>
+                    <p className="text-sm text-secondary bg-success-subtle p-3 rounded border border-green-200 whitespace-pre-wrap">{problem.resolution}</p>
                   </div>
                 )}
               </div>
@@ -637,8 +637,8 @@ export default function ProblemDetailPage() {
 
           {/* Quick Actions */}
           {!isEditing && (
-            <div className="bg-white rounded-lg shadow p-6">
-              <h2 className="text-lg font-semibold text-gray-900 mb-4">Actions</h2>
+            <div className="bg-surface rounded-xl shadow-sm p-6">
+              <h2 className="text-lg font-semibold text-foreground mb-4">Actions</h2>
               <div className="flex flex-wrap gap-2">
                 {currentStatus === 'new' && (
                   <>
@@ -706,15 +706,15 @@ export default function ProblemDetailPage() {
 
           {/* Tabs: Comments, Linked Issues, History */}
           {!isEditing && (
-            <div className="bg-white rounded-lg shadow">
-              <div className="border-b border-gray-200">
+            <div className="bg-surface rounded-xl shadow-sm">
+              <div className="border-b border-border">
                 <nav className="flex -mb-px">
                   <button
                     onClick={() => setActiveTab('comments')}
                     className={`px-6 py-3 text-sm font-medium border-b-2 ${
                       activeTab === 'comments'
-                        ? 'border-blue-500 text-blue-600'
-                        : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                        ? 'border-blue-500 text-primary'
+                        : 'border-transparent text-muted hover:text-secondary hover:border-border-strong'
                     }`}
                   >
                     <MessageSquare className="h-4 w-4 inline mr-2" />
@@ -724,8 +724,8 @@ export default function ProblemDetailPage() {
                     onClick={() => setActiveTab('issues')}
                     className={`px-6 py-3 text-sm font-medium border-b-2 ${
                       activeTab === 'issues'
-                        ? 'border-blue-500 text-blue-600'
-                        : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                        ? 'border-blue-500 text-primary'
+                        : 'border-transparent text-muted hover:text-secondary hover:border-border-strong'
                     }`}
                   >
                     <Link2 className="h-4 w-4 inline mr-2" />
@@ -735,8 +735,8 @@ export default function ProblemDetailPage() {
                     onClick={() => setActiveTab('history')}
                     className={`px-6 py-3 text-sm font-medium border-b-2 ${
                       activeTab === 'history'
-                        ? 'border-blue-500 text-blue-600'
-                        : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                        ? 'border-blue-500 text-primary'
+                        : 'border-transparent text-muted hover:text-secondary hover:border-border-strong'
                     }`}
                   >
                     <Timer className="h-4 w-4 inline mr-2" />
@@ -746,8 +746,8 @@ export default function ProblemDetailPage() {
                     onClick={() => setActiveTab('kb')}
                     className={`px-6 py-3 text-sm font-medium border-b-2 ${
                       activeTab === 'kb'
-                        ? 'border-blue-500 text-blue-600'
-                        : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                        ? 'border-blue-500 text-primary'
+                        : 'border-transparent text-muted hover:text-secondary hover:border-border-strong'
                     }`}
                   >
                     <BookOpen className="h-4 w-4 inline mr-2" />
@@ -757,8 +757,8 @@ export default function ProblemDetailPage() {
                     onClick={() => setActiveTab('rca')}
                     className={`px-6 py-3 text-sm font-medium border-b-2 ${
                       activeTab === 'rca'
-                        ? 'border-blue-500 text-blue-600'
-                        : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                        ? 'border-blue-500 text-primary'
+                        : 'border-transparent text-muted hover:text-secondary hover:border-border-strong'
                     }`}
                   >
                     <Search className="h-4 w-4 inline mr-2" />
@@ -774,7 +774,7 @@ export default function ProblemDetailPage() {
                     <form onSubmit={handleSubmitComment} className="mb-6">
                       <div className="flex space-x-3">
                         <div className="flex-shrink-0">
-                          <div className="h-8 w-8 rounded-full bg-blue-500 flex items-center justify-center text-white text-sm font-medium">
+                          <div className="h-8 w-8 rounded-full bg-primary flex items-center justify-center text-white text-sm font-medium">
                             U
                           </div>
                         </div>
@@ -784,7 +784,7 @@ export default function ProblemDetailPage() {
                             onChange={(e) => setNewComment(e.target.value)}
                             placeholder="Add a comment..."
                             rows={3}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+                            className="w-full px-3 py-2 border border-border-strong rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 resize-none"
                           />
                           <div className="mt-2 flex justify-end">
                             <Button type="submit" size="sm" disabled={!newComment.trim() || addComment.isPending}>
@@ -800,27 +800,27 @@ export default function ProblemDetailPage() {
                     <div className="space-y-4">
                       {commentsLoading ? (
                         <div className="flex items-center justify-center py-4">
-                          <Loader2 className="h-5 w-5 animate-spin text-gray-400" />
-                          <span className="ml-2 text-sm text-gray-500">Loading comments...</span>
+                          <Loader2 className="h-5 w-5 animate-spin text-muted" />
+                          <span className="ml-2 text-sm text-muted">Loading comments...</span>
                         </div>
                       ) : comments.length > 0 ? (
                         comments.map((comment: ProblemComment) => (
                           <div key={comment.id} className="flex space-x-3">
                             <div className="flex-shrink-0 mt-1">
-                              <MessageSquare className="h-4 w-4 text-blue-500" />
+                              <MessageSquare className="h-4 w-4 text-primary" />
                             </div>
                             <div className="flex-1 min-w-0">
                               <div className="flex items-center justify-between">
-                                <p className="text-sm font-medium text-gray-900">
+                                <p className="text-sm font-medium text-foreground">
                                   {comment.user_name || 'Unknown User'}
                                 </p>
-                                <p className="text-xs text-gray-500">
+                                <p className="text-xs text-muted">
                                   {formatRelativeTime(comment.created_at)}
                                 </p>
                               </div>
-                              <p className="text-sm text-gray-700 mt-1 whitespace-pre-wrap">{comment.content}</p>
+                              <p className="text-sm text-secondary mt-1 whitespace-pre-wrap">{comment.content}</p>
                               {comment.is_internal && (
-                                <span className="inline-flex items-center px-2 py-0.5 mt-1 rounded text-xs font-medium bg-yellow-100 text-yellow-800">
+                                <span className="inline-flex items-center px-2 py-0.5 mt-1 rounded text-xs font-medium bg-warning-subtle text-warning">
                                   Internal Note
                                 </span>
                               )}
@@ -828,7 +828,7 @@ export default function ProblemDetailPage() {
                           </div>
                         ))
                       ) : (
-                        <p className="text-sm text-gray-500">No comments yet</p>
+                        <p className="text-sm text-muted">No comments yet</p>
                       )}
                     </div>
                   </>
@@ -837,7 +837,7 @@ export default function ProblemDetailPage() {
                 {activeTab === 'issues' && (
                   <div className="space-y-4">
                     <div className="flex justify-between items-center">
-                      <h3 className="text-sm font-medium text-gray-700">Linked Issues</h3>
+                      <h3 className="text-sm font-medium text-secondary">Linked Issues</h3>
                       <Button size="sm" variant="outline" onClick={() => setShowLinkIssueModal(true)}>
                         <Plus className="h-4 w-4 mr-1" />
                         Link Issue
@@ -845,26 +845,26 @@ export default function ProblemDetailPage() {
                     </div>
                     {issuesLoading ? (
                       <div className="flex items-center justify-center py-4">
-                        <Loader2 className="h-5 w-5 animate-spin text-gray-400" />
+                        <Loader2 className="h-5 w-5 animate-spin text-muted" />
                       </div>
                     ) : linkedIssues.length > 0 ? (
                       <div className="space-y-2">
                         {linkedIssues.map((linked: LinkedIssue) => (
-                          <div key={linked.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                          <div key={linked.id} className="flex items-center justify-between p-3 bg-surface-hover rounded-xl">
                             <div className="flex items-center space-x-3">
-                              <AlertTriangle className="h-4 w-4 text-yellow-500" />
+                              <AlertTriangle className="h-4 w-4 text-warning" />
                               <div>
-                                <Link href={`/issues/${linked.issue_id}`} className="text-sm font-medium text-blue-600 hover:text-blue-800">
+                                <Link href={`/issues/${linked.issue_id}`} className="text-sm font-medium text-primary hover:text-primary">
                                   {linked.issue_number}
                                 </Link>
-                                <p className="text-xs text-gray-600">{linked.issue_title}</p>
+                                <p className="text-xs text-secondary">{linked.issue_title}</p>
                               </div>
                             </div>
                             <div className="flex items-center space-x-2">
-                              <span className="text-xs text-gray-500">{linked.relationship_type}</span>
+                              <span className="text-xs text-muted">{linked.relationship_type}</span>
                               <button
                                 onClick={() => handleUnlinkIssue(linked.issue_id)}
-                                className="text-gray-400 hover:text-red-500"
+                                className="text-muted hover:text-error"
                                 disabled={unlinkIssue.isPending}
                               >
                                 <X className="h-4 w-4" />
@@ -874,7 +874,7 @@ export default function ProblemDetailPage() {
                         ))}
                       </div>
                     ) : (
-                      <p className="text-sm text-gray-500">No linked issues</p>
+                      <p className="text-sm text-muted">No linked issues</p>
                     )}
                   </div>
                 )}
@@ -885,26 +885,26 @@ export default function ProblemDetailPage() {
                       history.map((entry: { id: string; from_status: string; to_status: string; reason?: string; changed_by_name?: string; changed_at: string }) => (
                         <div key={entry.id} className="flex space-x-3">
                           <div className="flex-shrink-0">
-                            <Clock className="h-4 w-4 text-gray-400 mt-1" />
+                            <Clock className="h-4 w-4 text-muted mt-1" />
                           </div>
                           <div className="flex-1">
-                            <p className="text-sm text-gray-900">
+                            <p className="text-sm text-foreground">
                               Status changed from{' '}
                               <span className="font-medium">{statusLabels[entry.from_status] || entry.from_status}</span>
                               {' '}to{' '}
                               <span className="font-medium">{statusLabels[entry.to_status] || entry.to_status}</span>
                             </p>
                             {entry.reason && (
-                              <p className="text-xs text-gray-600 mt-1">Reason: {entry.reason}</p>
+                              <p className="text-xs text-secondary mt-1">Reason: {entry.reason}</p>
                             )}
-                            <p className="text-xs text-gray-500 mt-1">
+                            <p className="text-xs text-muted mt-1">
                               by {entry.changed_by_name || 'System'} - {formatRelativeTime(entry.changed_at)}
                             </p>
                           </div>
                         </div>
                       ))
                     ) : (
-                      <p className="text-sm text-gray-500">No history available</p>
+                      <p className="text-sm text-muted">No history available</p>
                     )}
                   </div>
                 )}
@@ -912,7 +912,7 @@ export default function ProblemDetailPage() {
                 {activeTab === 'kb' && (
                   <div className="space-y-4">
                     <div className="flex justify-between items-center">
-                      <h3 className="text-sm font-medium text-gray-700">Knowledge Base Articles</h3>
+                      <h3 className="text-sm font-medium text-secondary">Knowledge Base Articles</h3>
                       <Button size="sm" variant="outline" onClick={() => setShowLinkKBModal(true)}>
                         <Plus className="h-4 w-4 mr-1" />
                         Link Article
@@ -924,23 +924,23 @@ export default function ProblemDetailPage() {
                           <Link
                             key={article.id}
                             href={`/knowledge-base/${article.id}`}
-                            className="block p-3 border border-gray-200 rounded-lg hover:bg-gray-50"
+                            className="block p-3 border border-border rounded-xl hover:bg-surface-hover"
                           >
                             <div className="flex items-start space-x-3">
-                              <BookOpen className="h-5 w-5 text-blue-500 mt-0.5" />
+                              <BookOpen className="h-5 w-5 text-primary mt-0.5" />
                               <div className="flex-1 min-w-0">
-                                <p className="text-sm font-medium text-blue-600 hover:text-blue-800">
+                                <p className="text-sm font-medium text-primary hover:text-primary">
                                   {article.title}
                                 </p>
                                 {article.summary && (
-                                  <p className="text-xs text-gray-500 mt-1 line-clamp-2">{article.summary}</p>
+                                  <p className="text-xs text-muted mt-1 line-clamp-2">{article.summary}</p>
                                 )}
                                 <div className="flex items-center space-x-2 mt-1">
                                   <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
-                                    article.type === 'troubleshooting' ? 'bg-orange-100 text-orange-800' :
-                                    article.type === 'how_to' ? 'bg-green-100 text-green-800' :
-                                    article.type === 'known_error' ? 'bg-purple-100 text-purple-800' :
-                                    'bg-gray-100 text-gray-800'
+                                    article.type === 'troubleshooting' ? 'bg-warning-subtle text-warning' :
+                                    article.type === 'how_to' ? 'bg-success-subtle text-success' :
+                                    article.type === 'known_error' ? 'bg-primary-subtle text-primary' :
+                                    'bg-background text-foreground'
                                   }`}>
                                     {article.type.replace(/_/g, ' ')}
                                   </span>
@@ -951,7 +951,7 @@ export default function ProblemDetailPage() {
                         ))}
                       </div>
                     ) : (
-                      <p className="text-sm text-gray-500">No linked KB articles. Link articles to document solutions for this problem.</p>
+                      <p className="text-sm text-muted">No linked KB articles. Link articles to document solutions for this problem.</p>
                     )}
                   </div>
                 )}
@@ -960,7 +960,7 @@ export default function ProblemDetailPage() {
                   <div className="space-y-8">
                     {/* RCA Success/Error Feedback */}
                     {rcaSaveSuccess && (
-                      <div className="flex items-center gap-2 p-3 text-sm text-green-800 bg-green-100 rounded-md">
+                      <div className="flex items-center gap-2 p-3 text-sm text-success bg-success-subtle rounded-md">
                         <CheckCircle className="h-4 w-4" />
                         {rcaSaveSuccess}
                       </div>
@@ -970,8 +970,8 @@ export default function ProblemDetailPage() {
                     <div className="space-y-4">
                       <div className="flex items-center justify-between">
                         <div className="flex items-center space-x-2">
-                          <Search className="h-5 w-5 text-blue-600" />
-                          <h3 className="text-lg font-semibold text-gray-900">5 Whys Analysis</h3>
+                          <Search className="h-5 w-5 text-primary" />
+                          <h3 className="text-lg font-semibold text-foreground">5 Whys Analysis</h3>
                         </div>
                         <Button
                           size="sm"
@@ -986,19 +986,19 @@ export default function ProblemDetailPage() {
                           Save 5 Whys
                         </Button>
                       </div>
-                      <p className="text-sm text-gray-500">
+                      <p className="text-sm text-muted">
                         Ask &quot;Why?&quot; repeatedly to drill down to the root cause of the problem.
                       </p>
                       <div className="space-y-4">
                         {fiveWhys.map((entry, index) => (
-                          <div key={index} className="bg-gray-50 rounded-lg p-4 border border-gray-200">
+                          <div key={index} className="bg-surface-hover rounded-xl p-4 border border-border">
                             <div className="flex items-start space-x-3">
-                              <div className="flex-shrink-0 w-8 h-8 rounded-full bg-blue-600 text-white flex items-center justify-center text-sm font-bold">
+                              <div className="flex-shrink-0 w-8 h-8 rounded-full bg-primary text-white flex items-center justify-center text-sm font-bold">
                                 {index + 1}
                               </div>
                               <div className="flex-1 space-y-3">
                                 <div>
-                                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                                  <label className="block text-sm font-medium text-secondary mb-1">
                                     Why? (Question {index + 1})
                                   </label>
                                   <Input
@@ -1009,7 +1009,7 @@ export default function ProblemDetailPage() {
                                   />
                                 </div>
                                 <div>
-                                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                                  <label className="block text-sm font-medium text-secondary mb-1">
                                     Answer
                                   </label>
                                   <textarea
@@ -1017,7 +1017,7 @@ export default function ProblemDetailPage() {
                                     onChange={(e) => handleFiveWhyChange(index, 'answer', e.target.value)}
                                     placeholder="Enter the answer to this Why question..."
                                     rows={2}
-                                    className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+                                    className="w-full px-3 py-2 border border-border-strong rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 resize-none"
                                   />
                                 </div>
                               </div>
@@ -1028,11 +1028,11 @@ export default function ProblemDetailPage() {
                     </div>
 
                     {/* Fishbone Diagram Section */}
-                    <div className="space-y-4 pt-6 border-t border-gray-200">
+                    <div className="space-y-4 pt-6 border-t border-border">
                       <div className="flex items-center justify-between">
                         <div className="flex items-center space-x-2">
-                          <GitBranch className="h-5 w-5 text-purple-600" />
-                          <h3 className="text-lg font-semibold text-gray-900">Fishbone Diagram (Ishikawa)</h3>
+                          <GitBranch className="h-5 w-5 text-info" />
+                          <h3 className="text-lg font-semibold text-foreground">Fishbone Diagram (Ishikawa)</h3>
                         </div>
                         <Button
                           size="sm"
@@ -1047,17 +1047,17 @@ export default function ProblemDetailPage() {
                           Save Fishbone
                         </Button>
                       </div>
-                      <p className="text-sm text-gray-500">
+                      <p className="text-sm text-muted">
                         Categorize potential causes of the problem across different dimensions.
                       </p>
 
                       {/* Fishbone Visual Representation */}
-                      <div className="bg-gray-50 rounded-lg p-6 border border-gray-200">
+                      <div className="bg-surface-hover rounded-xl p-6 border border-border">
                         {/* Main spine with effect */}
                         <div className="flex items-center justify-center mb-6">
-                          <div className="flex-1 h-1 bg-gray-400"></div>
-                          <div className="px-4 py-2 bg-red-100 border-2 border-red-400 rounded-lg">
-                            <span className="font-semibold text-red-800">Problem: {problem?.title || 'Effect'}</span>
+                          <div className="flex-1 h-1 bg-border-strong"></div>
+                          <div className="px-4 py-2 bg-error-subtle border-2 border-red-400 rounded-xl">
+                            <span className="font-semibold text-error">Problem: {problem?.title || 'Effect'}</span>
                           </div>
                         </div>
 
@@ -1066,7 +1066,7 @@ export default function ProblemDetailPage() {
                           {FISHBONE_CATEGORIES.map((category) => (
                             <div
                               key={category.key}
-                              className={`p-4 rounded-lg border ${category.color}`}
+                              className={`p-4 rounded-xl border ${category.color}`}
                             >
                               <h4 className="font-semibold mb-3">{category.label}</h4>
 
@@ -1075,12 +1075,12 @@ export default function ProblemDetailPage() {
                                 {fishbone[category.key as keyof FishboneDiagram]?.map((cause, index) => (
                                   <div
                                     key={index}
-                                    className="flex items-center justify-between bg-white rounded px-3 py-1.5 text-sm"
+                                    className="flex items-center justify-between bg-surface rounded px-3 py-1.5 text-sm"
                                   >
-                                    <span className="text-gray-800">{cause}</span>
+                                    <span className="text-foreground">{cause}</span>
                                     <button
                                       onClick={() => handleRemoveCause(category.key as keyof FishboneDiagram, index)}
-                                      className="text-gray-400 hover:text-red-500 ml-2"
+                                      className="text-muted hover:text-error ml-2"
                                     >
                                       <Trash2 className="h-3.5 w-3.5" />
                                     </button>
@@ -1103,7 +1103,7 @@ export default function ProblemDetailPage() {
                                     }
                                   }}
                                   placeholder="Add cause..."
-                                  className="flex-1 h-8 text-sm bg-white"
+                                  className="flex-1 h-8 text-sm bg-surface"
                                 />
                                 <Button
                                   size="sm"
@@ -1121,11 +1121,11 @@ export default function ProblemDetailPage() {
                     </div>
 
                     {/* RCA Summary */}
-                    <div className="space-y-4 pt-6 border-t border-gray-200">
+                    <div className="space-y-4 pt-6 border-t border-border">
                       <div className="flex items-center justify-between">
                         <div className="flex items-center space-x-2">
-                          <FileSearch className="h-5 w-5 text-green-600" />
-                          <h3 className="text-lg font-semibold text-gray-900">Analysis Summary</h3>
+                          <FileSearch className="h-5 w-5 text-success" />
+                          <h3 className="text-lg font-semibold text-foreground">Analysis Summary</h3>
                         </div>
                         <Button
                           size="sm"
@@ -1145,10 +1145,10 @@ export default function ProblemDetailPage() {
                         onChange={(e) => setRcaSummary(e.target.value)}
                         placeholder="Summarize the root cause analysis findings and recommended actions..."
                         rows={4}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+                        className="w-full px-3 py-2 border border-border-strong rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 resize-none"
                       />
                       {problem?.rca_data?.analysisDate && (
-                        <p className="text-xs text-gray-500">
+                        <p className="text-xs text-muted">
                           Last updated: {formatDate(problem.rca_data.analysisDate)}
                         </p>
                       )}
@@ -1163,17 +1163,17 @@ export default function ProblemDetailPage() {
         {/* Sidebar */}
         <div className="space-y-6">
           {/* Details Card */}
-          <div className="bg-white rounded-lg shadow p-6">
-            <h2 className="text-lg font-semibold text-gray-900 mb-4">Details</h2>
+          <div className="bg-surface rounded-xl shadow-sm p-6">
+            <h2 className="text-lg font-semibold text-foreground mb-4">Details</h2>
             <dl className="space-y-4">
               {isEditing ? (
                 <>
                   <div>
-                    <dt className="text-sm font-medium text-gray-500">Priority</dt>
+                    <dt className="text-sm font-medium text-muted">Priority</dt>
                     <select
                       value={editForm.priority}
                       onChange={(e) => setEditForm({ ...editForm, priority: e.target.value as 'critical' | 'high' | 'medium' | 'low' })}
-                      className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="mt-1 w-full px-3 py-2 border border-border-strong rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
                     >
                       <option value="critical">Critical</option>
                       <option value="high">High</option>
@@ -1182,11 +1182,11 @@ export default function ProblemDetailPage() {
                     </select>
                   </div>
                   <div>
-                    <dt className="text-sm font-medium text-gray-500">Impact</dt>
+                    <dt className="text-sm font-medium text-muted">Impact</dt>
                     <select
                       value={editForm.impact}
                       onChange={(e) => setEditForm({ ...editForm, impact: e.target.value as '' | 'widespread' | 'significant' | 'moderate' | 'minor' })}
-                      className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="mt-1 w-full px-3 py-2 border border-border-strong rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
                     >
                       <option value="">Select impact...</option>
                       <option value="widespread">Widespread</option>
@@ -1196,11 +1196,11 @@ export default function ProblemDetailPage() {
                     </select>
                   </div>
                   <div>
-                    <dt className="text-sm font-medium text-gray-500">Urgency</dt>
+                    <dt className="text-sm font-medium text-muted">Urgency</dt>
                     <select
                       value={editForm.urgency}
                       onChange={(e) => setEditForm({ ...editForm, urgency: e.target.value as '' | 'immediate' | 'high' | 'medium' | 'low' })}
-                      className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="mt-1 w-full px-3 py-2 border border-border-strong rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
                     >
                       <option value="">Select urgency...</option>
                       <option value="immediate">Immediate</option>
@@ -1210,11 +1210,11 @@ export default function ProblemDetailPage() {
                     </select>
                   </div>
                   <div>
-                    <dt className="text-sm font-medium text-gray-500">Assigned To</dt>
+                    <dt className="text-sm font-medium text-muted">Assigned To</dt>
                     <select
                       value={editForm.assignedTo}
                       onChange={(e) => setEditForm({ ...editForm, assignedTo: e.target.value })}
-                      className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="mt-1 w-full px-3 py-2 border border-border-strong rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
                     >
                       <option value="">Unassigned</option>
                       {users.map((user: { id: string; name: string }) => (
@@ -1223,11 +1223,11 @@ export default function ProblemDetailPage() {
                     </select>
                   </div>
                   <div>
-                    <dt className="text-sm font-medium text-gray-500">Assignment Group</dt>
+                    <dt className="text-sm font-medium text-muted">Assignment Group</dt>
                     <select
                       value={editForm.assignedGroup}
                       onChange={(e) => setEditForm({ ...editForm, assignedGroup: e.target.value })}
-                      className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="mt-1 w-full px-3 py-2 border border-border-strong rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
                     >
                       <option value="">Select group...</option>
                       {groups.map((group: { id: string; name: string }) => (
@@ -1236,11 +1236,11 @@ export default function ProblemDetailPage() {
                     </select>
                   </div>
                   <div>
-                    <dt className="text-sm font-medium text-gray-500">Application</dt>
+                    <dt className="text-sm font-medium text-muted">Application</dt>
                     <select
                       value={editForm.applicationId}
                       onChange={(e) => setEditForm({ ...editForm, applicationId: e.target.value })}
-                      className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="mt-1 w-full px-3 py-2 border border-border-strong rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
                     >
                       <option value="">Select application...</option>
                       {applications.map((app: { id: string; name: string }) => (
@@ -1252,33 +1252,33 @@ export default function ProblemDetailPage() {
               ) : (
                 <>
                   <div>
-                    <dt className="text-sm font-medium text-gray-500">Assigned To</dt>
+                    <dt className="text-sm font-medium text-muted">Assigned To</dt>
                     <dd className="mt-1">
                       {problem.assignee_name ? (
                         <div className="flex items-center">
-                          <div className="h-8 w-8 rounded-full bg-gray-200 flex items-center justify-center text-sm font-medium text-gray-600">
+                          <div className="h-8 w-8 rounded-full bg-surface-hover flex items-center justify-center text-sm font-medium text-secondary">
                             {problem.assignee_name.charAt(0)}
                           </div>
                           <div className="ml-2">
-                            <p className="text-sm font-medium text-gray-900">
+                            <p className="text-sm font-medium text-foreground">
                               {problem.assignee_name}
                             </p>
                             {problem.assignee_email && (
-                              <p className="text-xs text-gray-500">{problem.assignee_email}</p>
+                              <p className="text-xs text-muted">{problem.assignee_email}</p>
                             )}
                           </div>
                         </div>
                       ) : (
-                        <span className="text-sm text-gray-500 italic">Unassigned</span>
+                        <span className="text-sm text-muted italic">Unassigned</span>
                       )}
                     </dd>
                   </div>
 
                   <div>
-                    <dt className="text-sm font-medium text-gray-500">Problem Type</dt>
+                    <dt className="text-sm font-medium text-muted">Problem Type</dt>
                     <dd className="mt-1">
                       <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                        problem.problem_type === 'proactive' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                        problem.problem_type === 'proactive' ? 'bg-success-subtle text-success' : 'bg-error-subtle text-error'
                       }`}>
                         {problem.problem_type === 'proactive' ? 'Proactive' : 'Reactive'}
                       </span>
@@ -1286,12 +1286,12 @@ export default function ProblemDetailPage() {
                   </div>
 
                   <div>
-                    <dt className="text-sm font-medium text-gray-500">Application</dt>
-                    <dd className="mt-1 text-sm text-gray-900">
+                    <dt className="text-sm font-medium text-muted">Application</dt>
+                    <dd className="mt-1 text-sm text-foreground">
                       {problem.application_id && problem.application_name ? (
                         <Link
                           href={`/applications/${problem.application_id}`}
-                          className="text-blue-600 hover:text-blue-800"
+                          className="text-primary hover:text-primary"
                         >
                           {problem.application_name}
                         </Link>
@@ -1301,8 +1301,8 @@ export default function ProblemDetailPage() {
                     </dd>
                   </div>
 
-                  <div className="border-t border-gray-200 pt-4">
-                    <dt className="text-sm font-medium text-gray-500">Priority</dt>
+                  <div className="border-t border-border pt-4">
+                    <dt className="text-sm font-medium text-muted">Priority</dt>
                     <dd className="mt-1">
                       <span
                         className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${priorityColor.bg} ${priorityColor.text}`}
@@ -1314,21 +1314,21 @@ export default function ProblemDetailPage() {
 
                   {problem.impact && (
                     <div>
-                      <dt className="text-sm font-medium text-gray-500">Impact</dt>
-                      <dd className="mt-1 text-sm text-gray-900 capitalize">{problem.impact}</dd>
+                      <dt className="text-sm font-medium text-muted">Impact</dt>
+                      <dd className="mt-1 text-sm text-foreground capitalize">{problem.impact}</dd>
                     </div>
                   )}
 
                   {problem.urgency && (
                     <div>
-                      <dt className="text-sm font-medium text-gray-500">Urgency</dt>
-                      <dd className="mt-1 text-sm text-gray-900 capitalize">{problem.urgency}</dd>
+                      <dt className="text-sm font-medium text-muted">Urgency</dt>
+                      <dd className="mt-1 text-sm text-foreground capitalize">{problem.urgency}</dd>
                     </div>
                   )}
 
                   <div>
-                    <dt className="text-sm font-medium text-gray-500">Linked Issues</dt>
-                    <dd className="mt-1 text-sm text-gray-900">{linkedIssues.length} issues</dd>
+                    <dt className="text-sm font-medium text-muted">Linked Issues</dt>
+                    <dd className="mt-1 text-sm text-foreground">{linkedIssues.length} issues</dd>
                   </div>
                 </>
               )}
@@ -1337,27 +1337,27 @@ export default function ProblemDetailPage() {
 
           {/* Timeline Card */}
           {!isEditing && (
-            <div className="bg-white rounded-lg shadow p-6">
-              <h2 className="text-lg font-semibold text-gray-900 mb-4">Timeline</h2>
+            <div className="bg-surface rounded-xl shadow-sm p-6">
+              <h2 className="text-lg font-semibold text-foreground mb-4">Timeline</h2>
               <dl className="space-y-4">
                 <div>
-                  <dt className="text-sm font-medium text-gray-500">Created</dt>
-                  <dd className="mt-1 text-sm text-gray-900">{formatDate(problem.created_at)}</dd>
+                  <dt className="text-sm font-medium text-muted">Created</dt>
+                  <dd className="mt-1 text-sm text-foreground">{formatDate(problem.created_at)}</dd>
                 </div>
                 <div>
-                  <dt className="text-sm font-medium text-gray-500">Last Updated</dt>
-                  <dd className="mt-1 text-sm text-gray-900">{formatDate(problem.updated_at)}</dd>
+                  <dt className="text-sm font-medium text-muted">Last Updated</dt>
+                  <dd className="mt-1 text-sm text-foreground">{formatDate(problem.updated_at)}</dd>
                 </div>
                 {problem.resolved_at && (
                   <div>
-                    <dt className="text-sm font-medium text-gray-500">Resolved</dt>
-                    <dd className="mt-1 text-sm text-gray-900">{formatDate(problem.resolved_at)}</dd>
+                    <dt className="text-sm font-medium text-muted">Resolved</dt>
+                    <dd className="mt-1 text-sm text-foreground">{formatDate(problem.resolved_at)}</dd>
                   </div>
                 )}
                 {problem.closed_at && (
                   <div>
-                    <dt className="text-sm font-medium text-gray-500">Closed</dt>
-                    <dd className="mt-1 text-sm text-gray-900">{formatDate(problem.closed_at)}</dd>
+                    <dt className="text-sm font-medium text-muted">Closed</dt>
+                    <dd className="mt-1 text-sm text-foreground">{formatDate(problem.closed_at)}</dd>
                   </div>
                 )}
               </dl>
@@ -1371,10 +1371,10 @@ export default function ProblemDetailPage() {
         <div className="fixed inset-0 z-50 overflow-y-auto">
           <div className="flex min-h-screen items-center justify-center p-4">
             <div className="fixed inset-0 bg-black bg-opacity-30" onClick={() => setShowAssignModal(false)} />
-            <div className="relative bg-white rounded-lg shadow-xl max-w-md w-full p-6">
+            <div className="relative bg-surface rounded-xl shadow-sm-sm max-w-md w-full p-6">
               <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-semibold text-gray-900">Assign Problem</h3>
-                <button onClick={() => setShowAssignModal(false)} className="text-gray-400 hover:text-gray-500">
+                <h3 className="text-lg font-semibold text-foreground">Assign Problem</h3>
+                <button onClick={() => setShowAssignModal(false)} className="text-muted hover:text-muted">
                   <X className="h-5 w-5" />
                 </button>
               </div>
@@ -1384,14 +1384,14 @@ export default function ProblemDetailPage() {
                     key={user.id}
                     onClick={() => handleAssign(user.id)}
                     disabled={assignProblem.isPending}
-                    className="w-full flex items-center p-3 rounded-lg hover:bg-gray-50 border border-gray-200 text-left"
+                    className="w-full flex items-center p-3 rounded-xl hover:bg-surface-hover border border-border text-left"
                   >
-                    <div className="h-8 w-8 rounded-full bg-blue-500 flex items-center justify-center text-white text-sm font-medium">
+                    <div className="h-8 w-8 rounded-full bg-primary flex items-center justify-center text-white text-sm font-medium">
                       {user.name.charAt(0)}
                     </div>
                     <div className="ml-3">
-                      <p className="text-sm font-medium text-gray-900">{user.name}</p>
-                      <p className="text-xs text-gray-500">{user.email}</p>
+                      <p className="text-sm font-medium text-foreground">{user.name}</p>
+                      <p className="text-xs text-muted">{user.email}</p>
                     </div>
                   </button>
                 ))}
@@ -1406,26 +1406,26 @@ export default function ProblemDetailPage() {
         <div className="fixed inset-0 z-50 overflow-y-auto">
           <div className="flex min-h-screen items-center justify-center p-4">
             <div className="fixed inset-0 bg-black bg-opacity-30" onClick={() => setShowLinkIssueModal(false)} />
-            <div className="relative bg-white rounded-lg shadow-xl max-w-md w-full p-6">
+            <div className="relative bg-surface rounded-xl shadow-sm-sm max-w-md w-full p-6">
               <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-semibold text-gray-900">Link Issue</h3>
-                <button onClick={() => setShowLinkIssueModal(false)} className="text-gray-400 hover:text-gray-500">
+                <h3 className="text-lg font-semibold text-foreground">Link Issue</h3>
+                <button onClick={() => setShowLinkIssueModal(false)} className="text-muted hover:text-muted">
                   <X className="h-5 w-5" />
                 </button>
               </div>
-              <p className="text-sm text-gray-500 mb-4">Select an issue to link to this problem:</p>
+              <p className="text-sm text-muted mb-4">Select an issue to link to this problem:</p>
               <div className="max-h-64 overflow-y-auto space-y-2">
                 {allIssues.filter((issue: { id: string }) => !linkedIssues.some((li: LinkedIssue) => li.issue_id === issue.id)).map((issue: { id: string; issue_number: string; title: string; status: string }) => (
                   <button
                     key={issue.id}
                     onClick={() => handleLinkIssue(issue.id)}
                     disabled={linkIssue.isPending}
-                    className="w-full flex items-center p-3 rounded-lg hover:bg-gray-50 border border-gray-200 text-left"
+                    className="w-full flex items-center p-3 rounded-xl hover:bg-surface-hover border border-border text-left"
                   >
-                    <AlertTriangle className="h-4 w-4 text-yellow-500 mr-3" />
+                    <AlertTriangle className="h-4 w-4 text-warning mr-3" />
                     <div>
-                      <p className="text-sm font-medium text-gray-900">{issue.issue_number}</p>
-                      <p className="text-xs text-gray-600">{issue.title}</p>
+                      <p className="text-sm font-medium text-foreground">{issue.issue_number}</p>
+                      <p className="text-xs text-secondary">{issue.title}</p>
                     </div>
                   </button>
                 ))}
@@ -1440,10 +1440,10 @@ export default function ProblemDetailPage() {
         <div className="fixed inset-0 z-50 overflow-y-auto">
           <div className="flex min-h-screen items-center justify-center p-4">
             <div className="fixed inset-0 bg-black bg-opacity-30" onClick={() => setShowRootCauseModal(false)} />
-            <div className="relative bg-white rounded-lg shadow-xl max-w-lg w-full p-6">
+            <div className="relative bg-surface rounded-xl shadow-sm-sm max-w-lg w-full p-6">
               <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-semibold text-gray-900">Document Root Cause</h3>
-                <button onClick={() => setShowRootCauseModal(false)} className="text-gray-400 hover:text-gray-500">
+                <h3 className="text-lg font-semibold text-foreground">Document Root Cause</h3>
+                <button onClick={() => setShowRootCauseModal(false)} className="text-muted hover:text-muted">
                   <X className="h-5 w-5" />
                 </button>
               </div>
@@ -1452,7 +1452,7 @@ export default function ProblemDetailPage() {
                 onChange={(e) => setRootCause(e.target.value)}
                 placeholder="Describe the root cause of this problem..."
                 rows={6}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+                className="w-full px-3 py-2 border border-border-strong rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 resize-none"
               />
               <div className="mt-4 flex justify-end space-x-2">
                 <Button variant="outline" onClick={() => setShowRootCauseModal(false)}>Cancel</Button>
@@ -1470,10 +1470,10 @@ export default function ProblemDetailPage() {
         <div className="fixed inset-0 z-50 overflow-y-auto">
           <div className="flex min-h-screen items-center justify-center p-4">
             <div className="fixed inset-0 bg-black bg-opacity-30" onClick={() => setShowWorkaroundModal(false)} />
-            <div className="relative bg-white rounded-lg shadow-xl max-w-lg w-full p-6">
+            <div className="relative bg-surface rounded-xl shadow-sm-sm max-w-lg w-full p-6">
               <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-semibold text-gray-900">Document Workaround</h3>
-                <button onClick={() => setShowWorkaroundModal(false)} className="text-gray-400 hover:text-gray-500">
+                <h3 className="text-lg font-semibold text-foreground">Document Workaround</h3>
+                <button onClick={() => setShowWorkaroundModal(false)} className="text-muted hover:text-muted">
                   <X className="h-5 w-5" />
                 </button>
               </div>
@@ -1482,7 +1482,7 @@ export default function ProblemDetailPage() {
                 onChange={(e) => setWorkaround(e.target.value)}
                 placeholder="Describe the temporary workaround..."
                 rows={6}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+                className="w-full px-3 py-2 border border-border-strong rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 resize-none"
               />
               <div className="mt-4 flex justify-end space-x-2">
                 <Button variant="outline" onClick={() => setShowWorkaroundModal(false)}>Cancel</Button>
@@ -1500,29 +1500,29 @@ export default function ProblemDetailPage() {
         <div className="fixed inset-0 z-50 overflow-y-auto">
           <div className="flex min-h-screen items-center justify-center p-4">
             <div className="fixed inset-0 bg-black bg-opacity-30" onClick={() => setShowLinkKBModal(false)} />
-            <div className="relative bg-white rounded-lg shadow-xl max-w-lg w-full p-6">
+            <div className="relative bg-surface rounded-xl shadow-sm-sm max-w-lg w-full p-6">
               <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-semibold text-gray-900">Link Knowledge Base Article</h3>
+                <h3 className="text-lg font-semibold text-foreground">Link Knowledge Base Article</h3>
                 <button
                   onClick={() => setShowLinkKBModal(false)}
-                  className="text-gray-400 hover:text-gray-500"
+                  className="text-muted hover:text-muted"
                 >
                   <X className="h-5 w-5" />
                 </button>
               </div>
-              <p className="text-sm text-gray-500 mb-4">
+              <p className="text-sm text-muted mb-4">
                 Link a published KB article to document solutions for this problem.
               </p>
 
               <div className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-secondary mb-1">
                     Select Article
                   </label>
                   <select
                     value={selectedKBArticleId}
                     onChange={(e) => setSelectedKBArticleId(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-3 py-2 border border-border-strong rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
                   >
                     <option value="">Choose an article...</option>
                     {allKBArticles
@@ -1534,8 +1534,8 @@ export default function ProblemDetailPage() {
                       ))}
                   </select>
                   {allKBArticles.length === 0 && (
-                    <p className="mt-1 text-xs text-gray-500">
-                      No published articles found. <Link href="/knowledge-base/new" className="text-blue-600 hover:text-blue-800">Create a new article</Link>
+                    <p className="mt-1 text-xs text-muted">
+                      No published articles found. <Link href="/knowledge-base/new" className="text-primary hover:text-primary">Create a new article</Link>
                     </p>
                   )}
                 </div>

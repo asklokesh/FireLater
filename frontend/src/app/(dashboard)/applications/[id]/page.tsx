@@ -21,36 +21,36 @@ import { Button } from '@/components/ui/button';
 import { useApplication, useApplicationHealth, useIssues, useChanges } from '@/hooks/useApi';
 
 const statusColors: Record<string, { bg: string; text: string; label: string }> = {
-  active: { bg: 'bg-green-100', text: 'text-green-800', label: 'Active' },
-  inactive: { bg: 'bg-gray-100', text: 'text-gray-800', label: 'Inactive' },
-  deprecated: { bg: 'bg-red-100', text: 'text-red-800', label: 'Deprecated' },
-  operational: { bg: 'bg-green-100', text: 'text-green-800', label: 'Operational' },
-  degraded: { bg: 'bg-yellow-100', text: 'text-yellow-800', label: 'Degraded' },
-  partial_outage: { bg: 'bg-orange-100', text: 'text-orange-800', label: 'Partial Outage' },
-  major_outage: { bg: 'bg-red-100', text: 'text-red-800', label: 'Major Outage' },
-  maintenance: { bg: 'bg-blue-100', text: 'text-blue-800', label: 'Maintenance' },
+  active: { bg: 'bg-success-subtle', text: 'text-success', label: 'Active' },
+  inactive: { bg: 'bg-background', text: 'text-secondary', label: 'Inactive' },
+  deprecated: { bg: 'bg-error-subtle', text: 'text-error', label: 'Deprecated' },
+  operational: { bg: 'bg-success-subtle', text: 'text-success', label: 'Operational' },
+  degraded: { bg: 'bg-warning-subtle', text: 'text-warning', label: 'Degraded' },
+  partial_outage: { bg: 'bg-warning-subtle', text: 'text-warning', label: 'Partial Outage' },
+  major_outage: { bg: 'bg-error-subtle', text: 'text-error', label: 'Major Outage' },
+  maintenance: { bg: 'bg-primary-subtle', text: 'text-primary', label: 'Maintenance' },
 };
 
 const criticalityColors: Record<string, { bg: string; text: string }> = {
-  critical: { bg: 'bg-red-100', text: 'text-red-800' },
-  high: { bg: 'bg-orange-100', text: 'text-orange-800' },
-  medium: { bg: 'bg-yellow-100', text: 'text-yellow-800' },
-  low: { bg: 'bg-blue-100', text: 'text-blue-800' },
+  critical: { bg: 'bg-error-subtle', text: 'text-error' },
+  high: { bg: 'bg-warning-subtle', text: 'text-warning' },
+  medium: { bg: 'bg-warning-subtle', text: 'text-warning' },
+  low: { bg: 'bg-primary-subtle', text: 'text-primary' },
 };
 
 const stateColors: Record<string, { bg: string; text: string }> = {
-  new: { bg: 'bg-blue-100', text: 'text-blue-800' },
-  in_progress: { bg: 'bg-yellow-100', text: 'text-yellow-800' },
-  pending: { bg: 'bg-purple-100', text: 'text-purple-800' },
-  resolved: { bg: 'bg-green-100', text: 'text-green-800' },
-  scheduled: { bg: 'bg-blue-100', text: 'text-blue-800' },
+  new: { bg: 'bg-primary-subtle', text: 'text-primary' },
+  in_progress: { bg: 'bg-warning-subtle', text: 'text-warning' },
+  pending: { bg: 'bg-primary-subtle', text: 'text-primary' },
+  resolved: { bg: 'bg-success-subtle', text: 'text-success' },
+  scheduled: { bg: 'bg-primary-subtle', text: 'text-primary' },
 };
 
 const getHealthScoreColor = (score: number) => {
-  if (score >= 90) return 'text-green-600';
-  if (score >= 70) return 'text-yellow-600';
-  if (score >= 50) return 'text-orange-600';
-  return 'text-red-600';
+  if (score >= 90) return 'text-success';
+  if (score >= 70) return 'text-warning';
+  if (score >= 50) return 'text-warning';
+  return 'text-error';
 };
 
 export default function ApplicationDetailPage() {
@@ -87,7 +87,7 @@ export default function ApplicationDetailPage() {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <Loader2 className="h-8 w-8 animate-spin text-blue-500" />
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
       </div>
     );
   }
@@ -95,9 +95,9 @@ export default function ApplicationDetailPage() {
   if (error || !app) {
     return (
       <div className="flex flex-col items-center justify-center h-64">
-        <AlertCircle className="h-12 w-12 text-red-500 mb-4" />
-        <h2 className="text-xl font-semibold text-gray-900 mb-2">Application not found</h2>
-        <p className="text-gray-500 mb-4">The application you&apos;re looking for doesn&apos;t exist or you don&apos;t have access to it.</p>
+        <AlertCircle className="h-12 w-12 text-error mb-4" />
+        <h2 className="text-xl font-semibold text-foreground mb-2">Application not found</h2>
+        <p className="text-muted mb-4">The application you&apos;re looking for doesn&apos;t exist or you don&apos;t have access to it.</p>
         <Button onClick={() => router.push('/applications')}>Back to Applications</Button>
       </div>
     );
@@ -116,29 +116,29 @@ export default function ApplicationDetailPage() {
         <div className="flex items-center space-x-4">
           <button
             onClick={() => router.back()}
-            className="p-2 hover:bg-gray-100 rounded-md"
+            className="p-2 hover:bg-surface-hover rounded-md"
           >
-            <ArrowLeft className="h-5 w-5 text-gray-500" />
+            <ArrowLeft className="h-5 w-5 text-secondary" />
           </button>
-          <div className="h-12 w-12 rounded-lg bg-blue-100 flex items-center justify-center">
-            <Server className="h-6 w-6 text-blue-600" />
+          <div className="h-12 w-12 rounded-lg bg-primary-subtle flex items-center justify-center">
+            <Server className="h-6 w-6 text-primary" />
           </div>
           <div>
             <div className="flex items-center space-x-3">
-              <h1 className="text-2xl font-bold text-gray-900">{app.name}</h1>
+              <h1 className="text-2xl font-bold text-foreground">{app.name}</h1>
               {app.criticality && (
                 <span
                   className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                    criticalityColors[app.criticality]?.bg || 'bg-gray-100'
-                  } ${criticalityColors[app.criticality]?.text || 'text-gray-800'}`}
+                    criticalityColors[app.criticality]?.bg || 'bg-background'
+                  } ${criticalityColors[app.criticality]?.text || 'text-secondary'}`}
                 >
                   {app.criticality.charAt(0).toUpperCase() + app.criticality.slice(1)}
                 </span>
               )}
               <span
                 className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                  statusColors[status]?.bg || 'bg-gray-100'
-                } ${statusColors[status]?.text || 'text-gray-800'}`}
+                  statusColors[status]?.bg || 'bg-background'
+                } ${statusColors[status]?.text || 'text-secondary'}`}
               >
                 {status === 'active' && <CheckCircle className="h-3 w-3 mr-1" />}
                 {status === 'deprecated' && <AlertTriangle className="h-3 w-3 mr-1" />}
@@ -161,11 +161,11 @@ export default function ApplicationDetailPage() {
       </div>
 
       {/* Health Score Banner */}
-      <div className="bg-white rounded-lg shadow p-6">
+      <div className="bg-surface rounded-lg shadow-sm p-6">
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-6">
             <div>
-              <p className="text-sm text-gray-500">Health Score</p>
+              <p className="text-sm text-muted">Health Score</p>
               <div className="flex items-center">
                 <span className={`text-4xl font-bold ${getHealthScoreColor(healthScore)}`}>
                   {healthScore}%
@@ -173,7 +173,7 @@ export default function ApplicationDetailPage() {
                 {healthTrend !== 0 && (
                   <span
                     className={`ml-2 flex items-center text-sm ${
-                      healthTrend > 0 ? 'text-green-600' : 'text-red-600'
+                      healthTrend > 0 ? 'text-success' : 'text-error'
                     }`}
                   >
                     {healthTrend > 0 ? (
@@ -186,16 +186,16 @@ export default function ApplicationDetailPage() {
                 )}
               </div>
             </div>
-            <div className="h-12 border-l border-gray-200" />
+            <div className="h-12 border-l border-border" />
             <div>
-              <p className="text-sm text-gray-500">Open Issues</p>
-              <p className="text-2xl font-semibold text-gray-900">
+              <p className="text-sm text-muted">Open Issues</p>
+              <p className="text-2xl font-semibold text-foreground">
                 {openIssueCount}
               </p>
             </div>
             <div>
-              <p className="text-sm text-gray-500">Pending Changes</p>
-              <p className="text-2xl font-semibold text-gray-900">{relatedChanges.length}</p>
+              <p className="text-sm text-muted">Pending Changes</p>
+              <p className="text-2xl font-semibold text-foreground">{relatedChanges.length}</p>
             </div>
           </div>
           <div className="flex space-x-2">
@@ -210,7 +210,7 @@ export default function ApplicationDetailPage() {
       </div>
 
       {/* Tabs */}
-      <div className="border-b border-gray-200">
+      <div className="border-b border-border">
         <nav className="-mb-px flex space-x-8">
           {['overview', 'issues', 'changes', 'health'].map((tab) => (
             <button
@@ -218,8 +218,8 @@ export default function ApplicationDetailPage() {
               onClick={() => setActiveTab(tab as typeof activeTab)}
               className={`py-4 px-1 border-b-2 font-medium text-sm capitalize ${
                 activeTab === tab
-                  ? 'border-blue-500 text-blue-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                  ? 'border-primary text-primary'
+                  : 'border-transparent text-muted hover:text-secondary hover:border-border'
               }`}
             >
               {tab}
@@ -232,20 +232,20 @@ export default function ApplicationDetailPage() {
       {activeTab === 'overview' && (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="lg:col-span-2 space-y-6">
-            <div className="bg-white rounded-lg shadow p-6">
-              <h2 className="text-lg font-semibold text-gray-900 mb-4">Description</h2>
-              <p className="text-gray-700">{app.description}</p>
+            <div className="bg-surface rounded-lg shadow-sm p-6">
+              <h2 className="text-lg font-semibold text-foreground mb-4">Description</h2>
+              <p className="text-secondary">{app.description}</p>
             </div>
 
             {app.metadata && (app.metadata as Record<string, string>).url && (
-              <div className="bg-white rounded-lg shadow p-6">
-                <h2 className="text-lg font-semibold text-gray-900 mb-4">Quick Links</h2>
+              <div className="bg-surface rounded-lg shadow-sm p-6">
+                <h2 className="text-lg font-semibold text-foreground mb-4">Quick Links</h2>
                 <div className="space-y-3">
                   <a
                     href={(app.metadata as Record<string, string>).url}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="flex items-center text-blue-600 hover:text-blue-800"
+                    className="flex items-center text-primary hover:text-primary-hover"
                   >
                     <ExternalLink className="h-4 w-4 mr-2" />
                     Application URL
@@ -256,41 +256,41 @@ export default function ApplicationDetailPage() {
           </div>
 
           <div className="space-y-6">
-            <div className="bg-white rounded-lg shadow p-6">
-              <h2 className="text-lg font-semibold text-gray-900 mb-4">Details</h2>
+            <div className="bg-surface rounded-lg shadow-sm p-6">
+              <h2 className="text-lg font-semibold text-foreground mb-4">Details</h2>
               <dl className="space-y-4">
                 {app.owner_user_name && (
                   <div>
-                    <dt className="text-sm font-medium text-gray-500">Owner</dt>
+                    <dt className="text-sm font-medium text-muted">Owner</dt>
                     <dd className="mt-1 flex items-center">
-                      <div className="h-8 w-8 rounded-full bg-gray-200 flex items-center justify-center text-sm font-medium text-gray-600">
+                      <div className="h-8 w-8 rounded-full bg-surface-hover flex items-center justify-center text-sm font-medium text-secondary">
                         {app.owner_user_name.charAt(0)}
                       </div>
                       <div className="ml-2">
-                        <p className="text-sm font-medium text-gray-900">{app.owner_user_name}</p>
-                        {app.owner_user_email && <p className="text-xs text-gray-500">{app.owner_user_email}</p>}
+                        <p className="text-sm font-medium text-foreground">{app.owner_user_name}</p>
+                        {app.owner_user_email && <p className="text-xs text-muted">{app.owner_user_email}</p>}
                       </div>
                     </dd>
                   </div>
                 )}
                 {app.support_group_name && (
                   <div>
-                    <dt className="text-sm font-medium text-gray-500">Support Group</dt>
-                    <dd className="mt-1 flex items-center text-sm text-gray-900">
-                      <Users className="h-4 w-4 mr-2 text-gray-400" />
+                    <dt className="text-sm font-medium text-muted">Support Group</dt>
+                    <dd className="mt-1 flex items-center text-sm text-foreground">
+                      <Users className="h-4 w-4 mr-2 text-muted" />
                       {app.support_group_name}
                     </dd>
                   </div>
                 )}
                 {app.lifecycle_stage && (
                   <div>
-                    <dt className="text-sm font-medium text-gray-500">Lifecycle Stage</dt>
-                    <dd className="mt-1 text-sm text-gray-900 capitalize">{app.lifecycle_stage.replace('_', ' ')}</dd>
+                    <dt className="text-sm font-medium text-muted">Lifecycle Stage</dt>
+                    <dd className="mt-1 text-sm text-foreground capitalize">{app.lifecycle_stage.replace('_', ' ')}</dd>
                   </div>
                 )}
                 <div>
-                  <dt className="text-sm font-medium text-gray-500">Last Updated</dt>
-                  <dd className="mt-1 text-sm text-gray-900">{formatDate(app.updated_at)}</dd>
+                  <dt className="text-sm font-medium text-muted">Last Updated</dt>
+                  <dd className="mt-1 text-sm text-foreground">{formatDate(app.updated_at)}</dd>
                 </div>
               </dl>
             </div>
@@ -299,30 +299,30 @@ export default function ApplicationDetailPage() {
       )}
 
       {activeTab === 'issues' && (
-        <div className="bg-white rounded-lg shadow overflow-hidden">
-          <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
-            <h2 className="text-lg font-semibold text-gray-900">Related Issues</h2>
+        <div className="bg-surface rounded-lg shadow-sm overflow-hidden">
+          <div className="px-6 py-4 border-b border-border flex items-center justify-between">
+            <h2 className="text-lg font-semibold text-foreground">Related Issues</h2>
             <Link href={`/issues/new?application=${params.id}`}>
               <Button size="sm">New Issue</Button>
             </Link>
           </div>
           {relatedIssues.length > 0 ? (
-            <ul className="divide-y divide-gray-200">
+            <ul className="divide-y divide-border">
               {relatedIssues.map((issue: { id: string; number: string; short_description: string; state: string }) => (
                 <li key={issue.id}>
                   <Link
                     href={`/issues/${issue.id}`}
-                    className="block hover:bg-gray-50 px-6 py-4"
+                    className="block hover:bg-surface-hover px-6 py-4"
                   >
                     <div className="flex items-center justify-between">
                       <div>
-                        <p className="text-sm font-medium text-blue-600">{issue.number}</p>
-                        <p className="text-sm text-gray-900 mt-1">{issue.short_description}</p>
+                        <p className="text-sm font-medium text-primary">{issue.number}</p>
+                        <p className="text-sm text-foreground mt-1">{issue.short_description}</p>
                       </div>
                       <span
                         className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                          stateColors[issue.state]?.bg || 'bg-gray-100'
-                        } ${stateColors[issue.state]?.text || 'text-gray-800'}`}
+                          stateColors[issue.state]?.bg || 'bg-background'
+                        } ${stateColors[issue.state]?.text || 'text-secondary'}`}
                       >
                         {issue.state.replace('_', ' ')}
                       </span>
@@ -333,42 +333,42 @@ export default function ApplicationDetailPage() {
             </ul>
           ) : (
             <div className="text-center py-12">
-              <p className="text-gray-500">No related issues</p>
+              <p className="text-muted">No related issues</p>
             </div>
           )}
         </div>
       )}
 
       {activeTab === 'changes' && (
-        <div className="bg-white rounded-lg shadow overflow-hidden">
-          <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
-            <h2 className="text-lg font-semibold text-gray-900">Related Changes</h2>
+        <div className="bg-surface rounded-lg shadow-sm overflow-hidden">
+          <div className="px-6 py-4 border-b border-border flex items-center justify-between">
+            <h2 className="text-lg font-semibold text-foreground">Related Changes</h2>
             <Link href={`/changes/new?application=${params.id}`}>
               <Button size="sm">New Change</Button>
             </Link>
           </div>
           {relatedChanges.length > 0 ? (
-            <ul className="divide-y divide-gray-200">
+            <ul className="divide-y divide-border">
               {relatedChanges.map((change: { id: string; number: string; short_description: string; state: string; planned_start: string }) => (
                 <li key={change.id}>
                   <Link
                     href={`/changes/${change.id}`}
-                    className="block hover:bg-gray-50 px-6 py-4"
+                    className="block hover:bg-surface-hover px-6 py-4"
                   >
                     <div className="flex items-center justify-between">
                       <div>
-                        <p className="text-sm font-medium text-blue-600">{change.number}</p>
-                        <p className="text-sm text-gray-900 mt-1">{change.short_description}</p>
+                        <p className="text-sm font-medium text-primary">{change.number}</p>
+                        <p className="text-sm text-foreground mt-1">{change.short_description}</p>
                         {change.planned_start && (
-                          <p className="text-xs text-gray-500 mt-1">
+                          <p className="text-xs text-muted mt-1">
                             Scheduled: {formatDate(change.planned_start)}
                           </p>
                         )}
                       </div>
                       <span
                         className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                          stateColors[change.state]?.bg || 'bg-gray-100'
-                        } ${stateColors[change.state]?.text || 'text-gray-800'}`}
+                          stateColors[change.state]?.bg || 'bg-background'
+                        } ${stateColors[change.state]?.text || 'text-secondary'}`}
                       >
                         {change.state.replace('_', ' ')}
                       </span>
@@ -379,29 +379,29 @@ export default function ApplicationDetailPage() {
             </ul>
           ) : (
             <div className="text-center py-12">
-              <p className="text-gray-500">No related changes</p>
+              <p className="text-muted">No related changes</p>
             </div>
           )}
         </div>
       )}
 
       {activeTab === 'health' && (
-        <div className="bg-white rounded-lg shadow p-6">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">Health History</h2>
+        <div className="bg-surface rounded-lg shadow-sm p-6">
+          <h2 className="text-lg font-semibold text-foreground mb-4">Health History</h2>
           <div className="space-y-4">
             {healthData?.history && healthData.history.length > 0 ? (
               healthData.history.map((entry: { date: string; score: number }) => (
                 <div key={entry.date} className="flex items-center">
-                  <span className="w-24 text-sm text-gray-500">{entry.date}</span>
+                  <span className="w-24 text-sm text-muted">{entry.date}</span>
                   <div className="flex-1 mx-4">
-                    <div className="w-full bg-gray-200 rounded-full h-2">
+                    <div className="w-full bg-surface-hover rounded-full h-2">
                       <div
                         className={`h-2 rounded-full ${
                           entry.score >= 90
-                            ? 'bg-green-500'
+                            ? 'bg-success'
                             : entry.score >= 70
-                            ? 'bg-yellow-500'
-                            : 'bg-red-500'
+                            ? 'bg-warning'
+                            : 'bg-error'
                         }`}
                         style={{ width: `${entry.score}%` }}
                       />
@@ -413,7 +413,7 @@ export default function ApplicationDetailPage() {
                 </div>
               ))
             ) : (
-              <p className="text-sm text-gray-500">No health history available</p>
+              <p className="text-sm text-muted">No health history available</p>
             )}
           </div>
         </div>

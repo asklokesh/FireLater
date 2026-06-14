@@ -96,13 +96,13 @@ export default function NewIssuePage() {
       <div className="flex items-center space-x-4">
         <button
           onClick={() => router.back()}
-          className="p-2 hover:bg-gray-100 rounded-md"
+          className="p-2 hover:bg-surface-hover rounded-lg"
         >
-          <ArrowLeft className="h-5 w-5 text-gray-500" />
+          <ArrowLeft className="h-5 w-5 text-secondary" />
         </button>
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Create New Issue</h1>
-          <p className="mt-1 text-sm text-gray-500">
+          <h1 className="text-2xl font-bold text-foreground">Create New Issue</h1>
+          <p className="mt-1 text-sm text-secondary">
             Report a new IT incident or problem
           </p>
         </div>
@@ -111,14 +111,14 @@ export default function NewIssuePage() {
       {/* Form */}
       <form onSubmit={handleSubmit} className="space-y-6">
         {error && (
-          <div className="flex items-center gap-2 p-4 text-sm text-red-800 bg-red-100 rounded-md">
+          <div className="flex items-center gap-2 p-4 text-sm text-error bg-error-subtle rounded-lg">
             <AlertCircle className="h-4 w-4" />
             {error}
           </div>
         )}
 
-        <div className="bg-white rounded-lg shadow p-6 space-y-6">
-          <h2 className="text-lg font-semibold text-gray-900">Issue Details</h2>
+        <div className="bg-surface border border-border rounded-xl p-6 space-y-6">
+          <h2 className="text-lg font-semibold text-foreground">Issue Details</h2>
 
           <Input
             id="title"
@@ -134,9 +134,9 @@ export default function NewIssuePage() {
           <div>
             <label
               htmlFor="description"
-              className="block text-sm font-medium text-gray-700 mb-1"
+              className="block text-sm font-medium text-foreground mb-1"
             >
-              Description <span className="text-red-500">*</span>
+              Description <span className="text-error">*</span>
             </label>
             <textarea
               id="description"
@@ -144,20 +144,20 @@ export default function NewIssuePage() {
               placeholder="Detailed description of the issue, including steps to reproduce, error messages, etc."
               value={formData.description}
               onChange={handleChange('description')}
-              className={`w-full px-3 py-2 border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                errors.description ? 'border-red-500' : 'border-gray-300'
+              className={`w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary ${
+                errors.description ? 'border-error' : 'border-border'
               }`}
               required
             />
             {errors.description && (
-              <p className="mt-1 text-sm text-red-500">{errors.description}</p>
+              <p className="mt-1 text-sm text-error">{errors.description}</p>
             )}
           </div>
 
           <div>
             <label
               htmlFor="applicationId"
-              className="block text-sm font-medium text-gray-700 mb-1"
+              className="block text-sm font-medium text-foreground mb-1"
             >
               Application
             </label>
@@ -165,7 +165,7 @@ export default function NewIssuePage() {
               id="applicationId"
               value={formData.applicationId}
               onChange={handleChange('applicationId')}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary"
             >
               <option value="">Select an application (optional)</option>
               {applications.map((app: { id: string; name: string }) => (
@@ -177,14 +177,14 @@ export default function NewIssuePage() {
           </div>
         </div>
 
-        <div className="bg-white rounded-lg shadow p-6 space-y-6">
-          <h2 className="text-lg font-semibold text-gray-900">Priority & Impact</h2>
+        <div className="bg-surface border border-border rounded-xl p-6 space-y-6">
+          <h2 className="text-lg font-semibold text-foreground">Priority & Impact</h2>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
               <label
                 htmlFor="priority"
-                className="block text-sm font-medium text-gray-700 mb-1"
+                className="block text-sm font-medium text-foreground mb-1"
               >
                 Priority
               </label>
@@ -192,7 +192,7 @@ export default function NewIssuePage() {
                 id="priority"
                 value={formData.priority}
                 onChange={handleChange('priority')}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary"
               >
                 <option value="critical">Critical</option>
                 <option value="high">High</option>
@@ -204,7 +204,7 @@ export default function NewIssuePage() {
             <div>
               <label
                 htmlFor="urgency"
-                className="block text-sm font-medium text-gray-700 mb-1"
+                className="block text-sm font-medium text-foreground mb-1"
               >
                 Urgency
               </label>
@@ -212,7 +212,7 @@ export default function NewIssuePage() {
                 id="urgency"
                 value={formData.urgency}
                 onChange={handleChange('urgency')}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary"
               >
                 <option value="immediate">Immediate</option>
                 <option value="high">High</option>
@@ -224,7 +224,7 @@ export default function NewIssuePage() {
             <div>
               <label
                 htmlFor="impact"
-                className="block text-sm font-medium text-gray-700 mb-1"
+                className="block text-sm font-medium text-foreground mb-1"
               >
                 Impact
               </label>
@@ -232,7 +232,7 @@ export default function NewIssuePage() {
                 id="impact"
                 value={formData.impact}
                 onChange={handleChange('impact')}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary"
               >
                 <option value="widespread">Widespread</option>
                 <option value="significant">Significant</option>
@@ -243,14 +243,14 @@ export default function NewIssuePage() {
           </div>
         </div>
 
-        <div className="bg-white rounded-lg shadow p-6 space-y-6">
-          <h2 className="text-lg font-semibold text-gray-900">Assignment</h2>
+        <div className="bg-surface border border-border rounded-xl p-6 space-y-6">
+          <h2 className="text-lg font-semibold text-foreground">Assignment</h2>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label
                 htmlFor="assignedGroup"
-                className="block text-sm font-medium text-gray-700 mb-1"
+                className="block text-sm font-medium text-foreground mb-1"
               >
                 Assignment Group
               </label>
@@ -258,7 +258,7 @@ export default function NewIssuePage() {
                 id="assignedGroup"
                 value={formData.assignedGroup}
                 onChange={handleChange('assignedGroup')}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary"
               >
                 <option value="">Select a group (optional)</option>
                 {groups.map((group: { id: string; name: string }) => (
@@ -272,7 +272,7 @@ export default function NewIssuePage() {
             <div>
               <label
                 htmlFor="assignedTo"
-                className="block text-sm font-medium text-gray-700 mb-1"
+                className="block text-sm font-medium text-foreground mb-1"
               >
                 Assigned To
               </label>
@@ -280,7 +280,7 @@ export default function NewIssuePage() {
                 id="assignedTo"
                 value={formData.assignedTo}
                 onChange={handleChange('assignedTo')}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary"
               >
                 <option value="">Select a user (optional)</option>
                 {users.map((user: { id: string; name: string }) => (

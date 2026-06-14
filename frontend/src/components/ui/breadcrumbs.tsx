@@ -39,8 +39,6 @@ const pathLabels: Record<string, string> = {
 
 export function Breadcrumbs({ items, showHome = true, className = '' }: BreadcrumbsProps) {
   const pathname = usePathname();
-
-  // Generate breadcrumbs from pathname if items not provided
   const breadcrumbItems = items || generateBreadcrumbs(pathname);
 
   if (breadcrumbItems.length === 0 && !showHome) {
@@ -49,14 +47,14 @@ export function Breadcrumbs({ items, showHome = true, className = '' }: Breadcru
 
   return (
     <nav className={`flex items-center text-sm ${className}`} aria-label="Breadcrumb">
-      <ol className="flex items-center space-x-2">
+      <ol className="flex items-center gap-1">
         {showHome && (
           <li className="flex items-center">
             <Link
               href="/dashboard"
-              className="text-gray-500 hover:text-gray-700 flex items-center"
+              className="text-muted hover:text-secondary transition-colors duration-150 flex items-center"
             >
-              <Home className="h-4 w-4" />
+              <Home className="h-3.5 w-3.5" />
             </Link>
           </li>
         )}
@@ -64,14 +62,14 @@ export function Breadcrumbs({ items, showHome = true, className = '' }: Breadcru
           const isLast = index === breadcrumbItems.length - 1;
 
           return (
-            <li key={index} className="flex items-center">
-              <ChevronRight className="h-4 w-4 text-gray-400 mx-2" />
+            <li key={index} className="flex items-center gap-1">
+              <ChevronRight className="h-3.5 w-3.5 text-muted" />
               {isLast || !item.href ? (
-                <span className="text-gray-900 font-medium">{item.label}</span>
+                <span className="text-foreground font-medium">{item.label}</span>
               ) : (
                 <Link
                   href={item.href}
-                  className="text-gray-500 hover:text-gray-700"
+                  className="text-muted hover:text-secondary transition-colors duration-150"
                 >
                   {item.label}
                 </Link>
@@ -93,7 +91,6 @@ function generateBreadcrumbs(pathname: string): BreadcrumbItem[] {
     const segment = segments[i];
     currentPath += `/${segment}`;
 
-    // Skip if this looks like an ID (UUID or similar)
     if (isUuid(segment)) {
       continue;
     }
@@ -111,8 +108,7 @@ function generateBreadcrumbs(pathname: string): BreadcrumbItem[] {
 }
 
 function isUuid(str: string): boolean {
-  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-  return uuidRegex.test(str);
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(str);
 }
 
 function formatSegment(segment: string): string {
@@ -122,7 +118,6 @@ function formatSegment(segment: string): string {
     .join(' ');
 }
 
-// Hook for programmatic breadcrumb customization
 export function useBreadcrumbs() {
   const pathname = usePathname();
   const segments = pathname.split('/').filter(Boolean);

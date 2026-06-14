@@ -55,7 +55,6 @@ const adminNavigation = [
   { name: 'Workflows', href: '/admin/workflows', icon: Workflow },
   { name: 'Email Integration', href: '/admin/email', icon: Mail },
   { name: 'Integrations', href: '/admin/integrations', icon: Plug },
-  // Banking Compliance
   { name: 'Audit Logs', href: '/admin/audit-logs', icon: ScrollText },
   { name: 'SoD Policies', href: '/admin/sod-policies', icon: GitBranch },
   { name: 'Data Security', href: '/admin/data-security', icon: Lock },
@@ -71,6 +70,39 @@ interface SidebarProps {
   className?: string;
 }
 
+function NavItem({
+  item,
+  isActive,
+  onClick,
+}: {
+  item: { name: string; href: string; icon: React.ElementType };
+  isActive: boolean;
+  onClick?: () => void;
+}) {
+  return (
+    <Link
+      href={item.href}
+      onClick={onClick}
+      className={`
+        relative flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors duration-150
+        ${
+          isActive
+            ? 'bg-sidebar-active text-sidebar-active-fg font-medium'
+            : 'text-secondary hover:bg-sidebar-hover hover:text-foreground'
+        }
+      `}
+    >
+      {isActive && (
+        <span className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-5 bg-primary rounded-full" />
+      )}
+      <item.icon
+        className={`h-[18px] w-[18px] flex-shrink-0 ${isActive ? 'text-sidebar-active-fg' : 'text-muted'}`}
+      />
+      {item.name}
+    </Link>
+  );
+}
+
 export function Sidebar({ className = '' }: SidebarProps) {
   const pathname = usePathname();
   const { user, logout } = useAuthStore();
@@ -82,108 +114,96 @@ export function Sidebar({ className = '' }: SidebarProps) {
     setIsMobileMenuOpen(false);
   }, []);
 
-  // Close mobile menu on escape key
   useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        closeMobileMenu();
-      }
+      if (e.key === 'Escape') closeMobileMenu();
     };
     window.addEventListener('keydown', handleEscape);
     return () => window.removeEventListener('keydown', handleEscape);
   }, [closeMobileMenu]);
 
-  // Prevent body scroll when mobile menu is open
   useEffect(() => {
-    if (isMobileMenuOpen) {
-      document.body.style.overflow = 'hidden';
-    } else {
-      document.body.style.overflow = 'unset';
-    }
+    document.body.style.overflow = isMobileMenuOpen ? 'hidden' : 'unset';
     return () => {
       document.body.style.overflow = 'unset';
     };
   }, [isMobileMenuOpen]);
 
+  const initials = user?.name
+    ? user.name
+        .split(' ')
+        .map((n) => n[0])
+        .slice(0, 2)
+        .join('')
+        .toUpperCase()
+    : 'U';
+
   const sidebarContent = (
     <>
-      <div className="flex items-center h-16 px-4 bg-gray-800">
-        <span className="text-xl font-bold text-white">FireLater</span>
+      {/* Logo */}
+      <div className="flex items-center h-16 px-5 border-b border-border">
+        <div className="flex items-center gap-2.5">
+          <div className="h-7 w-7 rounded-lg bg-primary flex items-center justify-center flex-shrink-0">
+            <span className="text-xs font-bold text-white">FL</span>
+          </div>
+          <span className="text-[15px] font-semibold tracking-tight text-foreground">FireLater</span>
+        </div>
         <button
-          className="ml-auto lg:hidden p-2 text-gray-400 hover:text-white"
+          className="ml-auto lg:hidden p-1.5 rounded-lg text-muted hover:text-foreground hover:bg-sidebar-hover transition-colors duration-150"
           onClick={closeMobileMenu}
         >
-          <X className="h-6 w-6" />
+          <X className="h-5 w-5" />
         </button>
       </div>
 
-      <nav className="flex-1 px-2 py-4 space-y-1 overflow-y-auto">
-        {navigation.map((item) => {
-          const isActive = pathname.startsWith(item.href);
-          return (
-            <Link
-              key={item.name}
-              href={item.href}
-              onClick={closeMobileMenu}
-              className={`
-                flex items-center px-3 py-2 text-sm font-medium rounded-md
-                ${
-                  isActive
-                    ? 'bg-gray-800 text-white'
-                    : 'text-gray-300 hover:bg-gray-700 hover:text-white'
-                }
-              `}
-            >
-              <item.icon className="mr-3 h-5 w-5 flex-shrink-0" />
-              {item.name}
-            </Link>
-          );
-        })}
+      {/* Navigation */}
+      <nav className="flex-1 px-3 py-4 space-y-0.5 overflow-y-auto">
+        {navigation.map((item) => (
+          <NavItem
+            key={item.name}
+            item={item}
+            isActive={pathname.startsWith(item.href)}
+            onClick={closeMobileMenu}
+          />
+        ))}
 
         {isAdmin && (
           <>
-            <div className="pt-4 mt-4 border-t border-gray-700">
-              <p className="px-3 text-xs font-semibold text-gray-400 uppercase tracking-wider">
+            <div className="pt-5 pb-2">
+              <p className="px-3 text-xs font-medium uppercase tracking-wider text-muted">
                 Administration
               </p>
             </div>
-            {adminNavigation.map((item) => {
-              const isActive = pathname.startsWith(item.href);
-              return (
-                <Link
-                  key={item.name}
-                  href={item.href}
-                  onClick={closeMobileMenu}
-                  className={`
-                    flex items-center px-3 py-2 text-sm font-medium rounded-md
-                    ${
-                      isActive
-                        ? 'bg-gray-800 text-white'
-                        : 'text-gray-300 hover:bg-gray-700 hover:text-white'
-                    }
-                  `}
-                >
-                  <item.icon className="mr-3 h-5 w-5 flex-shrink-0" />
-                  {item.name}
-                </Link>
-              );
-            })}
+            {adminNavigation.map((item) => (
+              <NavItem
+                key={item.name}
+                item={item}
+                isActive={pathname.startsWith(item.href)}
+                onClick={closeMobileMenu}
+              />
+            ))}
           </>
         )}
       </nav>
 
-      <div className="flex items-center px-4 py-3 border-t border-gray-700">
-        <div className="flex-1 min-w-0">
-          <p className="text-sm font-medium text-white truncate">{user?.name}</p>
-          <p className="text-xs text-gray-400 truncate">{user?.email}</p>
+      {/* User footer */}
+      <div className="px-3 py-3 border-t border-border">
+        <div className="flex items-center gap-3 px-2 py-2 rounded-lg">
+          <div className="h-8 w-8 rounded-full bg-primary flex items-center justify-center flex-shrink-0">
+            <span className="text-xs font-semibold text-white">{initials}</span>
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-medium text-foreground truncate leading-tight">{user?.name}</p>
+            <p className="text-xs text-muted truncate leading-tight">{user?.email}</p>
+          </div>
+          <button
+            onClick={() => logout()}
+            className="p-1.5 rounded-lg text-muted hover:text-foreground hover:bg-sidebar-hover transition-colors duration-150 flex-shrink-0"
+            title="Sign out"
+          >
+            <LogOut className="h-4 w-4" />
+          </button>
         </div>
-        <button
-          onClick={() => logout()}
-          className="ml-3 p-2 text-gray-400 hover:text-white hover:bg-gray-700 rounded-md"
-          title="Logout"
-        >
-          <LogOut className="h-5 w-5" />
-        </button>
       </div>
     </>
   );
@@ -192,16 +212,16 @@ export function Sidebar({ className = '' }: SidebarProps) {
     <>
       {/* Mobile menu button */}
       <button
-        className="fixed top-4 left-4 z-50 lg:hidden p-2 rounded-md bg-gray-900 text-white shadow-lg"
+        className="fixed top-4 left-4 z-50 lg:hidden p-2 rounded-lg bg-surface border border-border text-secondary shadow-sm"
         onClick={() => setIsMobileMenuOpen(true)}
       >
-        <Menu className="h-6 w-6" />
+        <Menu className="h-5 w-5" />
       </button>
 
       {/* Mobile backdrop */}
       {isMobileMenuOpen && (
         <div
-          className="fixed inset-0 z-40 bg-black bg-opacity-50 lg:hidden"
+          className="fixed inset-0 z-40 bg-foreground/20 backdrop-blur-sm lg:hidden"
           onClick={closeMobileMenu}
         />
       )}
@@ -209,17 +229,18 @@ export function Sidebar({ className = '' }: SidebarProps) {
       {/* Mobile sidebar */}
       <div
         className={`
-          fixed inset-y-0 left-0 z-50 w-64 bg-gray-900 transform transition-transform duration-300 ease-in-out lg:hidden
+          fixed inset-y-0 left-0 z-50 w-64 bg-sidebar border-r border-border
+          transform transition-transform duration-300 ease-in-out lg:hidden
           ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'}
         `}
       >
-        <div className="flex flex-col h-full">
-          {sidebarContent}
-        </div>
+        <div className="flex flex-col h-full">{sidebarContent}</div>
       </div>
 
       {/* Desktop sidebar */}
-      <div className={`hidden lg:flex lg:flex-col lg:h-full lg:bg-gray-900 lg:w-64 ${className}`}>
+      <div
+        className={`hidden lg:flex lg:flex-col lg:h-full lg:w-64 bg-sidebar border-r border-border ${className}`}
+      >
         {sidebarContent}
       </div>
     </>
@@ -227,5 +248,5 @@ export function Sidebar({ className = '' }: SidebarProps) {
 }
 
 export function MobileMenuButton() {
-  return null; // Handled internally by Sidebar component
+  return null;
 }

@@ -323,8 +323,8 @@ export default function ReportBuilderPage() {
             </Button>
           </Link>
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">Report Builder</h1>
-            <p className="mt-1 text-sm text-gray-500">
+            <h1 className="text-2xl font-bold text-foreground">Report Builder</h1>
+            <p className="mt-1 text-sm text-muted">
               Create custom reports with drag-and-drop simplicity
             </p>
           </div>
@@ -355,9 +355,9 @@ export default function ReportBuilderPage() {
 
       {/* Error */}
       {error && (
-        <div className="bg-red-50 border border-red-200 rounded-lg p-4 flex items-start">
-          <AlertCircle className="h-5 w-5 text-red-500 mr-3 flex-shrink-0" />
-          <p className="text-sm text-red-700">{error}</p>
+        <div className="bg-error-subtle border border-red-200 rounded-lg p-4 flex items-start">
+          <AlertCircle className="h-5 w-5 text-error mr-3 flex-shrink-0" />
+          <p className="text-sm text-error">{error}</p>
         </div>
       )}
 
@@ -365,8 +365,8 @@ export default function ReportBuilderPage() {
         {/* Left Panel - Configuration */}
         <div className="lg:col-span-1 space-y-6">
           {/* Report Info */}
-          <div className="bg-white rounded-lg shadow p-4 space-y-4">
-            <h2 className="font-medium text-gray-900">Report Details</h2>
+          <div className="bg-surface rounded-lg shadow p-4 space-y-4">
+            <h2 className="font-medium text-foreground">Report Details</h2>
             <Input
               label="Report Name"
               value={reportName}
@@ -375,21 +375,21 @@ export default function ReportBuilderPage() {
               required
             />
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
+              <label className="block text-sm font-medium text-secondary mb-1">Description</label>
               <textarea
                 value={reportDescription}
                 onChange={(e) => setReportDescription(e.target.value)}
                 placeholder="Describe what this report shows..."
                 rows={2}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 border border-border-strong rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary"
               />
             </div>
           </div>
 
           {/* Data Source */}
-          <div className="bg-white rounded-lg shadow p-4">
-            <h2 className="font-medium text-gray-900 flex items-center mb-4">
-              <Database className="h-4 w-4 mr-2 text-gray-400" />
+          <div className="bg-surface rounded-lg shadow p-4">
+            <h2 className="font-medium text-foreground flex items-center mb-4">
+              <Database className="h-4 w-4 mr-2 text-muted" />
               Data Source
             </h2>
             <div className="space-y-2">
@@ -404,21 +404,21 @@ export default function ReportBuilderPage() {
                   }}
                   className={`w-full text-left p-3 rounded-lg border-2 transition-colors ${
                     selectedSource?.id === source.id
-                      ? 'border-blue-500 bg-blue-50'
-                      : 'border-gray-200 hover:border-gray-300'
+                      ? 'border-blue-500 bg-primary-subtle'
+                      : 'border-border hover:border-border-strong'
                   }`}
                 >
                   <div className="font-medium text-sm">{source.name}</div>
-                  <div className="text-xs text-gray-500">{source.description}</div>
+                  <div className="text-xs text-muted">{source.description}</div>
                 </button>
               ))}
             </div>
           </div>
 
           {/* Output Format */}
-          <div className="bg-white rounded-lg shadow p-4">
-            <h2 className="font-medium text-gray-900 flex items-center mb-4">
-              <FileText className="h-4 w-4 mr-2 text-gray-400" />
+          <div className="bg-surface rounded-lg shadow p-4">
+            <h2 className="font-medium text-foreground flex items-center mb-4">
+              <FileText className="h-4 w-4 mr-2 text-muted" />
               Output Format
             </h2>
             <div className="flex flex-wrap gap-2">
@@ -434,8 +434,8 @@ export default function ReportBuilderPage() {
                   }}
                   className={`px-3 py-1.5 rounded text-xs font-medium uppercase ${
                     outputFormats.includes(format)
-                      ? 'bg-blue-100 text-blue-700'
-                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                      ? 'bg-primary-subtle text-primary'
+                      : 'bg-surface-hover text-secondary hover:bg-surface-hover'
                   }`}
                 >
                   {format}
@@ -448,39 +448,39 @@ export default function ReportBuilderPage() {
         {/* Center Panel - Builder */}
         <div className="lg:col-span-2 space-y-4">
           {/* Columns Section */}
-          <div className="bg-white rounded-lg shadow">
+          <div className="bg-surface rounded-lg shadow">
             <button
               onClick={() => setExpandedSection(expandedSection === 'columns' ? null : 'columns')}
               className="w-full px-4 py-3 flex items-center justify-between text-left"
             >
-              <span className="font-medium text-gray-900 flex items-center">
-                <Table className="h-4 w-4 mr-2 text-gray-400" />
+              <span className="font-medium text-foreground flex items-center">
+                <Table className="h-4 w-4 mr-2 text-muted" />
                 Columns
-                <span className="ml-2 text-sm text-gray-500">({selectedColumns.length} selected)</span>
+                <span className="ml-2 text-sm text-muted">({selectedColumns.length} selected)</span>
               </span>
               {expandedSection === 'columns' ? (
-                <ChevronDown className="h-4 w-4 text-gray-400" />
+                <ChevronDown className="h-4 w-4 text-muted" />
               ) : (
-                <ChevronRight className="h-4 w-4 text-gray-400" />
+                <ChevronRight className="h-4 w-4 text-muted" />
               )}
             </button>
             {expandedSection === 'columns' && selectedSource && (
-              <div className="border-t border-gray-200 p-4">
+              <div className="border-t border-border p-4">
                 <div className="grid grid-cols-2 gap-4">
                   {/* Available Fields */}
                   <div>
-                    <h3 className="text-sm font-medium text-gray-700 mb-2">Available Fields</h3>
-                    <div className="border border-gray-200 rounded-lg max-h-64 overflow-y-auto">
+                    <h3 className="text-sm font-medium text-secondary mb-2">Available Fields</h3>
+                    <div className="border border-border rounded-lg max-h-64 overflow-y-auto">
                       {selectedSource.fields
                         .filter((f) => !selectedColumns.find((c) => c.field === f.name))
                         .map((field) => (
                           <button
                             key={field.name}
                             onClick={() => addColumn(field)}
-                            className="w-full px-3 py-2 text-left text-sm hover:bg-gray-50 flex items-center justify-between"
+                            className="w-full px-3 py-2 text-left text-sm hover:bg-surface-hover flex items-center justify-between"
                           >
                             <span>{field.label}</span>
-                            <Plus className="h-3 w-3 text-gray-400" />
+                            <Plus className="h-3 w-3 text-muted" />
                           </button>
                         ))}
                     </div>
@@ -488,10 +488,10 @@ export default function ReportBuilderPage() {
 
                   {/* Selected Columns */}
                   <div>
-                    <h3 className="text-sm font-medium text-gray-700 mb-2">Selected Columns</h3>
-                    <div className="border border-gray-200 rounded-lg max-h-64 overflow-y-auto">
+                    <h3 className="text-sm font-medium text-secondary mb-2">Selected Columns</h3>
+                    <div className="border border-border rounded-lg max-h-64 overflow-y-auto">
                       {selectedColumns.length === 0 ? (
-                        <div className="p-4 text-center text-sm text-gray-500">
+                        <div className="p-4 text-center text-sm text-muted">
                           Click fields to add them
                         </div>
                       ) : (
@@ -500,10 +500,10 @@ export default function ReportBuilderPage() {
                           return (
                             <div
                               key={col.id}
-                              className="px-3 py-2 flex items-center justify-between hover:bg-gray-50"
+                              className="px-3 py-2 flex items-center justify-between hover:bg-surface-hover"
                             >
                               <div className="flex items-center">
-                                <GripVertical className="h-3 w-3 text-gray-300 mr-2" />
+                                <GripVertical className="h-3 w-3 text-muted mr-2" />
                                 <span className="text-sm">{col.label}</span>
                               </div>
                               <div className="flex items-center space-x-2">
@@ -513,7 +513,7 @@ export default function ReportBuilderPage() {
                                     onChange={(e) =>
                                       updateColumn(col.id, { aggregation: e.target.value as AggregationType })
                                     }
-                                    className="text-xs border border-gray-200 rounded px-1 py-0.5"
+                                    className="text-xs border border-border rounded px-1 py-0.5"
                                   >
                                     <option value="none">-</option>
                                     <option value="count">Count</option>
@@ -525,7 +525,7 @@ export default function ReportBuilderPage() {
                                 )}
                                 <button
                                   onClick={() => removeColumn(col.id)}
-                                  className="text-red-500 hover:text-red-700"
+                                  className="text-error hover:text-error"
                                 >
                                   <Trash2 className="h-3 w-3" />
                                 </button>
@@ -542,30 +542,30 @@ export default function ReportBuilderPage() {
           </div>
 
           {/* Filters Section */}
-          <div className="bg-white rounded-lg shadow">
+          <div className="bg-surface rounded-lg shadow">
             <button
               onClick={() => setExpandedSection(expandedSection === 'filters' ? null : 'filters')}
               className="w-full px-4 py-3 flex items-center justify-between text-left"
             >
-              <span className="font-medium text-gray-900 flex items-center">
-                <Filter className="h-4 w-4 mr-2 text-gray-400" />
+              <span className="font-medium text-foreground flex items-center">
+                <Filter className="h-4 w-4 mr-2 text-muted" />
                 Filters
-                <span className="ml-2 text-sm text-gray-500">({filters.length} active)</span>
+                <span className="ml-2 text-sm text-muted">({filters.length} active)</span>
               </span>
               {expandedSection === 'filters' ? (
-                <ChevronDown className="h-4 w-4 text-gray-400" />
+                <ChevronDown className="h-4 w-4 text-muted" />
               ) : (
-                <ChevronRight className="h-4 w-4 text-gray-400" />
+                <ChevronRight className="h-4 w-4 text-muted" />
               )}
             </button>
             {expandedSection === 'filters' && selectedSource && (
-              <div className="border-t border-gray-200 p-4 space-y-3">
+              <div className="border-t border-border p-4 space-y-3">
                 {filters.map((filter) => (
                   <div key={filter.id} className="flex items-center space-x-2">
                     <select
                       value={filter.field}
                       onChange={(e) => updateFilter(filter.id, { field: e.target.value })}
-                      className="flex-1 px-2 py-1.5 border border-gray-200 rounded text-sm"
+                      className="flex-1 px-2 py-1.5 border border-border rounded text-sm"
                     >
                       {selectedSource.fields
                         .filter((f) => f.filterable)
@@ -578,7 +578,7 @@ export default function ReportBuilderPage() {
                     <select
                       value={filter.operator}
                       onChange={(e) => updateFilter(filter.id, { operator: e.target.value as FilterOperator })}
-                      className="px-2 py-1.5 border border-gray-200 rounded text-sm"
+                      className="px-2 py-1.5 border border-border rounded text-sm"
                     >
                       {Object.entries(operatorLabels).map(([op, label]) => (
                         <option key={op} value={op}>
@@ -591,11 +591,11 @@ export default function ReportBuilderPage() {
                       value={filter.value}
                       onChange={(e) => updateFilter(filter.id, { value: e.target.value })}
                       placeholder="Value"
-                      className="flex-1 px-2 py-1.5 border border-gray-200 rounded text-sm"
+                      className="flex-1 px-2 py-1.5 border border-border rounded text-sm"
                     />
                     <button
                       onClick={() => removeFilter(filter.id)}
-                      className="text-red-500 hover:text-red-700"
+                      className="text-error hover:text-error"
                     >
                       <Trash2 className="h-4 w-4" />
                     </button>
@@ -610,27 +610,27 @@ export default function ReportBuilderPage() {
           </div>
 
           {/* Sort Section */}
-          <div className="bg-white rounded-lg shadow">
+          <div className="bg-surface rounded-lg shadow">
             <button
               onClick={() => setExpandedSection(expandedSection === 'sort' ? null : 'sort')}
               className="w-full px-4 py-3 flex items-center justify-between text-left"
             >
-              <span className="font-medium text-gray-900 flex items-center">
+              <span className="font-medium text-foreground flex items-center">
                 Sort Order
                 {sortConfig && (
-                  <span className="ml-2 text-sm text-gray-500">
+                  <span className="ml-2 text-sm text-muted">
                     by {getFieldByName(sortConfig.field)?.label} ({sortConfig.direction})
                   </span>
                 )}
               </span>
               {expandedSection === 'sort' ? (
-                <ChevronDown className="h-4 w-4 text-gray-400" />
+                <ChevronDown className="h-4 w-4 text-muted" />
               ) : (
-                <ChevronRight className="h-4 w-4 text-gray-400" />
+                <ChevronRight className="h-4 w-4 text-muted" />
               )}
             </button>
             {expandedSection === 'sort' && selectedSource && (
-              <div className="border-t border-gray-200 p-4">
+              <div className="border-t border-border p-4">
                 <div className="flex items-center space-x-2">
                   <select
                     value={sortConfig?.field || ''}
@@ -641,7 +641,7 @@ export default function ReportBuilderPage() {
                         setSortConfig(null);
                       }
                     }}
-                    className="flex-1 px-2 py-1.5 border border-gray-200 rounded text-sm"
+                    className="flex-1 px-2 py-1.5 border border-border rounded text-sm"
                   >
                     <option value="">No sorting</option>
                     {selectedSource.fields
@@ -658,7 +658,7 @@ export default function ReportBuilderPage() {
                       onChange={(e) =>
                         setSortConfig({ ...sortConfig, direction: e.target.value as 'asc' | 'desc' })
                       }
-                      className="px-2 py-1.5 border border-gray-200 rounded text-sm"
+                      className="px-2 py-1.5 border border-border rounded text-sm"
                     >
                       <option value="asc">Ascending</option>
                       <option value="desc">Descending</option>
@@ -672,40 +672,40 @@ export default function ReportBuilderPage() {
 
         {/* Right Panel - Preview */}
         <div className="lg:col-span-1">
-          <div className="bg-white rounded-lg shadow sticky top-4">
-            <div className="px-4 py-3 border-b border-gray-200">
-              <h2 className="font-medium text-gray-900">Preview</h2>
+          <div className="bg-surface rounded-lg shadow sticky top-4">
+            <div className="px-4 py-3 border-b border-border">
+              <h2 className="font-medium text-foreground">Preview</h2>
             </div>
             <div className="p-4">
               {previewData === null ? (
-                <div className="text-center py-8 text-gray-500 text-sm">
-                  <Table className="h-8 w-8 mx-auto mb-2 text-gray-300" />
+                <div className="text-center py-8 text-muted text-sm">
+                  <Table className="h-8 w-8 mx-auto mb-2 text-muted" />
                   <p>Configure your report and click Preview to see results</p>
                 </div>
               ) : previewData.length === 0 ? (
-                <div className="text-center py-8 text-gray-500 text-sm">
+                <div className="text-center py-8 text-muted text-sm">
                   No data matches your criteria
                 </div>
               ) : (
                 <div className="overflow-x-auto">
                   <table className="min-w-full text-xs">
-                    <thead className="bg-gray-50">
+                    <thead className="bg-surface-hover">
                       <tr>
                         {selectedColumns.map((col) => (
                           <th
                             key={col.id}
-                            className="px-2 py-1 text-left font-medium text-gray-500 uppercase"
+                            className="px-2 py-1 text-left font-medium text-muted uppercase"
                           >
                             {col.label}
                           </th>
                         ))}
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-gray-200">
+                    <tbody className="divide-y divide-border">
                       {previewData.slice(0, 10).map((row, idx) => (
-                        <tr key={idx} className="hover:bg-gray-50">
+                        <tr key={idx} className="hover:bg-surface-hover">
                           {selectedColumns.map((col) => (
-                            <td key={col.id} className="px-2 py-1 text-gray-900 whitespace-nowrap">
+                            <td key={col.id} className="px-2 py-1 text-foreground whitespace-nowrap">
                               {String((row as Record<string, unknown>)[col.field] || '-')}
                             </td>
                           ))}
@@ -714,7 +714,7 @@ export default function ReportBuilderPage() {
                     </tbody>
                   </table>
                   {previewData.length > 10 && (
-                    <p className="text-xs text-gray-500 text-center mt-2">
+                    <p className="text-xs text-muted text-center mt-2">
                       Showing 10 of {previewData.length} rows
                     </p>
                   )}

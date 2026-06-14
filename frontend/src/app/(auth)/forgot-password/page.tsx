@@ -2,7 +2,7 @@
 
 import { useState, FormEvent } from 'react';
 import Link from 'next/link';
-import { Flame, AlertCircle, CheckCircle, ArrowLeft } from 'lucide-react';
+import { AlertCircle, CheckCircle, ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { authApi } from '@/lib/api';
@@ -53,27 +53,27 @@ export default function ForgotPasswordPage() {
 
   if (success) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4">
-        <div className="max-w-md w-full text-center">
+      <div className="min-h-screen flex items-center justify-center bg-background py-12 px-4">
+        <div className="w-full max-w-md text-center bg-surface rounded-2xl border border-border shadow-sm p-8">
           <div className="flex justify-center mb-4">
-            <CheckCircle className="h-16 w-16 text-green-500" />
+            <CheckCircle className="h-16 w-16 text-success" />
           </div>
-          <h2 className="text-2xl font-bold text-gray-900 mb-2">Check your email</h2>
-          <p className="text-gray-600 mb-6">
+          <h2 className="text-2xl font-semibold tracking-tight text-foreground mb-2">Check your email</h2>
+          <p className="text-secondary mb-6">
             We&apos;ve sent a password reset link to <strong>{email}</strong>.
             Please check your inbox and follow the instructions.
           </p>
-          <p className="text-sm text-gray-500 mb-6">
+          <p className="text-sm text-muted mb-6">
             Didn&apos;t receive the email? Check your spam folder or{' '}
             <button
               onClick={() => setSuccess(false)}
-              className="text-blue-600 hover:text-blue-500"
+              className="text-primary hover:text-primary-hover transition-colors"
             >
               try again
             </button>
           </p>
           <Link href="/login">
-            <Button variant="outline" className="w-full">
+            <Button variant="outline">
               <ArrowLeft className="h-4 w-4 mr-2" />
               Back to Login
             </Button>
@@ -84,60 +84,68 @@ export default function ForgotPasswordPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-md w-full space-y-8">
+    <div className="min-h-screen flex items-center justify-center bg-background py-12 px-4 sm:px-6 lg:px-8">
+      <div className="w-full max-w-md bg-surface rounded-2xl border border-border shadow-sm p-8">
         <div>
-          <div className="flex justify-center">
-            <div className="flex items-center space-x-2">
-              <Flame className="h-10 w-10 text-orange-500" />
-              <span className="text-3xl font-bold text-gray-900">FireLater</span>
-            </div>
+          <div className="flex items-center justify-center gap-2 mb-6">
+            <div className="h-8 w-8 rounded-lg bg-primary" />
+            <span className="text-xl font-semibold tracking-tight text-foreground">
+              FireLater
+            </span>
           </div>
-          <h2 className="mt-6 text-center text-2xl font-bold text-gray-900">
+          <h2 className="text-2xl font-semibold tracking-tight text-foreground mt-6 mb-1">
             Reset your password
           </h2>
-          <p className="mt-2 text-center text-sm text-gray-600">
+          <p className="text-sm text-secondary mb-6">
             Enter your email address and we&apos;ll send you a link to reset your password.
           </p>
         </div>
 
-        <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
+        <form className="space-y-6" onSubmit={handleSubmit}>
           {error && (
-            <div className="flex items-center gap-2 p-3 text-sm text-red-800 bg-red-100 rounded-md">
-              <AlertCircle className="h-4 w-4" />
+            <div className="flex items-center gap-2 bg-error-subtle border border-error/20 text-error rounded-lg px-4 py-3 text-sm">
+              <AlertCircle className="h-4 w-4 flex-shrink-0" />
               {error}
             </div>
           )}
 
-          <Input
-            id="tenant"
-            type="text"
-            label="Organization slug"
-            placeholder="your-org"
-            value={tenant}
-            onChange={(e) => setTenant(e.target.value)}
-            required
-          />
+          <div>
+            <label htmlFor="tenant" className="text-sm font-medium text-secondary mb-1.5 block">
+              Organization slug
+            </label>
+            <Input
+              id="tenant"
+              type="text"
+              placeholder="your-org"
+              value={tenant}
+              onChange={(e) => setTenant(e.target.value)}
+              required
+            />
+          </div>
 
-          <Input
-            id="email"
-            type="email"
-            label="Email address"
-            placeholder="you@company.com"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            required
-            autoComplete="email"
-          />
+          <div>
+            <label htmlFor="email" className="text-sm font-medium text-secondary mb-1.5 block">
+              Email address
+            </label>
+            <Input
+              id="email"
+              type="email"
+              placeholder="you@company.com"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+              autoComplete="email"
+            />
+          </div>
 
-          <Button type="submit" className="w-full" isLoading={isLoading}>
+          <Button type="submit" isLoading={isLoading}>
             Send Reset Link
           </Button>
 
           <div className="text-center">
             <Link
               href="/login"
-              className="text-sm font-medium text-blue-600 hover:text-blue-500 flex items-center justify-center"
+              className="text-sm font-medium text-primary hover:text-primary-hover transition-colors flex items-center justify-center"
             >
               <ArrowLeft className="h-4 w-4 mr-1" />
               Back to Login

@@ -32,12 +32,12 @@ export function EmptyState({
   const renderActionButton = () => {
     if (!action) return null;
 
+    const classes =
+      'inline-flex items-center gap-2 px-4 py-2 bg-primary text-primary-fg rounded-lg hover:bg-primary-hover transition-all duration-150 text-sm font-medium shadow-sm active:scale-[0.98]';
+
     if (action.href) {
       return (
-        <a
-          href={action.href}
-          className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-        >
+        <a href={action.href} className={classes}>
           {buttonContent}
         </a>
       );
@@ -45,10 +45,7 @@ export function EmptyState({
 
     if (action.onClick) {
       return (
-        <button
-          onClick={action.onClick}
-          className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-        >
+        <button onClick={action.onClick} className={classes}>
           {buttonContent}
         </button>
       );
@@ -58,13 +55,13 @@ export function EmptyState({
   };
 
   return (
-    <div className="flex flex-col items-center justify-center py-12 px-4 text-center">
-      <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-gray-100 mb-4">
-        <Icon className="w-8 h-8 text-gray-400" />
+    <div className="flex flex-col items-center justify-center py-16 px-4 text-center">
+      <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-primary-subtle mb-5">
+        <Icon className="w-7 h-7 text-primary" />
       </div>
-      <h3 className="text-lg font-medium text-gray-900 mb-1">{title}</h3>
+      <h3 className="text-base font-semibold text-foreground tracking-tight mb-1.5">{title}</h3>
       {description && (
-        <p className="text-sm text-gray-500 max-w-sm mb-4">{description}</p>
+        <p className="text-sm text-secondary max-w-sm mb-5 leading-relaxed">{description}</p>
       )}
       {renderActionButton()}
       {children}
