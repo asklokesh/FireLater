@@ -10,17 +10,22 @@ interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 }
 
 const variantClasses = {
-  primary: 'bg-blue-600 text-white hover:bg-blue-700 focus:ring-blue-500',
-  secondary: 'bg-gray-600 text-white hover:bg-gray-700 focus:ring-gray-500',
-  outline: 'border border-gray-300 bg-transparent hover:bg-gray-50 focus:ring-gray-500',
-  ghost: 'bg-transparent hover:bg-gray-100 focus:ring-gray-500',
-  danger: 'bg-red-600 text-white hover:bg-red-700 focus:ring-red-500',
+  primary:
+    'bg-primary text-primary-fg hover:bg-primary-hover shadow-sm',
+  secondary:
+    'bg-surface text-foreground border border-border-strong hover:bg-surface-hover shadow-sm',
+  outline:
+    'border border-border-strong bg-transparent text-foreground hover:bg-surface-hover',
+  ghost:
+    'bg-transparent text-secondary hover:bg-surface-hover hover:text-foreground',
+  danger:
+    'bg-error text-white hover:brightness-95 shadow-sm',
 };
 
 const sizeClasses = {
-  sm: 'px-3 py-1.5 text-sm',
-  md: 'px-4 py-2 text-sm',
-  lg: 'px-6 py-3 text-base',
+  sm: 'px-3 py-1.5 text-sm gap-1.5',
+  md: 'px-4 py-2 text-sm gap-2',
+  lg: 'px-5 py-2.5 text-[15px] gap-2',
 };
 
 export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
@@ -30,16 +35,20 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
         ref={ref}
         disabled={disabled || isLoading}
         className={`
-          inline-flex items-center justify-center rounded-md font-medium
-          transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2
-          disabled:opacity-50 disabled:cursor-not-allowed
+          inline-flex items-center justify-center rounded-lg font-medium
+          transition-all duration-150
+          focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2 focus-visible:ring-offset-background
+          disabled:opacity-50 disabled:pointer-events-none
+          active:scale-[0.98]
           ${variantClasses[variant]}
           ${sizeClasses[size]}
           ${className}
         `}
         {...props}
       >
-        {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+        {isLoading ? (
+          <Loader2 className="h-4 w-4 animate-spin" />
+        ) : null}
         {children}
       </button>
     );
