@@ -39,6 +39,15 @@ import emailRoutes from './routes/email.js';
 import integrationsRoutes from './routes/integrations.js';
 import migrationRoutes from './routes/migration.js';
 import ssoRoutes from './routes/sso.js';
+import sodRoutes from './routes/sod.js';
+import dataSecurityRoutes from './routes/data-security.js';
+import makerCheckerRoutes from './routes/maker-checker.js';
+import pamRoutes from './routes/pam.js';
+import complianceReportRoutes from './routes/compliance-reports.js';
+import recertificationRoutes from './routes/recertification.js';
+import regulatorySlaRoutes from './routes/regulatory-sla.js';
+import emergencyChangeRoutes from './routes/emergency-change.js';
+import { vendorRiskRoutes } from './routes/vendor-risk.js';
 import { initializeJobs, shutdownJobs } from './jobs/index.js';
 import { setupSwagger } from './docs/swagger.js';
 
@@ -421,6 +430,15 @@ async function registerRoutes() {
   await app.register(integrationsRoutes, { prefix: '/v1/integrations' });
   await app.register(migrationRoutes, { prefix: '/v1/migration' });
   await app.register(ssoRoutes, { prefix: '/v1/sso' });
+  await app.register(sodRoutes, { prefix: '/v1/sod' });
+  await app.register(dataSecurityRoutes, { prefix: '/v1/data-security' });
+  await app.register(makerCheckerRoutes, { prefix: '/v1/maker-checker' });
+  await app.register(pamRoutes, { prefix: '/v1/pam' });
+  await app.register(complianceReportRoutes, { prefix: '/v1/compliance-reports' });
+  await app.register(recertificationRoutes, { prefix: '/v1/recertification' });
+  await app.register(regulatorySlaRoutes, { prefix: '/v1/regulatory-sla' });
+  await app.register(emergencyChangeRoutes, { prefix: '/v1/emergency-changes' });
+  await app.register(vendorRiskRoutes, { prefix: '/v1/vendor-risk' });
 }
 
 function registerErrorHandler() {
