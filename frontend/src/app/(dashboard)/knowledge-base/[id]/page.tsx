@@ -38,10 +38,10 @@ import {
 } from '@/hooks/useApi';
 
 const statusColors: Record<string, { bg: string; text: string; label: string }> = {
-  draft: { bg: 'bg-gray-100', text: 'text-gray-800', label: 'Draft' },
-  review: { bg: 'bg-yellow-100', text: 'text-yellow-800', label: 'In Review' },
-  published: { bg: 'bg-green-100', text: 'text-green-800', label: 'Published' },
-  archived: { bg: 'bg-red-100', text: 'text-red-800', label: 'Archived' },
+  draft: { bg: 'bg-surface-hover', text: 'text-foreground', label: 'Draft' },
+  review: { bg: 'bg-warning-subtle', text: 'text-warning', label: 'In Review' },
+  published: { bg: 'bg-success-subtle', text: 'text-success', label: 'Published' },
+  archived: { bg: 'bg-error-subtle', text: 'text-error', label: 'Archived' },
 };
 
 const _typeLabels: Record<string, string> = {
@@ -174,13 +174,13 @@ export default function ArticleDetailPage() {
     if (isEditing) {
       return (
         <div className="space-y-2">
-          <label className="text-xs font-medium text-gray-500 uppercase">{label}</label>
+          <label className="text-xs font-medium text-muted uppercase">{label}</label>
           <div className="flex items-start gap-2">
             {type === 'select' && options ? (
               <select
                 value={editValue}
                 onChange={(e) => setEditValue(e.target.value)}
-                className="flex-1 px-3 py-2 border border-blue-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="flex-1 px-3 py-2 border border-primary rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary"
                 autoFocus
               >
                 {options.map(opt => (
@@ -192,7 +192,7 @@ export default function ArticleDetailPage() {
                 value={editValue}
                 onChange={(e) => setEditValue(e.target.value)}
                 rows={10}
-                className="flex-1 px-3 py-2 border border-blue-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono"
+                className="flex-1 px-3 py-2 border border-primary rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary font-mono"
                 autoFocus
               />
             ) : (
@@ -200,7 +200,7 @@ export default function ArticleDetailPage() {
                 type="text"
                 value={editValue}
                 onChange={(e) => setEditValue(e.target.value)}
-                className="flex-1 px-3 py-2 border border-blue-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="flex-1 px-3 py-2 border border-primary rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary"
                 autoFocus
               />
             )}
@@ -217,15 +217,15 @@ export default function ArticleDetailPage() {
 
     return (
       <div
-        className="group cursor-pointer hover:bg-gray-50 rounded-md p-2 -m-2"
+        className="group cursor-pointer hover:bg-surface-hover rounded-md p-2 -m-2"
         onClick={() => startEditing(field, value)}
       >
-        <label className="text-xs font-medium text-gray-500 uppercase">{label}</label>
+        <label className="text-xs font-medium text-muted uppercase">{label}</label>
         <div className="flex items-center justify-between">
-          <span className={`text-sm ${value ? 'text-gray-900' : 'text-gray-400 italic'}`}>
+          <span className={`text-sm ${value ? 'text-foreground' : 'text-muted italic'}`}>
             {value || `Add ${label.toLowerCase()}`}
           </span>
-          <Edit2 className="h-4 w-4 text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity" />
+          <Edit2 className="h-4 w-4 text-muted opacity-0 group-hover:opacity-100 transition-opacity" />
         </div>
       </div>
     );
@@ -234,18 +234,18 @@ export default function ArticleDetailPage() {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <Loader2 className="h-8 w-8 animate-spin text-blue-500" />
-        <span className="ml-2 text-gray-500">Loading article...</span>
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        <span className="ml-2 text-muted">Loading article...</span>
       </div>
     );
   }
 
   if (error || !article) {
     return (
-      <div className="bg-red-50 border border-red-200 rounded-lg p-6 text-center">
-        <AlertTriangle className="h-12 w-12 text-red-500 mx-auto mb-4" />
-        <h3 className="text-lg font-medium text-red-800 mb-2">Error loading article</h3>
-        <p className="text-red-600">Please try refreshing the page</p>
+      <div className="bg-error-subtle border border-error rounded-lg p-6 text-center">
+        <AlertTriangle className="h-12 w-12 text-error mx-auto mb-4" />
+        <h3 className="text-lg font-medium text-error mb-2">Error loading article</h3>
+        <p className="text-error">Please try refreshing the page</p>
       </div>
     );
   }
@@ -257,17 +257,17 @@ export default function ArticleDetailPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center space-x-4">
-          <Link href="/knowledge-base" className="text-gray-500 hover:text-gray-700">
+          <Link href="/knowledge-base" className="text-muted hover:text-secondary">
             <ArrowLeft className="h-5 w-5" />
           </Link>
           <div>
             <div className="flex items-center gap-3">
-              <h1 className="text-2xl font-bold text-gray-900">{article.article_number}</h1>
+              <h1 className="text-2xl font-bold text-foreground">{article.article_number}</h1>
               <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${statusStyle.bg} ${statusStyle.text}`}>
                 {statusStyle.label}
               </span>
             </div>
-            <p className="mt-1 text-sm text-gray-500">{article.title}</p>
+            <p className="mt-1 text-sm text-muted">{article.title}</p>
           </div>
         </div>
 
@@ -310,14 +310,14 @@ export default function ArticleDetailPage() {
         {/* Main Content */}
         <div className="lg:col-span-2 space-y-6">
           {/* Tabs */}
-          <div className="border-b border-gray-200">
+          <div className="border-b border-border">
             <nav className="-mb-px flex space-x-8">
               <button
                 onClick={() => setActiveTab('content')}
                 className={`py-2 px-1 border-b-2 font-medium text-sm ${
                   activeTab === 'content'
-                    ? 'border-blue-500 text-blue-600'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                    ? 'border-primary text-primary'
+                    : 'border-transparent text-muted hover:text-secondary hover:border-border-strong'
                 }`}
               >
                 <FileText className="h-4 w-4 inline-block mr-2" />
@@ -327,8 +327,8 @@ export default function ArticleDetailPage() {
                 onClick={() => setActiveTab('history')}
                 className={`py-2 px-1 border-b-2 font-medium text-sm ${
                   activeTab === 'history'
-                    ? 'border-blue-500 text-blue-600'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                    ? 'border-primary text-primary'
+                    : 'border-transparent text-muted hover:text-secondary hover:border-border-strong'
                 }`}
               >
                 <History className="h-4 w-4 inline-block mr-2" />
@@ -340,24 +340,24 @@ export default function ArticleDetailPage() {
           {activeTab === 'content' ? (
             <>
               {/* Title */}
-              <div className="bg-white rounded-lg shadow p-6">
+              <div className="bg-surface rounded-xl shadow-sm p-6">
                 <EditableField field="title" value={article.title} label="Title" />
               </div>
 
               {/* Summary */}
-              <div className="bg-white rounded-lg shadow p-6">
+              <div className="bg-surface rounded-xl shadow-sm p-6">
                 <EditableField field="summary" value={article.summary || ''} label="Summary" />
               </div>
 
               {/* Content */}
-              <div className="bg-white rounded-lg shadow p-6">
+              <div className="bg-surface rounded-xl shadow-sm p-6">
                 <EditableField field="content" value={article.content} label="Content" multiline />
               </div>
 
               {/* Feedback Section - Only for published articles */}
               {article.status === 'published' && (
-                <div className="bg-white rounded-lg shadow p-6">
-                  <h3 className="text-lg font-medium text-gray-900 mb-4">Was this article helpful?</h3>
+                <div className="bg-surface rounded-xl shadow-sm p-6">
+                  <h3 className="text-lg font-medium text-foreground mb-4">Was this article helpful?</h3>
                   <div className="space-y-4">
                     <div className="flex items-center gap-4">
                       <Button
@@ -384,24 +384,24 @@ export default function ArticleDetailPage() {
                       onChange={(e) => setFeedbackComment(e.target.value)}
                       placeholder="Additional feedback (optional)"
                       rows={2}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="w-full px-4 py-2 border border-border-strong rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary"
                     />
                   </div>
                 </div>
               )}
             </>
           ) : (
-            <div className="bg-white rounded-lg shadow">
+            <div className="bg-surface rounded-xl shadow-sm">
               <div className="p-6">
-                <h3 className="text-lg font-medium text-gray-900 mb-4">Version History</h3>
+                <h3 className="text-lg font-medium text-foreground mb-4">Version History</h3>
                 {history.length === 0 ? (
-                  <p className="text-gray-500 text-center py-4">No history available</p>
+                  <p className="text-muted text-center py-4">No history available</p>
                 ) : (
                   <div className="space-y-4">
                     {history.map((entry: KBArticleHistory) => (
-                      <div key={entry.id} className="border-l-2 border-gray-200 pl-4">
-                        <p className="text-sm font-medium text-gray-900">{entry.action}</p>
-                        <div className="flex items-center gap-2 text-xs text-gray-500 mt-1">
+                      <div key={entry.id} className="border-l-2 border-border pl-4">
+                        <p className="text-sm font-medium text-foreground">{entry.action}</p>
+                        <div className="flex items-center gap-2 text-xs text-muted mt-1">
                           <User className="h-3 w-3" />
                           <span>{entry.changed_by_name || 'Unknown'}</span>
                           <Clock className="h-3 w-3 ml-2" />
@@ -419,8 +419,8 @@ export default function ArticleDetailPage() {
         {/* Sidebar */}
         <div className="space-y-6">
           {/* Details Card */}
-          <div className="bg-white rounded-lg shadow p-6 space-y-4">
-            <h3 className="text-lg font-medium text-gray-900">Details</h3>
+          <div className="bg-surface rounded-xl shadow-sm p-6 space-y-4">
+            <h3 className="text-lg font-medium text-foreground">Details</h3>
 
             <EditableField
               field="type"
@@ -468,86 +468,86 @@ export default function ArticleDetailPage() {
           </div>
 
           {/* Author Card */}
-          <div className="bg-white rounded-lg shadow p-6 space-y-4">
-            <h3 className="text-lg font-medium text-gray-900">Author</h3>
+          <div className="bg-surface rounded-xl shadow-sm p-6 space-y-4">
+            <h3 className="text-lg font-medium text-foreground">Author</h3>
             <div className="flex items-center">
-              <div className="h-10 w-10 rounded-full bg-gray-200 flex items-center justify-center text-lg font-medium text-gray-600">
+              <div className="h-10 w-10 rounded-full bg-surface-hover flex items-center justify-center text-lg font-medium text-secondary">
                 {article.author_name?.charAt(0) || '?'}
               </div>
               <div className="ml-3">
-                <p className="text-sm font-medium text-gray-900">{article.author_name || 'Unknown'}</p>
-                <p className="text-xs text-gray-500">{article.author_email}</p>
+                <p className="text-sm font-medium text-foreground">{article.author_name || 'Unknown'}</p>
+                <p className="text-xs text-muted">{article.author_email}</p>
               </div>
             </div>
           </div>
 
           {/* Statistics Card */}
-          <div className="bg-white rounded-lg shadow p-6 space-y-4">
-            <h3 className="text-lg font-medium text-gray-900">Statistics</h3>
+          <div className="bg-surface rounded-xl shadow-sm p-6 space-y-4">
+            <h3 className="text-lg font-medium text-foreground">Statistics</h3>
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <p className="text-xs text-gray-500 uppercase">Views</p>
+                <p className="text-xs text-muted uppercase">Views</p>
                 <div className="flex items-center mt-1">
-                  <Eye className="h-4 w-4 text-gray-400 mr-2" />
-                  <span className="text-lg font-semibold text-gray-900">{article.view_count || 0}</span>
+                  <Eye className="h-4 w-4 text-muted mr-2" />
+                  <span className="text-lg font-semibold text-foreground">{article.view_count || 0}</span>
                 </div>
               </div>
               <div>
-                <p className="text-xs text-gray-500 uppercase">Helpful</p>
+                <p className="text-xs text-muted uppercase">Helpful</p>
                 <div className="flex items-center mt-1">
-                  <ThumbsUp className="h-4 w-4 text-green-500 mr-2" />
-                  <span className="text-lg font-semibold text-gray-900">{article.helpful_count || 0}</span>
+                  <ThumbsUp className="h-4 w-4 text-success mr-2" />
+                  <span className="text-lg font-semibold text-foreground">{article.helpful_count || 0}</span>
                 </div>
               </div>
               <div>
-                <p className="text-xs text-gray-500 uppercase">Not Helpful</p>
+                <p className="text-xs text-muted uppercase">Not Helpful</p>
                 <div className="flex items-center mt-1">
-                  <ThumbsDown className="h-4 w-4 text-red-500 mr-2" />
-                  <span className="text-lg font-semibold text-gray-900">{article.not_helpful_count || 0}</span>
+                  <ThumbsDown className="h-4 w-4 text-error mr-2" />
+                  <span className="text-lg font-semibold text-foreground">{article.not_helpful_count || 0}</span>
                 </div>
               </div>
               <div>
-                <p className="text-xs text-gray-500 uppercase">Version</p>
-                <span className="text-lg font-semibold text-gray-900">v{article.version}</span>
+                <p className="text-xs text-muted uppercase">Version</p>
+                <span className="text-lg font-semibold text-foreground">v{article.version}</span>
               </div>
             </div>
           </div>
 
           {/* Timestamps Card */}
-          <div className="bg-white rounded-lg shadow p-6 space-y-3">
-            <h3 className="text-lg font-medium text-gray-900">Timestamps</h3>
+          <div className="bg-surface rounded-xl shadow-sm p-6 space-y-3">
+            <h3 className="text-lg font-medium text-foreground">Timestamps</h3>
             <div className="text-sm">
-              <p className="text-gray-500">Created</p>
-              <p className="text-gray-900">{formatDate(article.created_at)}</p>
+              <p className="text-muted">Created</p>
+              <p className="text-foreground">{formatDate(article.created_at)}</p>
             </div>
             <div className="text-sm">
-              <p className="text-gray-500">Last Updated</p>
-              <p className="text-gray-900">{formatDate(article.updated_at)}</p>
+              <p className="text-muted">Last Updated</p>
+              <p className="text-foreground">{formatDate(article.updated_at)}</p>
             </div>
             {article.published_at && (
               <div className="text-sm">
-                <p className="text-gray-500">Published</p>
-                <p className="text-gray-900">{formatDate(article.published_at)}</p>
+                <p className="text-muted">Published</p>
+                <p className="text-foreground">{formatDate(article.published_at)}</p>
               </div>
             )}
           </div>
 
           {/* Related Items */}
           {(article.related_problem_id || article.related_issue_id) && (
-            <div className="bg-white rounded-lg shadow p-6 space-y-3">
-              <h3 className="text-lg font-medium text-gray-900">Related Items</h3>
+            <div className="bg-surface rounded-xl shadow-sm p-6 space-y-3">
+              <h3 className="text-lg font-medium text-foreground">Related Items</h3>
               {article.related_problem_id && (
                 <div className="text-sm">
-                  <p className="text-gray-500">Related Problem</p>
-                  <Link href={`/problems/${article.related_problem_id}`} className="text-blue-600 hover:text-blue-800">
+                  <p className="text-muted">Related Problem</p>
+                  <Link href={`/problems/${article.related_problem_id}`} className="text-primary hover:text-primary">
                     {article.related_problem_number} - {article.related_problem_title}
                   </Link>
                 </div>
               )}
               {article.related_issue_id && (
                 <div className="text-sm">
-                  <p className="text-gray-500">Related Issue</p>
-                  <Link href={`/issues/${article.related_issue_id}`} className="text-blue-600 hover:text-blue-800">
+                  <p className="text-muted">Related Issue</p>
+                  <Link href={`/issues/${article.related_issue_id}`} className="text-primary hover:text-primary">
                     {article.related_issue_number} - {article.related_issue_title}
                   </Link>
                 </div>
