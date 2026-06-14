@@ -48,8 +48,8 @@ export default function DataSecurityPage() {
   const [newClassification, setNewClassification] = useState({
     table_name: '',
     field_name: '',
-    classification: 'PII' as const,
-    masking_strategy: 'full' as const,
+    classification: 'PII' as FieldClassification['classification'],
+    masking_strategy: 'full' as FieldClassification['masking_strategy'],
     unmask_permission: 'admin:write',
   });
 
@@ -448,7 +448,7 @@ export default function DataSecurityPage() {
                   onChange={(e) =>
                     setNewClassification((prev) => ({
                       ...prev,
-                      classification: e.target.value as any,
+                      classification: e.target.value as FieldClassification['classification'],
                     }))
                   }
                   className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -469,7 +469,7 @@ export default function DataSecurityPage() {
                   onChange={(e) =>
                     setNewClassification((prev) => ({
                       ...prev,
-                      masking_strategy: e.target.value as any,
+                      masking_strategy: e.target.value as FieldClassification['masking_strategy'],
                     }))
                   }
                   className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"

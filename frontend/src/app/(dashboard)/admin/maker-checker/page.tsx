@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { CheckSquare, Loader2, AlertCircle, CheckCircle, Clock, XCircle } from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { api } from '@/lib/api';
 import { useAuthStore } from '@/stores/auth';
@@ -33,7 +34,7 @@ interface MakerCheckerRequest {
 
 type FilterStatus = 'pending' | 'approved' | 'rejected' | 'all';
 
-const statusColors: Record<string, { bg: string; text: string; icon: any }> = {
+const statusColors: Record<string, { bg: string; text: string; icon: LucideIcon }> = {
   pending: { bg: 'bg-yellow-100', text: 'text-yellow-800', icon: Clock },
   approved: { bg: 'bg-green-100', text: 'text-green-800', icon: CheckCircle },
   rejected: { bg: 'bg-red-100', text: 'text-red-800', icon: XCircle },
@@ -64,7 +65,7 @@ export default function MakerCheckerPage() {
       setIsLoading(true);
       setError(null);
 
-      const params: Record<string, any> = {};
+      const params: Record<string, string> = {};
       if (filterStatus !== 'all') {
         params.status = filterStatus;
       }

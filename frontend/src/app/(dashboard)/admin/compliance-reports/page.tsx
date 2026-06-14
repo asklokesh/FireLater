@@ -91,7 +91,7 @@ export default function ComplianceReportsPage() {
   const [scheduleForm, setScheduleForm] = useState({
     reportType: 'change_success_rate' as ReportType,
     name: '',
-    cadence: 'weekly' as const,
+    cadence: 'weekly' as 'daily' | 'weekly' | 'monthly' | 'quarterly',
     recipients: '',
   });
   const [isSubmittingSchedule, setIsSubmittingSchedule] = useState(false);

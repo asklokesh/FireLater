@@ -48,7 +48,9 @@ const statusColors: Record<string, { bg: string; text: string }> = {
   cancelled: { bg: 'bg-red-100', text: 'text-red-800' },
 };
 
-const scopeLabels: Record<string, string> = {
+type ScopeType = 'all_users' | 'role' | 'group' | 'resource';
+
+const scopeLabels: Record<ScopeType, string> = {
   all_users: 'All Users',
   role: 'By Role',
   group: 'By Group',
@@ -69,7 +71,7 @@ export default function AccessRecertificationPage() {
   const [createForm, setCreateForm] = useState({
     name: '',
     description: '',
-    scopeType: 'all_users' as const,
+    scopeType: 'all_users' as ScopeType,
     scopeValue: '',
     ownerEmail: user?.email || '',
     dueDate: '',
@@ -447,7 +449,7 @@ export default function AccessRecertificationPage() {
                 <label className="block text-sm font-medium text-gray-700 mb-1">Scope Type</label>
                 <select
                   value={createForm.scopeType}
-                  onChange={(e) => setCreateForm({ ...createForm, scopeType: e.target.value as any })}
+                  onChange={(e) => setCreateForm({ ...createForm, scopeType: e.target.value as ScopeType })}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                 >
                   {Object.entries(scopeLabels).map(([key, label]) => (

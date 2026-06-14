@@ -470,7 +470,7 @@ function AddVendorModal({
     name: '',
     description: '',
     website: '',
-    risk_tier: 'medium' as const,
+    risk_tier: 'medium' as Vendor['risk_tier'],
     criticality: '',
     primary_contact_name: '',
     primary_contact_email: '',
@@ -484,7 +484,7 @@ function AddVendorModal({
     try {
       await onSubmit({
         ...formData,
-        criticality: formData.criticality || null,
+        criticality: (formData.criticality || null) as Vendor['criticality'],
       });
     } finally {
       setLoading(false);
@@ -538,7 +538,7 @@ function AddVendorModal({
                 <label className="block text-sm font-medium text-gray-700">Risk Tier</label>
                 <select
                   value={formData.risk_tier}
-                  onChange={(e) => setFormData({ ...formData, risk_tier: e.target.value as any })}
+                  onChange={(e) => setFormData({ ...formData, risk_tier: e.target.value as Vendor['risk_tier'] })}
                   className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
                 >
                   <option value="critical">Critical</option>
