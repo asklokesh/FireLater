@@ -32,20 +32,20 @@ interface ChangeData {
 }
 
 const riskColors: Record<string, { bg: string; border: string; text: string }> = {
-  low: { bg: 'bg-green-100', border: 'border-green-300', text: 'text-green-800' },
-  medium: { bg: 'bg-yellow-100', border: 'border-yellow-300', text: 'text-yellow-800' },
-  high: { bg: 'bg-red-100', border: 'border-red-300', text: 'text-red-800' },
+  low: { bg: 'bg-success-subtle', border: 'border-success', text: 'text-success' },
+  medium: { bg: 'bg-warning-subtle', border: 'border-warning', text: 'text-warning' },
+  high: { bg: 'bg-error-subtle', border: 'border-error', text: 'text-error' },
 };
 
 const statusColors: Record<string, { bg: string; text: string }> = {
-  draft: { bg: 'bg-gray-100', text: 'text-gray-800' },
-  submitted: { bg: 'bg-blue-100', text: 'text-blue-800' },
-  approved: { bg: 'bg-green-100', text: 'text-green-800' },
-  scheduled: { bg: 'bg-purple-100', text: 'text-purple-800' },
-  implementing: { bg: 'bg-orange-100', text: 'text-orange-800' },
-  completed: { bg: 'bg-green-100', text: 'text-green-800' },
-  failed: { bg: 'bg-red-100', text: 'text-red-800' },
-  cancelled: { bg: 'bg-gray-100', text: 'text-gray-800' },
+  draft: { bg: 'bg-surface-hover', text: 'text-foreground' },
+  submitted: { bg: 'bg-primary-subtle', text: 'text-primary' },
+  approved: { bg: 'bg-success-subtle', text: 'text-success' },
+  scheduled: { bg: 'bg-primary-subtle', text: 'text-primary' },
+  implementing: { bg: 'bg-warning-subtle', text: 'text-warning' },
+  completed: { bg: 'bg-success-subtle', text: 'text-success' },
+  failed: { bg: 'bg-error-subtle', text: 'text-error' },
+  cancelled: { bg: 'bg-surface-hover', text: 'text-foreground' },
 };
 
 export default function ChangeCalendarPage() {
@@ -197,8 +197,8 @@ export default function ChangeCalendarPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Change Calendar</h1>
-          <p className="mt-1 text-sm text-gray-500">
+          <h1 className="text-2xl font-bold text-foreground">Change Calendar</h1>
+          <p className="mt-1 text-sm text-muted">
             View scheduled changes on a calendar
           </p>
         </div>
@@ -213,16 +213,16 @@ export default function ChangeCalendarPage() {
       </div>
 
       {/* Calendar Controls */}
-      <div className="bg-white rounded-lg shadow">
-        <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
+      <div className="bg-surface rounded-xl shadow-sm">
+        <div className="px-6 py-4 border-b border-border flex items-center justify-between">
           <div className="flex items-center space-x-4">
             <button
               onClick={() => viewMode === 'month' ? navigateMonth('prev') : navigateWeek('prev')}
-              className="p-2 hover:bg-gray-100 rounded"
+              className="p-2 hover:bg-surface-hover rounded"
             >
-              <ChevronLeft className="h-5 w-5 text-gray-600" />
+              <ChevronLeft className="h-5 w-5 text-secondary" />
             </button>
-            <h2 className="text-lg font-medium text-gray-900 min-w-[200px] text-center">
+            <h2 className="text-lg font-medium text-foreground min-w-[200px] text-center">
               {viewMode === 'month'
                 ? currentDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
                 : `Week of ${weekDays[0].toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`
@@ -230,9 +230,9 @@ export default function ChangeCalendarPage() {
             </h2>
             <button
               onClick={() => viewMode === 'month' ? navigateMonth('next') : navigateWeek('next')}
-              className="p-2 hover:bg-gray-100 rounded"
+              className="p-2 hover:bg-surface-hover rounded"
             >
-              <ChevronRight className="h-5 w-5 text-gray-600" />
+              <ChevronRight className="h-5 w-5 text-secondary" />
             </button>
           </div>
 
@@ -240,11 +240,11 @@ export default function ChangeCalendarPage() {
             <Button variant="outline" size="sm" onClick={() => setCurrentDate(new Date())}>
               Today
             </Button>
-            <div className="flex border border-gray-300 rounded-md overflow-hidden">
+            <div className="flex border border-border-strong rounded-md overflow-hidden">
               <button
                 onClick={() => setViewMode('month')}
                 className={`px-3 py-1.5 text-sm ${
-                  viewMode === 'month' ? 'bg-blue-100 text-blue-700' : 'bg-white text-gray-600'
+                  viewMode === 'month' ? 'bg-primary-subtle text-primary' : 'bg-white text-secondary'
                 }`}
               >
                 <Calendar className="h-4 w-4" />
@@ -252,7 +252,7 @@ export default function ChangeCalendarPage() {
               <button
                 onClick={() => setViewMode('week')}
                 className={`px-3 py-1.5 text-sm ${
-                  viewMode === 'week' ? 'bg-blue-100 text-blue-700' : 'bg-white text-gray-600'
+                  viewMode === 'week' ? 'bg-primary-subtle text-primary' : 'bg-white text-secondary'
                 }`}
               >
                 <List className="h-4 w-4" />
@@ -270,13 +270,13 @@ export default function ChangeCalendarPage() {
 
         {/* Filters */}
         {showFilters && (
-          <div className="px-6 py-3 border-b border-gray-200 bg-gray-50 flex items-center space-x-4">
+          <div className="px-6 py-3 border-b border-border bg-surface-hover flex items-center space-x-4">
             <div className="flex items-center space-x-2">
-              <label className="text-sm text-gray-600">Risk:</label>
+              <label className="text-sm text-secondary">Risk:</label>
               <select
                 value={riskFilter}
                 onChange={(e) => setRiskFilter(e.target.value)}
-                className="px-2 py-1 border border-gray-300 rounded text-sm"
+                className="px-2 py-1 border border-border-strong rounded text-sm"
               >
                 <option value="all">All</option>
                 <option value="low">Low</option>
@@ -285,11 +285,11 @@ export default function ChangeCalendarPage() {
               </select>
             </div>
             <div className="flex items-center space-x-2">
-              <label className="text-sm text-gray-600">Status:</label>
+              <label className="text-sm text-secondary">Status:</label>
               <select
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value)}
-                className="px-2 py-1 border border-gray-300 rounded text-sm"
+                className="px-2 py-1 border border-border-strong rounded text-sm"
               >
                 <option value="all">All</option>
                 <option value="approved">Approved</option>
@@ -304,22 +304,22 @@ export default function ChangeCalendarPage() {
         {/* Calendar Content */}
         {isLoading ? (
           <div className="flex items-center justify-center h-96">
-            <Loader2 className="h-8 w-8 animate-spin text-blue-500" />
+            <Loader2 className="h-8 w-8 animate-spin text-primary" />
           </div>
         ) : viewMode === 'month' ? (
           /* Month View */
           <div className="p-4">
             {/* Day Headers */}
-            <div className="grid grid-cols-7 gap-1 mb-2">
+            <div className="grid grid-cols-7 gap-px bg-border">
               {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((day) => (
-                <div key={day} className="text-center text-sm font-medium text-gray-500 py-2">
+                <div key={day} className="bg-background text-xs font-medium text-muted text-center py-2">
                   {day}
                 </div>
               ))}
             </div>
 
             {/* Calendar Grid */}
-            <div className="grid grid-cols-7 gap-1">
+            <div className="grid grid-cols-7 gap-px bg-border">
               {monthDays.map(({ date, isCurrentMonth }, idx) => {
                 const dayChanges = getChangesForDate(date);
                 const today = isToday(date);
@@ -327,13 +327,13 @@ export default function ChangeCalendarPage() {
                 return (
                   <div
                     key={idx}
-                    className={`min-h-[100px] p-2 border rounded ${
-                      isCurrentMonth ? 'bg-white' : 'bg-gray-50'
-                    } ${today ? 'border-blue-500' : 'border-gray-200'}`}
+                    className={`bg-surface p-2 min-h-[96px] ${
+                      today ? 'ring-1 ring-inset ring-primary' : ''
+                    }`}
                   >
                     <div className={`text-sm mb-1 ${
-                      today ? 'font-bold text-blue-600' :
-                      isCurrentMonth ? 'text-gray-900' : 'text-gray-400'
+                      today ? 'font-bold text-primary' :
+                      isCurrentMonth ? 'text-foreground' : 'text-muted'
                     }`}>
                       {date.getDate()}
                     </div>
@@ -352,7 +352,7 @@ export default function ChangeCalendarPage() {
                         );
                       })}
                       {dayChanges.length > 3 && (
-                        <div className="text-xs text-gray-500 pl-1">
+                        <div className="text-xs text-muted pl-1">
                           +{dayChanges.length - 3} more
                         </div>
                       )}
@@ -373,12 +373,12 @@ export default function ChangeCalendarPage() {
                 return (
                   <div key={idx} className="space-y-2">
                     <div className={`text-center py-2 rounded ${
-                      today ? 'bg-blue-100 text-blue-700' : 'bg-gray-100'
+                      today ? 'bg-primary-subtle text-primary' : 'bg-gray-100'
                     }`}>
-                      <div className="text-xs text-gray-500">
+                      <div className="text-xs text-muted">
                         {date.toLocaleDateString('en-US', { weekday: 'short' })}
                       </div>
-                      <div className={`text-lg font-medium ${today ? 'text-blue-700' : 'text-gray-900'}`}>
+                      <div className={`text-lg font-medium ${today ? 'text-primary' : 'text-foreground'}`}>
                         {date.getDate()}
                       </div>
                     </div>
@@ -397,13 +397,13 @@ export default function ChangeCalendarPage() {
                             }}
                             className={`block p-2 rounded border ${risk.border} ${risk.bg} hover:shadow transition-shadow`}
                           >
-                            <div className="text-xs font-medium text-gray-900">{change.change_id}</div>
-                            <div className="text-xs text-gray-600 truncate">{change.title}</div>
+                            <div className="text-xs font-medium text-foreground">{change.change_id}</div>
+                            <div className="text-xs text-secondary truncate">{change.title}</div>
                             <div className="flex items-center justify-between mt-1">
                               <span className={`px-1.5 py-0.5 rounded text-xs ${status.bg} ${status.text}`}>
                                 {change.status}
                               </span>
-                              <span className="text-xs text-gray-500">
+                              <span className="text-xs text-muted">
                                 {formatTime(change.scheduled_start)}
                               </span>
                             </div>
@@ -420,13 +420,13 @@ export default function ChangeCalendarPage() {
       </div>
 
       {/* Legend */}
-      <div className="bg-white rounded-lg shadow p-4">
+      <div className="bg-surface rounded-xl shadow-sm p-4">
         <h3 className="text-sm font-medium text-gray-700 mb-3">Risk Levels</h3>
         <div className="flex items-center space-x-6">
           {Object.entries(riskColors).map(([risk, colors]) => (
             <div key={risk} className="flex items-center">
               <div className={`h-3 w-3 rounded ${colors.bg} ${colors.border} border mr-2`} />
-              <span className="text-sm text-gray-600 capitalize">{risk}</span>
+              <span className="text-sm text-secondary capitalize">{risk}</span>
             </div>
           ))}
         </div>
@@ -435,15 +435,15 @@ export default function ChangeCalendarPage() {
       {/* Change Detail Modal */}
       {selectedChange && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4 p-6">
+          <div className="bg-surface rounded-xl shadow-sm-xl max-w-md w-full mx-4 p-6">
             <div className="flex items-start justify-between mb-4">
               <div>
-                <h2 className="text-lg font-semibold text-gray-900">{selectedChange.change_id}</h2>
-                <p className="text-sm text-gray-500">{selectedChange.title}</p>
+                <h2 className="text-lg font-semibold text-foreground">{selectedChange.change_id}</h2>
+                <p className="text-sm text-muted">{selectedChange.title}</p>
               </div>
               <button
                 onClick={() => setSelectedChange(null)}
-                className="text-gray-400 hover:text-gray-600"
+                className="text-muted hover:text-secondary"
               >
                 &times;
               </button>
@@ -451,38 +451,38 @@ export default function ChangeCalendarPage() {
 
             <div className="space-y-3">
               <div className="flex items-center text-sm">
-                <AlertCircle className="h-4 w-4 text-gray-400 mr-2" />
-                <span className="text-gray-600">Risk:</span>
+                <AlertCircle className="h-4 w-4 text-muted mr-2" />
+                <span className="text-secondary">Risk:</span>
                 <span className={`ml-2 px-2 py-0.5 rounded text-xs ${riskColors[selectedChange.risk_level]?.bg || ''} ${riskColors[selectedChange.risk_level]?.text || ''}`}>
                   {selectedChange.risk_level}
                 </span>
               </div>
               <div className="flex items-center text-sm">
-                <Clock className="h-4 w-4 text-gray-400 mr-2" />
-                <span className="text-gray-600">Status:</span>
+                <Clock className="h-4 w-4 text-muted mr-2" />
+                <span className="text-secondary">Status:</span>
                 <span className={`ml-2 px-2 py-0.5 rounded text-xs ${statusColors[selectedChange.status]?.bg || ''} ${statusColors[selectedChange.status]?.text || ''}`}>
                   {selectedChange.status}
                 </span>
               </div>
               <div className="flex items-center text-sm">
-                <Calendar className="h-4 w-4 text-gray-400 mr-2" />
-                <span className="text-gray-600">Scheduled:</span>
-                <span className="ml-2 text-gray-900">
+                <Calendar className="h-4 w-4 text-muted mr-2" />
+                <span className="text-secondary">Scheduled:</span>
+                <span className="ml-2 text-foreground">
                   {new Date(selectedChange.scheduled_start).toLocaleString()}
                 </span>
               </div>
               {selectedChange.assigned_to_name && (
                 <div className="flex items-center text-sm">
-                  <User className="h-4 w-4 text-gray-400 mr-2" />
-                  <span className="text-gray-600">Assignee:</span>
-                  <span className="ml-2 text-gray-900">{selectedChange.assigned_to_name}</span>
+                  <User className="h-4 w-4 text-muted mr-2" />
+                  <span className="text-secondary">Assignee:</span>
+                  <span className="ml-2 text-foreground">{selectedChange.assigned_to_name}</span>
                 </div>
               )}
               {selectedChange.application_name && (
                 <div className="flex items-center text-sm">
-                  <Server className="h-4 w-4 text-gray-400 mr-2" />
-                  <span className="text-gray-600">Application:</span>
-                  <span className="ml-2 text-gray-900">{selectedChange.application_name}</span>
+                  <Server className="h-4 w-4 text-muted mr-2" />
+                  <span className="text-secondary">Application:</span>
+                  <span className="ml-2 text-foreground">{selectedChange.application_name}</span>
                 </div>
               )}
             </div>
