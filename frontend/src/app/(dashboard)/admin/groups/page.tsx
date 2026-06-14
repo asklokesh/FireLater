@@ -52,9 +52,9 @@ interface UserData {
 }
 
 const typeConfig: Record<string, { icon: typeof Users; bg: string; text: string; label: string }> = {
-  team: { icon: Users, bg: 'bg-blue-100', text: 'text-blue-800', label: 'Team' },
-  department: { icon: Building2, bg: 'bg-purple-100', text: 'text-purple-800', label: 'Department' },
-  distribution: { icon: Send, bg: 'bg-green-100', text: 'text-green-800', label: 'Distribution' },
+  team: { icon: Users, bg: 'bg-primary-subtle', text: 'text-primary', label: 'Team' },
+  department: { icon: Building2, bg: 'bg-info-subtle', text: 'text-info', label: 'Department' },
+  distribution: { icon: Send, bg: 'bg-success-subtle', text: 'text-success', label: 'Distribution' },
 };
 
 export default function GroupsPage() {
@@ -211,7 +211,7 @@ export default function GroupsPage() {
   if (isLoading && groups.length === 0) {
     return (
       <div className="flex items-center justify-center h-64">
-        <Loader2 className="h-8 w-8 animate-spin text-blue-500" />
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
       </div>
     );
   }
@@ -221,8 +221,8 @@ export default function GroupsPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Groups</h1>
-          <p className="mt-1 text-sm text-gray-500">
+          <h1 className="text-2xl font-bold text-foreground">Groups</h1>
+          <p className="mt-1 text-sm text-muted">
             Manage teams, departments, and distribution groups
           </p>
         </div>
@@ -234,63 +234,63 @@ export default function GroupsPage() {
 
       {/* Stats */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <div className="bg-white rounded-lg shadow p-4">
+        <div className="bg-surface rounded-lg shadow p-4">
           <div className="flex items-center">
-            <div className="h-10 w-10 rounded-lg bg-blue-100 flex items-center justify-center">
-              <Users className="h-5 w-5 text-blue-600" />
+            <div className="h-10 w-10 rounded-lg bg-primary-subtle flex items-center justify-center">
+              <Users className="h-5 w-5 text-primary" />
             </div>
             <div className="ml-4">
-              <p className="text-sm text-gray-500">Total Groups</p>
-              <p className="text-2xl font-semibold text-gray-900">{total}</p>
+              <p className="text-sm text-muted">Total Groups</p>
+              <p className="text-2xl font-semibold text-foreground">{total}</p>
             </div>
           </div>
         </div>
-        <div className="bg-white rounded-lg shadow p-4">
+        <div className="bg-surface rounded-lg shadow p-4">
           <div className="flex items-center">
-            <div className="h-10 w-10 rounded-lg bg-blue-100 flex items-center justify-center">
-              <Users className="h-5 w-5 text-blue-600" />
+            <div className="h-10 w-10 rounded-lg bg-primary-subtle flex items-center justify-center">
+              <Users className="h-5 w-5 text-primary" />
             </div>
             <div className="ml-4">
-              <p className="text-sm text-gray-500">Teams</p>
-              <p className="text-2xl font-semibold text-gray-900">{teamCount}</p>
+              <p className="text-sm text-muted">Teams</p>
+              <p className="text-2xl font-semibold text-foreground">{teamCount}</p>
             </div>
           </div>
         </div>
-        <div className="bg-white rounded-lg shadow p-4">
+        <div className="bg-surface rounded-lg shadow p-4">
           <div className="flex items-center">
-            <div className="h-10 w-10 rounded-lg bg-purple-100 flex items-center justify-center">
-              <Building2 className="h-5 w-5 text-purple-600" />
+            <div className="h-10 w-10 rounded-lg bg-info-subtle flex items-center justify-center">
+              <Building2 className="h-5 w-5 text-info" />
             </div>
             <div className="ml-4">
-              <p className="text-sm text-gray-500">Departments</p>
-              <p className="text-2xl font-semibold text-gray-900">{departmentCount}</p>
+              <p className="text-sm text-muted">Departments</p>
+              <p className="text-2xl font-semibold text-foreground">{departmentCount}</p>
             </div>
           </div>
         </div>
-        <div className="bg-white rounded-lg shadow p-4">
+        <div className="bg-surface rounded-lg shadow p-4">
           <div className="flex items-center">
-            <div className="h-10 w-10 rounded-lg bg-green-100 flex items-center justify-center">
-              <Send className="h-5 w-5 text-green-600" />
+            <div className="h-10 w-10 rounded-lg bg-success-subtle flex items-center justify-center">
+              <Send className="h-5 w-5 text-success" />
             </div>
             <div className="ml-4">
-              <p className="text-sm text-gray-500">Distribution</p>
-              <p className="text-2xl font-semibold text-gray-900">{total - teamCount - departmentCount}</p>
+              <p className="text-sm text-muted">Distribution</p>
+              <p className="text-2xl font-semibold text-foreground">{total - teamCount - departmentCount}</p>
             </div>
           </div>
         </div>
       </div>
 
       {/* Search and Filters */}
-      <div className="bg-white rounded-lg shadow p-4">
+      <div className="bg-surface rounded-lg shadow p-4">
         <div className="flex flex-col sm:flex-row gap-4">
           <div className="flex-1 relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted" />
             <input
               type="text"
               placeholder="Search by name..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full pl-10 pr-4 py-2 border border-border-strong rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
             />
           </div>
           <Button
@@ -305,13 +305,13 @@ export default function GroupsPage() {
         </div>
 
         {showFilters && (
-          <div className="mt-4 pt-4 border-t border-gray-200">
+          <div className="mt-4 pt-4 border-t border-border">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Type</label>
+              <label className="block text-sm font-medium text-secondary mb-1">Type</label>
               <select
                 value={typeFilter}
                 onChange={(e) => setTypeFilter(e.target.value)}
-                className="w-full sm:w-48 px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full sm:w-48 px-3 py-2 border border-border-strong rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
               >
                 <option value="all">All Types</option>
                 <option value="team">Team</option>
@@ -324,45 +324,45 @@ export default function GroupsPage() {
       </div>
 
       {/* Groups Table */}
-      <div className="bg-white rounded-lg shadow overflow-hidden">
+      <div className="bg-surface rounded-lg shadow overflow-hidden">
         <table className="min-w-full divide-y divide-gray-200">
-          <thead className="bg-gray-50">
+          <thead className="bg-surface-hover">
             <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">
                 Group
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">
                 Type
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">
                 Members
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">
                 Manager
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">
                 Email
               </th>
-              <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th className="px-6 py-3 text-right text-xs font-medium text-muted uppercase tracking-wider">
                 Actions
               </th>
             </tr>
           </thead>
-          <tbody className="bg-white divide-y divide-gray-200">
+          <tbody className="bg-surface divide-y divide-gray-200">
             {groups.map((group) => {
               const config = typeConfig[group.type] || typeConfig.team;
               const TypeIcon = config.icon;
               return (
-                <tr key={group.id} className="hover:bg-gray-50">
+                <tr key={group.id} className="hover:bg-surface-hover">
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex items-center">
                       <div className={`h-10 w-10 rounded-lg ${config.bg} flex items-center justify-center`}>
                         <TypeIcon className={`h-5 w-5 ${config.text}`} />
                       </div>
                       <div className="ml-4">
-                        <div className="text-sm font-medium text-gray-900">{group.name}</div>
+                        <div className="text-sm font-medium text-foreground">{group.name}</div>
                         {group.description && (
-                          <div className="text-sm text-gray-500 truncate max-w-xs">
+                          <div className="text-sm text-muted truncate max-w-xs">
                             {group.description}
                           </div>
                         )}
@@ -376,19 +376,19 @@ export default function GroupsPage() {
                       {config.label}
                     </span>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-muted">
                     <button
                       onClick={() => handleOpenMembers(group)}
-                      className="flex items-center text-blue-600 hover:text-blue-800"
+                      className="flex items-center text-primary hover:text-primary"
                     >
                       <Users className="h-4 w-4 mr-1" />
                       {group.member_count || 0} members
                     </button>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-muted">
                     {group.manager_name || '-'}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-muted">
                     {group.email ? (
                       <span className="flex items-center">
                         <Mail className="h-3 w-3 mr-1" />
@@ -399,30 +399,30 @@ export default function GroupsPage() {
                   <td className="px-6 py-4 whitespace-nowrap text-right relative">
                     <button
                       onClick={() => setShowDropdown(showDropdown === group.id ? null : group.id)}
-                      className="text-gray-400 hover:text-gray-600"
+                      className="text-muted hover:text-secondary"
                     >
                       <MoreHorizontal className="h-5 w-5" />
                     </button>
                     {showDropdown === group.id && (
-                      <div className="absolute right-6 mt-2 w-48 bg-white rounded-md shadow-lg border border-gray-200 z-10">
+                      <div className="absolute right-6 mt-2 w-48 bg-surface rounded-xl shadow-lg border border-border z-10">
                         <div className="py-1">
                           <button
                             onClick={() => handleOpenMembers(group)}
-                            className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center"
+                            className="w-full text-left px-4 py-2 text-sm text-secondary hover:bg-background flex items-center"
                           >
                             <UserPlus className="h-4 w-4 mr-2" />
                             Manage Members
                           </button>
                           <button
                             onClick={() => setShowDropdown(null)}
-                            className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center"
+                            className="w-full text-left px-4 py-2 text-sm text-secondary hover:bg-background flex items-center"
                           >
                             <Edit className="h-4 w-4 mr-2" />
                             Edit Group
                           </button>
                           <button
                             onClick={() => handleDelete(group.id)}
-                            className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 flex items-center"
+                            className="w-full text-left px-4 py-2 text-sm text-error hover:bg-error-subtle flex items-center"
                           >
                             <Trash2 className="h-4 w-4 mr-2" />
                             Delete Group
@@ -439,9 +439,9 @@ export default function GroupsPage() {
 
         {groups.length === 0 && (
           <div className="text-center py-12">
-            <Users className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-            <h3 className="text-lg font-medium text-gray-900 mb-2">No groups found</h3>
-            <p className="text-gray-500 mb-4">Get started by creating your first group</p>
+            <Users className="h-12 w-12 text-muted mx-auto mb-4" />
+            <h3 className="text-lg font-medium text-foreground mb-2">No groups found</h3>
+            <p className="text-muted mb-4">Get started by creating your first group</p>
             <Button onClick={() => setShowCreateModal(true)}>
               <Plus className="h-4 w-4 mr-2" />
               Add Group
@@ -451,8 +451,8 @@ export default function GroupsPage() {
 
         {/* Pagination */}
         {groups.length > 0 && (
-          <div className="px-6 py-4 border-t border-gray-200 flex items-center justify-between">
-            <div className="text-sm text-gray-500">
+          <div className="px-6 py-4 border-t border-border flex items-center justify-between">
+            <div className="text-sm text-muted">
               Showing {groups.length} of {total} groups
             </div>
             <div className="flex space-x-2">
@@ -480,16 +480,16 @@ export default function GroupsPage() {
       {/* Create Group Modal */}
       {showCreateModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4">
-            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
-              <h2 className="text-lg font-semibold text-gray-900">Create Group</h2>
-              <button onClick={() => setShowCreateModal(false)} className="text-gray-400 hover:text-gray-600">
+          <div className="bg-surface rounded-lg shadow-xl max-w-md w-full mx-4">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-border">
+              <h2 className="text-lg font-semibold text-foreground">Create Group</h2>
+              <button onClick={() => setShowCreateModal(false)} className="text-muted hover:text-secondary">
                 <X className="h-5 w-5" />
               </button>
             </div>
             <form onSubmit={handleCreate} className="p-6 space-y-4">
               {formError && (
-                <div className="p-3 text-sm text-red-800 bg-red-100 rounded-md">
+                <div className="p-3 text-sm text-error bg-error-subtle rounded-xl">
                   {formError}
                 </div>
               )}
@@ -503,22 +503,22 @@ export default function GroupsPage() {
               />
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
+                <label className="block text-sm font-medium text-secondary mb-1">Description</label>
                 <textarea
                   value={formData.description}
                   onChange={(e) => setFormData((p) => ({ ...p, description: e.target.value }))}
                   placeholder="Optional description..."
                   rows={3}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 border border-border-strong rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Type</label>
+                <label className="block text-sm font-medium text-secondary mb-1">Type</label>
                 <select
                   value={formData.type}
                   onChange={(e) => setFormData((p) => ({ ...p, type: e.target.value as typeof formData.type }))}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 border border-border-strong rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
                 >
                   <option value="team">Team</option>
                   <option value="department">Department</option>
@@ -535,11 +535,11 @@ export default function GroupsPage() {
               />
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Manager (optional)</label>
+                <label className="block text-sm font-medium text-secondary mb-1">Manager (optional)</label>
                 <select
                   value={formData.managerId}
                   onChange={(e) => setFormData((p) => ({ ...p, managerId: e.target.value }))}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 border border-border-strong rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
                 >
                   <option value="">Select a manager...</option>
                   {users.map((user) => (
@@ -564,26 +564,26 @@ export default function GroupsPage() {
       {/* Members Modal */}
       {showMembersModal && selectedGroup && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full mx-4 max-h-[80vh] overflow-hidden flex flex-col">
-            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
+          <div className="bg-surface rounded-lg shadow-xl max-w-2xl w-full mx-4 max-h-[80vh] overflow-hidden flex flex-col">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-border">
               <div>
-                <h2 className="text-lg font-semibold text-gray-900">{selectedGroup.name}</h2>
-                <p className="text-sm text-gray-500">Manage group members</p>
+                <h2 className="text-lg font-semibold text-foreground">{selectedGroup.name}</h2>
+                <p className="text-sm text-muted">Manage group members</p>
               </div>
-              <button onClick={() => setShowMembersModal(false)} className="text-gray-400 hover:text-gray-600">
+              <button onClick={() => setShowMembersModal(false)} className="text-muted hover:text-secondary">
                 <X className="h-5 w-5" />
               </button>
             </div>
 
             {/* Add Member Form */}
-            <form onSubmit={handleAddMember} className="px-6 py-4 border-b border-gray-200 bg-gray-50">
+            <form onSubmit={handleAddMember} className="px-6 py-4 border-b border-border bg-surface-hover">
               <div className="flex items-end gap-3">
                 <div className="flex-1">
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Add Member</label>
+                  <label className="block text-sm font-medium text-secondary mb-1">Add Member</label>
                   <select
                     value={selectedUserId}
                     onChange={(e) => setSelectedUserId(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-3 py-2 border border-border-strong rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
                   >
                     <option value="">Select a user...</option>
                     {users
@@ -594,11 +594,11 @@ export default function GroupsPage() {
                   </select>
                 </div>
                 <div className="w-32">
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Role</label>
+                  <label className="block text-sm font-medium text-secondary mb-1">Role</label>
                   <select
                     value={memberRole}
                     onChange={(e) => setMemberRole(e.target.value as 'member' | 'lead')}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-3 py-2 border border-border-strong rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
                   >
                     <option value="member">Member</option>
                     <option value="lead">Lead</option>
@@ -615,42 +615,42 @@ export default function GroupsPage() {
             <div className="flex-1 overflow-auto p-6">
               {isLoadingMembers ? (
                 <div className="flex items-center justify-center py-8">
-                  <Loader2 className="h-6 w-6 animate-spin text-blue-500" />
+                  <Loader2 className="h-6 w-6 animate-spin text-primary" />
                 </div>
               ) : members.length === 0 ? (
                 <div className="text-center py-8">
-                  <Users className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                  <p className="text-gray-500">No members in this group yet</p>
+                  <Users className="h-12 w-12 text-muted mx-auto mb-4" />
+                  <p className="text-muted">No members in this group yet</p>
                 </div>
               ) : (
                 <div className="space-y-2">
                   {members.map((member) => (
                     <div
                       key={member.id}
-                      className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
+                      className="flex items-center justify-between p-3 bg-surface-hover rounded-lg"
                     >
                       <div className="flex items-center">
-                        <div className="h-10 w-10 rounded-full bg-gray-200 flex items-center justify-center text-sm font-medium text-gray-600">
+                        <div className="h-10 w-10 rounded-full bg-surface-hover flex items-center justify-center text-sm font-medium text-secondary">
                           {member.name?.charAt(0) || '?'}
                         </div>
                         <div className="ml-3">
-                          <div className="text-sm font-medium text-gray-900">{member.name}</div>
-                          <div className="text-sm text-gray-500">{member.email}</div>
+                          <div className="text-sm font-medium text-foreground">{member.name}</div>
+                          <div className="text-sm text-muted">{member.email}</div>
                         </div>
                       </div>
                       <div className="flex items-center space-x-3">
                         <span
                           className={`px-2 py-1 text-xs font-medium rounded-full ${
                             member.role === 'lead'
-                              ? 'bg-purple-100 text-purple-800'
-                              : 'bg-gray-100 text-gray-600'
+                              ? 'bg-info-subtle text-info'
+                              : 'bg-background text-secondary'
                           }`}
                         >
                           {member.role === 'lead' ? 'Lead' : 'Member'}
                         </span>
                         <button
                           onClick={() => handleRemoveMember(member.user_id)}
-                          className="text-red-500 hover:text-red-700"
+                          className="text-error hover:text-red-700"
                         >
                           <Trash2 className="h-4 w-4" />
                         </button>
@@ -661,7 +661,7 @@ export default function GroupsPage() {
               )}
             </div>
 
-            <div className="px-6 py-4 border-t border-gray-200 flex justify-end">
+            <div className="px-6 py-4 border-t border-border flex justify-end">
               <Button variant="outline" onClick={() => setShowMembersModal(false)}>
                 Close
               </Button>
