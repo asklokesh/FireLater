@@ -155,7 +155,7 @@ export default function PAMPage() {
       </div>
 
       {error && (
-        <div className="bg-red-50 border border-red-200 rounded-xl p-4 flex items-start space-x-3">
+        <div className="bg-error-subtle border border-red-200 rounded-xl p-4 flex items-start space-x-3">
           <AlertCircle className="h-5 w-5 text-error mt-0.5" />
           <div className="flex-1">
             <p className="text-sm font-medium text-error">{error}</p>
@@ -235,9 +235,9 @@ function StatCard({
   highlight?: 'yellow' | 'green' | 'red';
 }) {
   const colors = {
-    yellow: 'bg-yellow-50 border-yellow-200',
-    green: 'bg-green-50 border-green-200',
-    red: 'bg-red-50 border-red-200',
+    yellow: 'bg-warning-subtle border-yellow-200',
+    green: 'bg-success-subtle border-green-200',
+    red: 'bg-error-subtle border-red-200',
   };
 
   return (
@@ -271,7 +271,7 @@ function GrantsTable({
 
   return (
     <div className="bg-surface shadow-sm overflow-hidden sm:rounded-xl">
-      <table className="min-w-full divide-y divide-gray-200">
+      <table className="min-w-full divide-y divide-border">
         <thead className="bg-background">
           <tr>
             <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">Requester</th>
@@ -286,7 +286,7 @@ function GrantsTable({
             <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">Actions</th>
           </tr>
         </thead>
-        <tbody className="bg-surface divide-y divide-gray-200">
+        <tbody className="bg-surface divide-y divide-border">
           {grants.map((grant) => (
             <tr key={grant.id} className="hover:bg-background">
               <td className="px-6 py-4 whitespace-nowrap">
@@ -321,14 +321,14 @@ function GrantsTable({
                   <>
                     <button
                       onClick={() => onApprove(grant.id)}
-                      className="text-success hover:text-green-900 inline-flex items-center space-x-1"
+                      className="text-success hover:text-success inline-flex items-center space-x-1"
                     >
                       <Check className="h-4 w-4" />
                       <span>Approve</span>
                     </button>
                     <button
                       onClick={() => onRevoke(grant.id)}
-                      className="text-error hover:text-red-900 inline-flex items-center space-x-1"
+                      className="text-error hover:text-error inline-flex items-center space-x-1"
                     >
                       <X className="h-4 w-4" />
                       <span>Reject</span>
@@ -338,7 +338,7 @@ function GrantsTable({
                 {status === 'active' && (
                   <button
                     onClick={() => onRevoke(grant.id)}
-                    className="text-error hover:text-red-900 inline-flex items-center space-x-1"
+                    className="text-error hover:text-error inline-flex items-center space-x-1"
                   >
                     <X className="h-4 w-4" />
                     <span>Revoke</span>
@@ -366,7 +366,7 @@ function ConfigsTab({ configs, onEdit }: { configs: PrivilegeConfig[]; onEdit: (
 
   return (
     <div className="bg-surface shadow-sm overflow-hidden sm:rounded-xl">
-      <table className="min-w-full divide-y divide-gray-200">
+      <table className="min-w-full divide-y divide-border">
         <thead className="bg-background">
           <tr>
             <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">Privilege Type</th>
@@ -377,7 +377,7 @@ function ConfigsTab({ configs, onEdit }: { configs: PrivilegeConfig[]; onEdit: (
             <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">Actions</th>
           </tr>
         </thead>
-        <tbody className="bg-surface divide-y divide-gray-200">
+        <tbody className="bg-surface divide-y divide-border">
           {configs.map((config) => (
             <tr key={config.id} className="hover:bg-background">
               <td className="px-6 py-4 whitespace-nowrap">
@@ -390,16 +390,16 @@ function ConfigsTab({ configs, onEdit }: { configs: PrivilegeConfig[]; onEdit: (
               </td>
               <td className="px-6 py-4 whitespace-nowrap">
                 {config.requires_approver ? (
-                  <Check className="h-5 w-5 text-green-500" />
+                  <Check className="h-5 w-5 text-success" />
                 ) : (
-                  <X className="h-5 w-5 text-gray-300" />
+                  <X className="h-5 w-5 text-muted" />
                 )}
               </td>
               <td className="px-6 py-4 whitespace-nowrap">
                 {config.auto_approve ? (
-                  <Check className="h-5 w-5 text-green-500" />
+                  <Check className="h-5 w-5 text-success" />
                 ) : (
-                  <X className="h-5 w-5 text-gray-300" />
+                  <X className="h-5 w-5 text-muted" />
                 )}
               </td>
               <td className="px-6 py-4 text-sm text-muted">
@@ -408,7 +408,7 @@ function ConfigsTab({ configs, onEdit }: { configs: PrivilegeConfig[]; onEdit: (
               <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                 <button
                   onClick={() => onEdit(config)}
-                  className="text-primary hover:text-blue-900 inline-flex items-center space-x-1"
+                  className="text-primary hover:text-primary inline-flex items-center space-x-1"
                 >
                   <Edit2 className="h-4 w-4" />
                   <span>Edit</span>

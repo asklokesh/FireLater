@@ -372,7 +372,7 @@ export default function DataSecurityPage() {
                       <td className="px-6 py-4 whitespace-nowrap text-right">
                         <button
                           onClick={() => handleDeleteClassification(classification.id)}
-                          className="text-error hover:text-red-900"
+                          className="text-error hover:text-error"
                         >
                           <Trash2 className="h-4 w-4" />
                         </button>

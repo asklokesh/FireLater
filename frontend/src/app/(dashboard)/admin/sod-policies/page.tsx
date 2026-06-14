@@ -437,7 +437,7 @@ export default function SodPoliciesPage() {
                 <Button
                   type="button"
                   onClick={() => handleDeletePolicy(deleteConfirm)}
-                  className="flex-1 bg-primary hover:bg-red-700"
+                  className="flex-1 bg-primary hover:bg-error"
                 >
                   Delete
                 </Button>

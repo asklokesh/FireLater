@@ -244,7 +244,7 @@ export default function ChangeCalendarPage() {
               <button
                 onClick={() => setViewMode('month')}
                 className={`px-3 py-1.5 text-sm ${
-                  viewMode === 'month' ? 'bg-primary-subtle text-primary' : 'bg-white text-secondary'
+                  viewMode === 'month' ? 'bg-primary-subtle text-primary' : 'bg-surface text-secondary'
                 }`}
               >
                 <Calendar className="h-4 w-4" />
@@ -252,7 +252,7 @@ export default function ChangeCalendarPage() {
               <button
                 onClick={() => setViewMode('week')}
                 className={`px-3 py-1.5 text-sm ${
-                  viewMode === 'week' ? 'bg-primary-subtle text-primary' : 'bg-white text-secondary'
+                  viewMode === 'week' ? 'bg-primary-subtle text-primary' : 'bg-surface text-secondary'
                 }`}
               >
                 <List className="h-4 w-4" />
@@ -373,7 +373,7 @@ export default function ChangeCalendarPage() {
                 return (
                   <div key={idx} className="space-y-2">
                     <div className={`text-center py-2 rounded ${
-                      today ? 'bg-primary-subtle text-primary' : 'bg-gray-100'
+                      today ? 'bg-primary-subtle text-primary' : 'bg-surface-hover'
                     }`}>
                       <div className="text-xs text-muted">
                         {date.toLocaleDateString('en-US', { weekday: 'short' })}
@@ -421,7 +421,7 @@ export default function ChangeCalendarPage() {
 
       {/* Legend */}
       <div className="bg-surface rounded-xl shadow-sm p-4">
-        <h3 className="text-sm font-medium text-gray-700 mb-3">Risk Levels</h3>
+        <h3 className="text-sm font-medium text-secondary mb-3">Risk Levels</h3>
         <div className="flex items-center space-x-6">
           {Object.entries(riskColors).map(([risk, colors]) => (
             <div key={risk} className="flex items-center">

@@ -198,7 +198,7 @@ function ConfigurationsTab({
 
   return (
     <div className="bg-surface shadow overflow-hidden sm:rounded-xl">
-      <ul className="divide-y divide-gray-200">
+      <ul className="divide-y divide-border">
         {configs.map((config) => (
           <li key={config.id}>
             <div className="px-4 py-4 sm:px-6">
@@ -261,7 +261,7 @@ function ConfigurationsTab({
                     onClick={() => handleToggleActive(config)}
                     className={`p-2 rounded-xl ${
                       config.is_active
-                        ? 'text-success hover:bg-green-50'
+                        ? 'text-success hover:bg-success-subtle'
                         : 'text-muted hover:bg-surface-hover'
                     }`}
                     title={config.is_active ? 'Deactivate' : 'Activate'}
@@ -395,7 +395,7 @@ function LogsTab({
             </p>
           </div>
         ) : (
-          <table className="min-w-full divide-y divide-gray-200">
+          <table className="min-w-full divide-y divide-border">
             <thead className="bg-surface-hover">
               <tr>
                 <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">
@@ -415,7 +415,7 @@ function LogsTab({
                 </th>
               </tr>
             </thead>
-            <tbody className="bg-surface divide-y divide-gray-200">
+            <tbody className="bg-surface divide-y divide-border">
               {logs.map((log) => (
                 <tr key={log.id} className="hover:bg-surface-hover">
                   <td className="px-6 py-4 whitespace-nowrap">

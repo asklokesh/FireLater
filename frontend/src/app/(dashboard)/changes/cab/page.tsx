@@ -314,7 +314,7 @@ export default function CabMeetingsPage() {
           </div>
         ) : error ? (
           <div className="flex flex-col items-center justify-center h-64">
-            <AlertCircle className="h-12 w-12 text-red-500 mb-4" />
+            <AlertCircle className="h-12 w-12 text-error mb-4" />
             <p className="text-muted">Failed to load meetings</p>
           </div>
         ) : meetings.length === 0 ? (
@@ -355,7 +355,7 @@ export default function CabMeetingsPage() {
                   </th>
                 </tr>
               </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
+              <tbody className="bg-surface divide-y divide-border">
                 {meetings.map((meeting: CabMeeting) => {
                   const status = statusColors[meeting.status] || statusColors.scheduled;
                   return (
@@ -417,7 +417,7 @@ export default function CabMeetingsPage() {
                             e.stopPropagation();
                             openMeetingDetail(meeting);
                           }}
-                          className="text-primary hover:text-blue-900"
+                          className="text-primary hover:text-primary"
                         >
                           View
                         </button>
@@ -451,7 +451,7 @@ export default function CabMeetingsPage() {
             <div className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-secondary mb-1">
-                  Title <span className="text-red-500">*</span>
+                  Title <span className="text-error">*</span>
                 </label>
                 <Input
                   value={formData.title}
@@ -474,7 +474,7 @@ export default function CabMeetingsPage() {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-secondary mb-1">
-                    Start Date/Time <span className="text-red-500">*</span>
+                    Start Date/Time <span className="text-error">*</span>
                   </label>
                   <input
                     type="datetime-local"
@@ -638,7 +638,7 @@ function MeetingDetailModal({
         {/* Header */}
         <div className="px-6 py-4 border-b border-border flex items-center justify-between flex-shrink-0">
           <div className="flex items-center space-x-3">
-            <Calendar className="h-6 w-6 text-blue-500" />
+            <Calendar className="h-6 w-6 text-primary" />
             <div>
               <h2 className="text-lg font-semibold text-foreground">{meeting.title}</h2>
               <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${status.bg} ${status.text}`}>
@@ -825,21 +825,21 @@ function OverviewTab({
     <div className="space-y-6">
       {/* Quick Stats */}
       <div className="grid grid-cols-4 gap-4">
-        <div className="bg-blue-50 rounded-lg p-4">
-          <div className="text-2xl font-bold text-blue-700">{meeting.changes_count || 0}</div>
+        <div className="bg-primary-subtle rounded-lg p-4">
+          <div className="text-2xl font-bold text-primary">{meeting.changes_count || 0}</div>
           <div className="text-sm text-primary">Total Changes</div>
         </div>
-        <div className="bg-green-50 rounded-lg p-4">
-          <div className="text-2xl font-bold text-green-700">{meeting.attendee_count || 0}</div>
-          <div className="text-sm text-green-600">Attendees</div>
+        <div className="bg-success-subtle rounded-lg p-4">
+          <div className="text-2xl font-bold text-success">{meeting.attendee_count || 0}</div>
+          <div className="text-sm text-success">Attendees</div>
         </div>
-        <div className="bg-yellow-50 rounded-lg p-4">
-          <div className="text-2xl font-bold text-yellow-700">-</div>
-          <div className="text-sm text-yellow-600">Pending</div>
+        <div className="bg-warning-subtle rounded-lg p-4">
+          <div className="text-2xl font-bold text-warning">-</div>
+          <div className="text-sm text-warning">Pending</div>
         </div>
-        <div className="bg-purple-50 rounded-lg p-4">
-          <div className="text-2xl font-bold text-purple-700">-</div>
-          <div className="text-sm text-purple-600">Action Items</div>
+        <div className="bg-info-subtle rounded-lg p-4">
+          <div className="text-2xl font-bold text-info">-</div>
+          <div className="text-sm text-info">Action Items</div>
         </div>
       </div>
 
@@ -1010,7 +1010,7 @@ function AttendeesTab({ meetingId, meeting }: { meetingId: string; meeting: CabM
                   <div className="text-sm font-medium text-foreground">{attendee.user_name || 'Unknown'}</div>
                   <div className="text-xs text-muted">{attendee.user_email || ''}</div>
                 </div>
-                <span className="px-2 py-1 rounded-full text-xs font-medium bg-gray-200 text-secondary">
+                <span className="px-2 py-1 rounded-full text-xs font-medium bg-surface-hover text-secondary">
                   {roleLabels[attendee.role]}
                 </span>
               </div>
@@ -1254,8 +1254,8 @@ function DecisionsTab({ meetingId, meeting }: { meetingId: string; meeting: CabM
   return (
     <div className="space-y-4">
       {!canEdit && meeting.status !== 'completed' && (
-        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-          <p className="text-sm text-yellow-700">
+        <div className="bg-warning-subtle border border-yellow-200 rounded-lg p-4">
+          <p className="text-sm text-warning">
             Start the meeting to record decisions.
           </p>
         </div>
@@ -1278,7 +1278,7 @@ function DecisionsTab({ meetingId, meeting }: { meetingId: string; meeting: CabM
             return (
               <div
                 key={change.id}
-                className={`p-4 border rounded-lg ${isSelected ? 'border-blue-500 bg-blue-50' : 'border-border'}`}
+                className={`p-4 border rounded-lg ${isSelected ? 'border-blue-500 bg-primary-subtle' : 'border-border'}`}
               >
                 <div className="flex items-start justify-between">
                   <div>
@@ -1516,7 +1516,7 @@ function ActionItemsTab({ meetingId }: { meetingId: string }) {
             <div key={item.id} className="flex items-start space-x-3 p-3 bg-surface-hover rounded-lg">
               <button
                 onClick={() => handleToggleStatus(item)}
-                className={`mt-0.5 flex-shrink-0 ${item.status === 'completed' ? 'text-green-500' : 'text-muted'}`}
+                className={`mt-0.5 flex-shrink-0 ${item.status === 'completed' ? 'text-success' : 'text-muted'}`}
               >
                 <CheckCircle className="h-5 w-5" />
               </button>

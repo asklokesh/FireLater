@@ -45,11 +45,11 @@ const entityTypeLabels: Record<WorkflowEntityType, string> = {
 };
 
 const triggerTypeLabels: Record<WorkflowTriggerType, { label: string; color: string }> = {
-  on_create: { label: 'On Create', color: 'bg-green-100 text-green-800' },
-  on_update: { label: 'On Update', color: 'bg-blue-100 text-blue-800' },
-  on_status_change: { label: 'Status Change', color: 'bg-purple-100 text-purple-800' },
+  on_create: { label: 'On Create', color: 'bg-success-subtle text-success' },
+  on_update: { label: 'On Update', color: 'bg-primary-subtle text-primary' },
+  on_status_change: { label: 'Status Change', color: 'bg-info-subtle text-info' },
   on_assignment: { label: 'On Assignment', color: 'bg-orange-100 text-orange-800' },
-  scheduled: { label: 'Scheduled', color: 'bg-gray-100 text-gray-800' },
+  scheduled: { label: 'Scheduled', color: 'bg-surface-hover text-foreground' },
 };
 
 const operatorLabels: Record<WorkflowConditionOperator, string> = {
@@ -135,7 +135,7 @@ export default function WorkflowManagementPage() {
   if (loadingRules && rules.length === 0) {
     return (
       <div className="flex items-center justify-center h-64">
-        <Loader2 className="h-8 w-8 animate-spin text-blue-500" />
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
       </div>
     );
   }
@@ -145,8 +145,8 @@ export default function WorkflowManagementPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Workflow Automation</h1>
-          <p className="mt-1 text-sm text-gray-500">
+          <h1 className="text-2xl font-bold text-foreground">Workflow Automation</h1>
+          <p className="mt-1 text-sm text-muted">
             Create and manage automation rules for issues, problems, changes, and requests
           </p>
         </div>
@@ -158,36 +158,36 @@ export default function WorkflowManagementPage() {
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <div className="bg-white rounded-lg shadow p-4">
+        <div className="bg-surface rounded-lg shadow p-4">
           <div className="flex items-center">
-            <div className="h-10 w-10 rounded-lg bg-blue-100 flex items-center justify-center">
-              <WorkflowIcon className="h-5 w-5 text-blue-600" />
+            <div className="h-10 w-10 rounded-lg bg-primary-subtle flex items-center justify-center">
+              <WorkflowIcon className="h-5 w-5 text-primary" />
             </div>
             <div className="ml-4">
-              <p className="text-sm text-gray-500">Total Rules</p>
-              <p className="text-2xl font-semibold text-gray-900">{rules.length}</p>
+              <p className="text-sm text-muted">Total Rules</p>
+              <p className="text-2xl font-semibold text-foreground">{rules.length}</p>
             </div>
           </div>
         </div>
-        <div className="bg-white rounded-lg shadow p-4">
+        <div className="bg-surface rounded-lg shadow p-4">
           <div className="flex items-center">
-            <div className="h-10 w-10 rounded-lg bg-green-100 flex items-center justify-center">
-              <Play className="h-5 w-5 text-green-600" />
+            <div className="h-10 w-10 rounded-lg bg-success-subtle flex items-center justify-center">
+              <Play className="h-5 w-5 text-success" />
             </div>
             <div className="ml-4">
-              <p className="text-sm text-gray-500">Active Rules</p>
-              <p className="text-2xl font-semibold text-gray-900">{activeCount}</p>
+              <p className="text-sm text-muted">Active Rules</p>
+              <p className="text-2xl font-semibold text-foreground">{activeCount}</p>
             </div>
           </div>
         </div>
-        <div className="bg-white rounded-lg shadow p-4">
+        <div className="bg-surface rounded-lg shadow p-4">
           <div className="flex items-center">
-            <div className="h-10 w-10 rounded-lg bg-purple-100 flex items-center justify-center">
-              <Zap className="h-5 w-5 text-purple-600" />
+            <div className="h-10 w-10 rounded-lg bg-info-subtle flex items-center justify-center">
+              <Zap className="h-5 w-5 text-info" />
             </div>
             <div className="ml-4">
-              <p className="text-sm text-gray-500">Executions Today</p>
-              <p className="text-2xl font-semibold text-gray-900">
+              <p className="text-sm text-muted">Executions Today</p>
+              <p className="text-2xl font-semibold text-foreground">
                 {logs.filter((l) => {
                   const today = new Date().toDateString();
                   return new Date(l.executed_at).toDateString() === today;
@@ -196,14 +196,14 @@ export default function WorkflowManagementPage() {
             </div>
           </div>
         </div>
-        <div className="bg-white rounded-lg shadow p-4">
+        <div className="bg-surface rounded-lg shadow p-4">
           <div className="flex items-center">
             <div className="h-10 w-10 rounded-lg bg-orange-100 flex items-center justify-center">
               <AlertCircle className="h-5 w-5 text-orange-600" />
             </div>
             <div className="ml-4">
-              <p className="text-sm text-gray-500">Failed Today</p>
-              <p className="text-2xl font-semibold text-gray-900">
+              <p className="text-sm text-muted">Failed Today</p>
+              <p className="text-2xl font-semibold text-foreground">
                 {logs.filter((l) => {
                   const today = new Date().toDateString();
                   return new Date(l.executed_at).toDateString() === today && l.error;
@@ -215,14 +215,14 @@ export default function WorkflowManagementPage() {
       </div>
 
       {/* Tabs */}
-      <div className="border-b border-gray-200">
+      <div className="border-b border-border">
         <nav className="flex space-x-8">
           <button
             onClick={() => setActiveTab('rules')}
             className={`py-3 px-1 border-b-2 text-sm font-medium ${
               activeTab === 'rules'
-                ? 'border-blue-500 text-blue-600'
-                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                ? 'border-blue-500 text-primary'
+                : 'border-transparent text-muted hover:text-secondary hover:border-border-strong'
             }`}
           >
             Workflow Rules
@@ -231,8 +231,8 @@ export default function WorkflowManagementPage() {
             onClick={() => setActiveTab('logs')}
             className={`py-3 px-1 border-b-2 text-sm font-medium ${
               activeTab === 'logs'
-                ? 'border-blue-500 text-blue-600'
-                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                ? 'border-blue-500 text-primary'
+                : 'border-transparent text-muted hover:text-secondary hover:border-border-strong'
             }`}
           >
             Execution Logs
@@ -243,14 +243,14 @@ export default function WorkflowManagementPage() {
       {activeTab === 'rules' && (
         <>
           {/* Filters */}
-          <div className="bg-white rounded-lg shadow p-4">
+          <div className="bg-surface rounded-lg shadow p-4">
             <div className="flex items-center gap-4">
-              <Filter className="h-4 w-4 text-gray-400" />
-              <label className="text-sm font-medium text-gray-700">Entity Type:</label>
+              <Filter className="h-4 w-4 text-muted" />
+              <label className="text-sm font-medium text-secondary">Entity Type:</label>
               <select
                 value={entityTypeFilter}
                 onChange={(e) => setEntityTypeFilter(e.target.value as WorkflowEntityType | 'all')}
-                className="px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="px-3 py-2 border border-border-strong rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary"
               >
                 <option value="all">All Types</option>
                 <option value="issue">Issues</option>
@@ -264,10 +264,10 @@ export default function WorkflowManagementPage() {
           {/* Rules List */}
           <div className="space-y-4">
             {rules.length === 0 ? (
-              <div className="bg-white rounded-lg shadow p-12 text-center">
-                <WorkflowIcon className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                <h3 className="text-lg font-medium text-gray-900 mb-2">No Workflow Rules</h3>
-                <p className="text-gray-500 mb-4">
+              <div className="bg-surface rounded-lg shadow p-12 text-center">
+                <WorkflowIcon className="h-12 w-12 text-muted mx-auto mb-4" />
+                <h3 className="text-lg font-medium text-foreground mb-2">No Workflow Rules</h3>
+                <p className="text-muted mb-4">
                   Create your first automation rule to streamline your processes
                 </p>
                 <Button onClick={() => setShowCreateModal(true)}>
@@ -337,22 +337,22 @@ function RuleCard({
   onToggleActive: () => void;
 }) {
   return (
-    <div className="bg-white rounded-lg shadow">
-      <div className="p-4 cursor-pointer hover:bg-gray-50" onClick={onToggleExpand}>
+    <div className="bg-surface rounded-lg shadow">
+      <div className="p-4 cursor-pointer hover:bg-surface-hover" onClick={onToggleExpand}>
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-4">
             <div
               className={`h-10 w-10 rounded-lg flex items-center justify-center ${
-                rule.is_active ? 'bg-green-100' : 'bg-gray-100'
+                rule.is_active ? 'bg-success-subtle' : 'bg-surface-hover'
               }`}
             >
               <WorkflowIcon
-                className={`h-5 w-5 ${rule.is_active ? 'text-green-600' : 'text-gray-400'}`}
+                className={`h-5 w-5 ${rule.is_active ? 'text-success' : 'text-muted'}`}
               />
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h3 className="text-lg font-medium text-gray-900">{rule.name}</h3>
+                <h3 className="text-lg font-medium text-foreground">{rule.name}</h3>
                 <span
                   className={`px-2 py-0.5 text-xs font-medium rounded ${
                     triggerTypeLabels[rule.trigger_type].color
@@ -361,12 +361,12 @@ function RuleCard({
                   {triggerTypeLabels[rule.trigger_type].label}
                 </span>
                 {!rule.is_active && (
-                  <span className="px-2 py-0.5 text-xs font-medium bg-gray-100 text-gray-600 rounded">
+                  <span className="px-2 py-0.5 text-xs font-medium bg-surface-hover text-secondary rounded">
                     Inactive
                   </span>
                 )}
               </div>
-              <p className="text-sm text-gray-500">
+              <p className="text-sm text-muted">
                 {entityTypeLabels[rule.entity_type]} - {rule.conditions?.length || 0} conditions,{' '}
                 {rule.actions?.length || 0} actions
               </p>
@@ -385,7 +385,7 @@ function RuleCard({
               {rule.is_active ? (
                 <Pause className="h-4 w-4 text-orange-500" />
               ) : (
-                <Play className="h-4 w-4 text-green-500" />
+                <Play className="h-4 w-4 text-success" />
               )}
             </Button>
             <Button
@@ -406,26 +406,26 @@ function RuleCard({
                 onDelete();
               }}
             >
-              <Trash2 className="h-4 w-4 text-red-500" />
+              <Trash2 className="h-4 w-4 text-error" />
             </Button>
             {isExpanded ? (
-              <ChevronUp className="h-5 w-5 text-gray-400" />
+              <ChevronUp className="h-5 w-5 text-muted" />
             ) : (
-              <ChevronDown className="h-5 w-5 text-gray-400" />
+              <ChevronDown className="h-5 w-5 text-muted" />
             )}
           </div>
         </div>
       </div>
 
       {isExpanded && (
-        <div className="border-t border-gray-200 p-4">
-          {rule.description && <p className="text-sm text-gray-600 mb-4">{rule.description}</p>}
+        <div className="border-t border-border p-4">
+          {rule.description && <p className="text-sm text-secondary mb-4">{rule.description}</p>}
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {/* Conditions */}
             <div>
-              <h4 className="text-sm font-medium text-gray-900 mb-3 flex items-center">
-                <Filter className="h-4 w-4 mr-2 text-blue-500" />
+              <h4 className="text-sm font-medium text-foreground mb-3 flex items-center">
+                <Filter className="h-4 w-4 mr-2 text-primary" />
                 Conditions (IF)
               </h4>
               {rule.conditions && rule.conditions.length > 0 ? (
@@ -433,16 +433,16 @@ function RuleCard({
                   {rule.conditions.map((condition, idx) => (
                     <div
                       key={idx}
-                      className="bg-gray-50 rounded-lg p-3 text-sm flex items-center gap-2"
+                      className="bg-surface-hover rounded-lg p-3 text-sm flex items-center gap-2"
                     >
                       {idx > 0 && (
-                        <span className="text-xs font-medium text-gray-500">
+                        <span className="text-xs font-medium text-muted">
                           {condition.logical_operator || 'AND'}
                         </span>
                       )}
-                      <span className="font-medium text-gray-700">{condition.field}</span>
-                      <span className="text-gray-500">{operatorLabels[condition.operator]}</span>
-                      <span className="font-medium text-blue-600">
+                      <span className="font-medium text-secondary">{condition.field}</span>
+                      <span className="text-muted">{operatorLabels[condition.operator]}</span>
+                      <span className="font-medium text-primary">
                         {Array.isArray(condition.value)
                           ? condition.value.join(', ')
                           : String(condition.value)}
@@ -451,13 +451,13 @@ function RuleCard({
                   ))}
                 </div>
               ) : (
-                <p className="text-sm text-gray-500">No conditions (always matches)</p>
+                <p className="text-sm text-muted">No conditions (always matches)</p>
               )}
             </div>
 
             {/* Actions */}
             <div>
-              <h4 className="text-sm font-medium text-gray-900 mb-3 flex items-center">
+              <h4 className="text-sm font-medium text-foreground mb-3 flex items-center">
                 <Zap className="h-4 w-4 mr-2 text-purple-500" />
                 Actions (THEN)
               </h4>
@@ -466,17 +466,17 @@ function RuleCard({
                   {rule.actions
                     .sort((a, b) => a.order - b.order)
                     .map((action, idx) => (
-                      <div key={idx} className="bg-purple-50 rounded-lg p-3 text-sm">
+                      <div key={idx} className="bg-info-subtle rounded-lg p-3 text-sm">
                         <div className="flex items-center gap-2">
-                          <span className="inline-flex items-center justify-center h-5 w-5 rounded-full bg-purple-200 text-purple-700 text-xs font-medium">
+                          <span className="inline-flex items-center justify-center h-5 w-5 rounded-full bg-purple-200 text-info text-xs font-medium">
                             {idx + 1}
                           </span>
-                          <span className="font-medium text-gray-700">
+                          <span className="font-medium text-secondary">
                             {actionTypeLabels[action.action_type as WorkflowActionType]}
                           </span>
                         </div>
                         {Object.keys(action.parameters).length > 0 && (
-                          <div className="mt-1 ml-7 text-xs text-gray-500">
+                          <div className="mt-1 ml-7 text-xs text-muted">
                             {Object.entries(action.parameters).map(([key, value]) => (
                               <span key={key} className="mr-2">
                                 {key}: {String(value)}
@@ -488,7 +488,7 @@ function RuleCard({
                     ))}
                 </div>
               ) : (
-                <p className="text-sm text-gray-500">No actions configured</p>
+                <p className="text-sm text-muted">No actions configured</p>
               )}
             </div>
           </div>
@@ -593,9 +593,9 @@ function RuleModal({
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 overflow-y-auto">
-      <div className="bg-white rounded-lg shadow-xl max-w-3xl w-full mx-4 my-8">
-        <div className="px-6 py-4 border-b border-gray-200">
-          <h2 className="text-lg font-semibold text-gray-900">
+      <div className="bg-surface rounded-lg shadow-xl max-w-3xl w-full mx-4 my-8">
+        <div className="px-6 py-4 border-b border-border">
+          <h2 className="text-lg font-semibold text-foreground">
             {rule ? 'Edit Workflow Rule' : 'Create Workflow Rule'}
           </h2>
         </div>
@@ -605,23 +605,23 @@ function RuleModal({
             {/* Basic Info */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Rule Name *</label>
+                <label className="block text-sm font-medium text-secondary mb-1">Rule Name *</label>
                 <input
                   type="text"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 border border-border-strong rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary"
                   placeholder="e.g., Auto-assign critical issues"
                   required
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
+                <label className="block text-sm font-medium text-secondary mb-1">Description</label>
                 <input
                   type="text"
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 border border-border-strong rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary"
                   placeholder="Brief description..."
                 />
               </div>
@@ -629,11 +629,11 @@ function RuleModal({
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Entity Type *</label>
+                <label className="block text-sm font-medium text-secondary mb-1">Entity Type *</label>
                 <select
                   value={entityType}
                   onChange={(e) => setEntityType(e.target.value as WorkflowEntityType)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 border border-border-strong rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary"
                   disabled={!!rule}
                 >
                   <option value="issue">Issues</option>
@@ -643,11 +643,11 @@ function RuleModal({
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Trigger *</label>
+                <label className="block text-sm font-medium text-secondary mb-1">Trigger *</label>
                 <select
                   value={triggerType}
                   onChange={(e) => setTriggerType(e.target.value as WorkflowTriggerType)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 border border-border-strong rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary"
                   disabled={!!rule}
                 >
                   <option value="on_create">On Create</option>
@@ -661,7 +661,7 @@ function RuleModal({
             {/* Conditions */}
             <div>
               <div className="flex items-center justify-between mb-2">
-                <label className="block text-sm font-medium text-gray-700">
+                <label className="block text-sm font-medium text-secondary">
                   Conditions (IF)
                 </label>
                 <Button type="button" size="sm" variant="outline" onClick={addCondition}>
@@ -670,13 +670,13 @@ function RuleModal({
                 </Button>
               </div>
               {conditions.length === 0 ? (
-                <p className="text-sm text-gray-500 bg-gray-50 p-3 rounded-lg">
+                <p className="text-sm text-muted bg-surface-hover p-3 rounded-lg">
                   No conditions - rule will match all {entityTypeLabels[entityType].toLowerCase()}
                 </p>
               ) : (
                 <div className="space-y-2">
                   {conditions.map((condition, idx) => (
-                    <div key={idx} className="flex items-center gap-2 bg-gray-50 p-3 rounded-lg">
+                    <div key={idx} className="flex items-center gap-2 bg-surface-hover p-3 rounded-lg">
                       {idx > 0 && (
                         <select
                           value={condition.logical_operator || 'AND'}
@@ -685,7 +685,7 @@ function RuleModal({
                               logical_operator: e.target.value as 'AND' | 'OR',
                             })
                           }
-                          className="px-2 py-1 border border-gray-300 rounded text-xs"
+                          className="px-2 py-1 border border-border-strong rounded text-xs"
                         >
                           <option value="AND">AND</option>
                           <option value="OR">OR</option>
@@ -694,7 +694,7 @@ function RuleModal({
                       <select
                         value={condition.field}
                         onChange={(e) => updateCondition(idx, { field: e.target.value })}
-                        className="px-2 py-1 border border-gray-300 rounded text-sm flex-1"
+                        className="px-2 py-1 border border-border-strong rounded text-sm flex-1"
                       >
                         {fields.map((f) => (
                           <option key={f.field} value={f.field}>
@@ -709,7 +709,7 @@ function RuleModal({
                             operator: e.target.value as WorkflowConditionOperator,
                           })
                         }
-                        className="px-2 py-1 border border-gray-300 rounded text-sm"
+                        className="px-2 py-1 border border-border-strong rounded text-sm"
                       >
                         <option value="equals">equals</option>
                         <option value="not_equals">not equals</option>
@@ -722,7 +722,7 @@ function RuleModal({
                           type="text"
                           value={String(condition.value || '')}
                           onChange={(e) => updateCondition(idx, { value: e.target.value })}
-                          className="px-2 py-1 border border-gray-300 rounded text-sm flex-1"
+                          className="px-2 py-1 border border-border-strong rounded text-sm flex-1"
                           placeholder="Value"
                         />
                       )}
@@ -732,7 +732,7 @@ function RuleModal({
                         size="sm"
                         onClick={() => removeCondition(idx)}
                       >
-                        <Trash2 className="h-4 w-4 text-red-500" />
+                        <Trash2 className="h-4 w-4 text-error" />
                       </Button>
                     </div>
                   ))}
@@ -743,21 +743,21 @@ function RuleModal({
             {/* Actions */}
             <div>
               <div className="flex items-center justify-between mb-2">
-                <label className="block text-sm font-medium text-gray-700">Actions (THEN) *</label>
+                <label className="block text-sm font-medium text-secondary">Actions (THEN) *</label>
                 <Button type="button" size="sm" variant="outline" onClick={addAction}>
                   <Plus className="h-3 w-3 mr-1" />
                   Add Action
                 </Button>
               </div>
               {actions.length === 0 ? (
-                <p className="text-sm text-gray-500 bg-gray-50 p-3 rounded-lg">
+                <p className="text-sm text-muted bg-surface-hover p-3 rounded-lg">
                   No actions configured. Add at least one action.
                 </p>
               ) : (
                 <div className="space-y-2">
                   {actions.map((action, idx) => (
-                    <div key={idx} className="flex items-center gap-2 bg-purple-50 p-3 rounded-lg">
-                      <span className="inline-flex items-center justify-center h-6 w-6 rounded-full bg-purple-200 text-purple-700 text-xs font-medium">
+                    <div key={idx} className="flex items-center gap-2 bg-info-subtle p-3 rounded-lg">
+                      <span className="inline-flex items-center justify-center h-6 w-6 rounded-full bg-purple-200 text-info text-xs font-medium">
                         {idx + 1}
                       </span>
                       <select
@@ -768,7 +768,7 @@ function RuleModal({
                             parameters: {},
                           })
                         }
-                        className="px-2 py-1 border border-gray-300 rounded text-sm"
+                        className="px-2 py-1 border border-border-strong rounded text-sm"
                       >
                         <option value="change_status">Change Status</option>
                         <option value="change_priority">Change Priority</option>
@@ -778,7 +778,7 @@ function RuleModal({
                         <option value="send_notification">Send Notification</option>
                         <option value="set_field">Set Field</option>
                       </select>
-                      <ArrowRight className="h-4 w-4 text-gray-400" />
+                      <ArrowRight className="h-4 w-4 text-muted" />
                       <input
                         type="text"
                         value={String(action.parameters?.value || action.parameters?.status || '')}
@@ -796,7 +796,7 @@ function RuleModal({
                             },
                           })
                         }
-                        className="px-2 py-1 border border-gray-300 rounded text-sm flex-1"
+                        className="px-2 py-1 border border-border-strong rounded text-sm flex-1"
                         placeholder={
                           action.action_type === 'change_status'
                             ? 'Status value'
@@ -813,7 +813,7 @@ function RuleModal({
                         size="sm"
                         onClick={() => removeAction(idx)}
                       >
-                        <Trash2 className="h-4 w-4 text-red-500" />
+                        <Trash2 className="h-4 w-4 text-error" />
                       </Button>
                     </div>
                   ))}
@@ -828,15 +828,15 @@ function RuleModal({
                 id="stopOnMatch"
                 checked={stopOnMatch}
                 onChange={(e) => setStopOnMatch(e.target.checked)}
-                className="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                className="h-4 w-4 text-primary border-border-strong rounded focus:ring-primary"
               />
-              <label htmlFor="stopOnMatch" className="ml-2 text-sm text-gray-700">
+              <label htmlFor="stopOnMatch" className="ml-2 text-sm text-secondary">
                 Stop processing subsequent rules when this rule matches
               </label>
             </div>
           </div>
 
-          <div className="px-6 py-4 border-t border-gray-200 flex justify-end gap-3">
+          <div className="px-6 py-4 border-t border-border flex justify-end gap-3">
             <Button type="button" variant="outline" onClick={onClose}>
               Cancel
             </Button>
@@ -872,17 +872,17 @@ function ExecutionLogsPanel({
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <Loader2 className="h-8 w-8 animate-spin text-blue-500" />
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
       </div>
     );
   }
 
   if (logs.length === 0) {
     return (
-      <div className="bg-white rounded-lg shadow p-12 text-center">
-        <History className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-        <h3 className="text-lg font-medium text-gray-900 mb-2">No Execution Logs</h3>
-        <p className="text-gray-500">
+      <div className="bg-surface rounded-lg shadow p-12 text-center">
+        <History className="h-12 w-12 text-muted mx-auto mb-4" />
+        <h3 className="text-lg font-medium text-foreground mb-2">No Execution Logs</h3>
+        <p className="text-muted">
           Workflow execution logs will appear here once rules start running
         </p>
       </div>
@@ -890,57 +890,57 @@ function ExecutionLogsPanel({
   }
 
   return (
-    <div className="bg-white rounded-lg shadow overflow-hidden">
-      <table className="min-w-full divide-y divide-gray-200">
-        <thead className="bg-gray-50">
+    <div className="bg-surface rounded-lg shadow overflow-hidden">
+      <table className="min-w-full divide-y divide-border">
+        <thead className="bg-surface-hover">
           <tr>
-            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+            <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase">
               Executed At
             </th>
-            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+            <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase">
               Rule
             </th>
-            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+            <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase">
               Entity
             </th>
-            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+            <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase">
               Status
             </th>
-            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+            <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase">
               Duration
             </th>
           </tr>
         </thead>
-        <tbody className="divide-y divide-gray-200">
+        <tbody className="divide-y divide-border">
           {logs.map((log) => (
-            <tr key={log.id} className="hover:bg-gray-50">
-              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+            <tr key={log.id} className="hover:bg-surface-hover">
+              <td className="px-6 py-4 whitespace-nowrap text-sm text-muted">
                 {new Date(log.executed_at).toLocaleString()}
               </td>
               <td className="px-6 py-4 whitespace-nowrap">
-                <span className="text-sm font-medium text-gray-900">{log.rule_name}</span>
+                <span className="text-sm font-medium text-foreground">{log.rule_name}</span>
               </td>
-              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+              <td className="px-6 py-4 whitespace-nowrap text-sm text-muted">
                 {entityTypeLabels[log.entity_type]} #{log.entity_id.slice(0, 8)}
               </td>
               <td className="px-6 py-4 whitespace-nowrap">
                 {log.error ? (
-                  <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-red-100 text-red-800">
+                  <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-error-subtle text-error">
                     <XCircle className="h-3 w-3 mr-1" />
                     Failed
                   </span>
                 ) : log.conditions_matched ? (
-                  <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800">
+                  <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-success-subtle text-success">
                     <CheckCircle className="h-3 w-3 mr-1" />
                     Executed
                   </span>
                 ) : (
-                  <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-800">
+                  <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-surface-hover text-foreground">
                     Skipped
                   </span>
                 )}
               </td>
-              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+              <td className="px-6 py-4 whitespace-nowrap text-sm text-muted">
                 {log.execution_time_ms}ms
               </td>
             </tr>

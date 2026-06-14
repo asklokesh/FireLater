@@ -313,7 +313,7 @@ export default function MakerCheckerPage() {
                   <div className="space-y-3 pt-2 border-t border-border">
                     {/* Approve Section */}
                     {approvingRequestId === request.id ? (
-                      <div className="space-y-2 p-3 bg-blue-50 rounded-xl">
+                      <div className="space-y-2 p-3 bg-primary-subtle rounded-xl">
                         <label className="block text-sm font-medium text-secondary">
                           Approval Comment (optional)
                         </label>
@@ -351,7 +351,7 @@ export default function MakerCheckerPage() {
                     ) : (
                       <Button
                         onClick={() => setApprovingRequestId(request.id)}
-                        className="w-full bg-primary hover:bg-green-700"
+                        className="w-full bg-primary hover:bg-success"
                         disabled={isSubmitting !== null}
                       >
                         Approve
@@ -360,7 +360,7 @@ export default function MakerCheckerPage() {
 
                     {/* Reject Section */}
                     {rejectingRequestId === request.id ? (
-                      <div className="space-y-2 p-3 bg-red-50 rounded-xl">
+                      <div className="space-y-2 p-3 bg-error-subtle rounded-xl">
                         <label className="block text-sm font-medium text-secondary">
                           Rejection Reason
                         </label>
@@ -368,7 +368,7 @@ export default function MakerCheckerPage() {
                           value={rejectingReason}
                           onChange={(e) => setRejectingReason(e.target.value)}
                           placeholder="Explain why you're rejecting this request..."
-                          className="w-full px-3 py-2 border border-border-strong rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-red-500"
+                          className="w-full px-3 py-2 border border-border-strong rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-error"
                           rows={3}
                         />
                         <div className="flex justify-end gap-2">
@@ -387,7 +387,7 @@ export default function MakerCheckerPage() {
                             onClick={() => handleReject(request.id)}
                             size="sm"
                             disabled={isSubmitting === request.id || !rejectingReason}
-                            className="bg-primary hover:bg-red-700"
+                            className="bg-primary hover:bg-error"
                           >
                             {isSubmitting === request.id && (
                               <Loader2 className="h-4 w-4 mr-2 animate-spin" />
@@ -400,7 +400,7 @@ export default function MakerCheckerPage() {
                       <Button
                         variant="outline"
                         onClick={() => setRejectingRequestId(request.id)}
-                        className="w-full text-error border-red-300 hover:bg-red-50"
+                        className="w-full text-error border-red-300 hover:bg-error-subtle"
                         disabled={isSubmitting !== null}
                       >
                         Reject

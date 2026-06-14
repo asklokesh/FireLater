@@ -105,8 +105,8 @@ export default function CatalogPage() {
 
   if (catalogError) {
     return (
-      <div className="bg-red-50 border border-red-200 rounded-lg p-6 text-center">
-        <ShoppingCart className="h-12 w-12 text-red-500 mx-auto mb-4" />
+      <div className="bg-error-subtle border border-red-200 rounded-lg p-6 text-center">
+        <ShoppingCart className="h-12 w-12 text-error mx-auto mb-4" />
         <h3 className="text-lg font-medium text-error mb-2">Error loading catalog</h3>
         <p className="text-error">Please try refreshing the page</p>
       </div>
@@ -210,7 +210,7 @@ export default function CatalogPage() {
                     <Link
                       key={item.id}
                       href={`/catalog/${item.id}`}
-                      className="bg-surface rounded-lg shadow hover:shadow-md transition-shadow p-4"
+                      className="bg-surface rounded-lg shadow hover:shadow-sm transition-shadow p-4"
                     >
                       <div className="flex items-start justify-between">
                         <div>
@@ -243,7 +243,7 @@ export default function CatalogPage() {
                       <Link
                         key={category}
                         href={`/catalog?category=${category}`}
-                        className="bg-surface rounded-lg shadow hover:shadow-md transition-shadow p-6 flex items-start space-x-4"
+                        className="bg-surface rounded-lg shadow hover:shadow-sm transition-shadow p-6 flex items-start space-x-4"
                       >
                         <div className="h-12 w-12 rounded-lg bg-info-subtle flex items-center justify-center flex-shrink-0">
                           <Icon className="h-6 w-6 text-primary" />
@@ -276,7 +276,7 @@ export default function CatalogPage() {
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <Link
                   href="/issues/new"
-                  className="flex items-center space-x-3 p-4 bg-surface rounded-lg shadow-sm hover:shadow-md transition-shadow"
+                  className="flex items-center space-x-3 p-4 bg-surface rounded-lg shadow-sm hover:shadow-sm transition-shadow"
                 >
                   <Headphones className="h-8 w-8 text-primary" />
                   <div>
@@ -286,9 +286,9 @@ export default function CatalogPage() {
                 </Link>
                 <Link
                   href="/knowledge"
-                  className="flex items-center space-x-3 p-4 bg-surface rounded-lg shadow-sm hover:shadow-md transition-shadow"
+                  className="flex items-center space-x-3 p-4 bg-surface rounded-lg shadow-sm hover:shadow-sm transition-shadow"
                 >
-                  <Star className="h-8 w-8 text-yellow-500" />
+                  <Star className="h-8 w-8 text-warning" />
                   <div>
                     <h3 className="font-medium text-foreground">Knowledge Base</h3>
                     <p className="text-sm text-muted">Find answers yourself</p>
@@ -296,9 +296,9 @@ export default function CatalogPage() {
                 </Link>
                 <Link
                   href="/support"
-                  className="flex items-center space-x-3 p-4 bg-surface rounded-lg shadow-sm hover:shadow-md transition-shadow"
+                  className="flex items-center space-x-3 p-4 bg-surface rounded-lg shadow-sm hover:shadow-sm transition-shadow"
                 >
-                  <Users className="h-8 w-8 text-green-500" />
+                  <Users className="h-8 w-8 text-success" />
                   <div>
                     <h3 className="font-medium text-foreground">Contact Support</h3>
                     <p className="text-sm text-muted">Talk to our team</p>
@@ -320,7 +320,7 @@ export default function CatalogPage() {
               <span className="ml-2 text-muted">Loading requests...</span>
             </div>
           ) : myRequests.length > 0 ? (
-            <ul className="divide-y divide-gray-200">
+            <ul className="divide-y divide-border">
               {myRequests.map((request: Request) => (
                 <li key={request.id}>
                   <Link

@@ -390,14 +390,14 @@ export default function AccessRecertificationPage() {
                                     <>
                                       <button
                                         onClick={() => handleDecideItem(item.id, 'approved')}
-                                        className="inline-flex items-center px-3 py-1 rounded-xl text-xs font-medium bg-success-subtle text-success hover:bg-green-200"
+                                        className="inline-flex items-center px-3 py-1 rounded-xl text-xs font-medium bg-success-subtle text-success hover:bg-success-subtle"
                                       >
                                         <Check className="h-3 w-3 mr-1" />
                                         Approve
                                       </button>
                                       <button
                                         onClick={() => handleDecideItem(item.id, 'revoked')}
-                                        className="inline-flex items-center px-3 py-1 rounded-xl text-xs font-medium bg-error-subtle text-error hover:bg-red-200"
+                                        className="inline-flex items-center px-3 py-1 rounded-xl text-xs font-medium bg-error-subtle text-error hover:bg-error-subtle"
                                       >
                                         <X className="h-3 w-3 mr-1" />
                                         Revoke

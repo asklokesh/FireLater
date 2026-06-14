@@ -325,7 +325,7 @@ export default function GroupsPage() {
 
       {/* Groups Table */}
       <div className="bg-surface rounded-lg shadow overflow-hidden">
-        <table className="min-w-full divide-y divide-gray-200">
+        <table className="min-w-full divide-y divide-border">
           <thead className="bg-surface-hover">
             <tr>
               <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">
@@ -348,7 +348,7 @@ export default function GroupsPage() {
               </th>
             </tr>
           </thead>
-          <tbody className="bg-surface divide-y divide-gray-200">
+          <tbody className="bg-surface divide-y divide-border">
             {groups.map((group) => {
               const config = typeConfig[group.type] || typeConfig.team;
               const TypeIcon = config.icon;
@@ -650,7 +650,7 @@ export default function GroupsPage() {
                         </span>
                         <button
                           onClick={() => handleRemoveMember(member.user_id)}
-                          className="text-error hover:text-red-700"
+                          className="text-error hover:text-error"
                         >
                           <Trash2 className="h-4 w-4" />
                         </button>

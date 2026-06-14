@@ -181,7 +181,7 @@ export default function AssetsPage() {
           <div className="bg-surface rounded-lg shadow p-4">
             <div className="flex items-center">
               <div className="p-3 bg-warning-subtle rounded-lg">
-                <AlertTriangle className="h-6 w-6 text-yellow-600" />
+                <AlertTriangle className="h-6 w-6 text-warning" />
               </div>
               <div className="ml-4">
                 <p className="text-sm text-muted">Warranty Expiring</p>
@@ -192,7 +192,7 @@ export default function AssetsPage() {
           <div className="bg-surface rounded-lg shadow p-4">
             <div className="flex items-center">
               <div className="p-3 bg-info-subtle rounded-lg">
-                <Clock className="h-6 w-6 text-purple-600" />
+                <Clock className="h-6 w-6 text-info" />
               </div>
               <div className="ml-4">
                 <p className="text-sm text-muted">License Expiring</p>
@@ -219,7 +219,7 @@ export default function AssetsPage() {
           <button
             onClick={() => setShowFilters(!showFilters)}
             className={`inline-flex items-center px-4 py-2 border rounded-lg transition-colors ${
-              showFilters ? 'bg-blue-50 border-primary text-blue-700' : 'border-border-strong hover:bg-background'
+              showFilters ? 'bg-primary-subtle border-primary text-primary' : 'border-border-strong hover:bg-background'
             }`}
           >
             <Filter className="h-5 w-5 mr-2" />
@@ -279,13 +279,13 @@ export default function AssetsPage() {
           <div className="p-8 text-center text-muted">Loading assets...</div>
         ) : assets.length === 0 ? (
           <div className="p-8 text-center text-muted">
-            <HardDrive className="h-12 w-12 mx-auto mb-4 text-gray-300" />
+            <HardDrive className="h-12 w-12 mx-auto mb-4 text-muted" />
             <p className="text-lg font-medium">No assets found</p>
             <p className="text-sm mt-1">Create your first asset to start tracking your inventory.</p>
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
+            <table className="min-w-full divide-y divide-border">
               <thead className="bg-background">
                 <tr>
                   <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">Asset</th>
@@ -296,7 +296,7 @@ export default function AssetsPage() {
                   <th className="px-6 py-3 text-right text-xs font-medium text-muted uppercase tracking-wider">Actions</th>
                 </tr>
               </thead>
-              <tbody className="bg-surface divide-y divide-gray-200">
+              <tbody className="bg-surface divide-y divide-border">
                 {assets.map((asset: Asset) => {
                   const statusBadge = getStatusBadge(asset.status);
                   return (
@@ -371,7 +371,7 @@ export default function AssetsPage() {
                                   e.stopPropagation();
                                   handleDelete(asset.id);
                                 }}
-                                className="w-full px-4 py-2 text-left text-sm text-error hover:bg-red-50 flex items-center"
+                                className="w-full px-4 py-2 text-left text-sm text-error hover:bg-error-subtle flex items-center"
                               >
                                 <Trash2 className="h-4 w-4 mr-2" />
                                 Delete
