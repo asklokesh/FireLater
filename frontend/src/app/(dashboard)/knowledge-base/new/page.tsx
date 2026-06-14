@@ -65,36 +65,36 @@ export default function NewArticlePage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center space-x-4">
-          <Link href="/knowledge-base" className="text-gray-500 hover:text-gray-700">
+          <Link href="/knowledge-base" className="text-muted hover:text-secondary">
             <ArrowLeft className="h-5 w-5" />
           </Link>
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">New Article</h1>
-            <p className="mt-1 text-sm text-gray-500">Create a new knowledge base article</p>
+            <h1 className="text-2xl font-bold text-foreground">New Article</h1>
+            <p className="mt-1 text-sm text-muted">Create a new knowledge base article</p>
           </div>
         </div>
       </div>
 
       {/* Form */}
-      <form onSubmit={handleSubmit} className="bg-white rounded-lg shadow" role="form">
+      <form onSubmit={handleSubmit} className="bg-surface rounded-xl shadow-sm" role="form">
         <div className="p-6 space-y-6">
           {error && (
-            <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-sm text-red-600">
+            <div className="bg-error-subtle border border-error rounded-lg p-4 text-sm text-error">
               {error}
             </div>
           )}
 
           {/* Title */}
           <div>
-            <label htmlFor="title" className="block text-sm font-medium text-gray-700 mb-1">
-              Title <span className="text-red-500">*</span>
+            <label htmlFor="title" className="block text-sm font-medium text-secondary mb-1">
+              Title <span className="text-error">*</span>
             </label>
             <input
               id="title"
               type="text"
               value={formData.title}
               onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-              className="w-full px-4 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-4 py-2 border border-border-strong rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary"
               placeholder="Enter article title"
               required
             />
@@ -102,7 +102,7 @@ export default function NewArticlePage() {
 
           {/* Summary */}
           <div>
-            <label htmlFor="summary" className="block text-sm font-medium text-gray-700 mb-1">
+            <label htmlFor="summary" className="block text-sm font-medium text-secondary mb-1">
               Summary
             </label>
             <textarea
@@ -110,39 +110,39 @@ export default function NewArticlePage() {
               value={formData.summary}
               onChange={(e) => setFormData({ ...formData, summary: e.target.value })}
               rows={2}
-              className="w-full px-4 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-4 py-2 border border-border-strong rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary"
               placeholder="Brief summary of the article"
             />
           </div>
 
           {/* Content */}
           <div>
-            <label htmlFor="content" className="block text-sm font-medium text-gray-700 mb-1">
-              Content <span className="text-red-500">*</span>
+            <label htmlFor="content" className="block text-sm font-medium text-secondary mb-1">
+              Content <span className="text-error">*</span>
             </label>
             <textarea
               id="content"
               value={formData.content}
               onChange={(e) => setFormData({ ...formData, content: e.target.value })}
               rows={12}
-              className="w-full px-4 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono"
+              className="w-full px-4 py-2 border border-border-strong rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary font-mono"
               placeholder="Article content (Markdown supported)"
               required
             />
-            <p className="mt-1 text-xs text-gray-500">Supports Markdown formatting</p>
+            <p className="mt-1 text-xs text-muted">Supports Markdown formatting</p>
           </div>
 
           {/* Type and Visibility */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div>
-              <label htmlFor="type" className="block text-sm font-medium text-gray-700 mb-1">
+              <label htmlFor="type" className="block text-sm font-medium text-secondary mb-1">
                 Article Type
               </label>
               <select
                 id="type"
                 value={formData.type}
                 onChange={(e) => setFormData({ ...formData, type: e.target.value as typeof formData.type })}
-                className="w-full px-4 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-4 py-2 border border-border-strong rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary"
               >
                 <option value="how_to">How-To Guide</option>
                 <option value="troubleshooting">Troubleshooting</option>
@@ -153,14 +153,14 @@ export default function NewArticlePage() {
               </select>
             </div>
             <div>
-              <label htmlFor="visibility" className="block text-sm font-medium text-gray-700 mb-1">
+              <label htmlFor="visibility" className="block text-sm font-medium text-secondary mb-1">
                 Visibility
               </label>
               <select
                 id="visibility"
                 value={formData.visibility}
                 onChange={(e) => setFormData({ ...formData, visibility: e.target.value as typeof formData.visibility })}
-                className="w-full px-4 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-4 py-2 border border-border-strong rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary"
               >
                 <option value="public">Public</option>
                 <option value="internal">Internal</option>
@@ -168,14 +168,14 @@ export default function NewArticlePage() {
               </select>
             </div>
             <div>
-              <label htmlFor="category" className="block text-sm font-medium text-gray-700 mb-1">
+              <label htmlFor="category" className="block text-sm font-medium text-secondary mb-1">
                 Category
               </label>
               <select
                 id="category"
                 value={formData.categoryId}
                 onChange={(e) => setFormData({ ...formData, categoryId: e.target.value })}
-                className="w-full px-4 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-4 py-2 border border-border-strong rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary"
               >
                 <option value="">No Category</option>
                 {categories.map((cat: KBCategory) => (
@@ -188,7 +188,7 @@ export default function NewArticlePage() {
           {/* Tags and Keywords */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label htmlFor="tags" className="block text-sm font-medium text-gray-700 mb-1">
+              <label htmlFor="tags" className="block text-sm font-medium text-secondary mb-1">
                 Tags
               </label>
               <input
@@ -196,13 +196,13 @@ export default function NewArticlePage() {
                 type="text"
                 value={formData.tags}
                 onChange={(e) => setFormData({ ...formData, tags: e.target.value })}
-                className="w-full px-4 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-4 py-2 border border-border-strong rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary"
                 placeholder="tag1, tag2, tag3"
               />
-              <p className="mt-1 text-xs text-gray-500">Comma-separated list</p>
+              <p className="mt-1 text-xs text-muted">Comma-separated list</p>
             </div>
             <div>
-              <label htmlFor="keywords" className="block text-sm font-medium text-gray-700 mb-1">
+              <label htmlFor="keywords" className="block text-sm font-medium text-secondary mb-1">
                 Keywords
               </label>
               <input
@@ -210,16 +210,16 @@ export default function NewArticlePage() {
                 type="text"
                 value={formData.keywords}
                 onChange={(e) => setFormData({ ...formData, keywords: e.target.value })}
-                className="w-full px-4 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-4 py-2 border border-border-strong rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary"
                 placeholder="keyword1, keyword2, keyword3"
               />
-              <p className="mt-1 text-xs text-gray-500">Comma-separated list for search</p>
+              <p className="mt-1 text-xs text-muted">Comma-separated list for search</p>
             </div>
           </div>
         </div>
 
         {/* Form Actions */}
-        <div className="px-6 py-4 border-t border-gray-200 flex justify-end space-x-3">
+        <div className="px-6 py-4 border-t border-border flex justify-end space-x-3">
           <Link href="/knowledge-base">
             <Button variant="outline" type="button">
               Cancel
