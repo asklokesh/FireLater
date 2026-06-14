@@ -96,13 +96,13 @@ export default function NewProblemPage() {
       <div className="flex items-center space-x-4">
         <button
           onClick={() => router.back()}
-          className="p-2 hover:bg-gray-100 rounded-md"
+          className="p-2 hover:bg-background rounded-md"
         >
-          <ArrowLeft className="h-5 w-5 text-gray-500" />
+          <ArrowLeft className="h-5 w-5 text-muted" />
         </button>
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Create New Problem</h1>
-          <p className="mt-1 text-sm text-gray-500">
+          <h1 className="text-2xl font-bold text-foreground">Create New Problem</h1>
+          <p className="mt-1 text-sm text-muted">
             Initiate root cause analysis for recurring or significant issues
           </p>
         </div>
@@ -111,14 +111,14 @@ export default function NewProblemPage() {
       {/* Form */}
       <form onSubmit={handleSubmit} className="space-y-6">
         {error && (
-          <div className="flex items-center gap-2 p-4 text-sm text-red-800 bg-red-100 rounded-md">
+          <div className="flex items-center gap-2 p-4 text-sm text-error bg-error-subtle rounded-md">
             <AlertTriangle className="h-4 w-4" />
             {error}
           </div>
         )}
 
-        <div className="bg-white rounded-lg shadow p-6 space-y-6">
-          <h2 className="text-lg font-semibold text-gray-900">Problem Details</h2>
+        <div className="bg-surface rounded-xl shadow-sm p-6 space-y-6">
+          <h2 className="text-lg font-semibold text-foreground">Problem Details</h2>
 
           <Input
             id="title"
@@ -134,9 +134,9 @@ export default function NewProblemPage() {
           <div>
             <label
               htmlFor="description"
-              className="block text-sm font-medium text-gray-700 mb-1"
+              className="block text-sm font-medium text-secondary mb-1"
             >
-              Description <span className="text-red-500">*</span>
+              Description <span className="text-error">*</span>
             </label>
             <textarea
               id="description"
@@ -144,13 +144,13 @@ export default function NewProblemPage() {
               placeholder="Detailed description of the problem, symptoms, and patterns observed..."
               value={formData.description}
               onChange={handleChange('description')}
-              className={`w-full px-3 py-2 border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                errors.description ? 'border-red-500' : 'border-gray-300'
+              className={`w-full px-3 py-2 border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 ${
+                errors.description ? 'border-red-500' : 'border-border-strong'
               }`}
               required
             />
             {errors.description && (
-              <p className="mt-1 text-sm text-red-500">{errors.description}</p>
+              <p className="mt-1 text-sm text-error">{errors.description}</p>
             )}
           </div>
 
@@ -158,7 +158,7 @@ export default function NewProblemPage() {
             <div>
               <label
                 htmlFor="problemType"
-                className="block text-sm font-medium text-gray-700 mb-1"
+                className="block text-sm font-medium text-secondary mb-1"
               >
                 Problem Type
               </label>
@@ -166,12 +166,12 @@ export default function NewProblemPage() {
                 id="problemType"
                 value={formData.problemType}
                 onChange={handleChange('problemType')}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 border border-border-strong rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
               >
                 <option value="reactive">Reactive (from incident)</option>
                 <option value="proactive">Proactive (trend analysis)</option>
               </select>
-              <p className="mt-1 text-xs text-gray-500">
+              <p className="mt-1 text-xs text-muted">
                 Reactive: Created from recurring incidents. Proactive: Identified through trend analysis.
               </p>
             </div>
@@ -179,7 +179,7 @@ export default function NewProblemPage() {
             <div>
               <label
                 htmlFor="applicationId"
-                className="block text-sm font-medium text-gray-700 mb-1"
+                className="block text-sm font-medium text-secondary mb-1"
               >
                 Application
               </label>
@@ -187,7 +187,7 @@ export default function NewProblemPage() {
                 id="applicationId"
                 value={formData.applicationId}
                 onChange={handleChange('applicationId')}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 border border-border-strong rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
               >
                 <option value="">Select an application (optional)</option>
                 {applications.map((app: { id: string; name: string }) => (
@@ -200,14 +200,14 @@ export default function NewProblemPage() {
           </div>
         </div>
 
-        <div className="bg-white rounded-lg shadow p-6 space-y-6">
-          <h2 className="text-lg font-semibold text-gray-900">Priority & Impact</h2>
+        <div className="bg-surface rounded-xl shadow-sm p-6 space-y-6">
+          <h2 className="text-lg font-semibold text-foreground">Priority & Impact</h2>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
               <label
                 htmlFor="priority"
-                className="block text-sm font-medium text-gray-700 mb-1"
+                className="block text-sm font-medium text-secondary mb-1"
               >
                 Priority
               </label>
@@ -215,7 +215,7 @@ export default function NewProblemPage() {
                 id="priority"
                 value={formData.priority}
                 onChange={handleChange('priority')}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 border border-border-strong rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
               >
                 <option value="critical">Critical</option>
                 <option value="high">High</option>
@@ -227,7 +227,7 @@ export default function NewProblemPage() {
             <div>
               <label
                 htmlFor="urgency"
-                className="block text-sm font-medium text-gray-700 mb-1"
+                className="block text-sm font-medium text-secondary mb-1"
               >
                 Urgency
               </label>
@@ -235,7 +235,7 @@ export default function NewProblemPage() {
                 id="urgency"
                 value={formData.urgency}
                 onChange={handleChange('urgency')}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 border border-border-strong rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
               >
                 <option value="immediate">Immediate</option>
                 <option value="high">High</option>
@@ -247,7 +247,7 @@ export default function NewProblemPage() {
             <div>
               <label
                 htmlFor="impact"
-                className="block text-sm font-medium text-gray-700 mb-1"
+                className="block text-sm font-medium text-secondary mb-1"
               >
                 Impact
               </label>
@@ -255,7 +255,7 @@ export default function NewProblemPage() {
                 id="impact"
                 value={formData.impact}
                 onChange={handleChange('impact')}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 border border-border-strong rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
               >
                 <option value="widespread">Widespread</option>
                 <option value="significant">Significant</option>
@@ -266,14 +266,14 @@ export default function NewProblemPage() {
           </div>
         </div>
 
-        <div className="bg-white rounded-lg shadow p-6 space-y-6">
-          <h2 className="text-lg font-semibold text-gray-900">Assignment</h2>
+        <div className="bg-surface rounded-xl shadow-sm p-6 space-y-6">
+          <h2 className="text-lg font-semibold text-foreground">Assignment</h2>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label
                 htmlFor="assignedGroup"
-                className="block text-sm font-medium text-gray-700 mb-1"
+                className="block text-sm font-medium text-secondary mb-1"
               >
                 Assignment Group
               </label>
@@ -281,7 +281,7 @@ export default function NewProblemPage() {
                 id="assignedGroup"
                 value={formData.assignedGroup}
                 onChange={handleChange('assignedGroup')}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 border border-border-strong rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
               >
                 <option value="">Select a group (optional)</option>
                 {groups.map((group: { id: string; name: string }) => (
@@ -295,7 +295,7 @@ export default function NewProblemPage() {
             <div>
               <label
                 htmlFor="assignedTo"
-                className="block text-sm font-medium text-gray-700 mb-1"
+                className="block text-sm font-medium text-secondary mb-1"
               >
                 Assigned To
               </label>
@@ -303,7 +303,7 @@ export default function NewProblemPage() {
                 id="assignedTo"
                 value={formData.assignedTo}
                 onChange={handleChange('assignedTo')}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 border border-border-strong rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
               >
                 <option value="">Select a user (optional)</option>
                 {users.map((user: { id: string; name: string }) => (
