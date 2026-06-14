@@ -20,16 +20,16 @@ import { Button } from '@/components/ui/button';
 import { useApplications, Application } from '@/hooks/useApi';
 
 const statusColors: Record<string, { bg: string; text: string; label: string }> = {
-  active: { bg: 'bg-green-100', text: 'text-green-800', label: 'Active' },
-  inactive: { bg: 'bg-gray-100', text: 'text-gray-800', label: 'Inactive' },
-  deprecated: { bg: 'bg-red-100', text: 'text-red-800', label: 'Deprecated' },
+  active: { bg: 'bg-success-subtle', text: 'text-success', label: 'Active' },
+  inactive: { bg: 'bg-background', text: 'text-secondary', label: 'Inactive' },
+  deprecated: { bg: 'bg-error-subtle', text: 'text-error', label: 'Deprecated' },
 };
 
 const tierColors: Record<string, { bg: string; text: string; label: string }> = {
-  P1: { bg: 'bg-red-100', text: 'text-red-800', label: 'P1 - Critical' },
-  P2: { bg: 'bg-orange-100', text: 'text-orange-800', label: 'P2 - High' },
-  P3: { bg: 'bg-yellow-100', text: 'text-yellow-800', label: 'P3 - Medium' },
-  P4: { bg: 'bg-blue-100', text: 'text-blue-800', label: 'P4 - Low' },
+  P1: { bg: 'bg-error-subtle', text: 'text-error', label: 'P1 - Critical' },
+  P2: { bg: 'bg-warning-subtle', text: 'text-warning', label: 'P2 - High' },
+  P3: { bg: 'bg-warning-subtle', text: 'text-warning', label: 'P3 - Medium' },
+  P4: { bg: 'bg-primary-subtle', text: 'text-primary', label: 'P4 - Low' },
 };
 
 const criticalityLabels: Record<string, string> = {
@@ -47,18 +47,18 @@ const lifecycleLabels: Record<string, string> = {
 };
 
 const getHealthScoreColor = (score: number | undefined) => {
-  if (!score) return 'text-gray-400';
-  if (score >= 90) return 'text-green-600';
-  if (score >= 70) return 'text-yellow-600';
-  if (score >= 50) return 'text-orange-600';
-  return 'text-red-600';
+  if (!score) return 'text-muted';
+  if (score >= 90) return 'text-success';
+  if (score >= 70) return 'text-warning';
+  if (score >= 50) return 'text-warning';
+  return 'text-error';
 };
 
 const getHealthScoreIcon = (score: number | undefined) => {
-  if (!score) return <Activity className="h-5 w-5 text-gray-400" />;
-  if (score >= 90) return <CheckCircle className="h-5 w-5 text-green-500" />;
-  if (score >= 70) return <Activity className="h-5 w-5 text-yellow-500" />;
-  return <AlertTriangle className="h-5 w-5 text-red-500" />;
+  if (!score) return <Activity className="h-5 w-5 text-muted" />;
+  if (score >= 90) return <CheckCircle className="h-5 w-5 w-2.5 h-2.5 rounded-full bg-success" />;
+  if (score >= 70) return <Activity className="h-5 w-5 w-2.5 h-2.5 rounded-full bg-warning" />;
+  return <AlertTriangle className="h-5 w-5 w-2.5 h-2.5 rounded-full bg-error" />;
 };
 
 export default function ApplicationsPage() {
@@ -88,10 +88,10 @@ export default function ApplicationsPage() {
 
   if (error) {
     return (
-      <div className="bg-red-50 border border-red-200 rounded-lg p-6 text-center">
-        <Server className="h-12 w-12 text-red-500 mx-auto mb-4" />
-        <h3 className="text-lg font-medium text-red-800 mb-2">Error loading applications</h3>
-        <p className="text-red-600">Please try refreshing the page</p>
+      <div className="bg-error-subtle border border-border rounded-lg p-6 text-center">
+        <Server className="h-12 w-12 text-error mx-auto mb-4" />
+        <h3 className="text-lg font-medium text-error mb-2">Error loading applications</h3>
+        <p className="text-error">Please try refreshing the page</p>
       </div>
     );
   }
@@ -101,8 +101,8 @@ export default function ApplicationsPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Applications</h1>
-          <p className="mt-1 text-sm text-gray-500">
+          <h1 className="text-2xl font-bold text-foreground">Applications</h1>
+          <p className="mt-1 text-sm text-muted">
             Manage and monitor your IT applications
           </p>
         </div>
@@ -115,16 +115,16 @@ export default function ApplicationsPage() {
       </div>
 
       {/* Search and Filters */}
-      <div className="bg-white rounded-lg shadow p-4">
+      <div className="bg-surface rounded-lg shadow-sm p-4">
         <div className="flex flex-col sm:flex-row gap-4">
           <div className="flex-1 relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted" />
             <input
               type="text"
               placeholder="Search by name, ID or description..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full pl-10 pr-4 py-2 border border-border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary"
             />
           </div>
           <Button
@@ -139,13 +139,13 @@ export default function ApplicationsPage() {
         </div>
 
         {showFilters && (
-          <div className="mt-4 pt-4 border-t border-gray-200 grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div className="mt-4 pt-4 border-t border-border grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
+              <label className="block text-sm font-medium text-secondary mb-1">Status</label>
               <select
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 border border-border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary"
               >
                 <option value="all">All Statuses</option>
                 <option value="active">Active</option>
@@ -154,11 +154,11 @@ export default function ApplicationsPage() {
               </select>
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Tier</label>
+              <label className="block text-sm font-medium text-secondary mb-1">Tier</label>
               <select
                 value={tierFilter}
                 onChange={(e) => setTierFilter(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 border border-border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary"
               >
                 <option value="all">All Tiers</option>
                 <option value="P1">P1 - Critical</option>
@@ -168,11 +168,11 @@ export default function ApplicationsPage() {
               </select>
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Lifecycle Stage</label>
+              <label className="block text-sm font-medium text-secondary mb-1">Lifecycle Stage</label>
               <select
                 value={lifecycleFilter}
                 onChange={(e) => setLifecycleFilter(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 border border-border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary"
               >
                 <option value="all">All Stages</option>
                 <option value="development">Development</option>
@@ -188,8 +188,8 @@ export default function ApplicationsPage() {
       {/* Applications Grid */}
       {isLoading ? (
         <div className="flex items-center justify-center h-64">
-          <Loader2 className="h-8 w-8 animate-spin text-blue-500" />
-          <span className="ml-2 text-gray-500">Loading applications...</span>
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          <span className="ml-2 text-muted">Loading applications...</span>
         </div>
       ) : (
         <>
@@ -202,30 +202,30 @@ export default function ApplicationsPage() {
                 <Link
                   key={app.id}
                   href={`/applications/${app.id}`}
-                  className="bg-white rounded-lg shadow hover:shadow-md transition-shadow"
+                  className="bg-surface rounded-xl shadow-sm hover:shadow-md transition-shadow"
                 >
                   <div className="p-6">
                     <div className="flex items-start justify-between">
                       <div className="flex items-center space-x-3">
-                        <div className="h-10 w-10 rounded-lg bg-blue-100 flex items-center justify-center">
-                          <Server className="h-5 w-5 text-blue-600" />
+                        <div className="h-10 w-10 rounded-lg bg-primary-subtle flex items-center justify-center">
+                          <Server className="h-5 w-5 text-primary" />
                         </div>
                         <div>
-                          <h3 className="text-lg font-semibold text-gray-900">{app.name}</h3>
-                          <p className="text-sm text-gray-500">{app.app_id}</p>
+                          <h3 className="text-lg font-semibold text-foreground">{app.name}</h3>
+                          <p className="text-sm text-muted">{app.app_id}</p>
                         </div>
                       </div>
                       <button
                         onClick={(e) => {
                           e.preventDefault();
                         }}
-                        className="text-gray-400 hover:text-gray-600"
+                        className="text-muted hover:text-secondary"
                       >
                         <MoreHorizontal className="h-5 w-5" />
                       </button>
                     </div>
 
-                    <p className="mt-3 text-sm text-gray-600 line-clamp-2">{app.description || 'No description'}</p>
+                    <p className="mt-3 text-sm text-secondary line-clamp-2">{app.description || 'No description'}</p>
 
                     <div className="mt-4 flex items-center justify-between">
                       <div className="flex items-center space-x-2">
@@ -246,39 +246,39 @@ export default function ApplicationsPage() {
                         {tierStyle.label}
                       </span>
                       {app.lifecycle_stage && (
-                        <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-800">
+                        <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-background text-secondary">
                           {lifecycleLabels[app.lifecycle_stage] || app.lifecycle_stage}
                         </span>
                       )}
                       {app.criticality && (
-                        <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-purple-100 text-purple-800">
+                        <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-primary-subtle text-primary">
                           {criticalityLabels[app.criticality] || app.criticality}
                         </span>
                       )}
                     </div>
 
-                    <div className="mt-4 pt-4 border-t border-gray-100 space-y-2 text-sm">
+                    <div className="mt-4 pt-4 border-t border-border space-y-2 text-sm">
                       {app.owner_user_name && (
-                        <div className="flex items-center text-gray-600">
-                          <Users className="h-4 w-4 mr-2 text-gray-400" />
+                        <div className="flex items-center text-secondary">
+                          <Users className="h-4 w-4 mr-2 text-muted" />
                           Owner: {app.owner_user_name}
                         </div>
                       )}
                       {app.owner_group_name && (
-                        <div className="flex items-center text-gray-600">
-                          <Building2 className="h-4 w-4 mr-2 text-gray-400" />
+                        <div className="flex items-center text-secondary">
+                          <Building2 className="h-4 w-4 mr-2 text-muted" />
                           Team: {app.owner_group_name}
                         </div>
                       )}
                       {app.support_group_name && (
-                        <div className="flex items-center text-gray-600">
-                          <Users className="h-4 w-4 mr-2 text-gray-400" />
+                        <div className="flex items-center text-secondary">
+                          <Users className="h-4 w-4 mr-2 text-muted" />
                           Support: {app.support_group_name}
                         </div>
                       )}
                       {app.environment_count != null && app.environment_count > 0 && (
-                        <div className="flex items-center text-gray-600">
-                          <Server className="h-4 w-4 mr-2 text-gray-400" />
+                        <div className="flex items-center text-secondary">
+                          <Server className="h-4 w-4 mr-2 text-muted" />
                           {app.environment_count} environment{app.environment_count !== 1 ? 's' : ''}
                         </div>
                       )}
@@ -290,17 +290,17 @@ export default function ApplicationsPage() {
           </div>
 
           {filteredApplications.length === 0 && (
-            <div className="bg-white rounded-lg shadow p-12 text-center">
-              <Server className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-              <h3 className="text-lg font-medium text-gray-900 mb-2">No applications found</h3>
-              <p className="text-gray-500">Try adjusting your search or filters</p>
+            <div className="bg-surface rounded-lg shadow-sm p-12 text-center">
+              <Server className="h-12 w-12 text-muted mx-auto mb-4" />
+              <h3 className="text-lg font-medium text-foreground mb-2">No applications found</h3>
+              <p className="text-muted">Try adjusting your search or filters</p>
             </div>
           )}
 
           {/* Pagination */}
           {pagination.totalPages > 1 && (
             <div className="flex items-center justify-between">
-              <div className="text-sm text-gray-500">
+              <div className="text-sm text-muted">
                 Showing {filteredApplications.length} of {pagination.total} applications
               </div>
               <div className="flex space-x-2">

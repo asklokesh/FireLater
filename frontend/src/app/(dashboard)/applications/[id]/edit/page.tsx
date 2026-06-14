@@ -166,7 +166,7 @@ export default function EditApplicationPage() {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <Loader2 className="h-8 w-8 animate-spin text-blue-500" />
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
       </div>
     );
   }
@@ -174,9 +174,9 @@ export default function EditApplicationPage() {
   if (!application) {
     return (
       <div className="flex flex-col items-center justify-center h-64">
-        <AlertCircle className="h-12 w-12 text-red-500 mb-4" />
-        <h2 className="text-xl font-semibold text-gray-900 mb-2">Application not found</h2>
-        <p className="text-gray-500 mb-4">The application you are looking for does not exist.</p>
+        <AlertCircle className="h-12 w-12 text-error mb-4" />
+        <h2 className="text-xl font-semibold text-foreground mb-2">Application not found</h2>
+        <p className="text-muted mb-4">The application you are looking for does not exist.</p>
         <Link href="/applications">
           <Button>Back to Applications</Button>
         </Link>
@@ -195,8 +195,8 @@ export default function EditApplicationPage() {
             </Button>
           </Link>
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">Edit Application</h1>
-            <p className="mt-1 text-sm text-gray-500">
+            <h1 className="text-2xl font-bold text-foreground">Edit Application</h1>
+            <p className="mt-1 text-sm text-muted">
               Update {application.name} settings
             </p>
           </div>
@@ -214,16 +214,16 @@ export default function EditApplicationPage() {
       <form onSubmit={handleSubmit} className="space-y-6">
         {/* Error Alert */}
         {error && (
-          <div className="bg-red-50 border border-red-200 rounded-lg p-4 flex items-start">
-            <AlertCircle className="h-5 w-5 text-red-500 mr-3 flex-shrink-0 mt-0.5" />
-            <p className="text-sm text-red-700">{error}</p>
+          <div className="bg-error-subtle border border-border rounded-lg p-4 flex items-start">
+            <AlertCircle className="h-5 w-5 text-error mr-3 flex-shrink-0 mt-0.5" />
+            <p className="text-sm text-error">{error}</p>
           </div>
         )}
 
         {/* Basic Information */}
-        <div className="bg-white rounded-lg shadow">
-          <div className="px-6 py-4 border-b border-gray-200">
-            <h2 className="text-lg font-medium text-gray-900">Basic Information</h2>
+        <div className="bg-surface rounded-xl shadow-sm">
+          <div className="px-6 py-4 border-b border-border">
+            <h2 className="text-lg font-medium text-foreground">Basic Information</h2>
           </div>
           <div className="p-6 space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -235,9 +235,9 @@ export default function EditApplicationPage() {
                 required
               />
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-secondary mb-1">
                   Short Name
-                  <span className="text-red-500 ml-1">*</span>
+                  <span className="text-error ml-1">*</span>
                 </label>
                 <input
                   type="text"
@@ -245,50 +245,50 @@ export default function EditApplicationPage() {
                   onChange={(e) => setFormData((p) => ({ ...p, shortName: e.target.value.toUpperCase().replace(/[^A-Z0-9_-]/g, '') }))}
                   placeholder="CUST-PORTAL"
                   maxLength={20}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 border border-border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary"
                   required
                 />
-                <p className="mt-1 text-xs text-gray-500">Uppercase letters, numbers, hyphens only</p>
+                <p className="mt-1 text-xs text-muted">Uppercase letters, numbers, hyphens only</p>
               </div>
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
+              <label className="block text-sm font-medium text-secondary mb-1">Description</label>
               <textarea
                 value={formData.description}
                 onChange={(e) => setFormData((p) => ({ ...p, description: e.target.value }))}
                 rows={3}
                 placeholder="Describe the application's purpose and functionality..."
-                className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 border border-border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary"
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Version</label>
+              <label className="block text-sm font-medium text-secondary mb-1">Version</label>
               <input
                 type="text"
                 value={formData.version}
                 onChange={(e) => setFormData((p) => ({ ...p, version: e.target.value }))}
                 placeholder="1.0.0"
-                className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 border border-border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary"
               />
             </div>
           </div>
         </div>
 
         {/* Classification */}
-        <div className="bg-white rounded-lg shadow">
-          <div className="px-6 py-4 border-b border-gray-200">
-            <h2 className="text-lg font-medium text-gray-900">Classification</h2>
+        <div className="bg-surface rounded-xl shadow-sm">
+          <div className="px-6 py-4 border-b border-border">
+            <h2 className="text-lg font-medium text-foreground">Classification</h2>
           </div>
           <div className="p-6 space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Environment</label>
+                <label className="block text-sm font-medium text-secondary mb-1">Environment</label>
                 <select
                   value={formData.environment}
                   onChange={(e) => setFormData((p) => ({ ...p, environment: e.target.value }))}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 border border-border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary"
                 >
                   <option value="production">Production</option>
                   <option value="staging">Staging</option>
@@ -298,11 +298,11 @@ export default function EditApplicationPage() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Criticality</label>
+                <label className="block text-sm font-medium text-secondary mb-1">Criticality</label>
                 <select
                   value={formData.criticality}
                   onChange={(e) => setFormData((p) => ({ ...p, criticality: e.target.value }))}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 border border-border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary"
                 >
                   <option value="critical">Critical - Business critical, no downtime allowed</option>
                   <option value="high">High - Important for daily operations</option>
@@ -313,11 +313,11 @@ export default function EditApplicationPage() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
+              <label className="block text-sm font-medium text-secondary mb-1">Status</label>
               <select
                 value={formData.status}
                 onChange={(e) => setFormData((p) => ({ ...p, status: e.target.value }))}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 border border-border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary"
               >
                 <option value="operational">Operational</option>
                 <option value="degraded">Degraded</option>
@@ -330,18 +330,18 @@ export default function EditApplicationPage() {
         </div>
 
         {/* Ownership */}
-        <div className="bg-white rounded-lg shadow">
-          <div className="px-6 py-4 border-b border-gray-200">
-            <h2 className="text-lg font-medium text-gray-900">Ownership</h2>
+        <div className="bg-surface rounded-xl shadow-sm">
+          <div className="px-6 py-4 border-b border-border">
+            <h2 className="text-lg font-medium text-foreground">Ownership</h2>
           </div>
           <div className="p-6 space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Application Owner</label>
+                <label className="block text-sm font-medium text-secondary mb-1">Application Owner</label>
                 <select
                   value={formData.ownerId}
                   onChange={(e) => setFormData((p) => ({ ...p, ownerId: e.target.value }))}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 border border-border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary"
                 >
                   <option value="">Select owner...</option>
                   {users.map((user) => (
@@ -353,11 +353,11 @@ export default function EditApplicationPage() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Support Group</label>
+                <label className="block text-sm font-medium text-secondary mb-1">Support Group</label>
                 <select
                   value={formData.supportGroupId}
                   onChange={(e) => setFormData((p) => ({ ...p, supportGroupId: e.target.value }))}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 border border-border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary"
                 >
                   <option value="">Select support group...</option>
                   {groups.map((group) => (
@@ -369,9 +369,9 @@ export default function EditApplicationPage() {
               </div>
             </div>
 
-            <div className="flex items-start p-3 bg-blue-50 rounded-lg">
-              <Info className="h-5 w-5 text-blue-500 mr-2 flex-shrink-0 mt-0.5" />
-              <p className="text-sm text-blue-700">
+            <div className="flex items-start p-3 bg-primary-subtle rounded-lg">
+              <Info className="h-5 w-5 text-primary mr-2 flex-shrink-0 mt-0.5" />
+              <p className="text-sm text-primary">
                 The application owner is responsible for approving changes and managing the application lifecycle.
                 The support group handles incidents and support requests.
               </p>
@@ -380,9 +380,9 @@ export default function EditApplicationPage() {
         </div>
 
         {/* URLs */}
-        <div className="bg-white rounded-lg shadow">
-          <div className="px-6 py-4 border-b border-gray-200">
-            <h2 className="text-lg font-medium text-gray-900">URLs & Links</h2>
+        <div className="bg-surface rounded-xl shadow-sm">
+          <div className="px-6 py-4 border-b border-border">
+            <h2 className="text-lg font-medium text-foreground">URLs & Links</h2>
           </div>
           <div className="p-6 space-y-4">
             <Input
@@ -424,14 +424,14 @@ export default function EditApplicationPage() {
       {/* Delete Confirmation Modal */}
       {showDeleteConfirm && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4 p-6">
+          <div className="bg-surface rounded-lg shadow-xl max-w-md w-full mx-4 p-6">
             <div className="flex items-start">
-              <div className="h-10 w-10 rounded-full bg-red-100 flex items-center justify-center flex-shrink-0">
-                <AlertCircle className="h-5 w-5 text-red-600" />
+              <div className="h-10 w-10 rounded-full bg-error-subtle flex items-center justify-center flex-shrink-0">
+                <AlertCircle className="h-5 w-5 text-error" />
               </div>
               <div className="ml-4">
-                <h3 className="text-lg font-medium text-gray-900">Delete Application</h3>
-                <p className="mt-2 text-sm text-gray-500">
+                <h3 className="text-lg font-medium text-foreground">Delete Application</h3>
+                <p className="mt-2 text-sm text-muted">
                   Are you sure you want to delete <strong>{application.name}</strong>?
                   This action cannot be undone and will remove all associated data.
                 </p>
