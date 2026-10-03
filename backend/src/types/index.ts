@@ -1,3 +1,16 @@
+export type {
+  CreateApplicationInput,
+  UpdateApplicationInput,
+  CreateEnvironmentInput,
+  UpdateEnvironmentInput,
+  AppIdParam,
+  AppEnvParam,
+  ListAppsQuery,
+} from '../schemas/applications.js';
+export type { ListAssetsQuery, AssetIdParam } from '../schemas/assets.js';
+export type { UploadUrlRequestInput, ConfirmUploadRequestInput } from '../schemas/attachments.js';
+export type { UuidParam, PaginationQuery } from '../schemas/common.js';
+
 export interface PaginationParams {
   page: number;
   perPage: number;
