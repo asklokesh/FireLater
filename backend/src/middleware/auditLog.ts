@@ -130,3 +130,25 @@ export async function createAuditLog(
     logger.error({ err: error }, 'Failed to create audit log');
   }
 }
+
+
+// Security audit log for requests: metadata only, never request values
+export function logRequestAudit(
+  request: FastifyRequest,
+  validationFailures?: { field: string; code: string }[]
+): void {
+  const entry = {
+    method: request.method,
+    route: request.routeOptions?.url ?? request.url.split('?')[0],
+    tenant: request.user?.tenantSlug,
+    userId: request.user?.userId,
+    requestId: request.id,
+    ip: request.ip,
+    validationFailures,
+  };
+  if (validationFailures && validationFailures.length > 0) {
+    logger.warn(entry, 'Request validation failed');
+  } else {
+    logger.info(entry, 'Request audited');
+  }
+}

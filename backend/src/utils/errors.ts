@@ -97,3 +97,37 @@ export const getSafeErrorMessage = (error: unknown): string => {
   }
   return 'An unexpected error occurred';
 };
+
+
+export interface FormattedValidationIssue {
+  field: string;
+  message: string;
+  code: string;
+}
+
+export interface ValidationErrorResponse {
+  statusCode: 400;
+  error: 'Validation Error';
+  message: 'Validation failed';
+  details: FormattedValidationIssue[];
+}
+
+interface ZodIssueLike {
+  path: (string | number)[];
+  message: string;
+  code: string;
+}
+
+export const formatValidationError = (
+  issues: ZodIssueLike[],
+  source?: 'body' | 'params' | 'query'
+): ValidationErrorResponse => ({
+  statusCode: 400,
+  error: 'Validation Error',
+  message: 'Validation failed',
+  details: issues.map((issue) => ({
+    field: [source, ...issue.path].filter((p) => p !== undefined).join('.'),
+    message: issue.message,
+    code: issue.code,
+  })),
+});

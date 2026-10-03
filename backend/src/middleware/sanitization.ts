@@ -1,19 +1,34 @@
 import { FastifyInstance, FastifyRequest } from 'fastify';
 
-const sanitizeInput = (input: string): string => {
-  return input.replace(/[<>{}[\]|\\^`]/g, '').trim();
+// eslint-disable-next-line no-control-regex
+const CONTROL_CHARS = /[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/g;
+
+export const sanitizeInput = (input: string): string => {
+  // Strip script/style blocks including their content, then any remaining markup characters
+  const withoutBlocks = input
+    .replace(/<\s*(script|style)\b[^>]*>[\s\S]*?<\s*\/\s*\1\s*>/gi, '')
+    .replace(/<\s*(script|style)\b[^>]*>/gi, '');
+  return withoutBlocks
+    .replace(CONTROL_CHARS, '')
+    .replace(/[<>{}[\]|\\^`]/g, '')
+    .trim();
 };
 
-const sanitizeObject = (obj: Record<string, any>): Record<string, any> => {
+export const sanitizeValue = (value: unknown): unknown => {
+  if (typeof value === 'string') return sanitizeInput(value);
+  if (Array.isArray(value)) return value.map(sanitizeValue);
+  if (typeof value === 'object' && value !== null) return sanitizeObject(value as Record<string, unknown>);
+  return value;
+};
+
+// Credentials must reach validation unmodified
+const SENSITIVE_KEY = /password|token|secret/i;
+
+export const sanitizeObject = (obj: Record<string, any>): Record<string, any> => {
   const sanitized: Record<string, any> = {};
   for (const [key, value] of Object.entries(obj)) {
-    if (typeof value === 'string') {
-      sanitized[key] = sanitizeInput(value);
-    } else if (typeof value === 'object' && value !== null) {
-      sanitized[key] = sanitizeObject(value);
-    } else {
-      sanitized[key] = value;
-    }
+    if (key === '__proto__' || key === 'constructor' || key === 'prototype') continue;
+    sanitized[key] = SENSITIVE_KEY.test(key) ? value : sanitizeValue(value);
   }
   return sanitized;
 };
