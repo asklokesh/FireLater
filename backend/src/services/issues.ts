@@ -1,6 +1,7 @@
 import { pool } from '../config/database.js';
 import { tenantService } from './tenant.js';
-import { NotFoundError, BadRequestError } from '../utils/errors.js';
+import { NotFoundError, BadRequestError, ConflictError } from '../utils/errors.js';
+import { publishEntityChange } from '../lib/websocket/realtime-bridge.js';
 import { logger } from '../utils/logger.js';
 import type { PaginationParams, IssuePriority, IssueStatus, IssueSeverity, IssueImpact, IssueUrgency, IssueType, IssueSource } from '../types/index.js';
 import { getOffset } from '../utils/pagination.js';
@@ -36,6 +37,8 @@ interface UpdateIssueParams {
   assignedGroup?: string | null;
   applicationId?: string | null;
   environmentId?: string | null;
+  // Optimistic concurrency: updated_at the client last saw. Mismatch raises 409.
+  expectedVersion?: string;
 }
 
 interface Issue {
@@ -77,6 +80,15 @@ const VALID_STATUS_TRANSITIONS: Record<IssueStatus, IssueStatus[]> = {
   resolved: ['closed', 'in_progress'], // can reopen
   closed: ['in_progress'], // can reopen
 };
+
+// True when the stored version differs from the version the client edited.
+export function isVersionConflict(current: Date | string | null | undefined, expected: string): boolean {
+  if (!current) return false;
+  const a = new Date(current).getTime();
+  const b = new Date(expected).getTime();
+  if (Number.isNaN(b)) return true;
+  return a !== b;
+}
 
 export class IssueService {
   async list(tenantSlug: string, params: PaginationParams, filters?: {
@@ -294,6 +306,7 @@ export class IssueService {
       await client.query('COMMIT');
 
       logger.info({ issueId: issue.id, issueNumber }, 'Issue created');
+      publishEntityChange(tenantSlug, 'issue', issue.id, 'created', { actorId: reporterId });
 
       // Invalidate caches (non-blocking)
       Promise.all([
@@ -318,6 +331,10 @@ export class IssueService {
     const existing = await this.findById(tenantSlug, issueId);
     if (!existing) {
       throw new NotFoundError('Issue', issueId);
+    }
+
+    if (params.expectedVersion !== undefined && isVersionConflict(existing.updated_at, params.expectedVersion)) {
+      throw new ConflictError('Issue was modified by another user. Reload and merge your changes.');
     }
 
     const updates: string[] = [];
@@ -389,6 +406,10 @@ export class IssueService {
     );
 
     logger.info({ issueId: existing.id }, 'Issue updated');
+    {
+      const { expectedVersion: _ev, ...changed } = params;
+      publishEntityChange(tenantSlug, 'issue', existing.id, 'updated', { actorId: updatedBy, data: { changes: changed } });
+    }
 
     // Invalidate caches (non-blocking)
     Promise.all([

@@ -32,6 +32,7 @@ const updateIssueSchema = z.object({
   assignedGroup: z.string().uuid().optional(),
   applicationId: z.string().uuid().optional(),
   environmentId: z.string().uuid().optional(),
+  expectedVersion: z.string().max(64).optional(),
 });
 
 const assignSchema = z.object({
