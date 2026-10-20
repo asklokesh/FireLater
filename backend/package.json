@@ -40,6 +40,7 @@
     "@fastify/rate-limit": "^10.3.0",
     "@fastify/swagger": "^9.6.1",
     "@fastify/swagger-ui": "^5.2.3",
+    "@fastify/websocket": "^11.3.4",
     "@google-cloud/bigquery": "^8.1.1",
     "@google-cloud/compute": "^6.6.0",
     "@node-saml/passport-saml": "^5.1.0",

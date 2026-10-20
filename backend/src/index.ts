@@ -5,6 +5,7 @@ import jwt from '@fastify/jwt';
 import cookie from '@fastify/cookie';
 import rateLimit from '@fastify/rate-limit';
 import csrf from '@fastify/csrf-protection';
+import websocket from '@fastify/websocket';
 import { config } from './config/index.js';
 import { testConnection, closeDatabase } from './config/database.js';
 import { testRedisConnection, closeRedis, redis } from './config/redis.js';
@@ -48,6 +49,9 @@ import recertificationRoutes from './routes/recertification.js';
 import regulatorySlaRoutes from './routes/regulatory-sla.js';
 import emergencyChangeRoutes from './routes/emergency-change.js';
 import { vendorRiskRoutes } from './routes/vendor-risk.js';
+import wsRoutes from './routes/ws.js';
+import { realtimeBridge } from './lib/websocket/realtime-bridge.js';
+import { hub as realtimeHub } from './routes/ws.js';
 import { initializeJobs, shutdownJobs } from './jobs/index.js';
 import { setupSwagger } from './docs/swagger.js';
 
@@ -439,6 +443,10 @@ async function registerRoutes() {
   await app.register(regulatorySlaRoutes, { prefix: '/v1/regulatory-sla' });
   await app.register(emergencyChangeRoutes, { prefix: '/v1/emergency-changes' });
   await app.register(vendorRiskRoutes, { prefix: '/v1/vendor-risk' });
+
+  // Real-time WebSocket endpoint
+  await app.register(websocket, { options: { maxPayload: 64 * 1024 } });
+  await app.register(wsRoutes, { prefix: '/v1/ws' });
 }
 
 function registerErrorHandler() {
@@ -509,6 +517,9 @@ async function start() {
     }
     logger.info('Redis connected');
 
+    // Redis Pub/Sub bridge for multi-instance realtime delivery (subscriber needs its own connection)
+    await realtimeBridge.start(realtimeHub, redis, redis.duplicate());
+
     // Initialize background jobs
     logger.info('Initializing background jobs...');
     await initializeJobs();
@@ -525,6 +536,7 @@ async function start() {
 async function shutdown() {
   logger.info('Shutting down...');
   await shutdownJobs();
+  await realtimeBridge.stop();
   await app.close();
   await closeDatabase();
   await closeRedis();
