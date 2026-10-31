@@ -3,6 +3,7 @@
 import { useQuery, useMutation, useQueryClient, UseQueryOptions } from '@tanstack/react-query';
 import {
   issuesApi,
+  searchApi,
   problemsApi,
   changesApi,
   applicationsApi,
@@ -23,6 +24,7 @@ import {
   requestsApi,
   cabMeetingsApi,
 } from '@/lib/api';
+import type { SearchRequest, SearchEntityType, SaveFilterTemplateInput } from '@/lib/api';
 
 // Types
 export interface IssueActivity {
@@ -4204,5 +4206,78 @@ export function useDistributeMinutes() {
     onSuccess: (_, meetingId) => {
       queryClient.invalidateQueries({ queryKey: cabQueryKeys.meetings.detail(meetingId) });
     },
+  });
+}
+
+// ============================================
+// SEARCH HOOKS
+// ============================================
+
+export function useSearch(params: SearchRequest, enabled = true) {
+  return useQuery({
+    queryKey: ['search', 'results', params],
+    queryFn: () => searchApi.search(params),
+    enabled,
+  });
+}
+
+export function useSearchFacets(params: { q?: string; entityType?: SearchEntityType }) {
+  return useQuery({
+    queryKey: ['search', 'facets', params],
+    queryFn: () => searchApi.facets(params),
+  });
+}
+
+export function useSearchSuggestions(q: string) {
+  return useQuery({
+    queryKey: ['search', 'suggest', q],
+    queryFn: () => searchApi.suggest(q),
+    enabled: q.trim().length >= 2,
+    staleTime: 30_000,
+  });
+}
+
+export function useSearchHistory() {
+  return useQuery({
+    queryKey: ['search', 'history'],
+    queryFn: () => searchApi.history(),
+  });
+}
+
+export function useClearSearchHistory() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: () => searchApi.clearHistory(),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['search', 'history'] }),
+  });
+}
+
+export function useSearchAnalytics(days = 30) {
+  return useQuery({
+    queryKey: ['search', 'analytics', days],
+    queryFn: () => searchApi.analytics(days),
+  });
+}
+
+export function useFilterTemplates(entityType?: SearchEntityType) {
+  return useQuery({
+    queryKey: ['search', 'templates', entityType],
+    queryFn: () => searchApi.listTemplates(entityType),
+  });
+}
+
+export function useSaveFilterTemplate() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (data: SaveFilterTemplateInput) => searchApi.saveTemplate(data),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['search', 'templates'] }),
+  });
+}
+
+export function useDeleteFilterTemplate() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => searchApi.deleteTemplate(id),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['search', 'templates'] }),
   });
 }
