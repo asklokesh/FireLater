@@ -103,6 +103,7 @@ export async function migration014KnowledgeBase(pool: Pool): Promise<void> {
     CREATE INDEX IF NOT EXISTS idx_kb_articles_issue ON kb_articles(related_issue_id) WHERE related_issue_id IS NOT NULL;
     CREATE INDEX IF NOT EXISTS idx_kb_articles_tags ON kb_articles USING gin(tags);
     CREATE INDEX IF NOT EXISTS idx_kb_articles_keywords ON kb_articles USING gin(keywords);
+    -- Full-text index used by services/knowledge.ts, whose search queries are LIMIT-paginated
     CREATE INDEX IF NOT EXISTS idx_kb_articles_fulltext ON kb_articles USING gin(to_tsvector('english', coalesce(title, '') || ' ' || coalesce(summary, '') || ' ' || coalesce(content, '')));
 
     -- ============================================

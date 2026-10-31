@@ -1,6 +1,7 @@
 'use client';
 
 import { useQuery, useMutation, useQueryClient, UseQueryOptions } from '@tanstack/react-query';
+import { searchApi, type SearchParams } from '@/lib/search-api';
 import {
   issuesApi,
   problemsApi,
@@ -4204,5 +4205,39 @@ export function useDistributeMinutes() {
     onSuccess: (_, meetingId) => {
       queryClient.invalidateQueries({ queryKey: cabQueryKeys.meetings.detail(meetingId) });
     },
+  });
+}
+
+// ============================================
+// Search
+// ============================================
+
+export function useSearch(params: SearchParams) {
+  return useQuery({
+    queryKey: ['search', params],
+    queryFn: () => searchApi.search(params),
+    enabled: !!params.entity,
+  });
+}
+
+export function useSearchFacets(params: SearchParams) {
+  return useQuery({
+    queryKey: ['search', 'facets', params],
+    queryFn: () => searchApi.facets(params),
+  });
+}
+
+export function useSearchSuggestions(prefix: string) {
+  return useQuery({
+    queryKey: ['search', 'suggest', prefix],
+    queryFn: () => searchApi.suggest(prefix),
+    staleTime: 30000,
+  });
+}
+
+export function useSearchStats(days = 30) {
+  return useQuery({
+    queryKey: ['search', 'stats', days],
+    queryFn: () => searchApi.analytics(days),
   });
 }
