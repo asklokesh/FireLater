@@ -49,6 +49,7 @@ import recertificationRoutes from './routes/recertification.js';
 import regulatorySlaRoutes from './routes/regulatory-sla.js';
 import emergencyChangeRoutes from './routes/emergency-change.js';
 import { vendorRiskRoutes } from './routes/vendor-risk.js';
+import searchRoutes from './routes/search.js';
 import wsRoutes from './routes/ws.js';
 import { realtimeBridge } from './lib/websocket/realtime-bridge.js';
 import { hub as realtimeHub } from './routes/ws.js';
@@ -443,6 +444,7 @@ async function registerRoutes() {
   await app.register(regulatorySlaRoutes, { prefix: '/v1/regulatory-sla' });
   await app.register(emergencyChangeRoutes, { prefix: '/v1/emergency-changes' });
   await app.register(vendorRiskRoutes, { prefix: '/v1/vendor-risk' });
+  await app.register(searchRoutes, { prefix: '/v1/search' });
 
   // Real-time WebSocket endpoint
   await app.register(websocket, { options: { maxPayload: 64 * 1024 } });
