@@ -1,3 +1,5 @@
+import { ErrorCode, ExternalServiceError, ServiceUnavailableError } from './errors.js';
+
 export type CircuitBreakerState = 'CLOSED' | 'OPEN' | 'HALF_OPEN';
 
 interface CircuitBreakerOptions {
@@ -19,16 +21,28 @@ export class CircuitBreaker {
           Date.now() - this.lastFailureTime > this.options.cooldownPeriod) {
         this.state = 'HALF_OPEN';
       } else {
-        throw new Error('Circuit breaker is OPEN');
+        const elapsed = this.lastFailureTime ? Date.now() - this.lastFailureTime : 0;
+        const remainingMs = Math.max(0, this.options.cooldownPeriod - elapsed);
+        throw new ServiceUnavailableError('Circuit breaker is OPEN', {
+          code: ErrorCode.CIRCUIT_OPEN,
+          retryAfterSeconds: Math.max(1, Math.ceil(remainingMs / 1000)),
+        });
       }
     }
 
+    let timer: ReturnType<typeof setTimeout> | undefined;
     try {
       const result = await Promise.race([
         operation(),
-        new Promise<never>((_, reject) => 
-          setTimeout(() => reject(new Error('Operation timeout')), this.options.timeout)
-        )
+        new Promise<never>((_, reject) => {
+          timer = setTimeout(
+            () =>
+              reject(
+                new ExternalServiceError('Operation timeout', { code: ErrorCode.UPSTREAM_TIMEOUT })
+              ),
+            this.options.timeout
+          );
+        }),
       ]);
       
       this.onSuccess();
@@ -36,6 +50,8 @@ export class CircuitBreaker {
     } catch (error) {
       this.onFailure();
       throw error;
+    } finally {
+      if (timer !== undefined) clearTimeout(timer);
     }
   }
 

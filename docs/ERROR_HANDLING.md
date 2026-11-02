@@ -68,10 +68,41 @@ TBD
 
 ## Retry policy
 
-TBD
+`backend/src/utils/retry.ts` exports `withRetry(operation, options)`, `retryable(fn, options)` (a higher-order wrapper for service methods, no decorators) and `isTransientError(error)`.
 
+Defaults (each can be overridden per call):
 
+| Option | Default | Meaning |
+|---|---|---|
+| `maxAttempts` | 3 | Total attempts, including the first call |
+| `baseDelayMs` | 200 | Delay ceiling before the first retry |
+| `factor` | 2 | Exponential growth of the ceiling per retry |
+| `maxDelayMs` | 2000 | Upper bound of the ceiling |
+| `jitter` | `true` | Full jitter: the actual delay is random in `[0, ceiling)` |
+| `signal` | none | `AbortSignal`; once aborted no further attempt is made |
+
+Ceiling for retry *n* (1-based): `min(maxDelayMs, baseDelayMs * factor^(n-1))`.
+
+Non-transient errors are rethrown after one attempt. After the last attempt the final error is rethrown with `error.attempts` set to the attempt count. Each retry writes a `warn` log with `operation`, `attempt`, `delayMs` and `errorCode`.
+
+### Transient classification
+
+| Source | Transient | Not transient |
+|---|---|---|
+| `AppError` | `retryable: true` with a non-4xx status (e.g. `SERVICE_UNAVAILABLE`, `UPSTREAM_TIMEOUT`, `EXTERNAL_SERVICE_ERROR`) | Every 4xx (incl. `RATE_LIMITED`), `CIRCUIT_OPEN`, `retryable: false` |
+| PostgreSQL SQLSTATE | `40001` serialization failure, `40P01` deadlock, `57P01` admin shutdown, `08xxx` connection exceptions | Everything else (e.g. `23505`) |
+| Node.js `code` | `ECONNRESET`, `ETIMEDOUT`, `ECONNREFUSED`, `EAI_AGAIN` | Everything else |
+| Other errors | | Always (unclassified) |
+
+### Idempotency rule
+
+Retry is opt-in and only for idempotent operations. Currently `syncResources`, `getCostData` and `validateCredentials` in `awsService` wrap the circuit-breaker call in `withRetry`. No write path is retried by default; a write may only be wrapped when it is idempotent (for example, guarded by an idempotency key).
 
 ## Recovery handlers
 
-TBD
+| Scenario | Trigger | Server response | Expected client action |
+|---|---|---|---|
+| Circuit open | `CircuitBreaker` has reached `failureThreshold` and the cooldown has not elapsed | `503`, `code: CIRCUIT_OPEN`, `Retry-After` = remaining cooldown in seconds (rounded up, min 1); the operation is not invoked and the call is not retried server-side | Do not retry before `Retry-After`; show a temporary-unavailability message |
+| Upstream timeout | Operation exceeds the breaker `timeout` (the timer is cleared once the operation settles) | `502` (`ExternalServiceError`) with `code: UPSTREAM_TIMEOUT`, `retryable: true`; counts as a breaker failure; retried server-side by `withRetry` for idempotent calls | Retry an idempotent request with backoff; do not blindly resubmit writes |
+| Transient DB/network failure | SQLSTATE `40001`, `40P01`, `57P01`, `08xxx` or Node `ECONNRESET`/`ETIMEDOUT`/`ECONNREFUSED`/`EAI_AGAIN` inside a wrapped operation | Retried up to `maxAttempts`; if all fail, the final error is mapped by the error handler | Retry later if the response is retryable |
+| Cache (Redis) unavailable | Any Redis call fails | No error: `cacheService.getOrSet` falls back to the fetcher result; `invalidate`, `invalidatePrefix` and `invalidateTenant` resolve with `0` and log the failure | None; responses are served uncached |

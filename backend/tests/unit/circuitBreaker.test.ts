@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { CircuitBreaker, CircuitBreakerState } from '../../src/utils/circuitBreaker.js';
+import { ExternalServiceError, ServiceUnavailableError } from '../../src/utils/errors.js';
 
 /**
  * Unit tests for CircuitBreaker pattern implementation
@@ -422,6 +423,37 @@ describe('CircuitBreaker', () => {
 
       expect(cb1.getState()).toBe('OPEN');
       expect(cb2.getState()).toBe('CLOSED');
+    });
+  });
+
+  describe('Typed errors', () => {
+    it('throws ServiceUnavailableError CIRCUIT_OPEN with remaining cooldown when open', async () => {
+      const cb = new CircuitBreaker({ timeout: 1000, failureThreshold: 1, cooldownPeriod: 10000 });
+      await cb.call(() => Promise.reject(new Error('fail'))).catch(() => undefined);
+      vi.advanceTimersByTime(3000);
+      const err = await cb.call(() => Promise.resolve('ok')).catch((e) => e);
+      expect(err).toBeInstanceOf(ServiceUnavailableError);
+      expect(err.code).toBe('CIRCUIT_OPEN');
+      expect(err.statusCode).toBe(503);
+      expect(err.retryAfterSeconds).toBe(7);
+    });
+
+    it('throws ExternalServiceError UPSTREAM_TIMEOUT on timeout', async () => {
+      const cb = new CircuitBreaker({ timeout: 100, failureThreshold: 3, cooldownPeriod: 1000 });
+      const p = cb.call(() => new Promise((resolve) => setTimeout(() => resolve('slow'), 500)));
+      vi.advanceTimersByTime(150);
+      const err = await p.catch((e) => e);
+      expect(err).toBeInstanceOf(ExternalServiceError);
+      expect(err.code).toBe('UPSTREAM_TIMEOUT');
+    });
+
+    it('clears the timeout timer once the operation settles', async () => {
+      const cb = new CircuitBreaker({ timeout: 1000, failureThreshold: 3, cooldownPeriod: 1000 });
+      const before = vi.getTimerCount();
+      await cb.call(() => Promise.resolve('ok'));
+      expect(vi.getTimerCount()).toBe(before);
+      await cb.call(() => Promise.reject(new Error('fail'))).catch(() => undefined);
+      expect(vi.getTimerCount()).toBe(before);
     });
   });
 });

@@ -362,4 +362,40 @@ describe('Cache Service', () => {
       redis.del = originalDel;
     });
   });
+
+  describe('Redis failure degradation', () => {
+    it('getOrSet returns fetcher result when get and setex both fail', async () => {
+      vi.spyOn(redis, 'get').mockRejectedValueOnce(new Error('ECONNREFUSED'));
+      vi.spyOn(redis, 'setex').mockRejectedValueOnce(new Error('ECONNREFUSED'));
+      const result = await cacheService.getOrSet('degraded-key', async () => ({ ok: true }), { ttl: 10 });
+      expect(result).toEqual({ ok: true });
+      await new Promise((r) => setTimeout(r, 0));
+      vi.restoreAllMocks();
+    });
+
+    it('invalidate resolves when scan fails', async () => {
+      vi.spyOn(redis, 'scan').mockRejectedValueOnce(new Error('down'));
+      await expect(cacheService.invalidate('cache:x:*')).resolves.toBe(0);
+      vi.restoreAllMocks();
+    });
+
+    it('invalidatePrefix resolves when Redis fails', async () => {
+      vi.spyOn(redis, 'scan').mockRejectedValueOnce(new Error('down'));
+      await expect(cacheService.invalidatePrefix('cache:tenant')).resolves.toBe(0);
+      vi.restoreAllMocks();
+    });
+
+    it('invalidateTenant resolves when Redis fails', async () => {
+      vi.spyOn(redis, 'scan').mockRejectedValueOnce(new Error('down'));
+      await expect(cacheService.invalidateTenant('acme', 'issues')).resolves.toBe(0);
+      vi.restoreAllMocks();
+    });
+
+    it('invalidate resolves when del fails during pattern deletion', async () => {
+      await redis.set('cache:deg:1', 'a');
+      vi.spyOn(redis, 'del').mockRejectedValueOnce(new Error('down'));
+      await expect(cacheService.invalidate('cache:deg:*')).resolves.toBe(0);
+      vi.restoreAllMocks();
+    });
+  });
 });
