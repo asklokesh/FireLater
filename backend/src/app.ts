@@ -1,8 +1,8 @@
-import Fastify, { FastifyInstance, FastifyError, FastifyRequest, FastifyReply } from 'fastify';
+import Fastify, { FastifyInstance } from 'fastify';
 import cookie from '@fastify/cookie';
 import jwt from '@fastify/jwt';
 import csrf from '@fastify/csrf-protection';
-import { ZodError } from 'zod';
+import { registerErrorHandling } from './middleware/errorHandler.js';
 import authRoutes from './routes/auth.js';
 import { config } from './config/index.js';
 
@@ -36,37 +36,8 @@ export async function buildApp(): Promise<FastifyInstance> {
     sessionPlugin: '@fastify/cookie',
   });
 
-  // Global error handler
-  app.setErrorHandler((error: FastifyError | Error, request: FastifyRequest, reply: FastifyReply) => {
-    // Handle Zod validation errors
-    if (error instanceof ZodError) {
-      reply.status(400).send({
-        statusCode: 400,
-        error: 'Bad Request',
-        message: 'Validation failed',
-        details: error.errors,
-      });
-      return;
-    }
-
-    // Handle custom errors with statusCode
-    if ('statusCode' in error && typeof error.statusCode === 'number') {
-      const errorLabel = 'error' in error && typeof error.error === 'string' ? error.error : error.name;
-      reply.status(error.statusCode).send({
-        statusCode: error.statusCode,
-        error: errorLabel,
-        message: error.message,
-      });
-      return;
-    }
-
-    // Handle unexpected errors
-    reply.status(500).send({
-      statusCode: 500,
-      error: 'Internal Server Error',
-      message: process.env.NODE_ENV === 'production' ? 'An unexpected error occurred' : error.message,
-    });
-  });
+  // Centralized error handling
+  registerErrorHandling(app);
 
   // Register auth routes with /auth prefix
   await app.register(authRoutes, { prefix: '/auth' });

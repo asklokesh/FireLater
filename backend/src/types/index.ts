@@ -20,6 +20,8 @@ export interface ApiError {
   error: string;
   message: string;
   details?: Record<string, string[]>;
+  code: string;
+  requestId: string;
 }
 
 export type UserStatus = 'active' | 'inactive' | 'pending';

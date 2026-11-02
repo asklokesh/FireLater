@@ -10,7 +10,6 @@ import { config } from './config/index.js';
 import { testConnection, closeDatabase } from './config/database.js';
 import { testRedisConnection, closeRedis, redis } from './config/redis.js';
 import { logger } from './utils/logger.js';
-import { AppError } from './utils/errors.js';
 
 import authRoutes from './routes/auth.js';
 import userRoutes from './routes/users.js';
@@ -54,6 +53,7 @@ import { realtimeBridge } from './lib/websocket/realtime-bridge.js';
 import { hub as realtimeHub } from './routes/ws.js';
 import { initializeJobs, shutdownJobs } from './jobs/index.js';
 import { setupSwagger } from './docs/swagger.js';
+import { registerErrorHandling } from './middleware/errorHandler.js';
 
 const app = Fastify({
   logger: {
@@ -449,58 +449,10 @@ async function registerRoutes() {
   await app.register(wsRoutes, { prefix: '/v1/ws' });
 }
 
-function registerErrorHandler() {
-  app.setErrorHandler((error, request, reply) => {
-    logger.error({ err: error }, 'Request error');
-
-    if (error instanceof AppError) {
-      return reply.status(error.statusCode).send(error.toJSON());
-    }
-
-    // Handle Fastify validation errors
-    if (error instanceof Error && 'validation' in error) {
-      return reply.status(400).send({
-        statusCode: 400,
-        error: 'Validation Error',
-        message: 'Request validation failed',
-        details: (error as { validation: unknown }).validation,
-      });
-    }
-
-    // Handle Zod validation errors
-    if (error && typeof error === 'object' && 'name' in error && error.name === 'ZodError') {
-      const zodError = error as { issues?: unknown[] };
-      return reply.status(400).send({
-        statusCode: 400,
-        error: 'Validation Error',
-        message: 'Request validation failed',
-        details: zodError.issues,
-      });
-    }
-
-    // Check if error has statusCode property (for custom error classes)
-    if (error && typeof error === 'object' && 'statusCode' in error && typeof error.statusCode === 'number') {
-      const customError = error as { statusCode: number; error?: string; message?: string };
-      return reply.status(customError.statusCode).send({
-        statusCode: customError.statusCode,
-        error: customError.error || 'Error',
-        message: customError.message || 'An error occurred',
-      });
-    }
-
-    const errorMessage = error instanceof Error ? error.message : 'An unexpected error occurred';
-    return reply.status(500).send({
-      statusCode: 500,
-      error: 'Internal Server Error',
-      message: config.isDev ? errorMessage : 'An unexpected error occurred',
-    });
-  });
-}
-
 async function start() {
   try {
     await registerPlugins();
-    registerErrorHandler();
+    registerErrorHandling(app);
     await registerRoutes();
 
     logger.info('Testing database connection...');

@@ -8,6 +8,12 @@ import {
   ForbiddenError,
   ConflictError,
   getSafeErrorMessage,
+  ErrorCode,
+  RateLimitError,
+  ServiceUnavailableError,
+  ExternalServiceError,
+  DatabaseError,
+  InternalError,
 } from '../../src/utils/errors.js';
 
 /**
@@ -302,5 +308,59 @@ describe('HTTP Status Codes', () => {
     expect(new AppError(301, 'Redirect', 'Moved').statusCode).toBe(301);
     expect(new AppError(500, 'Error', 'Internal').statusCode).toBe(500);
     expect(new AppError(503, 'Unavailable', 'Service down').statusCode).toBe(503);
+  });
+});
+
+describe('Error hierarchy and codes', () => {
+  it('exports exactly the catalog codes', () => {
+    expect(Object.keys(ErrorCode).sort()).toEqual([
+      'BAD_REQUEST', 'CIRCUIT_OPEN', 'CONFLICT', 'DATABASE_ERROR', 'DATABASE_UNAVAILABLE',
+      'EXTERNAL_SERVICE_ERROR', 'FORBIDDEN', 'INTERNAL_ERROR', 'NOT_FOUND', 'RATE_LIMITED',
+      'SERVICE_UNAVAILABLE', 'UNAUTHORIZED', 'UPSTREAM_TIMEOUT', 'VALIDATION_FAILED',
+    ]);
+  });
+
+  const generic = 'An unexpected error occurred';
+  const cases: [string, AppError, number, string, boolean, string][] = [
+    ['NotFoundError', new NotFoundError('User', '1'), 404, 'NOT_FOUND', false, "User with id '1' not found"],
+    ['BadRequestError', new BadRequestError('bad'), 400, 'BAD_REQUEST', false, 'bad'],
+    ['ValidationError', new ValidationError({ a: ['x'] }), 400, 'VALIDATION_FAILED', false, 'Validation failed'],
+    ['UnauthorizedError', new UnauthorizedError(), 401, 'UNAUTHORIZED', false, 'Unauthorized'],
+    ['ForbiddenError', new ForbiddenError(), 403, 'FORBIDDEN', false, 'Forbidden'],
+    ['ConflictError', new ConflictError('dup'), 409, 'CONFLICT', false, 'dup'],
+    ['RateLimitError', new RateLimitError('slow'), 429, 'RATE_LIMITED', true, 'slow'],
+    ['ServiceUnavailableError', new ServiceUnavailableError('down'), 503, 'SERVICE_UNAVAILABLE', true,
+      'The service is temporarily unavailable. Please try again later.'],
+    ['ExternalServiceError', new ExternalServiceError('up'), 502, 'EXTERNAL_SERVICE_ERROR', true,
+      'An external service failed to respond. Please try again later.'],
+    ['DatabaseError', new DatabaseError('db'), 500, 'DATABASE_ERROR', false, generic],
+    ['InternalError', new InternalError('boom'), 500, 'INTERNAL_ERROR', false, generic],
+  ];
+
+  it.each(cases)('%s has status, code, retryable, userMessage and toJSON', (name, err, status, code, retryable, userMessage) => {
+    expect(err).toBeInstanceOf(AppError);
+    expect(err.name).toBe(name);
+    expect(err.statusCode).toBe(status);
+    expect(err.code).toBe(code);
+    expect(err.retryable).toBe(retryable);
+    expect(err.userMessage).toBe(userMessage);
+    const json = err.toJSON();
+    const expected: Record<string, unknown> = { statusCode: status, error: err.error, code, message: err.message };
+    if (err.details) expected.details = err.details;
+    expect(json).toEqual(expected);
+    expect(json).not.toHaveProperty('stack');
+    expect(json).not.toHaveProperty('cause');
+  });
+
+  it('InternalError is not operational; others are', () => {
+    expect(new InternalError().isOperational).toBe(false);
+    expect(new DatabaseError().isOperational).toBe(true);
+  });
+
+  it('keeps cause and retryAfterSeconds out of toJSON', () => {
+    const err = new RateLimitError('slow', { cause: new Error('x'), retryAfterSeconds: 5 });
+    expect(err.cause).toBeInstanceOf(Error);
+    expect(err.retryAfterSeconds).toBe(5);
+    expect(err.toJSON()).not.toHaveProperty('cause');
   });
 });
