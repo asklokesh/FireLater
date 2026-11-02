@@ -62,9 +62,36 @@ Each handled error writes one log entry with `requestId`, `method`, `route`, `st
 
 ## Error tracking
 
-TBD
+The backend reports errors to [Sentry](https://sentry.io) via `@sentry/node`, wrapped by
+`backend/src/utils/errorTracking.ts` (`initErrorTracking`, `captureError`, `flushErrorTracking`).
 
+### Configuration
 
+| Variable | Required | Default | Purpose |
+|----------|----------|---------|---------|
+| `SENTRY_DSN` | no | unset | Project DSN. When unset, every tracking function is a no-op, so dev and test runs need no Sentry account. |
+| `SENTRY_ENVIRONMENT` | no | `NODE_ENV` | Environment name attached to events. |
+| `SENTRY_TRACES_SAMPLE_RATE` | no | `0` | Performance tracing sample rate (0 to 1). |
+
+### What is reported
+
+- **HTTP requests**: only 5xx responses, which include non-operational errors because they normalise to 500. Each event gets the tags `tenant`, `code`, `route`, `requestId`, `method` and `statusCode`. The user is identified by id only.
+- **Background jobs**: the `failed` handlers of all BullMQ workers (integration-sync, cleanup, cloud-sync, health-scores, notifications, scheduled-reports, sla-breaches) report a failure only after the job has used up its configured attempts. Events carry `queue`, `jobName`, `jobId`, `attemptsMade` and `tenantSlug` (when present).
+- **Process faults**: `unhandledRejection` and `uncaughtException`. On shutdown and after an uncaught exception, pending events are flushed with a 2 second timeout.
+
+### What is not reported
+
+- 4xx responses: validation, auth, not found, conflict and rate limiting errors.
+- Job failures that will still be retried.
+
+### PII rules
+
+A `beforeSend` hook scrubs every event before it is sent:
+
+- the `authorization`, `proxy-authorization`, `x-api-key`, `cookie` and `set-cookie` headers are removed;
+- request bodies (`request.data`) and cookies are dropped;
+- email addresses anywhere in the event are replaced with `[email]`;
+- user data is reduced to `{ id }`. `sendDefaultPii` is disabled.
 
 ## Retry policy
 

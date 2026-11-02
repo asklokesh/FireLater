@@ -13,6 +13,7 @@ import { config } from '../../config/index.js';
 import { pool } from '../../config/database.js';
 import { logger } from '../../utils/logger.js';
 import { tenantService } from '../../services/tenant.js';
+import { captureError, isFinalAttempt, jobTenantSlug } from '../../utils/errorTracking.js';
 
 // Redis connection for worker
 const connection = {
@@ -958,6 +959,16 @@ cloudSyncWorker.on('completed', (job) => {
 
 cloudSyncWorker.on('failed', (job, err) => {
   logger.error({ jobId: job?.id, jobName: job?.name, err }, 'Cloud sync job failed');
+  // Report only once the job's configured attempts are exhausted.
+  if (isFinalAttempt(job)) {
+    captureError(err, {
+      queue: 'cloud-sync',
+      jobName: job?.name,
+      jobId: job?.id,
+      attemptsMade: job?.attemptsMade,
+      tenantSlug: jobTenantSlug(job),
+    });
+  }
 });
 
 // ============================================

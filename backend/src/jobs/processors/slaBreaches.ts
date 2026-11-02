@@ -6,6 +6,7 @@ import { tenantService } from '../../services/tenant.js';
 import { notificationQueue } from '../queues.js';
 import { slaService, SlaConfigForBreachCheck } from '../../services/sla.js';
 import format from 'pg-format';
+import { captureError, isFinalAttempt, jobTenantSlug } from '../../utils/errorTracking.js';
 
 // Redis connection for worker
 const connection = {
@@ -361,6 +362,16 @@ slaBreachWorker.on('completed', (job, result) => {
 
 slaBreachWorker.on('failed', (job, err) => {
   logger.error({ jobId: job?.id, err }, 'SLA breach check job failed');
+  // Report only once the job's configured attempts are exhausted.
+  if (isFinalAttempt(job)) {
+    captureError(err, {
+      queue: 'sla-breaches',
+      jobName: job?.name,
+      jobId: job?.id,
+      attemptsMade: job?.attemptsMade,
+      tenantSlug: jobTenantSlug(job),
+    });
+  }
 });
 
 // ============================================

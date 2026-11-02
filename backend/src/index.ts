@@ -52,6 +52,7 @@ import wsRoutes from './routes/ws.js';
 import { realtimeBridge } from './lib/websocket/realtime-bridge.js';
 import { hub as realtimeHub } from './routes/ws.js';
 import { initializeJobs, shutdownJobs } from './jobs/index.js';
+import { initErrorTracking, captureError, flushErrorTracking } from './utils/errorTracking.js';
 import { setupSwagger } from './docs/swagger.js';
 import { registerErrorHandling } from './middleware/errorHandler.js';
 
@@ -449,6 +450,23 @@ async function registerRoutes() {
   await app.register(wsRoutes, { prefix: '/v1/ws' });
 }
 
+initErrorTracking({
+  dsn: config.sentry.dsn,
+  environment: config.sentry.environment,
+  tracesSampleRate: config.sentry.tracesSampleRate,
+});
+
+process.on('unhandledRejection', (reason) => {
+  logger.error({ err: reason }, 'Unhandled promise rejection');
+  captureError(reason, { tags: { source: 'unhandledRejection' } });
+});
+
+process.on('uncaughtException', (err) => {
+  logger.fatal({ err }, 'Uncaught exception');
+  captureError(err, { tags: { source: 'uncaughtException' } });
+  void flushErrorTracking(2000).finally(() => process.exit(1));
+});
+
 async function start() {
   try {
     await registerPlugins();
@@ -492,6 +510,7 @@ async function shutdown() {
   await app.close();
   await closeDatabase();
   await closeRedis();
+  await flushErrorTracking(2000);
   process.exit(0);
 }
 

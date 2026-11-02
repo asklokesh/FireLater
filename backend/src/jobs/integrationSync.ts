@@ -2,6 +2,7 @@ import { Job, Queue, Worker } from 'bullmq';
 import { redisConnection } from '../config/redis.js';
 import { integrationsService } from '../services/integrations.js';
 import { logger } from '../utils/logger.js';
+import { captureError, isFinalAttempt, jobTenantSlug } from '../utils/errorTracking.js';
 
 // Create queue with proper retry configuration
 export const integrationSyncQueue = new Queue('integration-sync', {
@@ -53,6 +54,16 @@ export const integrationSyncWorker = new Worker(
 
 // Handle worker errors
 integrationSyncWorker.on('failed', (job: Job | undefined, error: Error) => {
+  // Report only once the job's configured attempts are exhausted.
+  if (isFinalAttempt(job)) {
+    captureError(error, {
+      queue: 'integration-sync',
+      jobName: job?.name,
+      jobId: job?.id,
+      attemptsMade: job?.attemptsMade,
+      tenantSlug: jobTenantSlug(job),
+    });
+  }
   if (job) {
     logger.error({
       jobId: job.id,

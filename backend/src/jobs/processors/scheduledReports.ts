@@ -3,6 +3,7 @@ import { config } from '../../config/index.js';
 import { pool } from '../../config/database.js';
 import { logger } from '../../utils/logger.js';
 import { reportExecutionService, scheduledReportService } from '../../services/reporting.js';
+import { captureError, isFinalAttempt, jobTenantSlug } from '../../utils/errorTracking.js';
 
 // Redis connection for worker
 const connection = {
@@ -134,6 +135,16 @@ scheduledReportsWorker.on('completed', (job) => {
 
 scheduledReportsWorker.on('failed', (job, err) => {
   logger.error({ jobId: job?.id, jobName: job?.name, err }, 'Report job failed');
+  // Report only once the job's configured attempts are exhausted.
+  if (isFinalAttempt(job)) {
+    captureError(err, {
+      queue: 'scheduled-reports',
+      jobName: job?.name,
+      jobId: job?.id,
+      attemptsMade: job?.attemptsMade,
+      tenantSlug: jobTenantSlug(job),
+    });
+  }
 });
 
 // ============================================

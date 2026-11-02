@@ -31,6 +31,10 @@ const envSchema = z.object({
   S3_FORCE_PATH_STYLE: z.string().default('false'),
   // CORS configuration
   CORS_ORIGIN: z.string().default('http://localhost:3000'),
+  // Error tracking (Sentry) - all optional; disabled when SENTRY_DSN is unset
+  SENTRY_DSN: z.string().url().optional(),
+  SENTRY_ENVIRONMENT: z.string().optional(),
+  SENTRY_TRACES_SAMPLE_RATE: z.coerce.number().min(0).max(1).default(0),
 });
 
 const parsed = envSchema.safeParse(process.env);
@@ -84,5 +88,10 @@ export const config = {
   },
   cors: {
     origin: parsed.data.CORS_ORIGIN,
+  },
+  sentry: {
+    dsn: parsed.data.SENTRY_DSN,
+    environment: parsed.data.SENTRY_ENVIRONMENT ?? parsed.data.NODE_ENV,
+    tracesSampleRate: parsed.data.SENTRY_TRACES_SAMPLE_RATE,
   },
 } as const;

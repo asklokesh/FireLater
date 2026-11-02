@@ -11,6 +11,7 @@ import {
   ValidationError,
   codeForStatus,
 } from '../utils/errors.js';
+import { captureError } from '../utils/errorTracking.js';
 
 const REQUEST_ID_PATTERN = /^[A-Za-z0-9._-]{1,64}$/;
 const REDACT_KEYS = /^(authorization|cookie|set-cookie|password|.*password.*)$/i;
@@ -140,6 +141,21 @@ function sendError(
     );
   } else {
     log.warn({ ...context, message: appErr.message, details: redact(appErr.details) }, 'Request rejected');
+  }
+
+  // Report 5xx (including non-operational errors, which normalise to 500); never 4xx.
+  if (is5xx) {
+    captureError(raw instanceof Error ? raw : appErr, {
+      tags: {
+        tenant: context.tenantSlug as string | undefined,
+        code: appErr.code,
+        route: context.route as string,
+        requestId,
+        method: request.method,
+        statusCode: appErr.statusCode,
+      },
+      user: user?.userId ? { id: String(user.userId) } : undefined,
+    });
   }
 
   if ((appErr.statusCode === 429 || appErr.statusCode === 503) && appErr.retryAfterSeconds !== undefined) {
