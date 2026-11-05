@@ -48,3 +48,44 @@ curl -X POST https://host/v1/issues/search \
   -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
   -d '{"q":"\"disk full\" -network","filter":{"op":"and","conditions":[{"field":"status","operator":"in","value":["open","in_progress"]}]},"facets":true}'
 ```
+
+## Saved filter templates, history, suggestions and analytics
+
+All endpoints are under `/v1/search`.
+
+### Templates
+
+- `GET /v1/search/templates` – the caller's templates plus templates other users marked `isShared`.
+- `POST /v1/search/templates` – create. `filter` is validated with the filter grammar above (400 if invalid); a duplicate name for the same user and entity type returns 409.
+- `GET|PUT|DELETE /v1/search/templates/:id` – only the owner can update or delete (others get 404).
+
+```json
+POST /v1/search/templates
+{ "name": "Open P1", "query": "outage", "filter": { "op": "and", "conditions": [{ "field": "priority", "operator": "eq", "value": "critical" }] }, "isShared": true }
+
+201 { "id": "…", "userId": "…", "name": "Open P1", "entityType": "issue", "query": "outage", "filter": {…}, "isShared": true, "createdAt": "…", "updatedAt": "…" }
+```
+
+### History
+
+`POST /v1/issues/search` records a row whenever `q` or `filter` is non-empty (failures to record are logged and do not affect the response).
+
+- `GET /v1/search/history?limit=10` (max 50) → `{ "data": [{ "query": "outage", "lastSearchedAt": "…" }] }` (distinct, most recent first)
+- `DELETE /v1/search/history` → `{ "deleted": 3 }` (caller's rows only)
+
+### Suggestions
+
+`GET /v1/search/suggestions?q=out` → `{ "data": ["outage vpn", "outlook"] }` – at most 10 case-insensitive prefix matches: the caller's recent queries first, then the tenant's most frequent.
+
+### Analytics
+
+`GET /v1/search/analytics?days=30` (requires `reports:read`; default 30, max 365)
+
+```json
+{
+  "topQueries": [{ "query": "outage", "count": 12 }],
+  "zeroResultQueries": [{ "query": "xyzzy", "count": 2 }],
+  "dailyVolume": [{ "date": "2026-11-01", "count": 5 }],
+  "averageResultCount": 7.5
+}
+```

@@ -3,6 +3,8 @@ import { z } from 'zod';
 import { issueService } from '../services/issues.js';
 import { requirePermission } from '../middleware/auth.js';
 import { filterSchema, FilterError } from '../utils/search-query-builder.js';
+import { searchService } from '../services/search.js';
+import { logger } from '../utils/logger.js';
 import { BadRequestError } from '../utils/errors.js';
 import { parsePagination, createPaginatedResponse } from '../utils/pagination.js';
 
@@ -99,7 +101,7 @@ export default async function issueRoutes(app: FastifyInstance) {
   app.post('/search', {
     preHandler: [requirePermission('issues:read')],
   }, async (request, reply) => {
-    const { tenantSlug } = request.user;
+    const { tenantSlug, userId } = request.user;
     const parsed = searchBodySchema.safeParse(request.body ?? {});
     if (!parsed.success) {
       return reply.status(400).send({
@@ -109,12 +111,27 @@ export default async function issueRoutes(app: FastifyInstance) {
     }
     const body = parsed.data;
     const pagination = { page: body.page, perPage: body.per_page, sort: body.sort, order: body.order };
+    const startedAt = Date.now();
     try {
       const { issues, total, facets } = await issueService.list(tenantSlug, pagination, {
         search: body.q?.trim() || undefined,
         filter: body.filter,
         facets: body.facets === true,
       });
+      const trimmedQ = body.q?.trim();
+      if (trimmedQ || (body.filter && body.filter.conditions.length > 0)) {
+        try {
+          await searchService.recordSearch(tenantSlug, {
+            userId,
+            query: trimmedQ || undefined,
+            filter: body.filter,
+            resultCount: total,
+            durationMs: Date.now() - startedAt,
+          });
+        } catch (recordErr) {
+          logger.error({ err: recordErr }, 'Failed to record search history');
+        }
+      }
       const response = createPaginatedResponse(issues, total, pagination);
       return reply.send(body.facets ? { ...response, facets } : response);
     } catch (err) {
