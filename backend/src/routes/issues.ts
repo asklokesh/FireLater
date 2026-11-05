@@ -2,6 +2,8 @@ import { FastifyInstance } from 'fastify';
 import { z } from 'zod';
 import { issueService } from '../services/issues.js';
 import { requirePermission } from '../middleware/auth.js';
+import { filterSchema, FilterError } from '../utils/search-query-builder.js';
+import { BadRequestError } from '../utils/errors.js';
 import { parsePagination, createPaginatedResponse } from '../utils/pagination.js';
 
 const createIssueSchema = z.object({
@@ -82,7 +84,45 @@ const listIssuesQuerySchema = z.object({
   sla_breached: z.enum(['true', 'false']).optional(),
 });
 
+const searchBodySchema = z.object({
+  q: z.string().max(200).optional(),
+  filter: filterSchema.optional(),
+  page: z.coerce.number().int().min(1).default(1),
+  per_page: z.coerce.number().int().min(1).max(100).default(25),
+  sort: z.string().optional(),
+  order: z.enum(['asc', 'desc']).default('desc'),
+  facets: z.boolean().optional(),
+});
+
 export default async function issueRoutes(app: FastifyInstance) {
+  // Full-text search with filter builder and facets
+  app.post('/search', {
+    preHandler: [requirePermission('issues:read')],
+  }, async (request, reply) => {
+    const { tenantSlug } = request.user;
+    const parsed = searchBodySchema.safeParse(request.body ?? {});
+    if (!parsed.success) {
+      return reply.status(400).send({
+        error: 'Bad Request',
+        message: parsed.error.issues.map((i) => `${i.path.join('.')}: ${i.message}`).join('; '),
+      });
+    }
+    const body = parsed.data;
+    const pagination = { page: body.page, perPage: body.per_page, sort: body.sort, order: body.order };
+    try {
+      const { issues, total, facets } = await issueService.list(tenantSlug, pagination, {
+        search: body.q?.trim() || undefined,
+        filter: body.filter,
+        facets: body.facets === true,
+      });
+      const response = createPaginatedResponse(issues, total, pagination);
+      return reply.send(body.facets ? { ...response, facets } : response);
+    } catch (err) {
+      if (err instanceof FilterError) throw new BadRequestError(err.message);
+      throw err;
+    }
+  });
+
   // List issues
   app.get('/', {
     preHandler: [requirePermission('issues:read')],
