@@ -46,3 +46,22 @@ Response: `{ "data": [{ "id": "...", "title": "...", "rank": 0.07 }], "meta": { 
 ## Indexing strategy
 
 Migration 037 creates GIN index `idx_issues_fulltext` on the same tsvector expression used by the queries (`ISSUE_TSVECTOR_EXPR`) in `tenant_template` and every `tenant_%` schema. For large datasets, create it with `CREATE INDEX CONCURRENTLY` manually beforehand (the migration is idempotent via `IF NOT EXISTS`), keep the expression identical so the planner uses it, and rely on btree indexes on filtered columns for the filter tree. Results are cached under `<tenant>:issues:search:` and cleared on issue writes.
+
+## Filter templates
+
+Saved filters per user (`search_filter_templates`), all under `/v1/search`, requiring `issues:read`.
+
+- `GET /templates` – own plus shared templates (`?entityType=`)
+- `POST /templates` – `{ name, entityType?, query?, filter?, isShared? }`; `filter` is validated with the filter builder
+- `GET /templates/:id`, `PUT /templates/:id`, `DELETE /templates/:id` – only the owner can update or delete (403 otherwise)
+
+## Search history
+
+`POST /v1/issues/search` records `{ query, filter, result_count }` for the caller when `q` or `filter` is present. Recording is fire-and-forget; failures are logged and never fail the search.
+
+- `GET /history?limit=` – the caller's distinct recent queries, newest first
+- `DELETE /history` – clears the caller's history
+
+## Suggestions
+
+`GET /suggestions?prefix=&limit=` returns the caller's recent queries plus tenant-popular queries starting with `prefix` (case-insensitive, deduplicated).

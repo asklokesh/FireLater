@@ -1,6 +1,8 @@
 import { FastifyInstance } from 'fastify';
 import { z } from 'zod';
 import { issueService } from '../services/issues.js';
+import { searchHistoryService } from '../services/searchHistory.js';
+import { logger } from '../utils/logger.js';
 import { requirePermission } from '../middleware/auth.js';
 import type { FilterGroup } from '../utils/searchFilterBuilder.js';
 import { parsePagination, createPaginatedResponse } from '../utils/pagination.js';
@@ -141,7 +143,7 @@ export default async function issueRoutes(app: FastifyInstance) {
   app.post('/search', {
     preHandler: [requirePermission('issues:read')],
   }, async (request, reply) => {
-    const { tenantSlug } = request.user;
+    const { tenantSlug, userId } = request.user;
     const body = searchBodySchema.parse(request.body ?? {});
     const page = body.page ?? 1;
     const perPage = body.per_page ?? 20;
@@ -155,6 +157,17 @@ export default async function issueRoutes(app: FastifyInstance) {
       sort: body.sort,
       order: body.order,
     });
+    if (body.q || body.filter) {
+      // Fire-and-forget: a recording failure must not fail the search
+      void Promise.resolve()
+        .then(() => searchHistoryService.record(tenantSlug, userId, {
+          entityType: 'issue',
+          query: body.q ?? null,
+          filter: body.filter as FilterGroup | undefined,
+          resultCount: total,
+        }))
+        .catch((err) => logger.error({ err }, 'Failed to record search history'));
+    }
     reply.send({
       ...createPaginatedResponse(issues, total, { page, perPage }),
       facets,
