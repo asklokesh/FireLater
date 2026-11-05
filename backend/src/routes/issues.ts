@@ -2,6 +2,7 @@ import { FastifyInstance } from 'fastify';
 import { z } from 'zod';
 import { issueService } from '../services/issues.js';
 import { requirePermission } from '../middleware/auth.js';
+import type { FilterGroup } from '../utils/searchFilterBuilder.js';
 import { parsePagination, createPaginatedResponse } from '../utils/pagination.js';
 
 const createIssueSchema = z.object({
@@ -82,6 +83,33 @@ const listIssuesQuerySchema = z.object({
   sla_breached: z.enum(['true', 'false']).optional(),
 });
 
+const filterNodeSchema: z.ZodType<unknown> = z.lazy(() =>
+  z.union([
+    z.object({
+      field: z.string(),
+      operator: z.string(),
+      value: z.unknown().optional(),
+    }),
+    z.object({
+      op: z.enum(['AND', 'OR']),
+      conditions: z.array(filterNodeSchema).max(25),
+    }),
+  ])
+);
+
+const searchBodySchema = z.object({
+  q: z.string().max(200).optional(),
+  filter: z.object({
+    op: z.enum(['AND', 'OR']),
+    conditions: z.array(filterNodeSchema).max(25),
+  }).optional(),
+  facets: z.array(z.enum(['status', 'priority', 'assigned_group', 'application_id'])).optional(),
+  page: z.number().int().positive().optional(),
+  per_page: z.number().int().min(1).max(100).optional(),
+  sort: z.string().max(50).optional(),
+  order: z.enum(['asc', 'desc']).optional(),
+});
+
 export default async function issueRoutes(app: FastifyInstance) {
   // List issues
   app.get('/', {
@@ -107,6 +135,30 @@ export default async function issueRoutes(app: FastifyInstance) {
 
     const { issues, total } = await issueService.list(tenantSlug, pagination, filters);
     reply.send(createPaginatedResponse(issues, total, pagination));
+  });
+
+  // Full-text search with filter tree and facets
+  app.post('/search', {
+    preHandler: [requirePermission('issues:read')],
+  }, async (request, reply) => {
+    const { tenantSlug } = request.user;
+    const body = searchBodySchema.parse(request.body ?? {});
+    const page = body.page ?? 1;
+    const perPage = body.per_page ?? 20;
+
+    const { issues, total, facets } = await issueService.search(tenantSlug, {
+      q: body.q,
+      filter: body.filter as FilterGroup | undefined,
+      facets: body.facets,
+      page,
+      perPage,
+      sort: body.sort,
+      order: body.order,
+    });
+    reply.send({
+      ...createPaginatedResponse(issues, total, { page, perPage }),
+      facets,
+    });
   });
 
   // Get issue by ID

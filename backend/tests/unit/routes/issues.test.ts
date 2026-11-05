@@ -473,6 +473,36 @@ describe('Issues Routes', () => {
     });
   });
 
+  describe('Search Body Schema', () => {
+    const searchBodySchema = z.object({
+      q: z.string().max(200).optional(),
+      filter: z.object({
+        op: z.enum(['AND', 'OR']),
+        conditions: z.array(z.unknown()).max(25),
+      }).optional(),
+      facets: z.array(z.enum(['status', 'priority', 'assigned_group', 'application_id'])).optional(),
+      page: z.number().int().positive().optional(),
+      per_page: z.number().int().min(1).max(100).optional(),
+      sort: z.string().max(50).optional(),
+      order: z.enum(['asc', 'desc']).optional(),
+    });
+
+    it('accepts a valid body', () => {
+      expect(searchBodySchema.safeParse({
+        q: 'server', filter: { op: 'AND', conditions: [] }, facets: ['status'], page: 1, per_page: 50, order: 'asc',
+      }).success).toBe(true);
+    });
+    it('rejects q over 200 chars', () => {
+      expect(searchBodySchema.safeParse({ q: 'a'.repeat(201) }).success).toBe(false);
+    });
+    it('rejects per_page over 100', () => {
+      expect(searchBodySchema.safeParse({ per_page: 101 }).success).toBe(false);
+    });
+    it('rejects invalid filter', () => {
+      expect(searchBodySchema.safeParse({ filter: { op: 'XOR', conditions: [] } }).success).toBe(false);
+    });
+  });
+
   describe('List Issues Query Schema', () => {
     const listIssuesQuerySchema = z.object({
       page: z.coerce.number().int().positive().optional(),

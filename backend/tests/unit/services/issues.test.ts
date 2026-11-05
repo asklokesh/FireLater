@@ -188,9 +188,9 @@ describe('Issue Service', () => {
       await issueService.list('test-tenant', { page: 1, perPage: 50 }, { search: 'server' });
 
       const query = mockQuery.mock.calls[0][0];
-      expect(query).toContain('i.title ILIKE $');
+      expect(query).toContain('to_tsvector');
+      expect(query).toContain('websearch_to_tsquery');
       expect(query).toContain('i.issue_number ILIKE $');
-      expect(query).toContain('i.description ILIKE $');
     });
 
     it('should sort by allowed columns', async () => {
@@ -1133,6 +1133,39 @@ describe('Issue Service', () => {
   describe('issueService export', () => {
     it('should be an instance of IssueService', () => {
       expect(issueService).toBeInstanceOf(IssueService);
+    });
+  });
+
+  describe('search', () => {
+    it('orders by rank when q is present', async () => {
+      mockQuery.mockResolvedValueOnce({ rows: [{ count: '1' }] });
+      mockQuery.mockResolvedValueOnce({ rows: [{ id: '1', rank: 0.5 }] });
+      await issueService.search('test-tenant', { q: 'search-rank', page: 1, perPage: 20 });
+      expect(mockQuery.mock.calls[1][0]).toContain('ORDER BY rank DESC');
+      expect(mockQuery.mock.calls[1][0]).toContain('ts_rank(');
+    });
+
+    it('wires the filter tree after search params', async () => {
+      mockQuery.mockResolvedValueOnce({ rows: [{ count: '0' }] });
+      mockQuery.mockResolvedValueOnce({ rows: [] });
+      await issueService.search('test-tenant', {
+        q: 'filter-wire',
+        filter: { op: 'AND', conditions: [{ field: 'status', operator: 'eq', value: 'new' }] },
+        page: 2,
+        perPage: 10,
+      });
+      expect(mockQuery.mock.calls[0][0]).toContain('(i.status = $3)');
+      expect(mockQuery.mock.calls[0][1]).toEqual(['filter-wire', 'filter-wire%', 'new']);
+      expect(mockQuery.mock.calls[1][1]).toEqual(['filter-wire', 'filter-wire%', 'new', 10, 10]);
+    });
+
+    it('builds facet queries and maps counts', async () => {
+      mockQuery.mockResolvedValueOnce({ rows: [{ count: '3' }] });
+      mockQuery.mockResolvedValueOnce({ rows: [] });
+      mockQuery.mockResolvedValueOnce({ rows: [{ value: 'new', count: '2' }, { value: 'closed', count: '1' }] });
+      const res = await issueService.search('test-tenant', { facets: ['status'], page: 1, perPage: 20 });
+      expect(mockQuery.mock.calls[2][0]).toContain('GROUP BY i.status');
+      expect(res.facets.status).toEqual([{ value: 'new', count: 2 }, { value: 'closed', count: 1 }]);
     });
   });
 });

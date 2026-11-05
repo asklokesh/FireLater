@@ -8,6 +8,7 @@ import { getOffset } from '../utils/pagination.js';
 import { dashboardService } from './dashboard.js';
 import { sanitizeMarkdown } from '../utils/contentSanitization.js';
 import { cacheService } from '../utils/cache.js';
+import { ISSUE_TSVECTOR_EXPR, buildSearchFilter, type FilterGroup } from '../utils/searchFilterBuilder.js';
 
 interface CreateIssueParams {
   title: string;
@@ -90,7 +91,106 @@ export function isVersionConflict(current: Date | string | null | undefined, exp
   return a !== b;
 }
 
+function escapeLike(term: string): string {
+  return term.replace(/[\\%_]/g, (c) => `\\${c}`);
+}
+
+export const SEARCH_FACET_DIMENSIONS = ['status', 'priority', 'assigned_group', 'application_id'] as const;
+export type SearchFacetDimension = (typeof SEARCH_FACET_DIMENSIONS)[number];
+
+export interface IssueSearchOptions {
+  q?: string;
+  filter?: FilterGroup;
+  facets?: SearchFacetDimension[];
+  page: number;
+  perPage: number;
+  sort?: string;
+  order?: 'asc' | 'desc';
+}
+
 export class IssueService {
+  async search(tenantSlug: string, opts: IssueSearchOptions): Promise<{
+    issues: Array<Issue & { rank: number }>;
+    total: number;
+    facets: Record<string, Array<{ value: string | null; count: number }>>;
+  }> {
+    const cacheKey = `${tenantSlug}:issues:search:${JSON.stringify(opts)}`;
+    return cacheService.getOrSet(
+      cacheKey,
+      async () => {
+        const schema = tenantService.getSchemaName(tenantSlug);
+        const values: unknown[] = [];
+        const clauses: string[] = [];
+        let rankExpr = '0::float4';
+        let paramIndex = 1;
+
+        if (opts.q) {
+          const tsv = ISSUE_TSVECTOR_EXPR.replace(/\b(title|description)\b(?=,)/g, 'i.$1');
+          clauses.push(`(${tsv} @@ websearch_to_tsquery('english', $${paramIndex}) OR i.issue_number ILIKE $${paramIndex + 1})`);
+          rankExpr = `ts_rank(${tsv}, websearch_to_tsquery('english', $${paramIndex}))`;
+          values.push(opts.q, `${escapeLike(opts.q)}%`);
+          paramIndex += 2;
+        }
+        if (opts.filter) {
+          const built = buildSearchFilter(opts.filter, paramIndex, 'i');
+          if (built.sql) {
+            clauses.push(built.sql);
+            values.push(...built.values);
+            paramIndex += built.values.length;
+          }
+        }
+        const whereClause = clauses.length ? `WHERE ${clauses.join(' AND ')}` : '';
+
+        const allowedSortColumns = ['created_at', 'updated_at', 'title', 'priority', 'status', 'severity', 'issue_number'];
+        const sortOrder = opts.order === 'asc' ? 'asc' : 'desc';
+        const orderBy = opts.sort && allowedSortColumns.includes(opts.sort)
+          ? `i.${opts.sort} ${sortOrder}`
+          : opts.q
+            ? 'rank DESC, i.created_at DESC'
+            : 'i.created_at DESC';
+
+        const countResult = await pool.query(
+          `SELECT COUNT(*) FROM ${schema}.issues i ${whereClause}`,
+          values
+        );
+        const total = parseInt(countResult.rows[0].count, 10);
+
+        const result = await pool.query(
+          `SELECT i.*, ${rankExpr} AS rank,
+                  r.name as reporter_name, a.name as assignee_name,
+                  g.name as assigned_group_name, app.name as application_name
+           FROM ${schema}.issues i
+           LEFT JOIN ${schema}.users r ON i.reporter_id = r.id
+           LEFT JOIN ${schema}.users a ON i.assigned_to = a.id
+           LEFT JOIN ${schema}.groups g ON i.assigned_group = g.id
+           LEFT JOIN ${schema}.applications app ON i.application_id = app.id
+           ${whereClause}
+           ORDER BY ${orderBy}
+           LIMIT $${paramIndex} OFFSET $${paramIndex + 1}`,
+          [...values, opts.perPage, (opts.page - 1) * opts.perPage]
+        );
+
+        const facets: Record<string, Array<{ value: string | null; count: number }>> = {};
+        for (const dim of opts.facets ?? []) {
+          if (!(SEARCH_FACET_DIMENSIONS as readonly string[]).includes(dim)) continue;
+          const fr = await pool.query(
+            `SELECT i.${dim}::text AS value, COUNT(*) AS count
+             FROM ${schema}.issues i ${whereClause}
+             GROUP BY i.${dim} ORDER BY count DESC, value ASC`,
+            values
+          );
+          facets[dim] = fr.rows.map((row: { value: string | null; count: string }) => ({
+            value: row.value,
+            count: parseInt(row.count, 10),
+          }));
+        }
+
+        return { issues: result.rows, total, facets };
+      },
+      { ttl: 300 }
+    );
+  }
+
   async list(tenantSlug: string, params: PaginationParams, filters?: {
     status?: string;
     priority?: string;
@@ -141,16 +241,22 @@ export class IssueService {
           whereClause += ` AND i.sla_breached = $${paramIndex++}`;
           values.push(filters.slaBreached);
         }
+        let rankExpr: string | null = null;
         if (filters?.search) {
-          whereClause += ` AND (i.title ILIKE $${paramIndex} OR i.issue_number ILIKE $${paramIndex} OR i.description ILIKE $${paramIndex})`;
-          values.push(`%${filters.search}%`);
-          paramIndex++;
+          const tsv = ISSUE_TSVECTOR_EXPR.replace(/\b(title|description)\b(?=,)/g, 'i.$1');
+          whereClause += ` AND (${tsv} @@ websearch_to_tsquery('english', $${paramIndex}) OR i.issue_number ILIKE $${paramIndex + 1})`;
+          rankExpr = `ts_rank(${tsv}, websearch_to_tsquery('english', $${paramIndex}))`;
+          values.push(filters.search, `${escapeLike(filters.search)}%`);
+          paramIndex += 2;
         }
 
         // Validate sort column against allowed columns to prevent SQL injection
         const allowedSortColumns = ['created_at', 'updated_at', 'title', 'priority', 'status', 'severity', 'issue_number'];
         const sortColumn = allowedSortColumns.includes(params.sort || '') ? params.sort : 'created_at';
         const sortOrder = params.order === 'asc' ? 'asc' : 'desc';
+        const orderBy = rankExpr && !params.sort
+          ? `${rankExpr} DESC, i.created_at DESC`
+          : `i.${sortColumn} ${sortOrder}`;
 
         const countResult = await pool.query(
           `SELECT COUNT(*) FROM ${schema}.issues i ${whereClause}`,
@@ -170,7 +276,7 @@ export class IssueService {
            LEFT JOIN ${schema}.groups g ON i.assigned_group = g.id
            LEFT JOIN ${schema}.applications app ON i.application_id = app.id
            ${whereClause}
-           ORDER BY i.${sortColumn} ${sortOrder}
+           ORDER BY ${orderBy}
            LIMIT $${paramIndex++} OFFSET $${paramIndex}`,
           [...values, params.perPage, offset]
         );
