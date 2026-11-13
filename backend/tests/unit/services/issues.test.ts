@@ -188,9 +188,89 @@ describe('Issue Service', () => {
       await issueService.list('test-tenant', { page: 1, perPage: 50 }, { search: 'server' });
 
       const query = mockQuery.mock.calls[0][0];
-      expect(query).toContain('i.title ILIKE $');
+      expect(query).toContain("websearch_to_tsquery('english'");
       expect(query).toContain('i.issue_number ILIKE $');
-      expect(query).toContain('i.description ILIKE $');
+      expect(query).not.toContain('i.title ILIKE');
+    });
+
+    describe('search()', () => {
+      it('orders by relevance (rank desc, created_at desc) when q is present', async () => {
+        mockQuery.mockResolvedValueOnce({ rows: [{ count: '2' }] });
+        mockQuery.mockResolvedValueOnce({ rows: [{ id: 'a', rank: '0.9' }, { id: 'b', rank: 0.1 }] });
+        mockQuery.mockResolvedValueOnce({ rows: [] });
+
+        const res = await issueService.search('test-tenant', { q: 'database outage' });
+
+        const dataQuery = mockQuery.mock.calls[1][0] as string;
+        expect(dataQuery).toContain("websearch_to_tsquery('english', $1)");
+        expect(dataQuery).toContain('ts_rank(');
+        expect(dataQuery).toContain('ORDER BY m.rank DESC, m.created_at DESC');
+        expect(mockQuery.mock.calls[1][1]).toEqual(['database outage', 20, 0]);
+        expect(res.data[0].rank).toBe(0.9);
+        expect(typeof res.data[1].rank).toBe('number');
+        expect(cacheService.getOrSet).toHaveBeenCalledWith(
+          expect.stringMatching(/^test-tenant:issues:search:/), expect.any(Function), { ttl: 300 }
+        );
+      });
+
+      it('defaults to created_at desc without q', async () => {
+        mockQuery.mockResolvedValueOnce({ rows: [{ count: '0' }] });
+        mockQuery.mockResolvedValueOnce({ rows: [] });
+
+        await issueService.search('test-tenant', { facets: false });
+
+        expect(mockQuery).toHaveBeenCalledTimes(2);
+        expect(mockQuery.mock.calls[1][0]).toContain('ORDER BY m.created_at DESC');
+        expect(mockQuery.mock.calls[1][0]).not.toContain('websearch_to_tsquery');
+      });
+
+      it('combines q, qualifiers and a filter group with correct parameter numbering', async () => {
+        mockQuery.mockResolvedValueOnce({ rows: [{ count: '1' }] });
+        mockQuery.mockResolvedValueOnce({ rows: [] });
+        mockQuery.mockResolvedValueOnce({ rows: [] });
+
+        await issueService.search('test-tenant', {
+          q: 'login status:open priority:high',
+          filter: { op: 'or', conditions: [
+            { field: 'severity', operator: 'eq', value: 'S1' },
+            { field: 'sla_breached', operator: 'eq', value: true },
+          ] },
+          page: 2,
+          perPage: 10,
+        });
+
+        const [countSql, countValues] = mockQuery.mock.calls[0];
+        expect(countSql).toContain("websearch_to_tsquery('english', $1)");
+        expect(countSql).toContain('(i.priority = $2)');
+        expect(countSql).toContain('(i.severity = $3 OR i.sla_breached = $4)');
+        expect(countValues).toEqual(['login status:open', 'high', 'S1', true]);
+        expect(mockQuery.mock.calls[1][0]).toContain('LIMIT $5 OFFSET $6');
+        expect(mockQuery.mock.calls[1][1]).toEqual(['login status:open', 'high', 'S1', true, 10, 10]);
+      });
+
+      it('returns facets and pagination over the matching set', async () => {
+        mockQuery.mockResolvedValueOnce({ rows: [{ count: '45' }] });
+        mockQuery.mockResolvedValueOnce({ rows: [] });
+        mockQuery.mockResolvedValueOnce({ rows: [
+          { facet: 'status', value: 'new', count: '5' },
+          { facet: 'status', value: 'closed', count: '40' },
+          { facet: 'priority', value: 'high', count: '45' },
+          { facet: 'severity', value: null, count: '45' },
+          { facet: 'assigned_group', value: 'g1', count: '45' },
+        ] });
+
+        const res = await issueService.search('test-tenant', { q: 'vpn', page: 3, perPage: 20, sort: 'priority', order: 'asc' });
+
+        expect(res.pagination).toEqual({ page: 3, perPage: 20, total: 45, totalPages: 3 });
+        expect(res.facets.status).toEqual([{ value: 'closed', count: 40 }, { value: 'new', count: 5 }]);
+        expect(res.facets.priority).toEqual([{ value: 'high', count: 45 }]);
+        expect(res.facets.severity).toEqual([{ value: null, count: 45 }]);
+        expect(res.facets.assigned_group).toEqual([{ value: 'g1', count: 45 }]);
+        expect(mockQuery.mock.calls[1][0]).toContain('ORDER BY m.priority ASC');
+        expect(mockQuery.mock.calls[1][1]).toEqual(['vpn', 20, 40]);
+        expect(mockQuery.mock.calls[2][0]).toContain('WITH matched AS');
+        expect(mockQuery.mock.calls[2][1]).toEqual(['vpn']);
+      });
     });
 
     it('should sort by allowed columns', async () => {

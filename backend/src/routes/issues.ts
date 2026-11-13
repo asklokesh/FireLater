@@ -3,6 +3,17 @@ import { z } from 'zod';
 import { issueService } from '../services/issues.js';
 import { requirePermission } from '../middleware/auth.js';
 import { parsePagination, createPaginatedResponse } from '../utils/pagination.js';
+import { filterGroupSchema } from '../utils/search-query.js';
+
+const searchIssuesBodySchema = z.object({
+  q: z.string().max(500).optional(),
+  filter: filterGroupSchema.optional(),
+  page: z.coerce.number().int().min(1).default(1),
+  per_page: z.coerce.number().int().min(1).max(100).default(20),
+  sort: z.enum(['relevance', 'created_at', 'updated_at', 'priority', 'status', 'issue_number']).optional(),
+  order: z.enum(['asc', 'desc']).optional(),
+  facets: z.boolean().default(true),
+});
 
 const createIssueSchema = z.object({
   title: z.string().min(5).max(500),
@@ -107,6 +118,24 @@ export default async function issueRoutes(app: FastifyInstance) {
 
     const { issues, total } = await issueService.list(tenantSlug, pagination, filters);
     reply.send(createPaginatedResponse(issues, total, pagination));
+  });
+
+  // Advanced full-text search with filter groups and facets
+  app.post('/search', {
+    preHandler: [requirePermission('issues:read')],
+  }, async (request, reply) => {
+    const { tenantSlug } = request.user;
+    const body = searchIssuesBodySchema.parse(request.body ?? {});
+    const result = await issueService.search(tenantSlug, {
+      q: body.q,
+      filter: body.filter,
+      page: body.page,
+      perPage: body.per_page,
+      sort: body.sort,
+      order: body.order,
+      facets: body.facets,
+    });
+    reply.send(result);
   });
 
   // Get issue by ID

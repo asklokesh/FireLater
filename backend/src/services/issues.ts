@@ -8,6 +8,27 @@ import { getOffset } from '../utils/pagination.js';
 import { dashboardService } from './dashboard.js';
 import { sanitizeMarkdown } from '../utils/contentSanitization.js';
 import { cacheService } from '../utils/cache.js';
+import { ISSUE_FULLTEXT_EXPRESSION, parseSearchQuery, buildFilterSql, type FilterGroup } from '../utils/search-query.js';
+
+export type IssueSearchSort = 'relevance' | 'created_at' | 'updated_at' | 'priority' | 'status' | 'issue_number';
+
+export interface IssueSearchParams {
+  q?: string;
+  filter?: FilterGroup;
+  page?: number;
+  perPage?: number;
+  sort?: IssueSearchSort;
+  order?: 'asc' | 'desc';
+  facets?: boolean;
+}
+
+export interface FacetBucket { value: string | null; count: number }
+
+export interface IssueSearchResult {
+  data: Array<Record<string, unknown> & { rank: number }>;
+  pagination: { page: number; perPage: number; total: number; totalPages: number };
+  facets: { status: FacetBucket[]; priority: FacetBucket[]; severity: FacetBucket[]; assigned_group: FacetBucket[] };
+}
 
 interface CreateIssueParams {
   title: string;
@@ -142,9 +163,11 @@ export class IssueService {
           values.push(filters.slaBreached);
         }
         if (filters?.search) {
-          whereClause += ` AND (i.title ILIKE $${paramIndex} OR i.issue_number ILIKE $${paramIndex} OR i.description ILIKE $${paramIndex})`;
-          values.push(`%${filters.search}%`);
-          paramIndex++;
+          // Full-text match via the shared indexed expression (subquery scope has only `issues`,
+          // so the unqualified columns are unambiguous); issue_number ILIKE keeps number lookups working.
+          whereClause += ` AND (i.issue_number ILIKE $${paramIndex} OR i.id IN (SELECT id FROM ${schema}.issues WHERE (${ISSUE_FULLTEXT_EXPRESSION}) @@ websearch_to_tsquery('english', $${paramIndex + 1})))`;
+          values.push(`%${filters.search}%`, filters.search);
+          paramIndex += 2;
         }
 
         // Validate sort column against allowed columns to prevent SQL injection
@@ -178,6 +201,102 @@ export class IssueService {
         return { issues: result.rows, total };
       },
       { ttl: 300 } // 5 minutes - issues change moderately frequently
+    );
+  }
+
+  async search(tenantSlug: string, params: IssueSearchParams): Promise<IssueSearchResult> {
+    const page = Math.max(1, params.page ?? 1);
+    const perPage = Math.min(100, Math.max(1, params.perPage ?? 20));
+    const includeFacets = params.facets !== false;
+    const cacheKey = `${tenantSlug}:issues:search:${JSON.stringify({ ...params, page, perPage, facets: includeFacets })}`;
+
+    return cacheService.getOrSet(
+      cacheKey,
+      async () => {
+        const schema = tenantService.getSchemaName(tenantSlug);
+        const parsed = parseSearchQuery(params.q);
+        const values: unknown[] = [];
+        let paramIndex = 1;
+        const where: string[] = [];
+
+        let rankSql = '0';
+        if (parsed.text) {
+          values.push(parsed.text);
+          const tsq = `websearch_to_tsquery('english', $${paramIndex++})`;
+          where.push(`(${ISSUE_FULLTEXT_EXPRESSION}) @@ ${tsq}`);
+          rankSql = `ts_rank(${ISSUE_FULLTEXT_EXPRESSION}, ${tsq})`;
+        }
+
+        const groups: FilterGroup[] = [];
+        if (parsed.conditions.length > 0) groups.push({ op: 'and', conditions: parsed.conditions });
+        if (params.filter) groups.push(params.filter);
+        for (const g of groups) {
+          const built = buildFilterSql(g, paramIndex, 'i');
+          where.push(built.sql);
+          values.push(...built.values);
+          paramIndex = built.nextParamIndex;
+        }
+
+        const whereSql = where.length > 0 ? `WHERE ${where.join(' AND ')}` : '';
+        // CTE scope contains only `issues`, so the shared unqualified expression matches the GIN index
+        const matched = `WITH matched AS (
+            SELECT i.*, ${rankSql}::float8 AS rank FROM ${schema}.issues i ${whereSql}
+          )`;
+
+        const sort = params.sort ?? (parsed.text ? 'relevance' : 'created_at');
+        const order = params.order === 'asc' ? 'ASC' : 'DESC';
+        const orderBy = sort === 'relevance'
+          ? `m.rank ${params.order === 'asc' ? 'ASC' : 'DESC'}, m.created_at DESC`
+          : `m.${sort} ${order}`;
+
+        const countResult = await pool.query(`${matched} SELECT COUNT(*) FROM matched`, values);
+        const total = parseInt(countResult.rows[0]?.count ?? '0', 10);
+
+        const offset = (page - 1) * perPage;
+        const result = await pool.query(
+          `${matched}
+           SELECT m.*,
+                  r.name as reporter_name, r.email as reporter_email,
+                  a.name as assignee_name, a.email as assignee_email,
+                  g.name as assigned_group_name,
+                  app.name as application_name, app.app_id as application_app_id
+           FROM matched m
+           LEFT JOIN ${schema}.users r ON m.reporter_id = r.id
+           LEFT JOIN ${schema}.users a ON m.assigned_to = a.id
+           LEFT JOIN ${schema}.groups g ON m.assigned_group = g.id
+           LEFT JOIN ${schema}.applications app ON m.application_id = app.id
+           ORDER BY ${orderBy}
+           LIMIT $${paramIndex} OFFSET $${paramIndex + 1}`,
+          [...values, perPage, offset]
+        );
+
+        const data = result.rows.map((row: Record<string, unknown>) => ({ ...row, rank: Number(row.rank ?? 0) }));
+
+        const facets: IssueSearchResult['facets'] = { status: [], priority: [], severity: [], assigned_group: [] };
+        if (includeFacets) {
+          const facetResult = await pool.query(
+            `${matched}
+             SELECT 'status' AS facet, status::text AS value, COUNT(*) AS count FROM matched GROUP BY status
+             UNION ALL SELECT 'priority', priority::text, COUNT(*) FROM matched GROUP BY priority
+             UNION ALL SELECT 'severity', severity::text, COUNT(*) FROM matched GROUP BY severity
+             UNION ALL SELECT 'assigned_group', assigned_group::text, COUNT(*) FROM matched GROUP BY assigned_group`,
+            values
+          );
+          for (const row of facetResult.rows as Array<{ facet: keyof IssueSearchResult['facets']; value: string | null; count: string | number }>) {
+            if (facets[row.facet]) facets[row.facet].push({ value: row.value, count: Number(row.count) });
+          }
+          for (const key of Object.keys(facets) as Array<keyof IssueSearchResult['facets']>) {
+            facets[key].sort((x, y) => y.count - x.count);
+          }
+        }
+
+        return {
+          data,
+          pagination: { page, perPage, total, totalPages: Math.ceil(total / perPage) },
+          facets,
+        };
+      },
+      { ttl: 300 }
     );
   }
 
