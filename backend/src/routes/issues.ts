@@ -1,6 +1,7 @@
 import { FastifyInstance } from 'fastify';
 import { z } from 'zod';
 import { issueService } from '../services/issues.js';
+import { searchService } from '../services/search.js';
 import { requirePermission } from '../middleware/auth.js';
 import { parsePagination, createPaginatedResponse } from '../utils/pagination.js';
 import { filterGroupSchema } from '../utils/search-query.js';
@@ -124,8 +125,9 @@ export default async function issueRoutes(app: FastifyInstance) {
   app.post('/search', {
     preHandler: [requirePermission('issues:read')],
   }, async (request, reply) => {
-    const { tenantSlug } = request.user;
+    const { tenantSlug, userId } = request.user;
     const body = searchIssuesBodySchema.parse(request.body ?? {});
+    const startedAt = Date.now();
     const result = await issueService.search(tenantSlug, {
       q: body.q,
       filter: body.filter,
@@ -134,6 +136,15 @@ export default async function issueRoutes(app: FastifyInstance) {
       sort: body.sort,
       order: body.order,
       facets: body.facets,
+    });
+    // recordSearch never throws; it skips empty searches and logs failures
+    await searchService.recordSearch(tenantSlug, {
+      userId,
+      entityType: 'issue',
+      query: body.q,
+      filter: body.filter ?? null,
+      resultCount: result.pagination.total,
+      durationMs: Date.now() - startedAt,
     });
     reply.send(result);
   });

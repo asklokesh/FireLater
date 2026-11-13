@@ -18,6 +18,7 @@ import groupRoutes from './routes/groups.js';
 import roleRoutes from './routes/roles.js';
 import applicationRoutes from './routes/applications.js';
 import issueRoutes from './routes/issues.js';
+import searchRoutes from './routes/search.js';
 import catalogRoutes from './routes/catalog.js';
 import requestRoutes from './routes/requests.js';
 import notificationRoutes from './routes/notifications.js';
@@ -412,6 +413,7 @@ async function registerRoutes() {
   await app.register(roleRoutes, { prefix: '/v1/roles' });
   await app.register(applicationRoutes, { prefix: '/v1/applications' });
   await app.register(issueRoutes, { prefix: '/v1/issues' });
+  await app.register(searchRoutes, { prefix: '/v1/search' });
   await app.register(catalogRoutes, { prefix: '/v1/catalog' });
   await app.register(requestRoutes, { prefix: '/v1/requests' });
   await app.register(notificationRoutes, { prefix: '/v1/notifications' });
