@@ -2432,4 +2432,80 @@ export const emailApi = {
   },
 };
 
+// Search API
+export interface SearchCondition {
+  field: string;
+  operator: 'eq' | 'neq' | 'in' | 'gte' | 'lte' | 'contains';
+  value: unknown;
+}
+export interface SearchFilter {
+  op: 'and' | 'or';
+  conditions: Array<SearchFilter | SearchCondition>;
+}
+export interface SearchRequest {
+  q?: string;
+  filter?: SearchFilter;
+  sort?: string;
+  order?: 'asc' | 'desc';
+  page?: number;
+  perPage?: number;
+  facets?: string[];
+}
+export interface SearchResultRow {
+  id: string;
+  issue_number: string;
+  title: string;
+  status: string;
+  priority: string;
+  rank?: number;
+  [key: string]: unknown;
+}
+export interface SearchResponse {
+  data: SearchResultRow[];
+  pagination: { page: number; perPage: number; total: number; totalPages: number };
+  facets?: Record<string, Array<{ value: string; count: number }>>;
+}
+export interface SearchTemplate {
+  id: string;
+  name: string;
+  query?: string;
+  filter?: SearchFilter;
+  isShared: boolean;
+  createdAt: string;
+}
+
+export const searchApi = {
+  search: async (body: SearchRequest): Promise<SearchResponse> => {
+    const response = await api.post('/v1/search', body);
+    return response.data;
+  },
+  suggest: async (q: string): Promise<{ data: string[] }> => {
+    const response = await api.get('/v1/search/suggest', { params: { q } });
+    return response.data;
+  },
+  history: async (): Promise<{
+    data: Array<{ id: string; query: string; resultCount: number; createdAt: string }>;
+  }> => {
+    const response = await api.get('/v1/search/history');
+    return response.data;
+  },
+  listTemplates: async (): Promise<{ data: SearchTemplate[] }> => {
+    const response = await api.get('/v1/search/templates');
+    return response.data;
+  },
+  createTemplate: async (body: {
+    name: string;
+    query?: string;
+    filter?: SearchFilter;
+    isShared?: boolean;
+  }) => {
+    const response = await api.post('/v1/search/templates', body);
+    return response.data;
+  },
+  deleteTemplate: async (id: string) => {
+    const response = await api.delete(`/v1/search/templates/${id}`);
+    return response.data;
+  },
+};
+
 export default api;
