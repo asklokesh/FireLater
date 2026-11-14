@@ -2508,4 +2508,24 @@ export const searchApi = {
   },
 };
 
+export interface SearchAnalyticsQuery {
+  query: string;
+  count: number;
+}
+
+export interface SearchAnalyticsResponse {
+  totalSearches: number;
+  uniqueUsers: number;
+  topQueries: SearchAnalyticsQuery[];
+  zeroResultQueries: SearchAnalyticsQuery[];
+  volumeByDay: Array<{ date: string; count: number }>;
+}
+
+export const searchAnalyticsApi = {
+  get: async (days: number): Promise<SearchAnalyticsResponse> => {
+    const response = await api.get('/v1/search/analytics', { params: { days } });
+    return response.data;
+  },
+};
+
 export default api;
