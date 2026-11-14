@@ -1,3 +1,4 @@
+import { z } from 'zod';
 import { BadRequestError } from '../utils/errors.js';
 
 export type FilterOperator = 'eq' | 'neq' | 'in' | 'gte' | 'lte' | 'contains';
@@ -104,3 +105,18 @@ export function buildFilterClause(
 
   return { sql: build(tree, 1), values };
 }
+
+const scalarSchema = z.union([z.string(), z.number(), z.boolean()]);
+
+const conditionSchema = z.object({
+  field: z.enum(FILTER_FIELDS),
+  operator: z.enum(FILTER_OPERATORS as [string, ...string[]]),
+  value: z.union([scalarSchema, z.array(scalarSchema)]),
+});
+
+export const filterSchema: z.ZodType<FilterNode> = z.lazy(() =>
+  z.union([
+    z.object({ op: z.enum(['and', 'or']), conditions: z.array(filterSchema).min(1).max(50) }),
+    conditionSchema,
+  ])
+) as z.ZodType<FilterNode>;

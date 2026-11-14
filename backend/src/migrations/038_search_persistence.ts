@@ -1,0 +1,45 @@
+import { Pool } from 'pg';
+import { logger } from '../utils/logger.js';
+
+export async function migration038SearchPersistence(pool: Pool): Promise<void> {
+  const schemasResult = await pool.query(
+    `SELECT nspname FROM pg_namespace WHERE nspname LIKE 'tenant_%'`
+  );
+  const schemas: string[] = schemasResult.rows.map((r: { nspname: string }) => r.nspname);
+  if (!schemas.includes('tenant_template')) {
+    schemas.push('tenant_template');
+  }
+
+  for (const schema of schemas) {
+    logger.info({ schema }, 'Applying search persistence migration');
+
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS ${schema}.saved_filters (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        user_id UUID NOT NULL,
+        name VARCHAR(100) NOT NULL,
+        query TEXT,
+        filter JSONB,
+        is_shared BOOLEAN NOT NULL DEFAULT false,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        UNIQUE (user_id, name)
+      )
+    `);
+
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS ${schema}.search_history (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        user_id UUID NOT NULL,
+        query TEXT NOT NULL,
+        filter JSONB,
+        result_count INTEGER NOT NULL DEFAULT 0,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      )
+    `);
+
+    await pool.query(
+      `CREATE INDEX IF NOT EXISTS idx_search_history_user_created ON ${schema}.search_history (user_id, created_at DESC)`
+    );
+  }
+}
