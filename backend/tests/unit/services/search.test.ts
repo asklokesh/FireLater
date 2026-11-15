@@ -42,6 +42,34 @@ describe('search service', () => {
     expect(mockQuery.mock.calls[1][1]).toEqual(['new', 20, 0]);
   });
 
+  it('records non-empty queries to history without blocking the result', async () => {
+    mockQuery.mockResolvedValueOnce({ rows: [{ count: '2' }] });
+    mockQuery.mockResolvedValueOnce({ rows: [] });
+    mockQuery.mockResolvedValueOnce({ rows: [] });
+    await search('t', { q: 'disk', userId: 'u1' });
+    await new Promise((r) => setTimeout(r, 0));
+    const call = mockQuery.mock.calls[2];
+    expect(call[0]).toContain('INSERT INTO tenant_test.search_history');
+    expect(call[1]).toEqual(['u1', 'disk', 'issues', 2]);
+  });
+
+  it('does not record empty queries', async () => {
+    mockQuery.mockResolvedValueOnce({ rows: [{ count: '0' }] });
+    mockQuery.mockResolvedValueOnce({ rows: [] });
+    await search('t', { q: '  ', userId: 'u1' });
+    await new Promise((r) => setTimeout(r, 0));
+    expect(mockQuery).toHaveBeenCalledTimes(2);
+  });
+
+  it('still succeeds when the history write fails', async () => {
+    mockQuery.mockResolvedValueOnce({ rows: [{ count: '1' }] });
+    mockQuery.mockResolvedValueOnce({ rows: [{ id: '1', rank: 1 }] });
+    mockQuery.mockRejectedValueOnce(new Error('db down'));
+    const r = await search('t', { q: 'disk', userId: 'u1' });
+    await new Promise((res) => setTimeout(res, 0));
+    expect(r.total).toBe(1);
+  });
+
   it('rejects invalid filters', async () => {
     await expect(
       search('t', { filters: { conditions: [{ field: 'bad', op: 'eq', value: 1 }] } })

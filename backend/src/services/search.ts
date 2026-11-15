@@ -9,6 +9,8 @@ import {
   type FilterGroup,
   type SearchEntity,
 } from '../lib/search-query.js';
+import { recordSearch } from './search-tracking.js';
+import { logger } from '../utils/logger.js';
 
 export const MAX_PER_PAGE = 100;
 
@@ -18,6 +20,7 @@ export interface SearchParams {
   filters?: FilterGroup;
   page?: number;
   perPage?: number;
+  userId?: string;
 }
 
 export interface SearchResult {
@@ -70,6 +73,12 @@ export async function search(tenantSlug: string, params: SearchParams): Promise<
      LIMIT $${values.length + 1} OFFSET $${values.length + 2}`,
     [...values, perPage, offset]
   );
+  if (params.userId && params.q && params.q.trim()) {
+    // Fire-and-forget: history must never block or fail the search
+    void Promise.resolve()
+      .then(() => recordSearch(tenantSlug, params.userId as string, params.q, entity, total))
+      .catch((err) => logger.warn({ err }, 'Failed to record search history'));
+  }
   return { results: result.rows, total };
 }
 
