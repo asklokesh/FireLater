@@ -1,5 +1,6 @@
 import { pool } from '../config/database.js';
 import { tenantService } from './tenant.js';
+import { z } from 'zod';
 import { BadRequestError } from '../utils/errors.js';
 import { cacheService } from '../utils/cache.js';
 import { getOffset } from '../utils/pagination.js';
@@ -97,6 +98,20 @@ export interface FilterGroup {
   op: 'and' | 'or';
   conditions: Array<FilterCondition | FilterGroup>;
 }
+
+/** Zod schema for a stored/submitted filter group; also validates fields, operators and values. */
+export const filterGroupSchema = z
+  .object({
+    op: z.enum(['and', 'or']),
+    conditions: z.array(z.any()).max(MAX_CONDITIONS),
+  })
+  .superRefine((val, ctx) => {
+    try {
+      buildFilterClause(val as FilterGroup);
+    } catch (e) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, message: e instanceof Error ? e.message : 'Invalid filters' });
+    }
+  });
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 

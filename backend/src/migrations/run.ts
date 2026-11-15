@@ -38,6 +38,8 @@ import { migration035PrivilegedGrants } from './035_privileged_grants.js';
 import { migration036VendorRisk } from './036_vendor_risk.js';
 import { migration037SearchFulltext } from './037_search_fulltext.js';
 
+import { migration038SearchSaved } from './038_search_saved.js';
+
 interface Migration {
   name: string;
   up: (client: typeof pool) => Promise<void>;
@@ -81,6 +83,7 @@ const migrations: Migration[] = [
   { name: '035_privileged_grants', up: migration035PrivilegedGrants },
   { name: '036_vendor_risk', up: migration036VendorRisk },
   { name: '037_search_fulltext', up: migration037SearchFulltext },
+  { name: '038_search_saved', up: migration038SearchSaved },
 ];
 
 async function ensureMigrationsTable() {
