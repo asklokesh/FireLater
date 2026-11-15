@@ -65,6 +65,7 @@ const adminNavigation = [
   { name: 'Recertification', href: '/admin/access-recertification', icon: UserCheck },
   { name: 'PAM Grants', href: '/admin/pam', icon: KeyRound },
   { name: 'Vendor Risk', href: '/admin/vendor-risk', icon: Building2 },
+  { name: 'Search Analytics', href: '/admin/search-analytics', icon: BarChart2 },
   { name: 'Settings', href: '/admin/settings', icon: Settings },
 ];
 

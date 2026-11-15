@@ -138,6 +138,12 @@ describe('Sidebar Component', () => {
       expect(screen.getAllByText('Settings')[0]).toBeInTheDocument();
     });
 
+    it('renders Search Analytics link for admin users', () => {
+      render(<Sidebar />);
+      const link = screen.getAllByText('Search Analytics')[0].closest('a');
+      expect(link).toHaveAttribute('href', '/admin/search-analytics');
+    });
+
     it('admin section has divider', () => {
       render(<Sidebar />);
       const divider = document.querySelector('.border-t.border-gray-700');
