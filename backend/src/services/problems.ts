@@ -1,3 +1,4 @@
+import { buildFtsMatch, buildFtsRank, qualifyTsvector, escapeLike, PROBLEMS_TSVECTOR } from '../lib/search-fts.js';
 import { pool } from '../config/database.js';
 import { tenantService } from './tenant.js';
 import { NotFoundError, BadRequestError } from '../utils/errors.js';
@@ -194,15 +195,23 @@ export class ProblemService {
           whereClause += ` AND p.problem_type = $${paramIndex++}`;
           values.push(filters.problemType);
         }
-        if (filters?.search) {
-          whereClause += ` AND (p.title ILIKE $${paramIndex} OR p.problem_number ILIKE $${paramIndex} OR p.description ILIKE $${paramIndex})`;
-          values.push(`%${filters.search}%`);
-          paramIndex++;
+        const searchText = filters?.search?.trim();
+        let rankIdx: number | null = null;
+        if (searchText) {
+          const ftsIdx = paramIndex++;
+          const prefixIdx = paramIndex++;
+          whereClause += ` AND (${buildFtsMatch(qualifyTsvector(PROBLEMS_TSVECTOR, 'p'), ftsIdx)} OR p.problem_number ILIKE $${prefixIdx} ESCAPE '\\')`;
+          values.push(searchText, `${escapeLike(searchText)}%`);
+          rankIdx = ftsIdx;
         }
 
         const allowedSortColumns = ['created_at', 'updated_at', 'title', 'priority', 'status', 'problem_number'];
         const sortColumn = allowedSortColumns.includes(params.sort || '') ? params.sort : 'created_at';
         const sortOrder = params.order === 'asc' ? 'asc' : 'desc';
+
+        const orderBy = rankIdx !== null && !params.sort
+          ? `${buildFtsRank(qualifyTsvector(PROBLEMS_TSVECTOR, 'p'), rankIdx)} DESC, p.created_at DESC`
+          : `p.${sortColumn} ${sortOrder}`;
 
         const countResult = await pool.query(
           `SELECT COUNT(*) FROM ${schema}.problems p ${whereClause}`,
@@ -222,7 +231,7 @@ export class ProblemService {
            LEFT JOIN ${schema}.groups g ON p.assigned_group = g.id
            LEFT JOIN ${schema}.applications app ON p.application_id = app.id
            ${whereClause}
-           ORDER BY p.${sortColumn} ${sortOrder}
+           ORDER BY ${orderBy}
            LIMIT $${paramIndex++} OFFSET $${paramIndex}`,
           [...values, params.perPage, offset]
         );

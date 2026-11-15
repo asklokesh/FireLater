@@ -52,3 +52,16 @@ export function buildFtsHeadline(textExpr: string, paramIndex: number): string {
     `'StartSel=${HEADLINE_START_SEL}, StopSel=${HEADLINE_STOP_SEL}, MaxWords=35, MinWords=15')`
   );
 }
+
+/** Prefix bare column names in a tsvector expression with a table alias (for joined queries). */
+export function qualifyTsvector(tsvectorExpr: string, alias: string): string {
+  return tsvectorExpr.replace(
+    /\b(title|description|issue_number|problem_number|request_number|notes)\b/g,
+    `${alias}.$1`
+  );
+}
+
+/** Escape LIKE wildcards in user text. */
+export function escapeLike(text: string): string {
+  return text.replace(/[\\%_]/g, (c) => `\\${c}`);
+}

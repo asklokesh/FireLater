@@ -148,9 +148,31 @@ describe('RequestService', () => {
 
       await requestService.list(tenantSlug, { page: 1, perPage: 10 }, { search: 'laptop' });
 
-      expect(mockQuery.mock.calls[0][0]).toContain('r.request_number ILIKE $1');
-      expect(mockQuery.mock.calls[0][0]).toContain('r.notes ILIKE $1');
-      expect(mockQuery.mock.calls[0][1]).toContain('%laptop%');
+      expect(mockQuery.mock.calls[0][0]).toContain("websearch_to_tsquery('english', $1)");
+      expect(mockQuery.mock.calls[0][0]).toContain('r.request_number ILIKE $2');
+      expect(mockQuery.mock.calls[0][0]).not.toContain('r.notes ILIKE');
+      expect(mockQuery.mock.calls[0][1].slice(0, 2)).toEqual(['laptop', 'laptop%']);
+    });
+
+    it('should order by rank then created_at when searching without sort', async () => {
+      mockQuery
+        .mockResolvedValueOnce({ rows: [{ count: '1' }] })
+        .mockResolvedValueOnce({ rows: [] });
+
+      await requestService.list(tenantSlug, { page: 1, perPage: 10 }, { search: 'laptop' });
+
+      expect(mockQuery.mock.calls[1][0]).toMatch(/ORDER BY ts_rank_cd\(.*\) DESC, r\.created_at DESC/s);
+    });
+
+    it('should let explicit sort override rank ordering', async () => {
+      mockQuery
+        .mockResolvedValueOnce({ rows: [{ count: '1' }] })
+        .mockResolvedValueOnce({ rows: [] });
+
+      await requestService.list(tenantSlug, { page: 1, perPage: 10, sort: 'created_at' }, { search: 'laptop' });
+
+      expect(mockQuery.mock.calls[1][0]).toContain('ORDER BY r.created_at DESC');
+      expect(mockQuery.mock.calls[1][0]).not.toContain('ts_rank_cd');
     });
 
     it('should combine multiple filters', async () => {

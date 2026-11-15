@@ -1,3 +1,4 @@
+import { buildFtsMatch, buildFtsRank, qualifyTsvector, escapeLike, ISSUES_TSVECTOR } from '../lib/search-fts.js';
 import { pool } from '../config/database.js';
 import { tenantService } from './tenant.js';
 import { NotFoundError, BadRequestError, ConflictError } from '../utils/errors.js';
@@ -141,16 +142,24 @@ export class IssueService {
           whereClause += ` AND i.sla_breached = $${paramIndex++}`;
           values.push(filters.slaBreached);
         }
-        if (filters?.search) {
-          whereClause += ` AND (i.title ILIKE $${paramIndex} OR i.issue_number ILIKE $${paramIndex} OR i.description ILIKE $${paramIndex})`;
-          values.push(`%${filters.search}%`);
-          paramIndex++;
+        const searchText = filters?.search?.trim();
+        let rankIdx: number | null = null;
+        if (searchText) {
+          const ftsIdx = paramIndex++;
+          const prefixIdx = paramIndex++;
+          whereClause += ` AND (${buildFtsMatch(qualifyTsvector(ISSUES_TSVECTOR, 'i'), ftsIdx)} OR i.issue_number ILIKE $${prefixIdx} ESCAPE '\\')`;
+          values.push(searchText, `${escapeLike(searchText)}%`);
+          rankIdx = ftsIdx;
         }
 
         // Validate sort column against allowed columns to prevent SQL injection
         const allowedSortColumns = ['created_at', 'updated_at', 'title', 'priority', 'status', 'severity', 'issue_number'];
         const sortColumn = allowedSortColumns.includes(params.sort || '') ? params.sort : 'created_at';
         const sortOrder = params.order === 'asc' ? 'asc' : 'desc';
+
+        const orderBy = rankIdx !== null && !params.sort
+          ? `${buildFtsRank(qualifyTsvector(ISSUES_TSVECTOR, 'i'), rankIdx)} DESC, i.created_at DESC`
+          : `i.${sortColumn} ${sortOrder}`;
 
         const countResult = await pool.query(
           `SELECT COUNT(*) FROM ${schema}.issues i ${whereClause}`,
@@ -170,7 +179,7 @@ export class IssueService {
            LEFT JOIN ${schema}.groups g ON i.assigned_group = g.id
            LEFT JOIN ${schema}.applications app ON i.application_id = app.id
            ${whereClause}
-           ORDER BY i.${sortColumn} ${sortOrder}
+           ORDER BY ${orderBy}
            LIMIT $${paramIndex++} OFFSET $${paramIndex}`,
           [...values, params.perPage, offset]
         );

@@ -1,3 +1,4 @@
+import { buildFtsMatch, buildFtsRank, qualifyTsvector, escapeLike, SERVICE_REQUESTS_TSVECTOR } from '../lib/search-fts.js';
 import { pool } from '../config/database.js';
 import { tenantService } from './tenant.js';
 import { NotFoundError, BadRequestError } from '../utils/errors.js';
@@ -108,11 +109,19 @@ export class RequestService {
           whereClause += ` AND r.catalog_item_id = $${paramIndex++}`;
           values.push(filters.catalogItemId);
         }
-        if (filters?.search) {
-          whereClause += ` AND (r.request_number ILIKE $${paramIndex} OR r.notes ILIKE $${paramIndex})`;
-          values.push(`%${filters.search}%`);
-          paramIndex++;
+        const searchText = filters?.search?.trim();
+        let rankIdx: number | null = null;
+        if (searchText) {
+          const ftsIdx = paramIndex++;
+          const prefixIdx = paramIndex++;
+          whereClause += ` AND (${buildFtsMatch(qualifyTsvector(SERVICE_REQUESTS_TSVECTOR, 'r'), ftsIdx)} OR r.request_number ILIKE $${prefixIdx} ESCAPE '\\')`;
+          values.push(searchText, `${escapeLike(searchText)}%`);
+          rankIdx = ftsIdx;
         }
+
+        const orderBy = rankIdx !== null && !params.sort
+          ? `${buildFtsRank(qualifyTsvector(SERVICE_REQUESTS_TSVECTOR, 'r'), rankIdx)} DESC, r.created_at DESC`
+          : 'r.created_at DESC';
 
         const countResult = await pool.query(
           `SELECT COUNT(*) FROM ${schema}.service_requests r ${whereClause}`,
@@ -134,7 +143,7 @@ export class RequestService {
            LEFT JOIN ${schema}.catalog_items ci ON r.catalog_item_id = ci.id
            LEFT JOIN ${schema}.groups fg ON r.fulfillment_group_id = fg.id
            ${whereClause}
-           ORDER BY r.created_at DESC
+           ORDER BY ${orderBy}
            LIMIT $${paramIndex++} OFFSET $${paramIndex}`,
           [...values, params.perPage, offset]
         );
