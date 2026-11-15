@@ -30,6 +30,7 @@ import jobsRoutes from './routes/jobs.js';
 import attachmentsRoutes from './routes/attachments.js';
 import auditRoutes from './routes/audit.js';
 import dashboardRoutes from './routes/dashboard.js';
+import searchHistoryRoutes from './routes/search-history.js';
 import settingsRoutes from './routes/settings.js';
 import problemRoutes from './routes/problems.js';
 import knowledgeRoutes from './routes/knowledge.js';
@@ -426,6 +427,7 @@ async function registerRoutes() {
   await app.register(attachmentsRoutes, { prefix: '/v1/attachments' });
   await app.register(auditRoutes, { prefix: '/v1/audit' });
   await app.register(dashboardRoutes, { prefix: '/v1/dashboard' });
+  await app.register(searchHistoryRoutes, { prefix: '/v1/search' });
   await app.register(settingsRoutes, { prefix: '/v1/settings' });
   await app.register(problemRoutes, { prefix: '/v1/problems' });
   await app.register(searchRoutes, { prefix: '/v1/search' });
