@@ -15,7 +15,20 @@ vi.mock('next/navigation', () => ({
 }));
 
 vi.mock('@/lib/api', () => ({
-  searchApi: { search: vi.fn() },
+  searchApi: {
+    search: vi.fn(),
+    history: vi.fn(),
+    suggestions: vi.fn(),
+    listTemplates: vi.fn(),
+    deleteHistory: vi.fn(),
+    clearHistory: vi.fn(),
+    createTemplate: vi.fn(),
+    deleteTemplate: vi.fn(),
+  },
+}));
+
+vi.mock('@/stores/auth', () => ({
+  useAuthStore: (sel: (s: any) => unknown) => sel({ user: { id: 'u1' } }),
 }));
 
 const response = {
@@ -39,6 +52,9 @@ describe('SearchPage', () => {
     vi.clearAllMocks();
     mockParams = new URLSearchParams();
     (searchApi.search as any).mockResolvedValue(response);
+    (searchApi.history as any).mockResolvedValue([]);
+    (searchApi.suggestions as any).mockResolvedValue([]);
+    (searchApi.listTemplates as any).mockResolvedValue([]);
   });
 
   it('initializes state from the URL', async () => {
@@ -87,5 +103,28 @@ describe('SearchPage', () => {
     mockParams = new URLSearchParams({ q: 'x' });
     render(<SearchPage />);
     expect(await screen.findByRole('alert')).toHaveTextContent('boom');
+  });
+
+  it('applies a saved template', async () => {
+    const filter = { op: 'and', conditions: [{ field: 'status', operator: 'in', value: ['new'] }] };
+    (searchApi.listTemplates as any).mockResolvedValue([
+      { id: 't1', name: 'Mine', q: 'vpn', filter, sort: 'created_at', order: 'asc', owner_id: 'u1' },
+    ]);
+    render(<SearchPage />);
+    fireEvent.click(screen.getByText('Saved filters'));
+    fireEvent.click(await screen.findByText('Mine'));
+    expect(mockPush).toHaveBeenCalledWith(
+      `/search?q=vpn&filter=${encodeURIComponent(JSON.stringify(filter))}&sort=created_at&order=asc`
+    );
+  });
+
+  it('runs the search when a suggestion is chosen', async () => {
+    (searchApi.suggestions as any).mockResolvedValue([{ text: 'vpn down', type: 'popular' }]);
+    render(<SearchPage />);
+    const input = screen.getByLabelText('Search query');
+    fireEvent.focus(input);
+    fireEvent.change(input, { target: { value: 'vp' } });
+    fireEvent.click(await screen.findByText('vpn down', {}, { timeout: 2000 }));
+    expect(mockPush).toHaveBeenCalledWith('/search?q=vpn+down');
   });
 });
