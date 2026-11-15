@@ -49,6 +49,7 @@ import recertificationRoutes from './routes/recertification.js';
 import regulatorySlaRoutes from './routes/regulatory-sla.js';
 import emergencyChangeRoutes from './routes/emergency-change.js';
 import { vendorRiskRoutes } from './routes/vendor-risk.js';
+import searchRoutes from './routes/search.js';
 import wsRoutes from './routes/ws.js';
 import { realtimeBridge } from './lib/websocket/realtime-bridge.js';
 import { hub as realtimeHub } from './routes/ws.js';
@@ -412,6 +413,7 @@ async function registerRoutes() {
   await app.register(roleRoutes, { prefix: '/v1/roles' });
   await app.register(applicationRoutes, { prefix: '/v1/applications' });
   await app.register(issueRoutes, { prefix: '/v1/issues' });
+  await app.register(searchRoutes, { prefix: '/v1/search' });
   await app.register(catalogRoutes, { prefix: '/v1/catalog' });
   await app.register(requestRoutes, { prefix: '/v1/requests' });
   await app.register(notificationRoutes, { prefix: '/v1/notifications' });

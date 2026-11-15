@@ -188,9 +188,8 @@ describe('Issue Service', () => {
       await issueService.list('test-tenant', { page: 1, perPage: 50 }, { search: 'server' });
 
       const query = mockQuery.mock.calls[0][0];
-      expect(query).toContain('i.title ILIKE $');
+      expect(query).toContain("i.search_vector @@ websearch_to_tsquery('english', $");
       expect(query).toContain('i.issue_number ILIKE $');
-      expect(query).toContain('i.description ILIKE $');
     });
 
     it('should sort by allowed columns', async () => {

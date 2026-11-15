@@ -8,6 +8,7 @@ import { getOffset } from '../utils/pagination.js';
 import { dashboardService } from './dashboard.js';
 import { sanitizeMarkdown } from '../utils/contentSanitization.js';
 import { cacheService } from '../utils/cache.js';
+import { parseSearchQuery, escapeLike } from './search.js';
 
 interface CreateIssueParams {
   title: string;
@@ -142,9 +143,12 @@ export class IssueService {
           values.push(filters.slaBreached);
         }
         if (filters?.search) {
-          whereClause += ` AND (i.title ILIKE $${paramIndex} OR i.issue_number ILIKE $${paramIndex} OR i.description ILIKE $${paramIndex})`;
-          values.push(`%${filters.search}%`);
-          paramIndex++;
+          const parsedSearch = parseSearchQuery(filters.search);
+          if (parsedSearch) {
+            whereClause += ` AND (i.search_vector @@ websearch_to_tsquery('english', $${paramIndex}) OR i.issue_number ILIKE $${paramIndex + 1})`;
+            values.push(parsedSearch, `${escapeLike(filters.search.trim())}%`);
+            paramIndex += 2;
+          }
         }
 
         // Validate sort column against allowed columns to prevent SQL injection
