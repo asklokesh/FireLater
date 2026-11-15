@@ -32,6 +32,7 @@ import {
   UserCheck,
   KeyRound,
   Building2,
+  Search,
 } from 'lucide-react';
 import { useAuthStore } from '@/stores/auth';
 
@@ -47,6 +48,7 @@ const navigation = [
   { name: 'On-Call', href: '/oncall', icon: Phone },
   { name: 'Cloud', href: '/cloud', icon: Cloud },
   { name: 'Reports', href: '/reports', icon: FileText },
+  { name: 'Search', href: '/search', icon: Search },
 ];
 
 const adminNavigation = [

@@ -3356,3 +3356,82 @@ describe('Email API', () => {
     });
   });
 });
+
+describe('Search API', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.resetModules();
+  });
+
+  it('search posts body', async () => {
+    const { searchApi, api } = await import('../api');
+    (api.post as ReturnType<typeof vi.fn>).mockResolvedValue({ data: { data: [] } });
+    const body = { q: 'x', page: 2 };
+    const res = await searchApi.search(body);
+    expect(api.post).toHaveBeenCalledWith('/v1/search/issues', body);
+    expect(res).toEqual({ data: [] });
+  });
+
+  it('history gets with limit', async () => {
+    const { searchApi, api } = await import('../api');
+    (api.get as ReturnType<typeof vi.fn>).mockResolvedValue({ data: [] });
+    await searchApi.history(5);
+    expect(api.get).toHaveBeenCalledWith('/v1/search/history', { params: { limit: 5 } });
+  });
+
+  it('clearHistory deletes', async () => {
+    const { searchApi, api } = await import('../api');
+    (api.delete as ReturnType<typeof vi.fn>).mockResolvedValue({ data: {} });
+    await searchApi.clearHistory();
+    expect(api.delete).toHaveBeenCalledWith('/v1/search/history');
+  });
+
+  it('deleteHistory deletes by id', async () => {
+    const { searchApi, api } = await import('../api');
+    (api.delete as ReturnType<typeof vi.fn>).mockResolvedValue({ data: {} });
+    await searchApi.deleteHistory('h1');
+    expect(api.delete).toHaveBeenCalledWith('/v1/search/history/h1');
+  });
+
+  it('suggestions gets with q and limit', async () => {
+    const { searchApi, api } = await import('../api');
+    (api.get as ReturnType<typeof vi.fn>).mockResolvedValue({ data: [] });
+    await searchApi.suggestions('ab', 3);
+    expect(api.get).toHaveBeenCalledWith('/v1/search/suggestions', { params: { q: 'ab', limit: 3 } });
+  });
+
+  it('listTemplates gets', async () => {
+    const { searchApi, api } = await import('../api');
+    (api.get as ReturnType<typeof vi.fn>).mockResolvedValue({ data: [] });
+    await searchApi.listTemplates();
+    expect(api.get).toHaveBeenCalledWith('/v1/search/templates');
+  });
+
+  it('createTemplate posts', async () => {
+    const { searchApi, api } = await import('../api');
+    (api.post as ReturnType<typeof vi.fn>).mockResolvedValue({ data: {} });
+    await searchApi.createTemplate({ name: 'n' });
+    expect(api.post).toHaveBeenCalledWith('/v1/search/templates', { name: 'n' });
+  });
+
+  it('updateTemplate puts', async () => {
+    const { searchApi, api } = await import('../api');
+    (api.put as ReturnType<typeof vi.fn>).mockResolvedValue({ data: {} });
+    await searchApi.updateTemplate('t1', { name: 'm' });
+    expect(api.put).toHaveBeenCalledWith('/v1/search/templates/t1', { name: 'm' });
+  });
+
+  it('deleteTemplate deletes', async () => {
+    const { searchApi, api } = await import('../api');
+    (api.delete as ReturnType<typeof vi.fn>).mockResolvedValue({ data: {} });
+    await searchApi.deleteTemplate('t1');
+    expect(api.delete).toHaveBeenCalledWith('/v1/search/templates/t1');
+  });
+
+  it('analytics gets with days', async () => {
+    const { searchApi, api } = await import('../api');
+    (api.get as ReturnType<typeof vi.fn>).mockResolvedValue({ data: {} });
+    await searchApi.analytics(7);
+    expect(api.get).toHaveBeenCalledWith('/v1/search/analytics', { params: { days: 7 } });
+  });
+});

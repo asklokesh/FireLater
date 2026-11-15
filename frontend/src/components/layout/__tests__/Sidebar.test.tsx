@@ -83,6 +83,12 @@ describe('Sidebar Component', () => {
       expect(screen.getAllByText('Reports')[0]).toBeInTheDocument();
     });
 
+    it('renders Search link to /search', () => {
+      render(<Sidebar />);
+      const link = screen.getAllByText('Search')[0].closest('a');
+      expect(link).toHaveAttribute('href', '/search');
+    });
+
     it('renders user information', () => {
       render(<Sidebar />);
       expect(screen.getAllByText('John Doe')[0]).toBeInTheDocument();

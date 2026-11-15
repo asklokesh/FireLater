@@ -2432,4 +2432,89 @@ export const emailApi = {
   },
 };
 
+// Search types
+export type SearchOperator = string;
+export interface SearchCondition {
+  field: string;
+  operator: string;
+  value: unknown;
+}
+export interface SearchFilterGroup {
+  op: 'and' | 'or';
+  conditions: Array<SearchFilterGroup | SearchCondition>;
+}
+export interface SearchRequest {
+  q?: string;
+  filter?: SearchFilterGroup;
+  sort?: string;
+  order?: 'asc' | 'desc';
+  page?: number;
+  perPage?: number;
+}
+export interface SearchIssueRow {
+  id: string;
+  issue_number: string;
+  title: string;
+  status: string;
+  priority: string;
+  application_name?: string | null;
+  rank?: number;
+  [key: string]: unknown;
+}
+export type SearchFacetField = 'status' | 'priority' | 'severity' | 'application_id' | 'assigned_to';
+export interface SearchFacetValue {
+  value: string;
+  label: string;
+  count: number;
+}
+export interface SearchResponse {
+  data: SearchIssueRow[];
+  pagination: { page: number; perPage: number; total: number; totalPages: number };
+  facets: Record<SearchFacetField, SearchFacetValue[]>;
+  tookMs: number;
+}
+
+export const searchApi = {
+  search: async (body: SearchRequest): Promise<SearchResponse> => {
+    const response = await api.post('/v1/search/issues', body);
+    return response.data;
+  },
+  history: async (limit?: number) => {
+    const response = await api.get('/v1/search/history', { params: { limit } });
+    return response.data;
+  },
+  clearHistory: async () => {
+    const response = await api.delete('/v1/search/history');
+    return response.data;
+  },
+  deleteHistory: async (id: string) => {
+    const response = await api.delete(`/v1/search/history/${id}`);
+    return response.data;
+  },
+  suggestions: async (q: string, limit?: number) => {
+    const response = await api.get('/v1/search/suggestions', { params: { q, limit } });
+    return response.data;
+  },
+  listTemplates: async () => {
+    const response = await api.get('/v1/search/templates');
+    return response.data;
+  },
+  createTemplate: async (body: Record<string, unknown>) => {
+    const response = await api.post('/v1/search/templates', body);
+    return response.data;
+  },
+  updateTemplate: async (id: string, body: Record<string, unknown>) => {
+    const response = await api.put(`/v1/search/templates/${id}`, body);
+    return response.data;
+  },
+  deleteTemplate: async (id: string) => {
+    const response = await api.delete(`/v1/search/templates/${id}`);
+    return response.data;
+  },
+  analytics: async (days?: number) => {
+    const response = await api.get('/v1/search/analytics', { params: { days } });
+    return response.data;
+  },
+};
+
 export default api;
