@@ -50,6 +50,7 @@ import regulatorySlaRoutes from './routes/regulatory-sla.js';
 import emergencyChangeRoutes from './routes/emergency-change.js';
 import { vendorRiskRoutes } from './routes/vendor-risk.js';
 import wsRoutes from './routes/ws.js';
+import searchRoutes from './routes/search.js';
 import { realtimeBridge } from './lib/websocket/realtime-bridge.js';
 import { hub as realtimeHub } from './routes/ws.js';
 import { initializeJobs, shutdownJobs } from './jobs/index.js';
@@ -426,6 +427,7 @@ async function registerRoutes() {
   await app.register(dashboardRoutes, { prefix: '/v1/dashboard' });
   await app.register(settingsRoutes, { prefix: '/v1/settings' });
   await app.register(problemRoutes, { prefix: '/v1/problems' });
+  await app.register(searchRoutes, { prefix: '/v1/search' });
   await app.register(knowledgeRoutes, { prefix: '/v1/kb' });
   await app.register(slaRoutes, { prefix: '/v1/sla' });
   await app.register(workflowRoutes, { prefix: '/v1/workflows' });
