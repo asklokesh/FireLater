@@ -2357,6 +2357,53 @@ export const integrationsApi = {
   },
 };
 
+// Search API
+export const searchApi = {
+  search: async (params: { q?: string; filters?: unknown; page?: number; per_page?: number }) => {
+    const { filters, ...rest } = params;
+    const response = await api.get('/v1/search', {
+      params: {
+        ...rest,
+        ...(filters ? { filters: typeof filters === 'string' ? filters : JSON.stringify(filters) } : {}),
+      },
+    });
+    return response.data;
+  },
+
+  suggest: async (q: string) => {
+    const response = await api.get('/v1/search/suggest', { params: { q } });
+    return response.data;
+  },
+
+  listTemplates: async () => {
+    const response = await api.get('/v1/search/templates');
+    return response.data;
+  },
+
+  createTemplate: async (data: { name: string; description?: string | null; query?: string | null; filters?: unknown; is_shared?: boolean }) => {
+    const response = await api.post('/v1/search/templates', data);
+    return response.data;
+  },
+
+  updateTemplate: async (id: string, data: { name?: string; description?: string | null; query?: string | null; filters?: unknown; is_shared?: boolean }) => {
+    const response = await api.put(`/v1/search/templates/${id}`, data);
+    return response.data;
+  },
+
+  deleteTemplate: async (id: string) => {
+    await api.delete(`/v1/search/templates/${id}`);
+  },
+
+  getHistory: async (limit?: number) => {
+    const response = await api.get('/v1/search/history', { params: limit ? { limit } : undefined });
+    return response.data;
+  },
+
+  clearHistory: async () => {
+    await api.delete('/v1/search/history');
+  },
+};
+
 // Email Integration API
 export const emailApi = {
   // Configs

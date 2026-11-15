@@ -3355,4 +3355,49 @@ describe('Email API', () => {
       expect(api.get).toHaveBeenCalledWith('/v1/email/webhook-urls');
     });
   });
+
+  describe('searchApi', () => {
+    it('searches with serialized filters', async () => {
+      const { searchApi, api } = await import('../api');
+      (api.get as ReturnType<typeof vi.fn>).mockResolvedValue({ data: { data: [] } });
+      const filters = { op: 'and', conditions: [{ field: 'status', op: 'eq', value: 'new' }] };
+      await searchApi.search({ q: 'vpn', filters, page: 2 });
+      expect(api.get).toHaveBeenCalledWith('/v1/search', {
+        params: { q: 'vpn', page: 2, filters: JSON.stringify(filters) },
+      });
+    });
+
+    it('suggests', async () => {
+      const { searchApi, api } = await import('../api');
+      (api.get as ReturnType<typeof vi.fn>).mockResolvedValue({ data: { data: [] } });
+      await searchApi.suggest('vp');
+      expect(api.get).toHaveBeenCalledWith('/v1/search/suggest', { params: { q: 'vp' } });
+    });
+
+    it('manages templates', async () => {
+      const { searchApi, api } = await import('../api');
+      (api.get as ReturnType<typeof vi.fn>).mockResolvedValue({ data: { data: [] } });
+      (api.post as ReturnType<typeof vi.fn>).mockResolvedValue({ data: {} });
+      (api.put as ReturnType<typeof vi.fn>).mockResolvedValue({ data: {} });
+      (api.delete as ReturnType<typeof vi.fn>).mockResolvedValue({});
+      await searchApi.listTemplates();
+      expect(api.get).toHaveBeenCalledWith('/v1/search/templates');
+      await searchApi.createTemplate({ name: 'a' });
+      expect(api.post).toHaveBeenCalledWith('/v1/search/templates', { name: 'a' });
+      await searchApi.updateTemplate('1', { name: 'b' });
+      expect(api.put).toHaveBeenCalledWith('/v1/search/templates/1', { name: 'b' });
+      await searchApi.deleteTemplate('1');
+      expect(api.delete).toHaveBeenCalledWith('/v1/search/templates/1');
+    });
+
+    it('gets and clears history', async () => {
+      const { searchApi, api } = await import('../api');
+      (api.get as ReturnType<typeof vi.fn>).mockResolvedValue({ data: { data: [] } });
+      (api.delete as ReturnType<typeof vi.fn>).mockResolvedValue({});
+      await searchApi.getHistory(5);
+      expect(api.get).toHaveBeenCalledWith('/v1/search/history', { params: { limit: 5 } });
+      await searchApi.clearHistory();
+      expect(api.delete).toHaveBeenCalledWith('/v1/search/history');
+    });
+  });
 });
