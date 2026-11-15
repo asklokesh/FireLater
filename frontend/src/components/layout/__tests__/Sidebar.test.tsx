@@ -81,6 +81,7 @@ describe('Sidebar Component', () => {
       expect(screen.getAllByText('On-Call')[0]).toBeInTheDocument();
       expect(screen.getAllByText('Cloud')[0]).toBeInTheDocument();
       expect(screen.getAllByText('Reports')[0]).toBeInTheDocument();
+      expect(screen.getAllByText('Search')[0].closest('a')).toHaveAttribute('href', '/search');
     });
 
     it('renders user information', () => {

@@ -32,11 +32,13 @@ import {
   UserCheck,
   KeyRound,
   Building2,
+  Search,
 } from 'lucide-react';
 import { useAuthStore } from '@/stores/auth';
 
 const navigation = [
   { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
+  { name: 'Search', href: '/search', icon: Search },
   { name: 'Issues', href: '/issues', icon: AlertCircle },
   { name: 'Problems', href: '/problems', icon: AlertTriangle },
   { name: 'Changes', href: '/changes', icon: RefreshCw },

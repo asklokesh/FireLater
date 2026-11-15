@@ -2357,6 +2357,53 @@ export const integrationsApi = {
   },
 };
 
+// Search API
+export interface SearchFilterCondition { field: string; op: string; value?: unknown }
+export interface SearchFilterGroup { logic?: 'AND' | 'OR'; conditions: Array<SearchFilterCondition | SearchFilterGroup> }
+export interface SearchTemplateInput {
+  name: string;
+  entity?: 'issues' | 'problems';
+  query?: string | null;
+  filter?: SearchFilterGroup | null;
+  isShared?: boolean;
+}
+
+export const searchApi = {
+  search: async (params: { q?: string; entity?: 'issues' | 'problems'; filters?: SearchFilterGroup | null; page?: number; per_page?: number }) => {
+    const { filters, ...rest } = params;
+    const query: Record<string, unknown> = { ...rest };
+    if (filters && filters.conditions.length > 0) query.filters = JSON.stringify(filters);
+    const response = await api.get('/v1/search', { params: query });
+    return response.data;
+  },
+  listTemplates: async () => {
+    const response = await api.get('/v1/search/templates');
+    return response.data;
+  },
+  createTemplate: async (data: SearchTemplateInput) => {
+    const response = await api.post('/v1/search/templates', data);
+    return response.data;
+  },
+  updateTemplate: async (id: string, data: Partial<SearchTemplateInput>) => {
+    const response = await api.put(`/v1/search/templates/${id}`, data);
+    return response.data;
+  },
+  deleteTemplate: async (id: string) => {
+    await api.delete(`/v1/search/templates/${id}`);
+  },
+  history: async (limit?: number) => {
+    const response = await api.get('/v1/search/history', { params: { limit } });
+    return response.data;
+  },
+  clearHistory: async () => {
+    await api.delete('/v1/search/history');
+  },
+  suggestions: async (prefix: string, limit?: number) => {
+    const response = await api.get('/v1/search/suggestions', { params: { prefix, limit } });
+    return response.data;
+  },
+};
+
 // Email Integration API
 export const emailApi = {
   // Configs
