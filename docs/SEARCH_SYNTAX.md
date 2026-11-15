@@ -76,3 +76,6 @@ eq, neq, in, nin, gt, gte, lt, lte, between (two values, timestamps only), is_nu
 
 - Nesting depth: 4 levels.
 - Total conditions: 50.
+- Result window: 10000 matches. Requests where `(page - 1) * perPage` is 10000 or more are rejected with HTTP 400; narrow the query or filters. The total is reported as 10000 with `totalCapped: true` when more match.
+- Facets: computed over at most the first 10000 matching rows, at most 20 values per facet; `facetsApproximate: true` when that cap is hit.
+- Timeout: search queries are cancelled after 5000 ms (`SEARCH_STATEMENT_TIMEOUT_MS`) and return HTTP 503; retry or narrow the query.

@@ -2,7 +2,8 @@ import { pool } from '../../config/database.js';
 import { tenantService } from '../tenant.js';
 import { cacheService } from '../../utils/cache.js';
 import { logger } from '../../utils/logger.js';
-import { NotFoundError } from '../../utils/errors.js';
+import { config } from '../../config/index.js';
+import { NotFoundError, BadRequestError, AppError } from '../../utils/errors.js';
 import { buildFilterClause, type FilterGroup } from './filter-builder.js';
 import { parseSearchQuery } from './query-parser.js';
 import { buildTextSearchClause, buildRankExpression } from './fts.js';
@@ -34,10 +35,16 @@ export interface SearchFacets {
 
 export interface SearchIssuesResult {
   data: Array<Record<string, unknown> & { rank: number }>;
-  pagination: { page: number; perPage: number; total: number; totalPages: number };
+  pagination: { page: number; perPage: number; total: number; totalPages: number; totalCapped: boolean };
   facets: SearchFacets;
+  facetsApproximate: boolean;
   tookMs: number;
 }
+
+export const MAX_RESULT_WINDOW = 10000;
+export const FACET_ROW_CAP = 10000;
+export const FACET_VALUE_LIMIT = 20;
+export const SEARCH_CACHE_TTL_SECONDS = 60;
 
 const SORT_COLUMNS: Record<string, string> = {
   created_at: 'i.created_at',
@@ -97,19 +104,39 @@ async function runSearch(
 
   const offset = (input.page - 1) * input.perPage;
 
-  const facetQuery = (col: string, join: string, label: string) =>
-    pool.query(
-      `SELECT i.${col}::text AS value, ${label} AS label, COUNT(*) AS count
-       FROM ${schema}.issues i ${join}
-       ${whereClause}
-       GROUP BY i.${col}, ${label}
-       ORDER BY count DESC`,
+  const facetSql = `
+    WITH m AS (
+      SELECT i.status::text AS s, i.priority::text AS p, i.severity::text AS sv,
+             i.application_id AS a, i.assigned_to AS u
+      FROM ${schema}.issues i
+      ${whereClause}
+      LIMIT ${FACET_ROW_CAP + 1}
+    ), c AS (SELECT * FROM m LIMIT ${FACET_ROW_CAP})
+    SELECT '_meta' AS facet, NULL::text AS value, NULL::text AS label, COUNT(*) AS count FROM m
+    UNION ALL
+    (SELECT 'status', s, s, COUNT(*) AS count FROM c GROUP BY s ORDER BY count DESC LIMIT ${FACET_VALUE_LIMIT})
+    UNION ALL
+    (SELECT 'priority', p, p, COUNT(*) AS count FROM c GROUP BY p ORDER BY count DESC LIMIT ${FACET_VALUE_LIMIT})
+    UNION ALL
+    (SELECT 'severity', sv, sv, COUNT(*) AS count FROM c GROUP BY sv ORDER BY count DESC LIMIT ${FACET_VALUE_LIMIT})
+    UNION ALL
+    (SELECT 'application_id', c.a::text, MAX(fa.name), COUNT(*) AS count FROM c
+       LEFT JOIN ${schema}.applications fa ON c.a = fa.id GROUP BY c.a ORDER BY count DESC LIMIT ${FACET_VALUE_LIMIT})
+    UNION ALL
+    (SELECT 'assigned_to', c.u::text, MAX(fu.name), COUNT(*) AS count FROM c
+       LEFT JOIN ${schema}.users fu ON c.u = fu.id GROUP BY c.u ORDER BY count DESC LIMIT ${FACET_VALUE_LIMIT})`;
+
+  const timeoutMs = Math.trunc(Number(config.search.statementTimeoutMs)) || 5000;
+  const client = await pool.connect();
+  let countRes, rowsRes, facetRes;
+  try {
+    await client.query('BEGIN');
+    await client.query(`SET LOCAL statement_timeout = ${timeoutMs}`);
+    countRes = await client.query(
+      `SELECT COUNT(*) FROM (SELECT 1 FROM ${schema}.issues i ${whereClause} LIMIT ${MAX_RESULT_WINDOW + 1}) capped`,
       values
     );
-
-  const [countRes, rowsRes, status, priority, severity, app, assignee] = await Promise.all([
-    pool.query(`SELECT COUNT(*) FROM ${schema}.issues i ${whereClause}`, values),
-    pool.query(
+    rowsRes = await client.query(
       `SELECT i.*, ${rankExpr} AS rank,
               r.name as reporter_name, r.email as reporter_email,
               a.name as assignee_name, a.email as assignee_email,
@@ -124,15 +151,36 @@ async function runSearch(
        ORDER BY ${orderBy}
        LIMIT $${idx} OFFSET $${idx + 1}`,
       [...values, input.perPage, offset]
-    ),
-    facetQuery('status', '', 'i.status::text'),
-    facetQuery('priority', '', 'i.priority::text'),
-    facetQuery('severity', '', 'i.severity::text'),
-    facetQuery('application_id', `LEFT JOIN ${schema}.applications fa ON i.application_id = fa.id`, 'fa.name'),
-    facetQuery('assigned_to', `LEFT JOIN ${schema}.users fu ON i.assigned_to = fu.id`, 'fu.name'),
-  ]);
+    );
+    facetRes = await client.query(facetSql, values);
+    await client.query('COMMIT');
+  } catch (err) {
+    try {
+      await client.query('ROLLBACK');
+    } catch {
+      // ignore rollback failure
+    }
+    if ((err as { code?: string })?.code === '57014') {
+      throw new AppError(
+        503,
+        'Service Unavailable',
+        'Search timed out. Please retry shortly or narrow your query or filters.'
+      );
+    }
+    throw err;
+  } finally {
+    client.release();
+  }
 
-  const total = parseInt(countRes.rows[0].count, 10);
+  const rawCount = parseInt(countRes.rows[0].count, 10);
+  const totalCapped = rawCount > MAX_RESULT_WINDOW;
+  const total = Math.min(rawCount, MAX_RESULT_WINDOW);
+  const facetRows: Array<{ facet: string; value: unknown; label?: unknown; count: unknown }> = facetRes.rows;
+  const metaRow = facetRows.find((r) => r.facet === '_meta');
+  const facetsApproximate = metaRow ? Number(metaRow.count) > FACET_ROW_CAP : false;
+  const facetBuckets = (name: string) =>
+    toBuckets(facetRows.filter((r) => r.facet === name)).slice(0, FACET_VALUE_LIMIT);
+
   return {
     data: rowsRes.rows.map((row: Record<string, unknown>) => ({ ...row, rank: Number(row.rank) || 0 })),
     pagination: {
@@ -140,15 +188,29 @@ async function runSearch(
       perPage: input.perPage,
       total,
       totalPages: Math.ceil(total / input.perPage),
+      totalCapped,
     },
     facets: {
-      status: toBuckets(status.rows),
-      priority: toBuckets(priority.rows),
-      severity: toBuckets(severity.rows),
-      application_id: toBuckets(app.rows),
-      assigned_to: toBuckets(assignee.rows),
+      status: facetBuckets('status'),
+      priority: facetBuckets('priority'),
+      severity: facetBuckets('severity'),
+      application_id: facetBuckets('application_id'),
+      assigned_to: facetBuckets('assigned_to'),
     },
+    facetsApproximate,
   };
+}
+
+export function buildSearchCacheKey(tenantSlug: string, input: SearchIssuesInput): string {
+  const normalized = {
+    q: (input.q ?? '').trim(),
+    filter: input.filter ?? null,
+    sort: input.sort ?? null,
+    order: input.order ?? null,
+    page: input.page,
+    perPage: input.perPage,
+  };
+  return `${tenantSlug}:issues:search:${JSON.stringify(normalized)}`;
 }
 
 export async function searchIssues(
@@ -157,8 +219,15 @@ export async function searchIssues(
   input: SearchIssuesInput
 ): Promise<SearchIssuesResult> {
   const started = Date.now();
-  const cacheKey = `${tenantSlug}:issues:search:${JSON.stringify(input)}`;
-  const result = await cacheService.getOrSet(cacheKey, () => runSearch(tenantSlug, input), { ttl: 300 });
+  if ((input.page - 1) * input.perPage >= MAX_RESULT_WINDOW) {
+    throw new BadRequestError(
+      `Search results are limited to the first ${MAX_RESULT_WINDOW} matches. Narrow the query or filters to see more.`
+    );
+  }
+  const cacheKey = buildSearchCacheKey(tenantSlug, input);
+  const result = await cacheService.getOrSet(cacheKey, () => runSearch(tenantSlug, input), {
+    ttl: SEARCH_CACHE_TTL_SECONDS,
+  });
   const tookMs = Date.now() - started;
 
   const q = (input.q ?? '').trim();

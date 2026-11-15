@@ -1,10 +1,14 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 const mockQuery = vi.fn();
+const mockRelease = vi.fn();
 const getOrSet = vi.fn(async (_key: string, fetcher: () => Promise<unknown>) => fetcher());
 
 vi.mock('../../../src/config/database.js', () => ({
-  pool: { query: (...args: unknown[]) => mockQuery(...args) },
+  pool: {
+    query: (...args: unknown[]) => mockQuery(...args),
+    connect: async () => ({ query: (...args: unknown[]) => mockQuery(...args), release: mockRelease }),
+  },
 }));
 vi.mock('../../../src/utils/cache.js', () => ({
   cacheService: {
@@ -22,23 +26,31 @@ vi.mock('../../../src/utils/logger.js', () => ({
 
 import {
   searchIssues,
+  buildSearchCacheKey,
   listSearchHistory,
   clearSearchHistory,
   deleteSearchHistoryEntry,
   getSuggestions,
 } from '../../../src/services/search/search.js';
 
-function setup(opts: { historyFails?: boolean } = {}) {
+function setup(opts: { historyFails?: boolean; count?: string; metaCount?: string } = {}) {
   mockQuery.mockImplementation(async (sql: string) => {
     if (sql.includes('INSERT INTO')) {
       if (opts.historyFails) throw new Error('boom');
       return { rows: [], rowCount: 1 };
     }
-    if (sql.includes('SELECT COUNT(*) FROM')) return { rows: [{ count: '3' }] };
+    if (sql.includes('SELECT COUNT(*) FROM')) return { rows: [{ count: opts.count ?? '3' }] };
     if (sql.includes('SELECT i.*')) return { rows: [{ id: '1', rank: 0.5 }] };
-    if (sql.includes('fa.name')) return { rows: [{ value: 'app1', label: 'App One', count: '2' }] };
-    if (sql.includes('fu.name')) return { rows: [{ value: 'u1', label: 'Alice', count: '1' }, { value: 'u2', label: 'Bob', count: '5' }] };
-    if (sql.includes('GROUP BY i.status')) return { rows: [{ value: 'new', label: 'new', count: '3' }] };
+    if (sql.includes("'_meta'"))
+      return {
+        rows: [
+          { facet: '_meta', value: null, label: null, count: opts.metaCount ?? '3' },
+          { facet: 'status', value: 'new', label: 'new', count: '3' },
+          { facet: 'application_id', value: 'app1', label: 'App One', count: '2' },
+          { facet: 'assigned_to', value: 'u1', label: 'Alice', count: '1' },
+          { facet: 'assigned_to', value: 'u2', label: 'Bob', count: '5' },
+        ],
+      };
     return { rows: [] };
   });
 }
@@ -50,6 +62,7 @@ describe('searchIssues', () => {
   beforeEach(() => {
     mockQuery.mockReset();
     getOrSet.mockClear();
+    mockRelease.mockClear();
     warn.mockClear();
   });
 
@@ -61,7 +74,8 @@ describe('searchIssues', () => {
     expect(sql).toContain('ts_rank(i.search_vector');
     expect(sql).toContain('ORDER BY rank DESC');
     expect(r.data[0].rank).toBe(0.5);
-    expect(r.pagination).toEqual({ page: 1, perPage: 25, total: 3, totalPages: 1 });
+    expect(r.pagination).toEqual({ page: 1, perPage: 25, total: 3, totalPages: 1, totalCapped: false });
+    expect(r.facetsApproximate).toBe(false);
   });
 
   it('defaults to created_at without text', async () => {
@@ -96,6 +110,68 @@ describe('searchIssues', () => {
     setup();
     await searchIssues('acme', 'u', base);
     expect(getOrSet.mock.calls[0][0].startsWith('acme:issues:search:')).toBe(true);
+    expect(getOrSet.mock.calls[0][2]).toEqual({ ttl: 60 });
+  });
+
+  it('keys cache by full normalized request', () => {
+    const a = buildSearchCacheKey('acme', { ...base, q: ' x ' });
+    expect(buildSearchCacheKey('acme', { ...base, q: 'x' })).toBe(a);
+    expect(buildSearchCacheKey('acme', { ...base, q: 'x', page: 2 })).not.toBe(a);
+    expect(a.startsWith('acme:issues:search:')).toBe(true);
+  });
+
+  it('caps total at 10000 with totalCapped when count query hits the bound', async () => {
+    setup({ count: '10001' });
+    const r = await searchIssues('acme', 'u', base);
+    expect(r.pagination.total).toBe(10000);
+    expect(r.pagination.totalCapped).toBe(true);
+    const countSql = mockQuery.mock.calls.map((c) => c[0] as string).find((q) => q.includes('SELECT COUNT(*) FROM'))!;
+    expect(countSql).toContain('LIMIT 10001');
+  });
+
+  it('marks facets approximate when the facet row cap is hit and runs facets in one query', async () => {
+    setup({ metaCount: '10001' });
+    const r = await searchIssues('acme', 'u', base);
+    expect(r.facetsApproximate).toBe(true);
+    const facetCalls = mockQuery.mock.calls.filter((c) => (c[0] as string).includes("'_meta'"));
+    expect(facetCalls).toHaveLength(1);
+    expect(facetCalls[0][0]).toContain('LIMIT 10000');
+    expect(facetCalls[0][0]).toContain('LIMIT 20');
+  });
+
+  it('sets a local statement timeout inside a transaction', async () => {
+    setup();
+    await searchIssues('acme', 'u', base);
+    const sqls = mockQuery.mock.calls.map((c) => c[0] as string);
+    expect(sqls[0]).toBe('BEGIN');
+    expect(sqls[1]).toBe('SET LOCAL statement_timeout = 5000');
+    expect(sqls).toContain('COMMIT');
+    expect(mockRelease).toHaveBeenCalled();
+  });
+
+  it('maps Postgres statement timeout (57014) to 503', async () => {
+    mockQuery.mockImplementation(async (sql: string) => {
+      if (sql.includes('SELECT COUNT(*) FROM')) throw Object.assign(new Error('canceling'), { code: '57014' });
+      return { rows: [] };
+    });
+    await expect(searchIssues('acme', 'u', base)).rejects.toMatchObject({ statusCode: 503 });
+    expect(mockQuery.mock.calls.map((c) => c[0])).toContain('ROLLBACK');
+    expect(mockRelease).toHaveBeenCalled();
+  });
+
+  it('allows the last window page and rejects the first page past it with 400', async () => {
+    setup();
+    await expect(searchIssues('acme', 'u', { page: 400, perPage: 25 })).resolves.toBeDefined();
+    await expect(searchIssues('acme', 'u', { page: 401, perPage: 25 })).rejects.toMatchObject({ statusCode: 400 });
+    await expect(searchIssues('acme', 'u', { page: 101, perPage: 100 })).rejects.toThrow(/Narrow the query or filters/);
+  });
+
+  it('uses websearch_to_tsquery on search_vector and never ILIKE on title/description', async () => {
+    setup();
+    await searchIssues('acme', 'u', { ...base, q: 'login' });
+    const all = mockQuery.mock.calls.map((c) => c[0] as string).join('\n');
+    expect(all).toContain('search_vector @@ websearch_to_tsquery');
+    expect(all).not.toMatch(/ILIKE/i);
   });
 
   it('records history when text present and does not record when empty', async () => {

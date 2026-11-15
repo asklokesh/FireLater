@@ -31,6 +31,8 @@ const envSchema = z.object({
   S3_FORCE_PATH_STYLE: z.string().default('false'),
   // CORS configuration
   CORS_ORIGIN: z.string().default('http://localhost:3000'),
+  // Search configuration
+  SEARCH_STATEMENT_TIMEOUT_MS: z.coerce.number().int().min(100).max(120000).default(5000),
 });
 
 const parsed = envSchema.safeParse(process.env);
@@ -84,5 +86,8 @@ export const config = {
   },
   cors: {
     origin: parsed.data.CORS_ORIGIN,
+  },
+  search: {
+    statementTimeoutMs: parsed.data.SEARCH_STATEMENT_TIMEOUT_MS,
   },
 } as const;
