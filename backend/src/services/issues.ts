@@ -8,6 +8,7 @@ import { getOffset } from '../utils/pagination.js';
 import { dashboardService } from './dashboard.js';
 import { sanitizeMarkdown } from '../utils/contentSanitization.js';
 import { cacheService } from '../utils/cache.js';
+import { buildTextSearchClause, buildRankExpression } from './search/fts.js';
 
 interface CreateIssueParams {
   title: string;
@@ -112,6 +113,7 @@ export class IssueService {
         let whereClause = 'WHERE 1=1';
         const values: unknown[] = [];
         let paramIndex = 1;
+        let searchParamIndex: number | null = null;
 
         if (filters?.status) {
           whereClause += ` AND i.status = $${paramIndex++}`;
@@ -142,15 +144,20 @@ export class IssueService {
           values.push(filters.slaBreached);
         }
         if (filters?.search) {
-          whereClause += ` AND (i.title ILIKE $${paramIndex} OR i.issue_number ILIKE $${paramIndex} OR i.description ILIKE $${paramIndex})`;
-          values.push(`%${filters.search}%`);
-          paramIndex++;
+          searchParamIndex = paramIndex;
+          whereClause += ` AND (${buildTextSearchClause('i', paramIndex)} OR i.issue_number ILIKE $${paramIndex + 1})`;
+          values.push(filters.search);
+          values.push(`${filters.search.replace(/[\\%_]/g, '\\$&')}%`);
+          paramIndex += 2;
         }
 
         // Validate sort column against allowed columns to prevent SQL injection
         const allowedSortColumns = ['created_at', 'updated_at', 'title', 'priority', 'status', 'severity', 'issue_number'];
         const sortColumn = allowedSortColumns.includes(params.sort || '') ? params.sort : 'created_at';
         const sortOrder = params.order === 'asc' ? 'asc' : 'desc';
+        const orderBy = searchParamIndex !== null && !params.sort
+          ? `${buildRankExpression('i', searchParamIndex)} DESC, i.created_at DESC`
+          : `i.${sortColumn} ${sortOrder}`;
 
         const countResult = await pool.query(
           `SELECT COUNT(*) FROM ${schema}.issues i ${whereClause}`,
@@ -170,7 +177,7 @@ export class IssueService {
            LEFT JOIN ${schema}.groups g ON i.assigned_group = g.id
            LEFT JOIN ${schema}.applications app ON i.application_id = app.id
            ${whereClause}
-           ORDER BY i.${sortColumn} ${sortOrder}
+           ORDER BY ${orderBy}
            LIMIT $${paramIndex++} OFFSET $${paramIndex}`,
           [...values, params.perPage, offset]
         );

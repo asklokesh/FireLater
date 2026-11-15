@@ -188,9 +188,25 @@ describe('Issue Service', () => {
       await issueService.list('test-tenant', { page: 1, perPage: 50 }, { search: 'server' });
 
       const query = mockQuery.mock.calls[0][0];
-      expect(query).toContain('i.title ILIKE $');
-      expect(query).toContain('i.issue_number ILIKE $');
-      expect(query).toContain('i.description ILIKE $');
+      expect(query).toContain("i.search_vector @@ websearch_to_tsquery('english', $1)");
+      expect(query).toContain('i.issue_number ILIKE $2');
+      expect(query).not.toContain('i.title ILIKE');
+      expect(query).not.toContain('i.description ILIKE');
+      expect(mockQuery.mock.calls[0][1]).toEqual(['server', 'server%']);
+      const listQuery = mockQuery.mock.calls[1][0];
+      expect(listQuery).toContain("ORDER BY ts_rank(i.search_vector, websearch_to_tsquery('english', $1)) DESC, i.created_at DESC");
+      expect(mockQuery.mock.calls[1][1]).toEqual(['server', 'server%', 50, 0]);
+    });
+
+    it('should let an explicit sort override rank ordering', async () => {
+      mockQuery.mockResolvedValueOnce({ rows: [{ count: '2' }] });
+      mockQuery.mockResolvedValueOnce({ rows: [] });
+
+      await issueService.list('test-tenant', { page: 1, perPage: 50, sort: 'title', order: 'asc' }, { search: 'server' });
+
+      const listQuery = mockQuery.mock.calls[1][0];
+      expect(listQuery).toContain('ORDER BY i.title asc');
+      expect(listQuery).not.toContain('ORDER BY ts_rank');
     });
 
     it('should sort by allowed columns', async () => {
