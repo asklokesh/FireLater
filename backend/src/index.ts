@@ -18,6 +18,7 @@ import groupRoutes from './routes/groups.js';
 import roleRoutes from './routes/roles.js';
 import applicationRoutes from './routes/applications.js';
 import issueRoutes from './routes/issues.js';
+import searchRoutes from './routes/search.js';
 import catalogRoutes from './routes/catalog.js';
 import requestRoutes from './routes/requests.js';
 import notificationRoutes from './routes/notifications.js';
@@ -346,6 +347,13 @@ async function registerRoutes() {
         { method: 'DELETE', path: '/v1/applications/:id', description: 'Delete application' },
         { method: 'GET', path: '/v1/applications/:id/health', description: 'Get application health' },
       ],
+      search: [
+        { method: 'GET', path: '/v1/search', description: 'Unified full-text search with facets' },
+        { method: 'POST', path: '/v1/search', description: 'Unified search with filter tree' },
+        { method: 'GET', path: '/v1/search/history', description: 'Recent searches of current user' },
+        { method: 'DELETE', path: '/v1/search/history', description: 'Clear search history of current user' },
+        { method: 'GET', path: '/v1/search/suggestions', description: 'Search suggestions from own history' },
+      ],
       issues: [
         { method: 'GET', path: '/v1/issues', description: 'List issues' },
         { method: 'POST', path: '/v1/issues', description: 'Create issue' },
@@ -412,6 +420,7 @@ async function registerRoutes() {
   await app.register(roleRoutes, { prefix: '/v1/roles' });
   await app.register(applicationRoutes, { prefix: '/v1/applications' });
   await app.register(issueRoutes, { prefix: '/v1/issues' });
+  await app.register(searchRoutes, { prefix: '/v1/search' });
   await app.register(catalogRoutes, { prefix: '/v1/catalog' });
   await app.register(requestRoutes, { prefix: '/v1/requests' });
   await app.register(notificationRoutes, { prefix: '/v1/notifications' });
