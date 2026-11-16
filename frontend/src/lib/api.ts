@@ -2433,3 +2433,38 @@ export const emailApi = {
 };
 
 export default api;
+
+// Advanced search (full-text, filters, saved filters, history, analytics)
+export const searchApi = {
+  search: async (body: { q?: string; filter?: unknown; page?: number; perPage?: number; sort?: string }) => {
+    const response = await api.post('/v1/search', body);
+    return response.data;
+  },
+  facets: async (body: { q?: string; filter?: unknown }) => {
+    const response = await api.post('/v1/search/facets', body);
+    return response.data;
+  },
+  listFilters: async () => {
+    const response = await api.get('/v1/search/filters');
+    return response.data;
+  },
+  createFilter: async (body: { name: string; query?: string; filter?: unknown; isShared?: boolean }) => {
+    const response = await api.post('/v1/search/filters', body);
+    return response.data;
+  },
+  deleteFilter: async (id: string) => {
+    await api.delete(`/v1/search/filters/${id}`);
+  },
+  history: async () => {
+    const response = await api.get('/v1/search/history');
+    return response.data;
+  },
+  suggest: async (q: string) => {
+    const response = await api.get('/v1/search/suggest', { params: { q } });
+    return response.data;
+  },
+  analytics: async (days?: number) => {
+    const response = await api.get('/v1/search/analytics', { params: { days } });
+    return response.data;
+  },
+};

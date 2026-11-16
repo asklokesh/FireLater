@@ -22,6 +22,7 @@ import {
   integrationsApi,
   requestsApi,
   cabMeetingsApi,
+  searchApi,
 } from '@/lib/api';
 
 // Types
@@ -4204,5 +4205,88 @@ export function useDistributeMinutes() {
     onSuccess: (_, meetingId) => {
       queryClient.invalidateQueries({ queryKey: cabQueryKeys.meetings.detail(meetingId) });
     },
+  });
+}
+
+// Advanced search
+export interface SearchFilterCondition {
+  field: string;
+  op: 'eq' | 'neq' | 'in' | 'gt' | 'gte' | 'lt' | 'lte' | 'is_null' | 'not_null';
+  value?: string | number | boolean | Array<string | number | boolean>;
+}
+export type SearchFilterNode = SearchFilterCondition | { and: SearchFilterNode[] } | { or: SearchFilterNode[] };
+
+export interface SearchParams {
+  q?: string;
+  filter?: SearchFilterNode;
+  page?: number;
+  perPage?: number;
+  sort?: 'relevance' | 'created_at' | 'updated_at';
+}
+
+export function useIssueSearch(params: SearchParams, enabled = true) {
+  return useQuery({
+    queryKey: ['search', 'issues', params],
+    queryFn: () => searchApi.search(params),
+    enabled,
+  });
+}
+
+export function useSearchFacets(params: Pick<SearchParams, 'q' | 'filter'>, enabled = true) {
+  return useQuery({
+    queryKey: ['search', 'facets', params],
+    queryFn: () => searchApi.facets(params),
+    enabled,
+  });
+}
+
+export function useSearchSuggestions(q: string) {
+  return useQuery({
+    queryKey: ['search', 'suggest', q],
+    queryFn: () => searchApi.suggest(q),
+    enabled: q.trim().length > 0,
+    staleTime: 30_000,
+  });
+}
+
+export function useSearchHistory() {
+  return useQuery({
+    queryKey: ['search', 'history'],
+    queryFn: () => searchApi.history(),
+  });
+}
+
+export function useSavedFilters() {
+  return useQuery({
+    queryKey: ['search', 'filters'],
+    queryFn: () => searchApi.listFilters(),
+  });
+}
+
+export function useCreateSavedFilter() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (data: { name: string; query?: string; filter?: SearchFilterNode; isShared?: boolean }) =>
+      searchApi.createFilter(data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['search', 'filters'] });
+    },
+  });
+}
+
+export function useDeleteSavedFilter() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => searchApi.deleteFilter(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['search', 'filters'] });
+    },
+  });
+}
+
+export function useSearchAnalytics(days?: number) {
+  return useQuery({
+    queryKey: ['search', 'analytics', days],
+    queryFn: () => searchApi.analytics(days),
   });
 }
