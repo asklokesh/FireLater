@@ -49,6 +49,7 @@ import recertificationRoutes from './routes/recertification.js';
 import regulatorySlaRoutes from './routes/regulatory-sla.js';
 import emergencyChangeRoutes from './routes/emergency-change.js';
 import { vendorRiskRoutes } from './routes/vendor-risk.js';
+import searchRoutes from './routes/search.js';
 import wsRoutes from './routes/ws.js';
 import { realtimeBridge } from './lib/websocket/realtime-bridge.js';
 import { hub as realtimeHub } from './routes/ws.js';
@@ -395,6 +396,22 @@ async function registerRoutes() {
         { method: 'GET', path: '/v1/notifications', description: 'List notifications' },
         { method: 'PUT', path: '/v1/notifications/:id/read', description: 'Mark notification as read' },
       ],
+      search: [
+        { method: 'GET', path: '/v1/search', description: 'Unified full-text search with filters and facets' },
+        { method: 'POST', path: '/v1/search/query', description: 'Search with a JSON filter tree' },
+        { method: 'GET', path: '/v1/search/fields', description: 'Filterable fields per entity type' },
+        { method: 'GET', path: '/v1/search/suggest', description: 'Autocomplete suggestions' },
+        { method: 'GET', path: '/v1/search/history', description: 'Recent searches for the current user' },
+        { method: 'DELETE', path: '/v1/search/history', description: 'Clear search history' },
+        { method: 'DELETE', path: '/v1/search/history/:id', description: 'Delete a search history entry' },
+        { method: 'GET', path: '/v1/search/templates', description: 'List saved search templates' },
+        { method: 'POST', path: '/v1/search/templates', description: 'Save a search template' },
+        { method: 'GET', path: '/v1/search/templates/:id', description: 'Get a saved search template' },
+        { method: 'PATCH', path: '/v1/search/templates/:id', description: 'Update a saved search template' },
+        { method: 'DELETE', path: '/v1/search/templates/:id', description: 'Delete a saved search template' },
+        { method: 'POST', path: '/v1/search/templates/:id/use', description: 'Record use of a saved search template' },
+        { method: 'GET', path: '/v1/search/analytics', description: 'Search analytics (admin and report readers)' },
+      ],
     };
 
     const totalRoutes = Object.values(apiEndpoints).flat().length;
@@ -443,6 +460,7 @@ async function registerRoutes() {
   await app.register(regulatorySlaRoutes, { prefix: '/v1/regulatory-sla' });
   await app.register(emergencyChangeRoutes, { prefix: '/v1/emergency-changes' });
   await app.register(vendorRiskRoutes, { prefix: '/v1/vendor-risk' });
+  await app.register(searchRoutes, { prefix: '/v1/search' });
 
   // Real-time WebSocket endpoint
   await app.register(websocket, { options: { maxPayload: 64 * 1024 } });

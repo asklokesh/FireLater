@@ -4,9 +4,12 @@ import { useState, useEffect, useRef } from 'react';
 import { Bell, Search, Plus, ChevronDown } from 'lucide-react';
 import { useAuthStore } from '@/stores/auth';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 
 export function Header() {
   const { user } = useAuthStore();
+  const router = useRouter();
+  const [searchText, setSearchText] = useState('');
   const [showNotifications, setShowNotifications] = useState(false);
   const [showCreateMenu, setShowCreateMenu] = useState(false);
   const createRef = useRef<HTMLDivElement>(null);
@@ -45,8 +48,17 @@ export function Header() {
         <div className="relative w-full">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted pointer-events-none" />
           <input
-            type="text"
+            type="search"
+            aria-label="Search everything"
             placeholder="Search..."
+            value={searchText}
+            onChange={(e) => setSearchText(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                const q = searchText.trim();
+                router.push(q ? `/search?q=${encodeURIComponent(q)}` : '/search');
+              }
+            }}
             className="w-full pl-9 pr-4 py-1.5 bg-surface border border-border rounded-lg text-sm text-foreground placeholder:text-muted
               transition-colors duration-150 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
           />
