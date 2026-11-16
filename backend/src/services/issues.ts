@@ -5,6 +5,7 @@ import { publishEntityChange } from '../lib/websocket/realtime-bridge.js';
 import { logger } from '../utils/logger.js';
 import type { PaginationParams, IssuePriority, IssueStatus, IssueSeverity, IssueImpact, IssueUrgency, IssueType, IssueSource } from '../types/index.js';
 import { getOffset } from '../utils/pagination.js';
+import { buildRankedMatchSql } from './search/filter-builder.js';
 import { dashboardService } from './dashboard.js';
 import { sanitizeMarkdown } from '../utils/contentSanitization.js';
 import { cacheService } from '../utils/cache.js';
@@ -110,6 +111,7 @@ export class IssueService {
         const offset = getOffset(params);
 
         let whereClause = 'WHERE 1=1';
+        let rankOrderBy: string | null = null;
         const values: unknown[] = [];
         let paramIndex = 1;
 
@@ -142,15 +144,23 @@ export class IssueService {
           values.push(filters.slaBreached);
         }
         if (filters?.search) {
-          whereClause += ` AND (i.title ILIKE $${paramIndex} OR i.issue_number ILIKE $${paramIndex} OR i.description ILIKE $${paramIndex})`;
-          values.push(`%${filters.search}%`);
-          paramIndex++;
+          const ranked = buildRankedMatchSql('issues', paramIndex);
+          // Qualify columns: joined tables (groups, applications) also have description
+          const qualify = (sql: string) => sql.replace(/coalesce\((\w+),/g, 'coalesce(i.$1,');
+          rankOrderBy = qualify(ranked.orderBy);
+          whereClause += ` AND (${qualify(ranked.where)} OR i.issue_number ILIKE $${paramIndex + 1})`;
+          values.push(filters.search, `%${filters.search}%`);
+          paramIndex += 2;
         }
 
         // Validate sort column against allowed columns to prevent SQL injection
         const allowedSortColumns = ['created_at', 'updated_at', 'title', 'priority', 'status', 'severity', 'issue_number'];
         const sortColumn = allowedSortColumns.includes(params.sort || '') ? params.sort : 'created_at';
         const sortOrder = params.order === 'asc' ? 'asc' : 'desc';
+
+        const orderBy = rankOrderBy && !params.sort
+          ? `${rankOrderBy}, i.created_at DESC`
+          : `i.${sortColumn} ${sortOrder}`;
 
         const countResult = await pool.query(
           `SELECT COUNT(*) FROM ${schema}.issues i ${whereClause}`,
@@ -170,7 +180,7 @@ export class IssueService {
            LEFT JOIN ${schema}.groups g ON i.assigned_group = g.id
            LEFT JOIN ${schema}.applications app ON i.application_id = app.id
            ${whereClause}
-           ORDER BY i.${sortColumn} ${sortOrder}
+           ORDER BY ${orderBy}
            LIMIT $${paramIndex++} OFFSET $${paramIndex}`,
           [...values, params.perPage, offset]
         );

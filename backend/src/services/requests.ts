@@ -4,6 +4,7 @@ import { NotFoundError, BadRequestError } from '../utils/errors.js';
 import { logger } from '../utils/logger.js';
 import type { PaginationParams } from '../types/index.js';
 import { getOffset } from '../utils/pagination.js';
+import { buildRankedMatchSql } from './search/filter-builder.js';
 import { dashboardService } from './dashboard.js';
 import { sanitizeMarkdown } from '../utils/contentSanitization.js';
 import { cacheService } from '../utils/cache.js';
@@ -81,6 +82,7 @@ export class RequestService {
         const offset = getOffset(params);
 
         let whereClause = 'WHERE 1=1';
+        let rankOrderBy: string | null = null;
         const values: unknown[] = [];
         let paramIndex = 1;
 
@@ -109,10 +111,15 @@ export class RequestService {
           values.push(filters.catalogItemId);
         }
         if (filters?.search) {
-          whereClause += ` AND (r.request_number ILIKE $${paramIndex} OR r.notes ILIKE $${paramIndex})`;
-          values.push(`%${filters.search}%`);
-          paramIndex++;
+          const ranked = buildRankedMatchSql('requests', paramIndex);
+          const qualify = (sql: string) => sql.replace(/coalesce\((\w+),/g, 'coalesce(r.$1,');
+          rankOrderBy = qualify(ranked.orderBy);
+          whereClause += ` AND (${qualify(ranked.where)} OR r.request_number ILIKE $${paramIndex + 1})`;
+          values.push(filters.search, `%${filters.search}%`);
+          paramIndex += 2;
         }
+
+        const orderBy = rankOrderBy ? `${rankOrderBy}, r.created_at DESC` : 'r.created_at DESC';
 
         const countResult = await pool.query(
           `SELECT COUNT(*) FROM ${schema}.service_requests r ${whereClause}`,
@@ -134,7 +141,7 @@ export class RequestService {
            LEFT JOIN ${schema}.catalog_items ci ON r.catalog_item_id = ci.id
            LEFT JOIN ${schema}.groups fg ON r.fulfillment_group_id = fg.id
            ${whereClause}
-           ORDER BY r.created_at DESC
+           ORDER BY ${orderBy}
            LIMIT $${paramIndex++} OFFSET $${paramIndex}`,
           [...values, params.perPage, offset]
         );

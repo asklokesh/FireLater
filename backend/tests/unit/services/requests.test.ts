@@ -148,9 +148,11 @@ describe('RequestService', () => {
 
       await requestService.list(tenantSlug, { page: 1, perPage: 10 }, { search: 'laptop' });
 
-      expect(mockQuery.mock.calls[0][0]).toContain('r.request_number ILIKE $1');
-      expect(mockQuery.mock.calls[0][0]).toContain('r.notes ILIKE $1');
-      expect(mockQuery.mock.calls[0][1]).toContain('%laptop%');
+      expect(mockQuery.mock.calls[0][0]).toContain('to_tsvector');
+      expect(mockQuery.mock.calls[0][0]).toContain('websearch_to_tsquery');
+      expect(mockQuery.mock.calls[0][0]).toContain('r.request_number ILIKE $2');
+      expect(mockQuery.mock.calls[0][1]).toEqual(['laptop', '%laptop%']);
+      expect(mockQuery.mock.calls[1][0]).toContain('ORDER BY ts_rank_cd');
     });
 
     it('should combine multiple filters', async () => {

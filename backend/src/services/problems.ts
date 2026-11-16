@@ -4,6 +4,7 @@ import { NotFoundError, BadRequestError } from '../utils/errors.js';
 import { logger } from '../utils/logger.js';
 import type { PaginationParams, ProblemStatus, ProblemType, ProblemPriority, IssueImpact, IssueUrgency } from '../types/index.js';
 import { getOffset } from '../utils/pagination.js';
+import { buildRankedMatchSql } from './search/filter-builder.js';
 import { sanitizeMarkdown, sanitizePlainText } from '../utils/contentSanitization.js';
 import { cacheService } from '../utils/cache.js';
 
@@ -159,6 +160,7 @@ export class ProblemService {
         const offset = getOffset(params);
 
         let whereClause = 'WHERE 1=1';
+        let rankOrderBy: string | null = null;
         const values: unknown[] = [];
         let paramIndex = 1;
 
@@ -195,14 +197,22 @@ export class ProblemService {
           values.push(filters.problemType);
         }
         if (filters?.search) {
-          whereClause += ` AND (p.title ILIKE $${paramIndex} OR p.problem_number ILIKE $${paramIndex} OR p.description ILIKE $${paramIndex})`;
-          values.push(`%${filters.search}%`);
-          paramIndex++;
+          const ranked = buildRankedMatchSql('problems', paramIndex);
+          // Qualify columns: joined tables (groups, applications) also have description
+          const qualify = (sql: string) => sql.replace(/coalesce\((\w+),/g, 'coalesce(p.$1,');
+          rankOrderBy = qualify(ranked.orderBy);
+          whereClause += ` AND (${qualify(ranked.where)} OR p.problem_number ILIKE $${paramIndex + 1})`;
+          values.push(filters.search, `%${filters.search}%`);
+          paramIndex += 2;
         }
 
         const allowedSortColumns = ['created_at', 'updated_at', 'title', 'priority', 'status', 'problem_number'];
         const sortColumn = allowedSortColumns.includes(params.sort || '') ? params.sort : 'created_at';
         const sortOrder = params.order === 'asc' ? 'asc' : 'desc';
+
+        const orderBy = rankOrderBy && !params.sort
+          ? `${rankOrderBy}, p.created_at DESC`
+          : `p.${sortColumn} ${sortOrder}`;
 
         const countResult = await pool.query(
           `SELECT COUNT(*) FROM ${schema}.problems p ${whereClause}`,
@@ -222,7 +232,7 @@ export class ProblemService {
            LEFT JOIN ${schema}.groups g ON p.assigned_group = g.id
            LEFT JOIN ${schema}.applications app ON p.application_id = app.id
            ${whereClause}
-           ORDER BY p.${sortColumn} ${sortOrder}
+           ORDER BY ${orderBy}
            LIMIT $${paramIndex++} OFFSET $${paramIndex}`,
           [...values, params.perPage, offset]
         );
