@@ -54,6 +54,9 @@ import wsRoutes from './routes/ws.js';
 import { realtimeBridge } from './lib/websocket/realtime-bridge.js';
 import { hub as realtimeHub } from './routes/ws.js';
 import { initializeJobs, shutdownJobs } from './jobs/index.js';
+import { startBulkWorker, stopBulkWorker } from './jobs/processors/bulkOperations.js';
+import { closeBulkQueue } from './jobs/bulkQueue.js';
+import bulkRoutes from './routes/bulk.js';
 import { setupSwagger } from './docs/swagger.js';
 
 const app = Fastify({
@@ -447,6 +450,7 @@ async function registerRoutes() {
   await app.register(slaRoutes, { prefix: '/v1/sla' });
   await app.register(workflowRoutes, { prefix: '/v1/workflows' });
   await app.register(assetRoutes, { prefix: '/v1/assets' });
+  await app.register(bulkRoutes, { prefix: '/v1/bulk' });
   await app.register(emailRoutes, { prefix: '/v1/email' });
   await app.register(integrationsRoutes, { prefix: '/v1/integrations' });
   await app.register(migrationRoutes, { prefix: '/v1/migration' });
@@ -541,6 +545,7 @@ async function start() {
     // Initialize background jobs
     logger.info('Initializing background jobs...');
     await initializeJobs();
+    startBulkWorker();
     logger.info('Background jobs initialized');
 
     await app.listen({ port: config.port, host: config.host });
@@ -554,6 +559,8 @@ async function start() {
 async function shutdown() {
   logger.info('Shutting down...');
   await shutdownJobs();
+  await stopBulkWorker();
+  await closeBulkQueue();
   await realtimeBridge.stop();
   await app.close();
   await closeDatabase();
