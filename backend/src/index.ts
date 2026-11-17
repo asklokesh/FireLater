@@ -53,6 +53,8 @@ import wsRoutes from './routes/ws.js';
 import { realtimeBridge } from './lib/websocket/realtime-bridge.js';
 import { hub as realtimeHub } from './routes/ws.js';
 import { initializeJobs, shutdownJobs } from './jobs/index.js';
+import { cacheService } from './utils/cache.js';
+import { cacheMetrics } from './utils/cacheMetrics.js';
 import { setupSwagger } from './docs/swagger.js';
 
 const app = Fastify({
@@ -132,6 +134,7 @@ async function registerPlugins() {
   app.addHook('preHandler', async (request, reply) => {
     const isStateChanging = ['POST', 'PUT', 'PATCH', 'DELETE'].includes(request.method);
     const isPublicRoute = request.url.startsWith('/health') ||
+                          request.url === '/metrics' ||
                           request.url.startsWith('/ready') ||
                           request.url === '/csrf-token' ||
                           request.url.startsWith('/v1/auth/login') ||
@@ -190,6 +193,12 @@ async function registerRoutes() {
   app.get('/csrf-token', async (request, reply) => {
     const token = await reply.generateCsrf();
     return { csrfToken: token };
+  });
+
+  // Prometheus scrape endpoint for cache metrics (counters only, labelled by namespace)
+  app.get('/metrics', async (_request, reply) => {
+    reply.header('Content-Type', 'text/plain; version=0.0.4; charset=utf-8');
+    return cacheMetrics.render();
   });
 
   // Basic liveness check - just confirms the server is running
@@ -520,6 +529,9 @@ async function start() {
     // Redis Pub/Sub bridge for multi-instance realtime delivery (subscriber needs its own connection)
     await realtimeBridge.start(realtimeHub, redis, redis.duplicate());
 
+    // Cross-instance cache invalidation (Redis Pub/Sub)
+    await cacheService.startPubSub();
+
     // Initialize background jobs
     logger.info('Initializing background jobs...');
     await initializeJobs();
@@ -536,6 +548,7 @@ async function start() {
 async function shutdown() {
   logger.info('Shutting down...');
   await shutdownJobs();
+  await cacheService.stopPubSub().catch(() => undefined);
   await realtimeBridge.stop();
   await app.close();
   await closeDatabase();
