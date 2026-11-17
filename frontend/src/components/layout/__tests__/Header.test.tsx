@@ -9,6 +9,11 @@ vi.mock('@/stores/auth', () => ({
   useAuthStore: vi.fn(),
 }));
 
+const mockPush = vi.fn();
+vi.mock('next/navigation', () => ({
+  useRouter: () => ({ push: mockPush, replace: vi.fn() }),
+}));
+
 // Mock Next.js Link component
 vi.mock('next/link', () => ({
   default: ({ children, href, onClick, className }: any) => (

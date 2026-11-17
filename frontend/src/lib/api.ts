@@ -2432,4 +2432,186 @@ export const emailApi = {
   },
 };
 
+// ============================================
+// SEARCH API (issue #24)
+// ============================================
+
+export type SearchEntityType = 'issue' | 'problem' | 'change' | 'knowledge';
+export type SearchSort = 'relevance' | 'updated' | 'created';
+export type SearchFilterOperator =
+  | 'eq' | 'neq' | 'in' | 'nin' | 'gt' | 'gte' | 'lt' | 'lte' | 'contains' | 'is_null' | 'not_null';
+export type SearchFilterValue = string | number | boolean | null;
+
+export interface SearchFilterCondition {
+  field: string;
+  operator: SearchFilterOperator;
+  value?: SearchFilterValue | SearchFilterValue[];
+}
+
+export interface SearchFilterGroup {
+  op: 'and' | 'or';
+  conditions: Array<SearchFilterCondition | SearchFilterGroup>;
+}
+
+export interface SearchResultItem {
+  entityType: SearchEntityType;
+  id: string;
+  number: string;
+  title: string;
+  snippet: string;
+  status: string | null;
+  priority: string | null;
+  assignedTo: string | null;
+  createdAt: string;
+  updatedAt: string;
+  rank: number;
+  url: string;
+}
+
+export interface SearchFacetBucket {
+  value: string;
+  count: number;
+}
+
+export interface SearchResponse {
+  results: SearchResultItem[];
+  total: number;
+  page: number;
+  perPage: number;
+  totalPages: number;
+  facets: { entityType: SearchFacetBucket[]; status: SearchFacetBucket[]; priority: SearchFacetBucket[] };
+  query: { text: string; entityTypes: SearchEntityType[]; sort: SearchSort; warnings: string[] };
+  tookMs: number;
+}
+
+export interface SearchRequest {
+  q?: string;
+  filters?: SearchFilterGroup | null;
+  entityTypes?: SearchEntityType[];
+  page?: number;
+  perPage?: number;
+  sort?: SearchSort;
+}
+
+export interface SearchSuggestions {
+  history: string[];
+  popular: string[];
+  records: Array<{ entityType: SearchEntityType; id: string; number: string; title: string; url: string }>;
+}
+
+export interface SearchFieldsResponse {
+  operators: SearchFilterOperator[];
+  entities: Array<{ type: SearchEntityType; fields: Array<{ name: string; type: 'text' | 'uuid' | 'date' | 'boolean' }> }>;
+}
+
+export interface SearchHistoryEntry {
+  id: string;
+  queryText: string;
+  filters: SearchFilterGroup | Record<string, never>;
+  entityTypes: SearchEntityType[];
+  resultCount: number;
+  createdAt: string;
+}
+
+export interface SavedSearch {
+  id: string;
+  name: string;
+  description: string | null;
+  queryText: string;
+  filters: SearchFilterGroup | Record<string, never>;
+  entityTypes: SearchEntityType[];
+  isShared: boolean;
+  isOwner: boolean;
+  useCount: number;
+  lastUsedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface SavedSearchInput {
+  name: string;
+  description?: string | null;
+  queryText?: string;
+  filters?: SearchFilterGroup | null;
+  entityTypes?: SearchEntityType[];
+  isShared?: boolean;
+}
+
+export interface SearchAnalytics {
+  days: number;
+  totals: {
+    searches: number;
+    uniqueUsers: number;
+    avgDurationMs: number;
+    avgResults: number;
+    zeroResultSearches: number;
+    zeroResultRate: number;
+  };
+  topQueries: Array<{ query: string; count: number; avgResults: number; lastSearchedAt: string }>;
+  zeroResultQueries: Array<{ query: string; count: number; lastSearchedAt: string }>;
+  searchesPerDay: Array<{ day: string; count: number }>;
+  entityTypeUsage: Array<{ entityType: string; count: number }>;
+  topTemplates: Array<{ id: string; name: string; useCount: number }>;
+}
+
+export const searchApi = {
+  search: async (request: SearchRequest): Promise<SearchResponse> => {
+    const response = await api.post('/v1/search/query', request);
+    return response.data;
+  },
+
+  fields: async (): Promise<SearchFieldsResponse> => {
+    const response = await api.get('/v1/search/fields');
+    return response.data;
+  },
+
+  suggest: async (q: string, limit = 5): Promise<SearchSuggestions> => {
+    const response = await api.get('/v1/search/suggest', { params: { q, limit } });
+    return response.data;
+  },
+
+  history: async (limit = 20): Promise<SearchHistoryEntry[]> => {
+    const response = await api.get('/v1/search/history', { params: { limit } });
+    return response.data.data;
+  },
+
+  clearHistory: async (): Promise<{ deleted: number }> => {
+    const response = await api.delete('/v1/search/history');
+    return response.data;
+  },
+
+  deleteHistoryEntry: async (id: string): Promise<void> => {
+    await api.delete(`/v1/search/history/${id}`);
+  },
+
+  listTemplates: async (): Promise<SavedSearch[]> => {
+    const response = await api.get('/v1/search/templates');
+    return response.data.data;
+  },
+
+  createTemplate: async (data: SavedSearchInput): Promise<SavedSearch> => {
+    const response = await api.post('/v1/search/templates', data);
+    return response.data;
+  },
+
+  updateTemplate: async (id: string, data: Partial<SavedSearchInput>): Promise<SavedSearch> => {
+    const response = await api.patch(`/v1/search/templates/${id}`, data);
+    return response.data;
+  },
+
+  deleteTemplate: async (id: string): Promise<void> => {
+    await api.delete(`/v1/search/templates/${id}`);
+  },
+
+  useTemplate: async (id: string): Promise<SavedSearch> => {
+    const response = await api.post(`/v1/search/templates/${id}/use`);
+    return response.data;
+  },
+
+  analytics: async (days = 30): Promise<SearchAnalytics> => {
+    const response = await api.get('/v1/search/analytics', { params: { days } });
+    return response.data;
+  },
+};
+
 export default api;
