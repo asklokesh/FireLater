@@ -24,7 +24,11 @@ export type AuditAction =
   | 'permission_revoked'
   | 'config_change'
   | 'api_key_created'
-  | 'api_key_revoked';
+  | 'api_key_revoked'
+  | 'token_issued'
+  | 'token_refreshed'
+  | 'token_revoked'
+  | 'token_reuse_detected';
 
 export interface AuditLogEntry {
   userId?: string;
@@ -368,7 +372,9 @@ class AuditService {
     const result = await pool.query(
       `SELECT * FROM ${schema}.audit_logs
        WHERE action IN ('login', 'logout', 'login_failed', 'permission_granted',
-                        'permission_revoked', 'api_key_created', 'api_key_revoked')
+                        'permission_revoked', 'api_key_created', 'api_key_revoked',
+                        'token_issued', 'token_refreshed', 'token_revoked',
+                        'token_reuse_detected')
          AND created_at > NOW() - INTERVAL '1 hour' * $1
        ORDER BY created_at DESC`,
       [hours]

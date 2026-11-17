@@ -2,6 +2,23 @@ import { FastifyRequest, FastifyReply } from 'fastify';
 import { UnauthorizedError, ForbiddenError } from '../utils/errors.js';
 import { authService } from '../services/auth.js';
 import { tenantService } from '../services/tenant.js';
+import { tokenRevocation } from '../lib/tokenRevocation.js';
+import { logger } from '../utils/logger.js';
+
+/**
+ * Check the verified access token against the Redis revocation list.
+ * Fails closed: if the list cannot be read the token is not trusted.
+ */
+async function isRevoked(request: FastifyRequest): Promise<boolean> {
+  const { userId, tenantSlug, sid, rtv } = request.user;
+  try {
+    const ns = tenantService.getSchemaName(tenantSlug);
+    return await tokenRevocation.isAccessTokenRevoked(ns, { userId, sid, rtv });
+  } catch (error) {
+    logger.error({ err: error }, 'Failed to check token revocation list');
+    return true;
+  }
+}
 
 export async function authenticate(
   request: FastifyRequest,
@@ -11,6 +28,10 @@ export async function authenticate(
     await request.jwtVerify();
   } catch {
     throw new UnauthorizedError('Invalid or expired token');
+  }
+
+  if (await isRevoked(request)) {
+    throw new UnauthorizedError('Token has been revoked');
   }
 }
 
@@ -63,5 +84,11 @@ export async function optionalAuth(
     await request.jwtVerify();
   } catch {
     // Token not present or invalid, continue without user
+    return;
+  }
+
+  if (await isRevoked(request)) {
+    // Revoked token: behave as if no token was sent
+    (request as { user?: unknown }).user = undefined;
   }
 }

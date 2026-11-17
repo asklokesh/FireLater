@@ -51,6 +51,10 @@ export interface JwtPayload {
   tenantSlug: string;
   email: string;
   roles: string[];
+  /** Session id (refresh token family) the access token belongs to */
+  sid?: string;
+  /** User's refresh_token_version when the token was issued */
+  rtv?: number;
 }
 
 declare module '@fastify/jwt' {

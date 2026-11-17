@@ -38,6 +38,14 @@ vi.mock('../../../src/services/tenant.js', () => ({
   },
 }));
 
+// Auth events are written to the audit log through pool.query; mock the audit service so
+// the pinned pool.query call sequences below keep describing only the auth queries.
+vi.mock('../../../src/services/audit.js', () => ({
+  auditService: {
+    log: vi.fn().mockResolvedValue('audit-id'),
+  },
+}));
+
 vi.mock('../../../src/services/email.js', () => ({
   emailService: {
     sendPasswordResetEmail: vi.fn().mockResolvedValue(undefined),

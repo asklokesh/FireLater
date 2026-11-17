@@ -201,6 +201,9 @@ export async function migration024PerformanceIndexes(pool: Pool): Promise<void> 
     ANALYZE service_requests;
     ANALYZE request_approvals;
     ANALYZE audit_logs;
+
+    -- Do not leak the tenant_template search_path into later migrations on the same connection
+    RESET search_path;
   `);
 
   logger.info('[Migration 024] Performance indexes created successfully');
@@ -237,6 +240,8 @@ export async function migration024PerformanceIndexesDown(pool: Pool): Promise<vo
     DROP INDEX IF EXISTS idx_kb_articles_category_status;
 
     DROP INDEX IF EXISTS idx_oncall_schedules_group_active;
+
+    RESET search_path;
   `);
 
   logger.info('[Migration 024] Performance indexes rolled back successfully');

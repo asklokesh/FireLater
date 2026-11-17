@@ -2,8 +2,11 @@ import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { z } from 'zod';
 import { authService } from '../services/auth.js';
 import { tenantService } from '../services/tenant.js';
-import { authenticate } from '../middleware/auth.js';
-import { BadRequestError, ConflictError } from '../utils/errors.js';
+import { sessionService, type ClientContext } from '../services/sessions.js';
+import { auditService, type AuditAction } from '../services/audit.js';
+import { authenticate, requirePermission } from '../middleware/auth.js';
+import { BadRequestError, ConflictError, NotFoundError } from '../utils/errors.js';
+import { validateDate, validateDateRange, validateLimit, validateOffset } from '../utils/validation.js';
 import { logger } from '../utils/logger.js';
 
 // Security warning: log if secure cookies are disabled in production
@@ -23,6 +26,24 @@ const getRefreshTokenCookieOptions = () => ({
   path: '/',
   maxAge: 7 * 24 * 60 * 60, // 7 days
 });
+
+// Auth events recorded in the audit log (see GET /audit-log)
+const AUTH_AUDIT_ACTIONS: AuditAction[] = [
+  'token_issued',
+  'token_refreshed',
+  'token_revoked',
+  'token_reuse_detected',
+];
+
+// Optional device binding: clients send a stable device fingerprint with login and refresh
+const getClientContext = (request: FastifyRequest): ClientContext => {
+  const fingerprint = request.headers['x-device-fingerprint'];
+  return {
+    ipAddress: request.ip,
+    userAgent: request.headers['user-agent'],
+    deviceFingerprint: Array.isArray(fingerprint) ? fingerprint[0] : fingerprint,
+  };
+};
 
 const loginSchema = z.object({
   email: z.string().email(),
@@ -117,7 +138,8 @@ export default async function authRoutes(app: FastifyInstance) {
           email: body.email,
           password: body.password,
         },
-        (payload) => app.jwt.sign(payload)
+        (payload) => app.jwt.sign(payload),
+        getClientContext(request)
       );
 
       reply.status(201).send({
@@ -147,7 +169,8 @@ export default async function authRoutes(app: FastifyInstance) {
           email: body.adminEmail,
           password: body.adminPassword,
         },
-        (payload) => app.jwt.sign(payload)
+        (payload) => app.jwt.sign(payload),
+        getClientContext(request)
       );
 
       reply.status(201).send({
@@ -176,7 +199,8 @@ export default async function authRoutes(app: FastifyInstance) {
         email: body.email,
         password: body.password,
       },
-      (payload) => app.jwt.sign(payload)
+      (payload) => app.jwt.sign(payload),
+      getClientContext(request)
     );
 
     // Set refresh token as httpOnly cookie
@@ -194,8 +218,15 @@ export default async function authRoutes(app: FastifyInstance) {
   }, async (request: FastifyRequest, reply: FastifyReply) => {
     const refreshToken = request.cookies.refreshToken;
 
+    const { userId, tenantSlug, sid } = request.user;
+    const context = getClientContext(request);
+
     if (refreshToken) {
-      await authService.logout(refreshToken, request.user.tenantSlug);
+      await authService.logout(refreshToken, tenantSlug, context);
+    }
+    // Also end the session of the access token being used (e.g. when the cookie is absent)
+    if (sid) {
+      await authService.revokeSession(tenantSlug, userId, sid, context, 'logout');
     }
 
     reply.clearCookie('refreshToken', { path: '/' });
@@ -219,13 +250,92 @@ export default async function authRoutes(app: FastifyInstance) {
     const result = await authService.refresh(
       refreshToken,
       tenantSlug,
-      (payload) => app.jwt.sign(payload)
+      (payload) => app.jwt.sign(payload),
+      getClientContext(request)
     );
 
     reply.setCookie('refreshToken', result.refreshToken, getRefreshTokenCookieOptions());
 
     reply.send({
       accessToken: result.accessToken,
+    });
+  });
+
+  // List the caller's active sessions
+  app.get('/sessions', {
+    preHandler: [authenticate],
+  }, async (request: FastifyRequest, reply: FastifyReply) => {
+    const { userId, tenantSlug, sid } = request.user;
+    const sessions = await sessionService.listForUser(tenantSlug, userId);
+
+    reply.send({
+      sessions: sessions.map((session) => ({ ...session, current: session.id === sid })),
+    });
+  });
+
+  // Revoke all of the caller's sessions (sign out everywhere)
+  app.delete('/sessions', {
+    preHandler: [authenticate],
+  }, async (request: FastifyRequest, reply: FastifyReply) => {
+    const { userId, tenantSlug } = request.user;
+    await authService.revokeAllSessions(tenantSlug, userId, getClientContext(request));
+
+    reply.clearCookie('refreshToken', { path: '/' });
+    reply.send({ message: 'All sessions revoked' });
+  });
+
+  // Revoke one of the caller's sessions
+  app.delete<{ Params: { id: string } }>('/sessions/:id', {
+    preHandler: [authenticate],
+  }, async (request, reply) => {
+    const { userId, tenantSlug } = request.user;
+    const sessionId = z.string().uuid().parse(request.params.id);
+
+    const revoked = await authService.revokeSession(
+      tenantSlug,
+      userId,
+      sessionId,
+      getClientContext(request)
+    );
+    if (!revoked) {
+      throw new NotFoundError('Session', sessionId);
+    }
+
+    reply.send({ message: 'Session revoked' });
+  });
+
+  // Security review: token issuance, refresh, revocation and reuse events
+  app.get<{
+    Querystring: {
+      userId?: string;
+      action?: string;
+      startDate?: string;
+      endDate?: string;
+      limit?: string;
+      offset?: string;
+    };
+  }>('/audit-log', {
+    preHandler: [requirePermission('admin:read')],
+  }, async (request, _reply) => {
+    const { tenantSlug } = request.user;
+    const { userId, action, startDate, endDate, limit, offset } = request.query;
+
+    if (action && !AUTH_AUDIT_ACTIONS.includes(action as AuditAction)) {
+      throw new BadRequestError(`action must be one of: ${AUTH_AUDIT_ACTIONS.join(', ')}`);
+    }
+
+    const validatedStartDate = validateDate(startDate, 'startDate');
+    const validatedEndDate = validateDate(endDate, 'endDate');
+    validateDateRange(validatedStartDate, validatedEndDate, 365);
+
+    return auditService.query(tenantSlug, {
+      userId,
+      action: (action as AuditAction | undefined) ?? AUTH_AUDIT_ACTIONS,
+      entityType: 'auth_session',
+      startDate: validatedStartDate,
+      endDate: validatedEndDate,
+      limit: validateLimit(limit, 1000),
+      offset: validateOffset(offset),
     });
   });
 

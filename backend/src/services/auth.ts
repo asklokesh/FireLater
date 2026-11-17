@@ -6,6 +6,15 @@ import { tenantService } from './tenant.js';
 import { emailService } from './email.js';
 import { UnauthorizedError, NotFoundError, BadRequestError } from '../utils/errors.js';
 import { logger } from '../utils/logger.js';
+import { auditService, type AuditAction } from './audit.js';
+import { tokenRevocation } from '../lib/tokenRevocation.js';
+import {
+  sessionService,
+  hashDeviceFingerprint,
+  normalizeUserAgent,
+  deviceHashesMatch,
+  type ClientContext,
+} from './sessions.js';
 import type { JwtPayload } from '../types/index.js';
 
 interface LoginParams {
@@ -38,9 +47,40 @@ interface User {
 export class AuthService {
   private refreshTokenExpiry = 7 * 24 * 60 * 60 * 1000; // 7 days in ms
 
+  /** Record an auth event in the tenant audit log; never lets an audit failure break auth. */
+  private async audit(
+    tenantSlug: string,
+    action: AuditAction,
+    event: {
+      userId?: string;
+      email?: string;
+      sessionId?: string;
+      context?: ClientContext;
+      metadata?: Record<string, unknown>;
+    }
+  ): Promise<void> {
+    try {
+      await auditService.log(tenantSlug, {
+        userId: event.userId,
+        userEmail: event.email,
+        action,
+        entityType: 'auth_session',
+        // audit_logs.entity_id is a UUID: the session when there is one, else the user
+        entityId: event.sessionId ?? event.userId,
+        sessionId: event.sessionId,
+        ipAddress: event.context?.ipAddress,
+        userAgent: normalizeUserAgent(event.context?.userAgent),
+        metadata: event.metadata,
+      });
+    } catch (error) {
+      logger.warn({ error, action, tenantSlug }, 'Failed to write auth audit event');
+    }
+  }
+
   async login(
     params: LoginParams,
-    signToken: (payload: JwtPayload) => string
+    signToken: (payload: JwtPayload) => string,
+    context: ClientContext = {}
   ): Promise<LoginResult> {
     const tenant = await tenantService.findBySlug(params.tenantSlug);
     if (!tenant) {
@@ -124,16 +164,33 @@ export class AuthService {
 
     // Generate tokens
     const roles = user.roles.filter(Boolean);
+    const sessionId = crypto.randomUUID();
     const payload: JwtPayload = {
       userId: user.id,
       tenantId: tenant.id,
       tenantSlug: params.tenantSlug,
       email: user.email,
       roles,
+      sid: sessionId,
+      rtv: (user as { refresh_token_version?: number }).refresh_token_version,
     };
 
     const accessToken = signToken(payload);
-    const refreshToken = await this.createRefreshToken(user.id, schema);
+    const deviceHash = hashDeviceFingerprint(context.deviceFingerprint);
+    const refreshToken = await this.createRefreshToken(user.id, schema, {
+      familyId: sessionId,
+      version: 1,
+      context,
+      deviceHash,
+    });
+
+    await this.audit(params.tenantSlug, 'token_issued', {
+      userId: user.id,
+      email: user.email,
+      sessionId,
+      context,
+      metadata: { reason: 'login', deviceBound: !!deviceHash },
+    });
 
     logger.info({ userId: user.id, tenantSlug: params.tenantSlug }, 'User logged in');
 
@@ -152,7 +209,8 @@ export class AuthService {
   async refresh(
     refreshToken: string,
     tenantSlug: string,
-    signToken: (payload: JwtPayload) => string
+    signToken: (payload: JwtPayload) => string,
+    context: ClientContext = {}
   ): Promise<{ accessToken: string; refreshToken: string }> {
     const tenant = await tenantService.findBySlug(tenantSlug);
     if (!tenant) {
@@ -162,9 +220,10 @@ export class AuthService {
     const schema = tenantService.getSchemaName(tenantSlug);
     const tokenHash = this.hashToken(refreshToken);
 
-    // Verify refresh token
+    // Look the token up including revoked rows: presenting a revoked (already rotated) token
+    // is a replay and must be told apart from an unknown token.
     const tokenResult = await pool.query(
-      `SELECT rt.*, u.email, u.status,
+      `SELECT rt.*, u.email, u.status, u.refresh_token_version,
               array_agg(r.name) as roles
        FROM ${schema}.refresh_tokens rt
        JOIN ${schema}.users u ON rt.user_id = u.id
@@ -172,7 +231,6 @@ export class AuthService {
        LEFT JOIN ${schema}.roles r ON ur.role_id = r.id
        WHERE rt.token_hash = $1
          AND rt.expires_at > NOW()
-         AND rt.revoked_at IS NULL
        GROUP BY rt.id, u.id`,
       [tokenHash]
     );
@@ -182,16 +240,48 @@ export class AuthService {
     }
 
     const tokenData = tokenResult.rows[0];
+    const familyId: string = tokenData.family_id || crypto.randomUUID();
+
+    const revoked =
+      !!tokenData.revoked_at || (await tokenRevocation.isRefreshTokenRevoked(schema, tokenHash));
+    if (revoked) {
+      await this.handleRefreshTokenReuse(tenantSlug, schema, tokenData, familyId, context);
+      throw new UnauthorizedError('Invalid or expired refresh token');
+    }
 
     if (tokenData.status !== 'active') {
       throw new UnauthorizedError('Account is not active');
     }
 
-    // Revoke old token (rotation)
-    await pool.query(
-      `UPDATE ${schema}.refresh_tokens SET revoked_at = NOW() WHERE token_hash = $1`,
+    // Device binding: a session created with a device fingerprint only refreshes from that device
+    if (tokenData.device_hash) {
+      const presented = hashDeviceFingerprint(context.deviceFingerprint);
+      if (!deviceHashesMatch(tokenData.device_hash, presented)) {
+        await this.revokeFamily(schema, tokenData.user_id, familyId);
+        await this.audit(tenantSlug, 'token_revoked', {
+          userId: tokenData.user_id,
+          email: tokenData.email,
+          sessionId: familyId,
+          context,
+          metadata: { reason: 'device_mismatch' },
+        });
+        logger.warn({ userId: tokenData.user_id, tenantSlug }, 'Refresh rejected: device mismatch');
+        throw new UnauthorizedError('Invalid or expired refresh token');
+      }
+    }
+
+    // Revoke old token (rotation). The revoked_at guard makes rotation single-use even when
+    // two requests race with the same token: only one of them can claim it.
+    const claim = await pool.query(
+      `UPDATE ${schema}.refresh_tokens SET revoked_at = NOW()
+       WHERE token_hash = $1 AND revoked_at IS NULL`,
       [tokenHash]
     );
+    if (claim.rowCount === 0) {
+      await this.handleRefreshTokenReuse(tenantSlug, schema, tokenData, familyId, context);
+      throw new UnauthorizedError('Invalid or expired refresh token');
+    }
+    await this.rememberRevokedRefreshToken(schema, tokenHash, tokenData.expires_at);
 
     // Create new tokens
     const roles = tokenData.roles.filter(Boolean);
@@ -201,10 +291,31 @@ export class AuthService {
       tenantSlug,
       email: tokenData.email,
       roles,
+      sid: familyId,
+      rtv: tokenData.refresh_token_version,
     };
 
     const newAccessToken = signToken(payload);
-    const newRefreshToken = await this.createRefreshToken(tokenData.user_id, schema);
+    const newVersion = (tokenData.version || 1) + 1;
+    const newRefreshToken = await this.createRefreshToken(tokenData.user_id, schema, {
+      familyId,
+      version: newVersion,
+      // Session metadata follows the session; the latest request's IP/UA are what we know now
+      context: {
+        ipAddress: context.ipAddress ?? tokenData.ip_address ?? undefined,
+        userAgent: context.userAgent ?? tokenData.user_agent ?? undefined,
+      },
+      deviceHash: tokenData.device_hash || undefined,
+      sessionCreatedAt: tokenData.session_created_at || undefined,
+    });
+
+    await this.audit(tenantSlug, 'token_refreshed', {
+      userId: tokenData.user_id,
+      email: tokenData.email,
+      sessionId: familyId,
+      context,
+      metadata: { version: newVersion },
+    });
 
     return {
       accessToken: newAccessToken,
@@ -212,22 +323,112 @@ export class AuthService {
     };
   }
 
-  async logout(refreshToken: string, tenantSlug: string): Promise<void> {
-    const schema = tenantService.getSchemaName(tenantSlug);
-    const tokenHash = this.hashToken(refreshToken);
-
-    await pool.query(
-      `UPDATE ${schema}.refresh_tokens SET revoked_at = NOW() WHERE token_hash = $1`,
-      [tokenHash]
+  /** A revoked refresh token was presented again: assume theft and kill the whole session. */
+  private async handleRefreshTokenReuse(
+    tenantSlug: string,
+    schema: string,
+    tokenData: { user_id: string; email: string },
+    familyId: string,
+    context: ClientContext
+  ): Promise<void> {
+    await this.revokeFamily(schema, tokenData.user_id, familyId);
+    await this.audit(tenantSlug, 'token_reuse_detected', {
+      userId: tokenData.user_id,
+      email: tokenData.email,
+      sessionId: familyId,
+      context,
+      metadata: { action: 'session_revoked' },
+    });
+    logger.warn(
+      { userId: tokenData.user_id, tenantSlug, sessionId: familyId },
+      'Refresh token reuse detected, session revoked'
     );
   }
 
-  async revokeAllUserTokens(userId: string, schema: string): Promise<void> {
+  private async revokeFamily(schema: string, userId: string, familyId: string): Promise<void> {
     await pool.query(
       `UPDATE ${schema}.refresh_tokens SET revoked_at = NOW()
-       WHERE user_id = $1 AND revoked_at IS NULL`,
-      [userId]
+       WHERE family_id = $1 AND user_id = $2 AND revoked_at IS NULL`,
+      [familyId, userId]
     );
+    await tokenRevocation.revokeSession(schema, familyId);
+  }
+
+  private async rememberRevokedRefreshToken(
+    schema: string,
+    tokenHash: string,
+    expiresAt: Date
+  ): Promise<void> {
+    try {
+      await tokenRevocation.revokeRefreshToken(schema, tokenHash, new Date(expiresAt));
+    } catch (error) {
+      // The database row is authoritative; Redis is a fast second line
+      logger.warn({ error }, 'Failed to record revoked refresh token in Redis');
+    }
+  }
+
+  async logout(refreshToken: string, tenantSlug: string, context: ClientContext = {}): Promise<void> {
+    const schema = tenantService.getSchemaName(tenantSlug);
+    const tokenHash = this.hashToken(refreshToken);
+
+    const result = await pool.query(
+      `UPDATE ${schema}.refresh_tokens SET revoked_at = NOW() WHERE token_hash = $1
+       RETURNING user_id, family_id, expires_at`,
+      [tokenHash]
+    );
+
+    const row = result?.rows?.[0];
+    if (!row) return;
+
+    await this.rememberRevokedRefreshToken(schema, tokenHash, row.expires_at);
+    // Access tokens of this session stop working immediately, not only after they expire
+    await tokenRevocation.revokeSession(schema, row.family_id);
+    await this.audit(tenantSlug, 'token_revoked', {
+      userId: row.user_id,
+      sessionId: row.family_id,
+      context,
+      metadata: { reason: 'logout' },
+    });
+  }
+
+  /** Revoke every session of a user and invalidate access tokens minted so far. */
+  async revokeAllUserTokens(userId: string, schema: string): Promise<void> {
+    await sessionService.revokeAllInSchema(schema, userId);
+  }
+
+  /** Revoke one session (refresh token family) of a user. */
+  async revokeSession(
+    tenantSlug: string,
+    userId: string,
+    sessionId: string,
+    context: ClientContext = {},
+    reason = 'session_revoked'
+  ): Promise<boolean> {
+    const revoked = await sessionService.revoke(tenantSlug, userId, sessionId);
+    if (revoked) {
+      await this.audit(tenantSlug, 'token_revoked', {
+        userId,
+        sessionId,
+        context,
+        metadata: { reason },
+      });
+    }
+    return revoked;
+  }
+
+  /** Revoke all sessions of a user and audit it. */
+  async revokeAllSessions(
+    tenantSlug: string,
+    userId: string,
+    context: ClientContext = {},
+    reason = 'revoke_all'
+  ): Promise<void> {
+    await sessionService.revokeAll(tenantSlug, userId);
+    await this.audit(tenantSlug, 'token_revoked', {
+      userId,
+      context,
+      metadata: { reason, scope: 'all_sessions' },
+    });
   }
 
   async changePassword(
@@ -263,15 +464,37 @@ export class AuthService {
     logger.info({ userId }, 'Password changed');
   }
 
-  private async createRefreshToken(userId: string, schema: string): Promise<string> {
+  private async createRefreshToken(
+    userId: string,
+    schema: string,
+    session: {
+      familyId: string;
+      version: number;
+      context?: ClientContext;
+      deviceHash?: string;
+      sessionCreatedAt?: Date;
+    }
+  ): Promise<string> {
     const token = crypto.randomBytes(64).toString('hex');
     const tokenHash = this.hashToken(token);
     const expiresAt = new Date(Date.now() + this.refreshTokenExpiry);
 
     await pool.query(
-      `INSERT INTO ${schema}.refresh_tokens (user_id, token_hash, expires_at)
-       VALUES ($1, $2, $3)`,
-      [userId, tokenHash, expiresAt]
+      `INSERT INTO ${schema}.refresh_tokens
+         (user_id, token_hash, expires_at, family_id, version,
+          ip_address, user_agent, device_hash, session_created_at, last_used_at)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, COALESCE($9, NOW()), NOW())`,
+      [
+        userId,
+        tokenHash,
+        expiresAt,
+        session.familyId,
+        session.version,
+        session.context?.ipAddress ?? null,
+        normalizeUserAgent(session.context?.userAgent) ?? null,
+        session.deviceHash ?? null,
+        session.sessionCreatedAt ?? null,
+      ]
     );
 
     // Clean up expired tokens periodically
