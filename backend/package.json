@@ -10,6 +10,7 @@
     "migrate": "tsx src/migrations/run.ts",
     "migrate:rollback": "tsx src/migrations/rollback.ts",
     "test": "vitest run",
+    "test:perf": "vitest run tests/performance",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
     "test:ui": "vitest --ui",

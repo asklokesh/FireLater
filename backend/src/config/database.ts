@@ -1,5 +1,8 @@
-import { Pool, QueryResult } from 'pg';
+import { Pool, PoolClient, QueryResult } from 'pg';
 import { logger } from '../utils/logger.js';
+import { queryStats, getSlowQueryThresholdMs } from '../services/queryStats.js';
+import { explainQuery, isExplainable, parseSearchPath, shouldAnalyze, storeAnalysis } from '../services/indexAdvisor.js';
+import { sendSlowQueryAlert } from '../services/slowQueryAlerts.js';
 
 const originalPool = new Pool({
   connectionString: process.env.DATABASE_URL,
@@ -11,52 +14,120 @@ const originalPool = new Pool({
   statement_timeout: parseInt(process.env.DB_STATEMENT_TIMEOUT || '30000'),
 });
 
-// Slow query threshold in milliseconds
-const SLOW_QUERY_THRESHOLD = parseInt(process.env.DB_SLOW_QUERY_THRESHOLD || '100');
-
-// Wrap pool.query to add performance monitoring
 const originalQuery = originalPool.query.bind(originalPool);
 
-// Simplified query wrapper with performance monitoring
-originalPool.query = function (queryTextOrConfig: string | { text: string }, values?: unknown[]): Promise<QueryResult> {
-  const startTime = Date.now();
-  const queryText = typeof queryTextOrConfig === 'string' ? queryTextOrConfig : queryTextOrConfig.text;
+function truncateQuery(text: string): string {
+  return text.length > 200 ? text.substring(0, 200) + '...' : text;
+}
 
-  // Call original query
-  const resultPromise = originalQuery(queryTextOrConfig as never, values as never) as Promise<QueryResult>;
+/** Log the (non-ANALYZE) plan of a slow query once per fingerprint interval. */
+function logSlowQueryPlan(
+  fingerprint: string,
+  text: string,
+  values: unknown[] | undefined,
+  searchPath: string | null
+): void {
+  if (process.env.DB_LOG_QUERY_PLANS === 'false') return;
+  if (!isExplainable(text) || !shouldAnalyze(fingerprint)) return;
+  // Uses the un-instrumented pool (so the EXPLAIN is not itself tracked) on a dedicated connection
+  // in a READ ONLY transaction, replaying the originating connection's search_path if it set one.
+  const db = {
+    query: (t: string, v?: unknown[]) => originalQuery(t, v as never) as never,
+    connect: () => originalConnect() as never,
+  };
+  explainQuery(db, text, values ?? [], { searchPath })
+    .then((result) => {
+      storeAnalysis(fingerprint, truncateQuery(text), result);
+      logger.info(
+        { fingerprint, plan: result.plan, recommendations: result.recommendations },
+        'Slow query plan'
+      );
+    })
+    .catch((err: Error) => {
+      logger.warn({ err: err.message, fingerprint, query: truncateQuery(text) }, 'Could not EXPLAIN slow query');
+    });
+}
 
-  // Only log slow queries in production or when explicitly enabled
-  if (process.env.NODE_ENV === 'production' || process.env.LOG_SLOW_QUERIES === 'true') {
-    return resultPromise
-      .then((res: QueryResult) => {
-        const duration = Date.now() - startTime;
-        if (duration > SLOW_QUERY_THRESHOLD) {
-          // Truncate query text for logging (max 200 chars)
-          const truncatedQuery = queryText.length > 200
-            ? queryText.substring(0, 200) + '...'
-            : queryText;
-
-          logger.warn({
-            duration,
-            rowCount: res.rowCount,
-            query: truncatedQuery,
-          }, 'Slow query detected');
-        }
-        return res;
-      })
-      .catch((err: Error) => {
-        const duration = Date.now() - startTime;
-        logger.error({
-          duration,
-          err,
-          query: queryText.substring(0, 200),
-        }, 'Query failed');
-        throw err;
-      });
+function observe(
+  text: string,
+  values: unknown[] | undefined,
+  startTime: number,
+  res: QueryResult | null,
+  err?: Error,
+  searchPath: string | null = null
+) {
+  const duration = Date.now() - startTime;
+  const { fingerprint, slow } = queryStats.record({
+    text,
+    durationMs: duration,
+    rowCount: res?.rowCount ?? null,
+    failed: !!err,
+  });
+  if (err) {
+    logger.error({ duration, err, query: truncateQuery(text) }, 'Query failed');
   }
+  if (slow) {
+    logger.warn(
+      { duration, rowCount: res?.rowCount ?? null, thresholdMs: getSlowQueryThresholdMs(), fingerprint, query: truncateQuery(text) },
+      'Slow query detected'
+    );
+    sendSlowQueryAlert({
+      fingerprint,
+      query: truncateQuery(text),
+      durationMs: duration,
+      rowCount: res?.rowCount ?? null,
+      thresholdMs: getSlowQueryThresholdMs(),
+    });
+    logSlowQueryPlan(fingerprint, text, values, searchPath);
+  }
+}
 
-  return resultPromise;
-} as typeof originalQuery;
+/**
+ * Wrap a promise-style query function with performance tracking. For checked-out
+ * clients, `ctx` remembers a `SET search_path` issued on that connection so slow-query
+ * plans can be produced against the same schema.
+ */
+function instrument<F extends (...args: any[]) => any>(fn: F, ctx?: { searchPath: string | null }): F {
+  return function (this: unknown, queryTextOrConfig: string | { text: string; values?: unknown[] }, values?: unknown[]) {
+    const isPromiseStyle = typeof queryTextOrConfig !== 'function' && typeof values !== 'function';
+    const result = fn.apply(this, arguments as unknown as unknown[]);
+    if (!isPromiseStyle || !result || typeof result.then !== 'function') return result;
+    const startTime = Date.now();
+    const text = typeof queryTextOrConfig === 'string' ? queryTextOrConfig : queryTextOrConfig?.text ?? '';
+    const vals = Array.isArray(values) ? values : typeof queryTextOrConfig === 'object' ? queryTextOrConfig.values : undefined;
+    return result.then(
+      (res: QueryResult) => {
+        if (ctx) {
+          const sp = parseSearchPath(text);
+          if (sp) ctx.searchPath = sp;
+          else if (/^\s*reset\s+(all|search_path)\b/i.test(text)) ctx.searchPath = null;
+        }
+        observe(text, vals, startTime, res, undefined, ctx?.searchPath ?? null);
+        return res;
+      },
+      (err: Error) => {
+        observe(text, vals, startTime, null, err, ctx?.searchPath ?? null);
+        throw err;
+      }
+    );
+  } as unknown as F;
+}
+
+originalPool.query = instrument(originalQuery) as typeof originalQuery;
+
+// Also instrument queries issued on checked-out clients (transactions etc.)
+const originalConnect = originalPool.connect.bind(originalPool) as (...args: unknown[]) => unknown;
+originalPool.connect = function (...args: unknown[]) {
+  if (typeof args[0] === 'function') return originalConnect(...args);
+  return (originalConnect() as Promise<PoolClient>).then((client) => {
+    const c = client as PoolClient & { __instrumented?: boolean };
+    if (!c.__instrumented) {
+      c.__instrumented = true;
+      c.query = instrument(c.query.bind(c), { searchPath: null }) as typeof c.query;
+    }
+    return client;
+  });
+} as typeof originalPool.connect;
 
 const pool = originalPool;
 

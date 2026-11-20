@@ -1,0 +1,6 @@
+{
+  "_comment": "Budgets for query-performance regression tests. Raise only with justification in review.",
+  "wrapperOverheadMsPerQueryMax": 0.25,
+  "indexedPlanCostRatioMax": 0.5,
+  "minSeqScanRows": 1000
+}

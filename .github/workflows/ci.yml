@@ -73,6 +73,18 @@ jobs:
           JWT_REFRESH_SECRET: test-jwt-refresh-secret-key-for-ci
         run: npm test
 
+      - name: Query performance regression tests
+        working-directory: backend
+        env:
+          NODE_ENV: test
+          PERF_DB: '1'
+          PGHOST: localhost
+          PGPORT: '5432'
+          PGUSER: postgres
+          PGDATABASE: firelater_test
+          PGPASSWORD: postgres
+        run: npm run test:perf
+
       - name: Build
         working-directory: backend
         run: npm run build

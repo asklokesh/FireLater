@@ -33,6 +33,7 @@ import {
   UserCheck,
   KeyRound,
   Building2,
+  Database,
 } from 'lucide-react';
 import { useAuthStore } from '@/stores/auth';
 
@@ -58,6 +59,7 @@ const adminNavigation = [
   { name: 'Email Integration', href: '/admin/email', icon: Mail },
   { name: 'Integrations', href: '/admin/integrations', icon: Plug },
   { name: 'Audit Logs', href: '/admin/audit-logs', icon: ScrollText },
+  { name: 'Query Analytics', href: '/admin/query-analytics', icon: Database },
   { name: 'SoD Policies', href: '/admin/sod-policies', icon: GitBranch },
   { name: 'Data Security', href: '/admin/data-security', icon: Lock },
   { name: 'Maker-Checker', href: '/admin/maker-checker', icon: CheckSquare },
