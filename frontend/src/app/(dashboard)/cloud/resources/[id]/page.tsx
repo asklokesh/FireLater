@@ -1,5 +1,6 @@
 'use client';
 
+import { useT } from '@/i18n/useT';
 import { useState, useEffect, useCallback } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
@@ -89,6 +90,7 @@ const statusColors: Record<string, { bg: string; text: string; icon: typeof Chec
 };
 
 export default function ResourceDetailPage() {
+  const cr = useT('cloudResource');
   const params = useParams();
   const resourceId = params.id as string;
 
@@ -110,11 +112,11 @@ export default function ResourceDetailPage() {
       setResource(data);
     } catch (err) {
       console.error('Failed to load resource:', err);
-      setError('Failed to load resource details');
+      setError(cr('loadFailed'));
     } finally {
       setIsLoading(false);
     }
-  }, [resourceId]);
+  }, [resourceId, cr]);
 
   const loadApplications = useCallback(async () => {
     try {
@@ -147,7 +149,7 @@ export default function ResourceDetailPage() {
   };
 
   const handleUnmap = async () => {
-    if (!confirm('Are you sure you want to unmap this resource from the application?')) return;
+    if (!confirm(cr('confirmUnmap'))) return;
 
     try {
       setIsMapping(true);
@@ -196,9 +198,9 @@ export default function ResourceDetailPage() {
     return (
       <div className="bg-error-subtle border border-red-200 rounded-lg p-6 text-center">
         <AlertCircle className="h-12 w-12 text-error mx-auto mb-4" />
-        <h3 className="text-lg font-medium text-error mb-2">{error || 'Resource not found'}</h3>
+        <h3 className="text-lg font-medium text-error mb-2">{error || cr('notFound')}</h3>
         <Link href="/cloud">
-          <Button variant="outline">Back to Cloud Resources</Button>
+          <Button variant="outline">{cr('backToCloud')}</Button>
         </Link>
       </div>
     );
@@ -249,41 +251,41 @@ export default function ResourceDetailPage() {
           {/* Resource Details */}
           <div className="bg-surface rounded-lg shadow">
             <div className="px-6 py-4 border-b border-border">
-              <h2 className="text-lg font-medium text-foreground">Resource Details</h2>
+              <h2 className="text-lg font-medium text-foreground">{cr('resourceDetails')}</h2>
             </div>
             <div className="p-6">
               <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4">
                 <div>
-                  <dt className="text-sm text-muted">Resource Type</dt>
+                  <dt className="text-sm text-muted">{cr('resourceType')}</dt>
                   <dd className="mt-1 text-sm font-medium text-foreground">{resource.resource_type}</dd>
                 </div>
                 <div>
-                  <dt className="text-sm text-muted">Region</dt>
+                  <dt className="text-sm text-muted">{cr('region')}</dt>
                   <dd className="mt-1 text-sm font-medium text-foreground flex items-center">
                     <Globe className="h-4 w-4 text-muted mr-1" />
                     {resource.region}
                   </dd>
                 </div>
                 <div>
-                  <dt className="text-sm text-muted">Cloud Account</dt>
+                  <dt className="text-sm text-muted">{cr('cloudAccount')}</dt>
                   <dd className="mt-1 text-sm font-medium text-foreground">{resource.account_name}</dd>
                 </div>
                 <div>
-                  <dt className="text-sm text-muted">Monthly Cost</dt>
+                  <dt className="text-sm text-muted">{cr('monthlyCost')}</dt>
                   <dd className="mt-1 text-sm font-medium text-foreground flex items-center">
                     <DollarSign className="h-4 w-4 text-success mr-1" />
                     {formatCost(resource.monthly_cost)}
                   </dd>
                 </div>
                 <div>
-                  <dt className="text-sm text-muted">Last Synced</dt>
+                  <dt className="text-sm text-muted">{cr('lastSynced')}</dt>
                   <dd className="mt-1 text-sm font-medium text-foreground flex items-center">
                     <Clock className="h-4 w-4 text-muted mr-1" />
                     {formatDate(resource.last_synced_at)}
                   </dd>
                 </div>
                 <div>
-                  <dt className="text-sm text-muted">Created</dt>
+                  <dt className="text-sm text-muted">{cr('created')}</dt>
                   <dd className="mt-1 text-sm font-medium text-foreground">{formatDate(resource.created_at)}</dd>
                 </div>
               </dl>
@@ -295,7 +297,7 @@ export default function ResourceDetailPage() {
             <div className="px-6 py-4 border-b border-border">
               <h2 className="text-lg font-medium text-foreground flex items-center">
                 <Tag className="h-5 w-5 mr-2 text-muted" />
-                Tags
+                {cr('tags')}
               </h2>
             </div>
             <div className="p-6">
@@ -312,7 +314,7 @@ export default function ResourceDetailPage() {
                   ))}
                 </div>
               ) : (
-                <p className="text-sm text-muted">No tags defined</p>
+                <p className="text-sm text-muted">{cr('noTags')}</p>
               )}
             </div>
           </div>
@@ -320,7 +322,7 @@ export default function ResourceDetailPage() {
           {/* Metadata */}
           <div className="bg-surface rounded-lg shadow">
             <div className="px-6 py-4 border-b border-border">
-              <h2 className="text-lg font-medium text-foreground">Metadata</h2>
+              <h2 className="text-lg font-medium text-foreground">{cr('metadata')}</h2>
             </div>
             <div className="p-6">
               {Object.keys(resource.metadata).length > 0 ? (
@@ -330,7 +332,7 @@ export default function ResourceDetailPage() {
                   </pre>
                 </div>
               ) : (
-                <p className="text-sm text-muted">No metadata available</p>
+                <p className="text-sm text-muted">{cr('noMetadata')}</p>
               )}
             </div>
           </div>
@@ -341,7 +343,7 @@ export default function ResourceDetailPage() {
           {/* Application Mapping */}
           <div className="bg-surface rounded-lg shadow">
             <div className="px-6 py-4 border-b border-border">
-              <h2 className="text-lg font-medium text-foreground">Application Mapping</h2>
+              <h2 className="text-lg font-medium text-foreground">{cr('appMapping')}</h2>
             </div>
             <div className="p-6">
               {resource.application_id ? (
@@ -369,20 +371,20 @@ export default function ResourceDetailPage() {
                     className="w-full text-error border-red-300 hover:bg-error-subtle"
                   >
                     <Unlink className="h-4 w-4 mr-2" />
-                    Unmap from Application
+                    {cr('unmap')}
                   </Button>
                 </div>
               ) : (
                 <div className="space-y-4">
                   <p className="text-sm text-muted">
-                    This resource is not mapped to any application.
+                    {cr('notMapped')}
                   </p>
                   <Button
                     onClick={() => setShowMapModal(true)}
                     className="w-full"
                   >
                     <LinkIcon className="h-4 w-4 mr-2" />
-                    Map to Application
+                    {cr('mapToApp')}
                   </Button>
                 </div>
               )}
@@ -392,27 +394,27 @@ export default function ResourceDetailPage() {
           {/* Quick Stats */}
           <div className="bg-surface rounded-lg shadow">
             <div className="px-6 py-4 border-b border-border">
-              <h2 className="text-lg font-medium text-foreground">Quick Stats</h2>
+              <h2 className="text-lg font-medium text-foreground">{cr('quickStats')}</h2>
             </div>
             <div className="p-6 space-y-4">
               <div className="flex items-center justify-between">
-                <span className="text-sm text-muted">Provider</span>
+                <span className="text-sm text-muted">{cr('provider')}</span>
                 <span className={`px-2 py-1 rounded text-xs font-medium ${providerCfg.bg} ${providerCfg.text}`}>
                   {resource.provider.toUpperCase()}
                 </span>
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-sm text-muted">Status</span>
+                <span className="text-sm text-muted">{cr('status')}</span>
                 <span className={`px-2 py-1 rounded text-xs font-medium ${statusCfg.bg} ${statusCfg.text}`}>
                   {resource.status}
                 </span>
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-sm text-muted">Region</span>
+                <span className="text-sm text-muted">{cr('region')}</span>
                 <span className="text-sm font-medium text-foreground">{resource.region}</span>
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-sm text-muted">Monthly Cost</span>
+                <span className="text-sm text-muted">{cr('monthlyCost')}</span>
                 <span className="text-sm font-medium text-success">{formatCost(resource.monthly_cost)}</span>
               </div>
             </div>
@@ -421,16 +423,16 @@ export default function ResourceDetailPage() {
           {/* Resource Actions */}
           <div className="bg-surface rounded-lg shadow">
             <div className="px-6 py-4 border-b border-border">
-              <h2 className="text-lg font-medium text-foreground">Actions</h2>
+              <h2 className="text-lg font-medium text-foreground">{cr('actions')}</h2>
             </div>
             <div className="p-6 space-y-3">
               <Button variant="outline" className="w-full justify-start">
                 <Activity className="h-4 w-4 mr-2" />
-                View Metrics
+                {cr('viewMetrics')}
               </Button>
               <Button variant="outline" className="w-full justify-start">
                 <DollarSign className="h-4 w-4 mr-2" />
-                Cost History
+                {cr('costHistory')}
               </Button>
               <a
                 href={`https://console.aws.amazon.com/${resource.resource_type.split(':')[0]}/${resource.region}`}
@@ -439,7 +441,7 @@ export default function ResourceDetailPage() {
               >
                 <Button variant="outline" className="w-full justify-start">
                   <Globe className="h-4 w-4 mr-2" />
-                  Open in Cloud Console
+                  {cr('openConsole')}
                 </Button>
               </a>
             </div>
@@ -451,19 +453,18 @@ export default function ResourceDetailPage() {
       {showMapModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-surface rounded-lg shadow-xl max-w-md w-full mx-4 p-6">
-            <h2 className="text-lg font-semibold text-foreground mb-4">Map to Application</h2>
+            <h2 className="text-lg font-semibold text-foreground mb-4">{cr('mapTitle')}</h2>
             <p className="text-sm text-secondary mb-4">
-              Select an application to map this resource to. This helps track cloud resources
-              associated with your applications.
+              {cr('mapBody')}
             </p>
             <div className="mb-4">
-              <label className="block text-sm font-medium text-secondary mb-1">Application</label>
+              <label className="block text-sm font-medium text-secondary mb-1">{cr('application')}</label>
               <select
                 value={selectedAppId}
                 onChange={(e) => setSelectedAppId(e.target.value)}
                 className="w-full px-3 py-2 border border-border-strong rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
               >
-                <option value="">Select an application...</option>
+                <option value="">{cr('selectApp')}</option>
                 {applications.map((app) => (
                   <option key={app.id} value={app.id}>
                     {app.name} ({app.short_name})
@@ -473,7 +474,7 @@ export default function ResourceDetailPage() {
             </div>
             <div className="flex justify-end space-x-3">
               <Button variant="outline" onClick={() => setShowMapModal(false)}>
-                Cancel
+                {cr('cancel')}
               </Button>
               <Button
                 onClick={handleMapToApplication}
@@ -484,7 +485,7 @@ export default function ResourceDetailPage() {
                 ) : (
                   <LinkIcon className="h-4 w-4 mr-2" />
                 )}
-                Map Resource
+                {cr('mapResource')}
               </Button>
             </div>
           </div>

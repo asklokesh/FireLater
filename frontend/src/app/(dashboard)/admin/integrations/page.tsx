@@ -1,5 +1,6 @@
 'use client';
 
+import { useT } from '@/i18n/useT';
 import { useState } from 'react';
 import {
   Key,
@@ -44,6 +45,7 @@ import {
 
 // Tab components
 function ApiKeysTab() {
+  const ai = useT('adminIntegrations');
   const { data: apiKeysData, isLoading } = useApiKeys({ includeInactive: true });
   const createApiKey = useCreateApiKey();
   const updateApiKey = useUpdateApiKey();
@@ -91,22 +93,22 @@ function ApiKeysTab() {
   };
 
   const handleDelete = async (id: string) => {
-    if (confirm('Are you sure you want to delete this API key? This action cannot be undone.')) {
+    if (confirm(ai('confirmDeleteKey'))) {
       await deleteApiKey.mutateAsync(id);
     }
   };
 
   if (isLoading) {
-    return <div className="animate-pulse">Loading API keys...</div>;
+    return <div className="animate-pulse">{ai('loadingKeys')}</div>;
   }
 
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <div>
-          <h3 className="text-lg font-medium text-foreground">API Keys</h3>
+          <h3 className="text-lg font-medium text-foreground">{ai('keysTitle')}</h3>
           <p className="text-sm text-muted">
-            Manage API keys for programmatic access to your data
+            {ai('keysSubtitle')}
           </p>
         </div>
         <button
@@ -114,7 +116,7 @@ function ApiKeysTab() {
           className="inline-flex items-center px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-hover"
         >
           <Plus className="h-4 w-4 mr-2" />
-          Create API Key
+          {ai('createKey')}
         </button>
       </div>
 
@@ -124,11 +126,11 @@ function ApiKeysTab() {
           <div className="bg-surface rounded-lg p-6 max-w-lg w-full mx-4">
             <div className="flex items-center text-success mb-4">
               <CheckCircle className="h-6 w-6 mr-2" />
-              <h3 className="text-lg font-medium">API Key Created</h3>
+              <h3 className="text-lg font-medium">{ai('keyCreated')}</h3>
             </div>
             <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-4">
               <p className="text-sm text-warning mb-2">
-                <strong>Important:</strong> Copy your API key now. You won&apos;t be able to see it again.
+                <strong>{ai('importantPre')}</strong> {ai('importantPost')}
               </p>
               <div className="flex items-center gap-2 bg-surface p-2 rounded border font-mono text-sm break-all">
                 <span className="flex-1">{newKeyResult.key}</span>
@@ -147,7 +149,7 @@ function ApiKeysTab() {
               }}
               className="w-full px-4 py-2 bg-background text-secondary rounded-lg hover:bg-surface-hover"
             >
-              Done
+              {ai('done')}
             </button>
           </div>
         </div>
@@ -157,30 +159,30 @@ function ApiKeysTab() {
       {showModal && !newKeyResult && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-surface rounded-lg p-6 max-w-md w-full mx-4">
-            <h3 className="text-lg font-medium text-foreground mb-4">Create API Key</h3>
+            <h3 className="text-lg font-medium text-foreground mb-4">{ai('createKeyTitle')}</h3>
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-secondary">Name</label>
+                <label className="block text-sm font-medium text-secondary">{ai('name')}</label>
                 <input
                   type="text"
                   value={formData.name}
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                   className="mt-1 block w-full border border-border-strong rounded-lg px-3 py-2"
-                  placeholder="e.g., Production API"
+                  placeholder={ai('namePh')}
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-secondary">Description</label>
+                <label className="block text-sm font-medium text-secondary">{ai('description')}</label>
                 <textarea
                   value={formData.description}
                   onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                   className="mt-1 block w-full border border-border-strong rounded-lg px-3 py-2"
                   rows={2}
-                  placeholder="Optional description"
+                  placeholder={ai('descPh')}
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-secondary">Rate Limit (requests/hour)</label>
+                <label className="block text-sm font-medium text-secondary">{ai('rateLimit')}</label>
                 <input
                   type="number"
                   value={formData.rateLimit}
@@ -189,7 +191,7 @@ function ApiKeysTab() {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-secondary">Expires At (optional)</label>
+                <label className="block text-sm font-medium text-secondary">{ai('expiresAt')}</label>
                 <input
                   type="datetime-local"
                   value={formData.expiresAt}
@@ -203,14 +205,14 @@ function ApiKeysTab() {
                 onClick={() => setShowModal(false)}
                 className="flex-1 px-4 py-2 border border-border-strong text-secondary rounded-lg hover:bg-surface-hover"
               >
-                Cancel
+                {ai('cancel')}
               </button>
               <button
                 onClick={handleCreate}
                 disabled={!formData.name || createApiKey.isPending}
                 className="flex-1 px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-hover disabled:opacity-50"
               >
-                {createApiKey.isPending ? 'Creating...' : 'Create'}
+                {createApiKey.isPending ? ai('creating') : ai('create')}
               </button>
             </div>
           </div>
@@ -222,18 +224,18 @@ function ApiKeysTab() {
         {apiKeys.length === 0 ? (
           <div className="p-8 text-center text-muted">
             <Key className="h-12 w-12 mx-auto mb-4 opacity-50" />
-            <p>No API keys created yet</p>
+            <p>{ai('noKeys')}</p>
           </div>
         ) : (
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-surface-hover">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase">Name</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase">Key Prefix</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase">Status</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase">Usage</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase">Last Used</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase">Actions</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase">{ai('colName')}</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase">{ai('colKeyPrefix')}</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase">{ai('colStatus')}</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase">{ai('colUsage')}</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase">{ai('colLastUsed')}</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase">{ai('colActions')}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200">
@@ -258,7 +260,7 @@ function ApiKeysTab() {
                           : 'bg-background text-secondary'
                       }`}
                     >
-                      {key.is_active ? 'Active' : 'Inactive'}
+                      {key.is_active ? ai('active') : ai('inactive')}
                     </span>
                   </td>
                   <td className="px-6 py-4 text-sm text-muted">
@@ -267,21 +269,21 @@ function ApiKeysTab() {
                   <td className="px-6 py-4 text-sm text-muted">
                     {key.last_used_at
                       ? new Date(key.last_used_at).toLocaleDateString()
-                      : 'Never'}
+                      : ai('never')}
                   </td>
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-2">
                       <button
                         onClick={() => handleToggleActive(key)}
                         className="p-1 text-muted hover:text-secondary"
-                        title={key.is_active ? 'Deactivate' : 'Activate'}
+                        title={key.is_active ? ai('deactivate') : ai('activate')}
                       >
                         {key.is_active ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                       </button>
                       <button
                         onClick={() => handleDelete(key.id)}
                         className="p-1 text-error hover:text-error"
-                        title="Delete"
+                        title={ai('delete')}
                       >
                         <Trash2 className="h-4 w-4" />
                       </button>
@@ -298,6 +300,7 @@ function ApiKeysTab() {
 }
 
 function WebhooksTab() {
+  const ai = useT('adminIntegrations');
   const { data: webhooksData, isLoading } = useWebhooks({ includeInactive: true });
   const { data: eventsData } = useWebhookEvents();
   const createWebhook = useCreateWebhook();
@@ -348,14 +351,14 @@ function WebhooksTab() {
   const handleTest = async (id: string) => {
     try {
       await testWebhook.mutateAsync(id);
-      alert('Test webhook sent successfully!');
+      alert(ai('testOk'));
     } catch {
-      alert('Failed to send test webhook');
+      alert(ai('testFailed'));
     }
   };
 
   const handleDelete = async (id: string) => {
-    if (confirm('Are you sure you want to delete this webhook?')) {
+    if (confirm(ai('confirmDeleteWebhook'))) {
       await deleteWebhook.mutateAsync(id);
     }
   };
@@ -370,16 +373,16 @@ function WebhooksTab() {
   };
 
   if (isLoading) {
-    return <div className="animate-pulse">Loading webhooks...</div>;
+    return <div className="animate-pulse">{ai('loadingWebhooks')}</div>;
   }
 
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <div>
-          <h3 className="text-lg font-medium text-foreground">Webhooks</h3>
+          <h3 className="text-lg font-medium text-foreground">{ai('webhooksTitle')}</h3>
           <p className="text-sm text-muted">
-            Send real-time notifications to external systems when events occur
+            {ai('webhooksSubtitle')}
           </p>
         </div>
         <button
@@ -387,7 +390,7 @@ function WebhooksTab() {
           className="inline-flex items-center px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-hover"
         >
           <Plus className="h-4 w-4 mr-2" />
-          Create Webhook
+          {ai('createWebhook')}
         </button>
       </div>
 
@@ -395,20 +398,20 @@ function WebhooksTab() {
       {showModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-surface rounded-lg p-6 max-w-lg w-full mx-4 max-h-[90vh] overflow-y-auto">
-            <h3 className="text-lg font-medium text-foreground mb-4">Create Webhook</h3>
+            <h3 className="text-lg font-medium text-foreground mb-4">{ai('createWebhookTitle')}</h3>
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-secondary">Name</label>
+                <label className="block text-sm font-medium text-secondary">{ai('name')}</label>
                 <input
                   type="text"
                   value={formData.name}
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                   className="mt-1 block w-full border border-border-strong rounded-lg px-3 py-2"
-                  placeholder="e.g., Slack Notifications"
+                  placeholder={ai('whNamePh')}
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-secondary">URL</label>
+                <label className="block text-sm font-medium text-secondary">{ai('url')}</label>
                 <input
                   type="url"
                   value={formData.url}
@@ -418,17 +421,17 @@ function WebhooksTab() {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-secondary">Secret (optional)</label>
+                <label className="block text-sm font-medium text-secondary">{ai('secretOptional')}</label>
                 <input
                   type="text"
                   value={formData.secret}
                   onChange={(e) => setFormData({ ...formData, secret: e.target.value })}
                   className="mt-1 block w-full border border-border-strong rounded-lg px-3 py-2"
-                  placeholder="Used for HMAC signature verification"
+                  placeholder={ai('secretPh')}
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-secondary mb-2">Events</label>
+                <label className="block text-sm font-medium text-secondary mb-2">{ai('events')}</label>
                 <div className="border rounded-lg p-3 max-h-48 overflow-y-auto">
                   <div className="grid grid-cols-2 gap-2">
                     {availableEvents.map((event: string) => (
@@ -447,7 +450,7 @@ function WebhooksTab() {
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-secondary">Retry Count</label>
+                  <label className="block text-sm font-medium text-secondary">{ai('retryCount')}</label>
                   <input
                     type="number"
                     value={formData.retryCount}
@@ -458,7 +461,7 @@ function WebhooksTab() {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-secondary">Timeout (seconds)</label>
+                  <label className="block text-sm font-medium text-secondary">{ai('timeoutSec')}</label>
                   <input
                     type="number"
                     value={formData.timeout}
@@ -475,7 +478,7 @@ function WebhooksTab() {
                 onClick={() => setShowModal(false)}
                 className="flex-1 px-4 py-2 border border-border-strong text-secondary rounded-lg hover:bg-surface-hover"
               >
-                Cancel
+                {ai('cancel')}
               </button>
               <button
                 onClick={handleCreate}
@@ -502,7 +505,7 @@ function WebhooksTab() {
         {webhooks.length === 0 ? (
           <div className="bg-surface rounded-lg border p-8 text-center text-muted">
             <Webhook className="h-12 w-12 mx-auto mb-4 opacity-50" />
-            <p>No webhooks configured yet</p>
+            <p>{ai('noWebhooks')}</p>
           </div>
         ) : (
           webhooks.map((webhook: WebhookType) => (
@@ -518,7 +521,7 @@ function WebhooksTab() {
                           : 'bg-background text-secondary'
                       }`}
                     >
-                      {webhook.is_active ? 'Active' : 'Inactive'}
+                      {webhook.is_active ? ai('active') : ai('inactive')}
                     </span>
                   </div>
                   <p className="text-sm text-muted mt-1 break-all">{webhook.url}</p>
@@ -553,28 +556,28 @@ function WebhooksTab() {
                   <button
                     onClick={() => handleTest(webhook.id)}
                     className="p-2 text-muted hover:text-primary"
-                    title="Send test"
+                    title={ai('sendTest')}
                   >
                     <Send className="h-4 w-4" />
                   </button>
                   <button
                     onClick={() => setShowDeliveries(webhook.id)}
                     className="p-2 text-muted hover:text-secondary"
-                    title="View deliveries"
+                    title={ai('viewDeliveries')}
                   >
                     <ExternalLink className="h-4 w-4" />
                   </button>
                   <button
                     onClick={() => handleToggleActive(webhook)}
                     className="p-2 text-muted hover:text-secondary"
-                    title={webhook.is_active ? 'Deactivate' : 'Activate'}
+                    title={webhook.is_active ? ai('deactivate') : ai('activate')}
                   >
                     {webhook.is_active ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                   </button>
                   <button
                     onClick={() => handleDelete(webhook.id)}
                     className="p-2 text-error hover:text-error"
-                    title="Delete"
+                    title={ai('delete')}
                   >
                     <Trash2 className="h-4 w-4" />
                   </button>
@@ -589,6 +592,7 @@ function WebhooksTab() {
 }
 
 function WebhookDeliveriesModal({ webhookId, onClose }: { webhookId: string; onClose: () => void }) {
+  const ai = useT('adminIntegrations');
   const { data: deliveriesData, isLoading } = useWebhookDeliveries(webhookId);
   const deliveries = deliveriesData?.data || [];
 
@@ -596,15 +600,15 @@ function WebhookDeliveriesModal({ webhookId, onClose }: { webhookId: string; onC
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
       <div className="bg-surface rounded-lg p-6 max-w-2xl w-full mx-4 max-h-[80vh] overflow-y-auto">
         <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-medium text-foreground">Webhook Deliveries</h3>
+          <h3 className="text-lg font-medium text-foreground">{ai('deliveriesTitle')}</h3>
           <button onClick={onClose} className="text-muted hover:text-secondary">
             &times;
           </button>
         </div>
         {isLoading ? (
-          <div className="animate-pulse">Loading deliveries...</div>
+          <div className="animate-pulse">{ai('loadingDeliveries')}</div>
         ) : deliveries.length === 0 ? (
-          <p className="text-muted text-center py-8">No deliveries yet</p>
+          <p className="text-muted text-center py-8">{ai('noDeliveries')}</p>
         ) : (
           <div className="space-y-3">
             {deliveries.map((delivery: WebhookDelivery) => (
@@ -653,6 +657,7 @@ function WebhookDeliveriesModal({ webhookId, onClose }: { webhookId: string; onC
 }
 
 function IntegrationsTab() {
+  const ai = useT('adminIntegrations');
   const { data: integrationsData, isLoading } = useIntegrations({ includeInactive: true });
   const { data: typesData } = useIntegrationTypes();
   const createIntegration = useCreateIntegration();
@@ -699,29 +704,29 @@ function IntegrationsTab() {
   const handleTest = async (id: string) => {
     try {
       const result = await testIntegration.mutateAsync(id);
-      alert(result.data?.success ? 'Connection successful!' : 'Connection failed');
+      alert(result.data?.success ? ai('connOk') : ai('connFailed'));
     } catch {
-      alert('Failed to test connection');
+      alert(ai('connTestFailed'));
     }
   };
 
   const handleDelete = async (id: string) => {
-    if (confirm('Are you sure you want to delete this integration?')) {
+    if (confirm(ai('confirmDeleteIntegration'))) {
       await deleteIntegration.mutateAsync(id);
     }
   };
 
   if (isLoading) {
-    return <div className="animate-pulse">Loading integrations...</div>;
+    return <div className="animate-pulse">{ai('loadingIntegrations')}</div>;
   }
 
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <div>
-          <h3 className="text-lg font-medium text-foreground">Third-Party Integrations</h3>
+          <h3 className="text-lg font-medium text-foreground">{ai('integrationsTitle')}</h3>
           <p className="text-sm text-muted">
-            Connect with external tools like Slack, Jira, ServiceNow, and more
+            {ai('integrationsSubtitle')}
           </p>
         </div>
         <button
@@ -729,7 +734,7 @@ function IntegrationsTab() {
           className="inline-flex items-center px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-hover"
         >
           <Plus className="h-4 w-4 mr-2" />
-          Add Integration
+          {ai('addIntegration')}
         </button>
       </div>
 
@@ -737,16 +742,16 @@ function IntegrationsTab() {
       {showModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-surface rounded-lg p-6 max-w-md w-full mx-4">
-            <h3 className="text-lg font-medium text-foreground mb-4">Add Integration</h3>
+            <h3 className="text-lg font-medium text-foreground mb-4">{ai('addIntegration')}</h3>
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-secondary">Integration Type</label>
+                <label className="block text-sm font-medium text-secondary">{ai('integrationType')}</label>
                 <select
                   value={formData.type}
                   onChange={(e) => setFormData({ ...formData, type: e.target.value })}
                   className="mt-1 block w-full border border-border-strong rounded-lg px-3 py-2"
                 >
-                  <option value="">Select a type...</option>
+                  <option value="">{ai('selectType')}</option>
                   {integrationTypes.map((type: { id: string; name: string }) => (
                     <option key={type.id} value={type.id}>
                       {type.name}
@@ -755,17 +760,17 @@ function IntegrationsTab() {
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium text-secondary">Name</label>
+                <label className="block text-sm font-medium text-secondary">{ai('name')}</label>
                 <input
                   type="text"
                   value={formData.name}
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                   className="mt-1 block w-full border border-border-strong rounded-lg px-3 py-2"
-                  placeholder="e.g., Production Slack"
+                  placeholder={ai('intNamePh')}
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-secondary">Description</label>
+                <label className="block text-sm font-medium text-secondary">{ai('description')}</label>
                 <textarea
                   value={formData.description}
                   onChange={(e) => setFormData({ ...formData, description: e.target.value })}
@@ -782,13 +787,13 @@ function IntegrationsTab() {
                   className="rounded border-border-strong"
                 />
                 <label htmlFor="syncEnabled" className="text-sm font-medium text-secondary">
-                  Enable automatic sync
+                  {ai('enableSync')}
                 </label>
               </div>
               {formData.syncEnabled && (
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-secondary">Sync Interval (min)</label>
+                    <label className="block text-sm font-medium text-secondary">{ai('syncInterval')}</label>
                     <input
                       type="number"
                       value={formData.syncInterval}
@@ -799,7 +804,7 @@ function IntegrationsTab() {
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-secondary">Direction</label>
+                    <label className="block text-sm font-medium text-secondary">{ai('direction')}</label>
                     <select
                       value={formData.syncDirection}
                       onChange={(e) =>
@@ -807,9 +812,9 @@ function IntegrationsTab() {
                       }
                       className="mt-1 block w-full border border-border-strong rounded-lg px-3 py-2"
                     >
-                      <option value="both">Both</option>
-                      <option value="inbound">Inbound only</option>
-                      <option value="outbound">Outbound only</option>
+                      <option value="both">{ai('both')}</option>
+                      <option value="inbound">{ai('inbound')}</option>
+                      <option value="outbound">{ai('outbound')}</option>
                     </select>
                   </div>
                 </div>
@@ -820,7 +825,7 @@ function IntegrationsTab() {
                 onClick={() => setShowModal(false)}
                 className="flex-1 px-4 py-2 border border-border-strong text-secondary rounded-lg hover:bg-surface-hover"
               >
-                Cancel
+                {ai('cancel')}
               </button>
               <button
                 onClick={handleCreate}
@@ -838,8 +843,8 @@ function IntegrationsTab() {
       {integrations.length === 0 ? (
         <div className="bg-surface rounded-lg border p-8 text-center text-muted">
           <Plug className="h-12 w-12 mx-auto mb-4 opacity-50" />
-          <p className="mb-4">No integrations configured yet</p>
-          <p className="text-sm">Connect with external tools to enhance your workflow</p>
+          <p className="mb-4">{ai('noIntegrations')}</p>
+          <p className="text-sm">{ai('noIntegrationsHint')}</p>
         </div>
       ) : (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
@@ -876,11 +881,11 @@ function IntegrationsTab() {
                   {integration.sync_enabled && (
                     <span className="flex items-center gap-1">
                       <RefreshCw className="h-3 w-3" />
-                      Every {integration.sync_interval}min
+                      {ai('every', { minutes: integration.sync_interval })}
                     </span>
                   )}
                   {integration.last_sync_at && (
-                    <span>Last sync: {new Date(integration.last_sync_at).toLocaleString()}</span>
+                    <span>{ai('lastSync', { date: new Date(integration.last_sync_at).toLocaleString() })}</span>
                   )}
                 </div>
                 <div className="flex items-center gap-2 mt-4 pt-4 border-t">
@@ -888,19 +893,19 @@ function IntegrationsTab() {
                     onClick={() => handleTest(integration.id)}
                     className="flex-1 px-3 py-1.5 text-sm border border-border-strong rounded-lg hover:bg-surface-hover"
                   >
-                    Test Connection
+                    {ai('testConnection')}
                   </button>
                   <button
                     onClick={() => handleToggleActive(integration)}
                     className="p-1.5 text-muted hover:text-secondary"
-                    title={integration.is_active ? 'Deactivate' : 'Activate'}
+                    title={integration.is_active ? ai('deactivate') : ai('activate')}
                   >
                     {integration.is_active ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                   </button>
                   <button
                     onClick={() => handleDelete(integration.id)}
                     className="p-1.5 text-error hover:text-error"
-                    title="Delete"
+                    title={ai('delete')}
                   >
                     <Trash2 className="h-4 w-4" />
                   </button>
@@ -915,20 +920,21 @@ function IntegrationsTab() {
 }
 
 export default function IntegrationsPage() {
+  const ai = useT('adminIntegrations');
   const [activeTab, setActiveTab] = useState<'api-keys' | 'webhooks' | 'integrations'>('api-keys');
 
   const tabs = [
-    { id: 'api-keys' as const, name: 'API Keys', icon: Key },
-    { id: 'webhooks' as const, name: 'Webhooks', icon: Webhook },
-    { id: 'integrations' as const, name: 'Integrations', icon: Plug },
+    { id: 'api-keys' as const, name: 'tabKeys', icon: Key },
+    { id: 'webhooks' as const, name: 'tabWebhooks', icon: Webhook },
+    { id: 'integrations' as const, name: 'tabIntegrations', icon: Plug },
   ];
 
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-foreground">Integrations</h1>
+        <h1 className="text-2xl font-bold text-foreground">{ai('pageTitle')}</h1>
         <p className="text-secondary">
-          Manage API access, webhooks, and third-party integrations
+          {ai('pageSubtitle')}
         </p>
       </div>
 
@@ -948,7 +954,7 @@ export default function IntegrationsPage() {
                 }`}
               >
                 <Icon className="h-4 w-4" />
-                {tab.name}
+                {ai(tab.name)}
               </button>
             );
           })}

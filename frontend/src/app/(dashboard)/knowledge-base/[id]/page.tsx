@@ -1,5 +1,6 @@
 'use client';
 
+import { useT } from '@/i18n/useT';
 import { useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
@@ -38,10 +39,10 @@ import {
 } from '@/hooks/useApi';
 
 const statusColors: Record<string, { bg: string; text: string; label: string }> = {
-  draft: { bg: 'bg-surface-hover', text: 'text-foreground', label: 'Draft' },
-  review: { bg: 'bg-warning-subtle', text: 'text-warning', label: 'In Review' },
-  published: { bg: 'bg-success-subtle', text: 'text-success', label: 'Published' },
-  archived: { bg: 'bg-error-subtle', text: 'text-error', label: 'Archived' },
+  draft: { bg: 'bg-surface-hover', text: 'text-foreground', label: 'sDraft' },
+  review: { bg: 'bg-warning-subtle', text: 'text-warning', label: 'sReview' },
+  published: { bg: 'bg-success-subtle', text: 'text-success', label: 'sPublished' },
+  archived: { bg: 'bg-error-subtle', text: 'text-error', label: 'sArchived' },
 };
 
 const _typeLabels: Record<string, string> = {
@@ -54,6 +55,10 @@ const _typeLabels: Record<string, string> = {
 };
 
 export default function ArticleDetailPage() {
+  const kd = useT('kbDetail');
+  const kf = useT('kbForm');
+  const tm = useT('listpages2');
+  const tl = useT('listpages');
   const params = useParams();
   const _router = useRouter();
   const id = params.id as string;
@@ -223,7 +228,7 @@ export default function ArticleDetailPage() {
         <label className="text-xs font-medium text-muted uppercase">{label}</label>
         <div className="flex items-center justify-between">
           <span className={`text-sm ${value ? 'text-foreground' : 'text-muted italic'}`}>
-            {value || `Add ${label.toLowerCase()}`}
+            {value || kd('addField', { label: label.toLowerCase() })}
           </span>
           <Edit2 className="h-4 w-4 text-muted opacity-0 group-hover:opacity-100 transition-opacity" />
         </div>
@@ -235,7 +240,7 @@ export default function ArticleDetailPage() {
     return (
       <div className="flex items-center justify-center h-64">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
-        <span className="ml-2 text-muted">Loading article...</span>
+        <span className="ml-2 text-muted">{kd('loading')}</span>
       </div>
     );
   }
@@ -244,8 +249,8 @@ export default function ArticleDetailPage() {
     return (
       <div className="bg-error-subtle border border-error rounded-lg p-6 text-center">
         <AlertTriangle className="h-12 w-12 text-error mx-auto mb-4" />
-        <h3 className="text-lg font-medium text-error mb-2">Error loading article</h3>
-        <p className="text-error">Please try refreshing the page</p>
+        <h3 className="text-lg font-medium text-error mb-2">{kd('errorLoading')}</h3>
+        <p className="text-error">{kd('tryRefresh')}</p>
       </div>
     );
   }
@@ -264,7 +269,7 @@ export default function ArticleDetailPage() {
             <div className="flex items-center gap-3">
               <h1 className="text-2xl font-bold text-foreground">{article.article_number}</h1>
               <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${statusStyle.bg} ${statusStyle.text}`}>
-                {statusStyle.label}
+                {kd(statusStyle.label)}
               </span>
             </div>
             <p className="mt-1 text-sm text-muted">{article.title}</p>
@@ -276,31 +281,31 @@ export default function ArticleDetailPage() {
           {article.status === 'draft' && (
             <Button onClick={() => handleStatusAction('submitForReview')} disabled={submitForReview.isPending}>
               {submitForReview.isPending ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Send className="h-4 w-4 mr-2" />}
-              Submit for Review
+              {kd('submitForReview')}
             </Button>
           )}
           {article.status === 'review' && (
             <>
               <Button onClick={() => handleStatusAction('publish')} disabled={publishArticle.isPending}>
                 {publishArticle.isPending ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <CheckCircle className="h-4 w-4 mr-2" />}
-                Publish
+                {kd('publish')}
               </Button>
               <Button variant="outline" onClick={() => handleStatusAction('revertToDraft')} disabled={revertToDraft.isPending}>
                 <RotateCcw className="h-4 w-4 mr-2" />
-                Back to Draft
+                {kd('backToDraft')}
               </Button>
             </>
           )}
           {article.status === 'published' && (
             <Button variant="outline" onClick={() => handleStatusAction('archive')} disabled={archiveArticle.isPending}>
               <Archive className="h-4 w-4 mr-2" />
-              Archive
+              {kd('archive')}
             </Button>
           )}
           {article.status === 'archived' && (
             <Button onClick={() => handleStatusAction('revertToDraft')} disabled={revertToDraft.isPending}>
               <RotateCcw className="h-4 w-4 mr-2" />
-              Restore
+              {kd('restore')}
             </Button>
           )}
         </div>
@@ -321,7 +326,7 @@ export default function ArticleDetailPage() {
                 }`}
               >
                 <FileText className="h-4 w-4 inline-block mr-2" />
-                Content
+                {kd('tabContent')}
               </button>
               <button
                 onClick={() => setActiveTab('history')}
@@ -332,7 +337,7 @@ export default function ArticleDetailPage() {
                 }`}
               >
                 <History className="h-4 w-4 inline-block mr-2" />
-                History
+                {kd('tabHistory')}
               </button>
             </nav>
           </div>
@@ -341,23 +346,23 @@ export default function ArticleDetailPage() {
             <>
               {/* Title */}
               <div className="bg-surface rounded-xl shadow-sm p-6">
-                <EditableField field="title" value={article.title} label="Title" />
+                <EditableField field="title" value={article.title} label={kd('fTitle')} />
               </div>
 
               {/* Summary */}
               <div className="bg-surface rounded-xl shadow-sm p-6">
-                <EditableField field="summary" value={article.summary || ''} label="Summary" />
+                <EditableField field="summary" value={article.summary || ''} label={kd('fSummary')} />
               </div>
 
               {/* Content */}
               <div className="bg-surface rounded-xl shadow-sm p-6">
-                <EditableField field="content" value={article.content} label="Content" multiline />
+                <EditableField field="content" value={article.content} label={kd('fContent')} multiline />
               </div>
 
               {/* Feedback Section - Only for published articles */}
               {article.status === 'published' && (
                 <div className="bg-surface rounded-xl shadow-sm p-6">
-                  <h3 className="text-lg font-medium text-foreground mb-4">Was this article helpful?</h3>
+                  <h3 className="text-lg font-medium text-foreground mb-4">{kd('helpfulQ')}</h3>
                   <div className="space-y-4">
                     <div className="flex items-center gap-4">
                       <Button
@@ -367,7 +372,7 @@ export default function ArticleDetailPage() {
                         className="flex items-center"
                       >
                         <ThumbsUp className="h-4 w-4 mr-2" />
-                        Yes ({article.helpful_count || 0})
+                        {kd('yes')} ({article.helpful_count || 0})
                       </Button>
                       <Button
                         variant="outline"
@@ -376,13 +381,13 @@ export default function ArticleDetailPage() {
                         className="flex items-center"
                       >
                         <ThumbsDown className="h-4 w-4 mr-2" />
-                        No ({article.not_helpful_count || 0})
+                        {kd('no')} ({article.not_helpful_count || 0})
                       </Button>
                     </div>
                     <textarea
                       value={feedbackComment}
                       onChange={(e) => setFeedbackComment(e.target.value)}
-                      placeholder="Additional feedback (optional)"
+                      placeholder={kd('feedbackPh')}
                       rows={2}
                       className="w-full px-4 py-2 border border-border-strong rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary"
                     />
@@ -393,9 +398,9 @@ export default function ArticleDetailPage() {
           ) : (
             <div className="bg-surface rounded-xl shadow-sm">
               <div className="p-6">
-                <h3 className="text-lg font-medium text-foreground mb-4">Version History</h3>
+                <h3 className="text-lg font-medium text-foreground mb-4">{kd('versionHistory')}</h3>
                 {history.length === 0 ? (
-                  <p className="text-muted text-center py-4">No history available</p>
+                  <p className="text-muted text-center py-4">{kd('noHistory')}</p>
                 ) : (
                   <div className="space-y-4">
                     {history.map((entry: KBArticleHistory) => (
@@ -403,7 +408,7 @@ export default function ArticleDetailPage() {
                         <p className="text-sm font-medium text-foreground">{entry.action}</p>
                         <div className="flex items-center gap-2 text-xs text-muted mt-1">
                           <User className="h-3 w-3" />
-                          <span>{entry.changed_by_name || 'Unknown'}</span>
+                          <span>{entry.changed_by_name || kd('unknown')}</span>
                           <Clock className="h-3 w-3 ml-2" />
                           <span>{formatDate(entry.created_at)}</span>
                         </div>
@@ -420,42 +425,42 @@ export default function ArticleDetailPage() {
         <div className="space-y-6">
           {/* Details Card */}
           <div className="bg-surface rounded-xl shadow-sm p-6 space-y-4">
-            <h3 className="text-lg font-medium text-foreground">Details</h3>
+            <h3 className="text-lg font-medium text-foreground">{kd('details')}</h3>
 
             <EditableField
               field="type"
               value={article.type}
-              label="Type"
+              label={kd('fType')}
               type="select"
               options={[
-                { value: 'how_to', label: 'How-To' },
-                { value: 'troubleshooting', label: 'Troubleshooting' },
-                { value: 'faq', label: 'FAQ' },
-                { value: 'reference', label: 'Reference' },
-                { value: 'policy', label: 'Policy' },
-                { value: 'known_error', label: 'Known Error' },
+                { value: 'how_to', label: tm('howTo') },
+                { value: 'troubleshooting', label: tm('troubleshooting') },
+                { value: 'faq', label: tm('faq') },
+                { value: 'reference', label: tm('reference') },
+                { value: 'policy', label: tm('policy') },
+                { value: 'known_error', label: tl('knownError') },
               ]}
             />
 
             <EditableField
               field="visibility"
               value={article.visibility}
-              label="Visibility"
+              label={kd('fVisibility')}
               type="select"
               options={[
-                { value: 'public', label: 'Public' },
-                { value: 'internal', label: 'Internal' },
-                { value: 'restricted', label: 'Restricted' },
+                { value: 'public', label: kf('public') },
+                { value: 'internal', label: kf('internal') },
+                { value: 'restricted', label: kf('restricted') },
               ]}
             />
 
             <EditableField
               field="categoryId"
               value={article.category_id || ''}
-              label="Category"
+              label={kd('fCategory')}
               type="select"
               options={[
-                { value: '', label: 'No Category' },
+                { value: '', label: kf('noCategory') },
                 ...categories.map((cat: KBCategory) => ({ value: cat.id, label: cat.name })),
               ]}
             />
@@ -463,19 +468,19 @@ export default function ArticleDetailPage() {
             <EditableField
               field="tags"
               value={(article.tags || []).join(', ')}
-              label="Tags"
+              label={kd('fTags')}
             />
           </div>
 
           {/* Author Card */}
           <div className="bg-surface rounded-xl shadow-sm p-6 space-y-4">
-            <h3 className="text-lg font-medium text-foreground">Author</h3>
+            <h3 className="text-lg font-medium text-foreground">{kd('author')}</h3>
             <div className="flex items-center">
               <div className="h-10 w-10 rounded-full bg-surface-hover flex items-center justify-center text-lg font-medium text-secondary">
                 {article.author_name?.charAt(0) || '?'}
               </div>
               <div className="ml-3">
-                <p className="text-sm font-medium text-foreground">{article.author_name || 'Unknown'}</p>
+                <p className="text-sm font-medium text-foreground">{article.author_name || kd('unknown')}</p>
                 <p className="text-xs text-muted">{article.author_email}</p>
               </div>
             </div>
@@ -483,31 +488,31 @@ export default function ArticleDetailPage() {
 
           {/* Statistics Card */}
           <div className="bg-surface rounded-xl shadow-sm p-6 space-y-4">
-            <h3 className="text-lg font-medium text-foreground">Statistics</h3>
+            <h3 className="text-lg font-medium text-foreground">{kd('statistics')}</h3>
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <p className="text-xs text-muted uppercase">Views</p>
+                <p className="text-xs text-muted uppercase">{kd('views')}</p>
                 <div className="flex items-center mt-1">
                   <Eye className="h-4 w-4 text-muted mr-2" />
                   <span className="text-lg font-semibold text-foreground">{article.view_count || 0}</span>
                 </div>
               </div>
               <div>
-                <p className="text-xs text-muted uppercase">Helpful</p>
+                <p className="text-xs text-muted uppercase">{kd('helpful')}</p>
                 <div className="flex items-center mt-1">
                   <ThumbsUp className="h-4 w-4 text-success mr-2" />
                   <span className="text-lg font-semibold text-foreground">{article.helpful_count || 0}</span>
                 </div>
               </div>
               <div>
-                <p className="text-xs text-muted uppercase">Not Helpful</p>
+                <p className="text-xs text-muted uppercase">{kd('notHelpful')}</p>
                 <div className="flex items-center mt-1">
                   <ThumbsDown className="h-4 w-4 text-error mr-2" />
                   <span className="text-lg font-semibold text-foreground">{article.not_helpful_count || 0}</span>
                 </div>
               </div>
               <div>
-                <p className="text-xs text-muted uppercase">Version</p>
+                <p className="text-xs text-muted uppercase">{kd('version')}</p>
                 <span className="text-lg font-semibold text-foreground">v{article.version}</span>
               </div>
             </div>
@@ -515,18 +520,18 @@ export default function ArticleDetailPage() {
 
           {/* Timestamps Card */}
           <div className="bg-surface rounded-xl shadow-sm p-6 space-y-3">
-            <h3 className="text-lg font-medium text-foreground">Timestamps</h3>
+            <h3 className="text-lg font-medium text-foreground">{kd('timestamps')}</h3>
             <div className="text-sm">
-              <p className="text-muted">Created</p>
+              <p className="text-muted">{kd('created')}</p>
               <p className="text-foreground">{formatDate(article.created_at)}</p>
             </div>
             <div className="text-sm">
-              <p className="text-muted">Last Updated</p>
+              <p className="text-muted">{kd('lastUpdated')}</p>
               <p className="text-foreground">{formatDate(article.updated_at)}</p>
             </div>
             {article.published_at && (
               <div className="text-sm">
-                <p className="text-muted">Published</p>
+                <p className="text-muted">{kd('published')}</p>
                 <p className="text-foreground">{formatDate(article.published_at)}</p>
               </div>
             )}
@@ -535,10 +540,10 @@ export default function ArticleDetailPage() {
           {/* Related Items */}
           {(article.related_problem_id || article.related_issue_id) && (
             <div className="bg-surface rounded-xl shadow-sm p-6 space-y-3">
-              <h3 className="text-lg font-medium text-foreground">Related Items</h3>
+              <h3 className="text-lg font-medium text-foreground">{kd('relatedItems')}</h3>
               {article.related_problem_id && (
                 <div className="text-sm">
-                  <p className="text-muted">Related Problem</p>
+                  <p className="text-muted">{kd('relatedProblem')}</p>
                   <Link href={`/problems/${article.related_problem_id}`} className="text-primary hover:text-primary">
                     {article.related_problem_number} - {article.related_problem_title}
                   </Link>
@@ -546,7 +551,7 @@ export default function ArticleDetailPage() {
               )}
               {article.related_issue_id && (
                 <div className="text-sm">
-                  <p className="text-muted">Related Issue</p>
+                  <p className="text-muted">{kd('relatedIssue')}</p>
                   <Link href={`/issues/${article.related_issue_id}`} className="text-primary hover:text-primary">
                     {article.related_issue_number} - {article.related_issue_title}
                   </Link>

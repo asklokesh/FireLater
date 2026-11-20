@@ -1,5 +1,6 @@
 'use client';
 
+import { useT } from '@/i18n/useT';
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
@@ -142,6 +143,7 @@ const operatorLabels: Record<FilterOperator, string> = {
 };
 
 export default function ReportBuilderPage() {
+  const rb = useT('reportBuilder');
   const router = useRouter();
 
   // Report metadata
@@ -251,7 +253,7 @@ export default function ReportBuilderPage() {
       setPreviewData(data.rows || []);
     } catch (err) {
       console.error('Preview failed:', err);
-      setError('Failed to generate preview');
+      setError(rb('previewFailed'));
     } finally {
       setIsPreviewLoading(false);
     }
@@ -260,15 +262,15 @@ export default function ReportBuilderPage() {
   // Save
   const handleSave = async () => {
     if (!reportName.trim()) {
-      setError('Report name is required');
+      setError(rb('nameRequired'));
       return;
     }
     if (!selectedSource) {
-      setError('Please select a data source');
+      setError(rb('selectSource'));
       return;
     }
     if (selectedColumns.length === 0) {
-      setError('Please select at least one column');
+      setError(rb('selectColumn'));
       return;
     }
 
@@ -302,7 +304,7 @@ export default function ReportBuilderPage() {
       router.push(`/reports/${template.id}`);
     } catch (err) {
       console.error('Save failed:', err);
-      setError('Failed to save report template');
+      setError(rb('saveFailed'));
     } finally {
       setIsSaving(false);
     }
@@ -323,9 +325,9 @@ export default function ReportBuilderPage() {
             </Button>
           </Link>
           <div>
-            <h1 className="text-2xl font-bold text-foreground">Report Builder</h1>
+            <h1 className="text-2xl font-bold text-foreground">{rb('title')}</h1>
             <p className="mt-1 text-sm text-muted">
-              Create custom reports with drag-and-drop simplicity
+              {rb('subtitle')}
             </p>
           </div>
         </div>
@@ -340,7 +342,7 @@ export default function ReportBuilderPage() {
             ) : (
               <Play className="h-4 w-4 mr-2" />
             )}
-            Preview
+            {rb('preview')}
           </Button>
           <Button onClick={handleSave} disabled={isSaving}>
             {isSaving ? (
@@ -348,7 +350,7 @@ export default function ReportBuilderPage() {
             ) : (
               <Save className="h-4 w-4 mr-2" />
             )}
-            Save Report
+            {rb('save')}
           </Button>
         </div>
       </div>
@@ -366,20 +368,20 @@ export default function ReportBuilderPage() {
         <div className="lg:col-span-1 space-y-6">
           {/* Report Info */}
           <div className="bg-surface rounded-lg shadow p-4 space-y-4">
-            <h2 className="font-medium text-foreground">Report Details</h2>
+            <h2 className="font-medium text-foreground">{rb('details')}</h2>
             <Input
-              label="Report Name"
+              label={rb('name')}
               value={reportName}
               onChange={(e) => setReportName(e.target.value)}
-              placeholder="My Custom Report"
+              placeholder={rb('namePh')}
               required
             />
             <div>
-              <label className="block text-sm font-medium text-secondary mb-1">Description</label>
+              <label className="block text-sm font-medium text-secondary mb-1">{rb('description')}</label>
               <textarea
                 value={reportDescription}
                 onChange={(e) => setReportDescription(e.target.value)}
-                placeholder="Describe what this report shows..."
+                placeholder={rb('descPh')}
                 rows={2}
                 className="w-full px-3 py-2 border border-border-strong rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary"
               />
@@ -390,7 +392,7 @@ export default function ReportBuilderPage() {
           <div className="bg-surface rounded-lg shadow p-4">
             <h2 className="font-medium text-foreground flex items-center mb-4">
               <Database className="h-4 w-4 mr-2 text-muted" />
-              Data Source
+              {rb('dataSource')}
             </h2>
             <div className="space-y-2">
               {dataSources.map((source) => (
@@ -419,7 +421,7 @@ export default function ReportBuilderPage() {
           <div className="bg-surface rounded-lg shadow p-4">
             <h2 className="font-medium text-foreground flex items-center mb-4">
               <FileText className="h-4 w-4 mr-2 text-muted" />
-              Output Format
+              {rb('outputFormat')}
             </h2>
             <div className="flex flex-wrap gap-2">
               {['pdf', 'csv', 'xlsx', 'json'].map((format) => (
@@ -455,8 +457,8 @@ export default function ReportBuilderPage() {
             >
               <span className="font-medium text-foreground flex items-center">
                 <Table className="h-4 w-4 mr-2 text-muted" />
-                Columns
-                <span className="ml-2 text-sm text-muted">({selectedColumns.length} selected)</span>
+                {rb('columns')}
+                <span className="ml-2 text-sm text-muted">{rb('selectedCount', { count: selectedColumns.length })}</span>
               </span>
               {expandedSection === 'columns' ? (
                 <ChevronDown className="h-4 w-4 text-muted" />
@@ -469,7 +471,7 @@ export default function ReportBuilderPage() {
                 <div className="grid grid-cols-2 gap-4">
                   {/* Available Fields */}
                   <div>
-                    <h3 className="text-sm font-medium text-secondary mb-2">Available Fields</h3>
+                    <h3 className="text-sm font-medium text-secondary mb-2">{rb('availableFields')}</h3>
                     <div className="border border-border rounded-lg max-h-64 overflow-y-auto">
                       {selectedSource.fields
                         .filter((f) => !selectedColumns.find((c) => c.field === f.name))
@@ -488,11 +490,11 @@ export default function ReportBuilderPage() {
 
                   {/* Selected Columns */}
                   <div>
-                    <h3 className="text-sm font-medium text-secondary mb-2">Selected Columns</h3>
+                    <h3 className="text-sm font-medium text-secondary mb-2">{rb('selectedColumns')}</h3>
                     <div className="border border-border rounded-lg max-h-64 overflow-y-auto">
                       {selectedColumns.length === 0 ? (
                         <div className="p-4 text-center text-sm text-muted">
-                          Click fields to add them
+                          {rb('clickToAdd')}
                         </div>
                       ) : (
                         selectedColumns.map((col) => {
@@ -516,11 +518,11 @@ export default function ReportBuilderPage() {
                                     className="text-xs border border-border rounded px-1 py-0.5"
                                   >
                                     <option value="none">-</option>
-                                    <option value="count">Count</option>
-                                    <option value="sum">Sum</option>
-                                    <option value="avg">Avg</option>
-                                    <option value="min">Min</option>
-                                    <option value="max">Max</option>
+                                    <option value="count">{rb('count')}</option>
+                                    <option value="sum">{rb('sum')}</option>
+                                    <option value="avg">{rb('avg')}</option>
+                                    <option value="min">{rb('min')}</option>
+                                    <option value="max">{rb('max')}</option>
                                   </select>
                                 )}
                                 <button
@@ -549,8 +551,8 @@ export default function ReportBuilderPage() {
             >
               <span className="font-medium text-foreground flex items-center">
                 <Filter className="h-4 w-4 mr-2 text-muted" />
-                Filters
-                <span className="ml-2 text-sm text-muted">({filters.length} active)</span>
+                {rb('filters')}
+                <span className="ml-2 text-sm text-muted">{rb('activeCount', { count: filters.length })}</span>
               </span>
               {expandedSection === 'filters' ? (
                 <ChevronDown className="h-4 w-4 text-muted" />
@@ -590,7 +592,7 @@ export default function ReportBuilderPage() {
                       type="text"
                       value={filter.value}
                       onChange={(e) => updateFilter(filter.id, { value: e.target.value })}
-                      placeholder="Value"
+                      placeholder={rb('valuePh')}
                       className="flex-1 px-2 py-1.5 border border-border rounded text-sm"
                     />
                     <button
@@ -603,7 +605,7 @@ export default function ReportBuilderPage() {
                 ))}
                 <Button variant="outline" size="sm" onClick={addFilter}>
                   <Plus className="h-3 w-3 mr-1" />
-                  Add Filter
+                  {rb('addFilter')}
                 </Button>
               </div>
             )}
@@ -616,7 +618,7 @@ export default function ReportBuilderPage() {
               className="w-full px-4 py-3 flex items-center justify-between text-left"
             >
               <span className="font-medium text-foreground flex items-center">
-                Sort Order
+                {rb('sortOrder')}
                 {sortConfig && (
                   <span className="ml-2 text-sm text-muted">
                     by {getFieldByName(sortConfig.field)?.label} ({sortConfig.direction})
@@ -643,7 +645,7 @@ export default function ReportBuilderPage() {
                     }}
                     className="flex-1 px-2 py-1.5 border border-border rounded text-sm"
                   >
-                    <option value="">No sorting</option>
+                    <option value="">{rb('noSorting')}</option>
                     {selectedSource.fields
                       .filter((f) => f.sortable)
                       .map((f) => (
@@ -660,8 +662,8 @@ export default function ReportBuilderPage() {
                       }
                       className="px-2 py-1.5 border border-border rounded text-sm"
                     >
-                      <option value="asc">Ascending</option>
-                      <option value="desc">Descending</option>
+                      <option value="asc">{rb('asc')}</option>
+                      <option value="desc">{rb('desc')}</option>
                     </select>
                   )}
                 </div>
@@ -674,17 +676,17 @@ export default function ReportBuilderPage() {
         <div className="lg:col-span-1">
           <div className="bg-surface rounded-lg shadow sticky top-4">
             <div className="px-4 py-3 border-b border-border">
-              <h2 className="font-medium text-foreground">Preview</h2>
+              <h2 className="font-medium text-foreground">{rb('previewTitle')}</h2>
             </div>
             <div className="p-4">
               {previewData === null ? (
                 <div className="text-center py-8 text-muted text-sm">
                   <Table className="h-8 w-8 mx-auto mb-2 text-muted" />
-                  <p>Configure your report and click Preview to see results</p>
+                  <p>{rb('configureHint')}</p>
                 </div>
               ) : previewData.length === 0 ? (
                 <div className="text-center py-8 text-muted text-sm">
-                  No data matches your criteria
+                  {rb('noMatch')}
                 </div>
               ) : (
                 <div className="overflow-x-auto">

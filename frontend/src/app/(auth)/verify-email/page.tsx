@@ -1,5 +1,6 @@
 'use client';
 
+import { useT } from '@/i18n/useT';
 import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
@@ -9,6 +10,7 @@ import { Input } from '@/components/ui/input';
 import { authApi } from '@/lib/api';
 
 function VerifyEmailContent() {
+  const t = useT('auth.verifyEmail');
   const searchParams = useSearchParams();
   const router = useRouter();
   const [status, setStatus] = useState<'verifying' | 'success' | 'error' | 'resend'>('verifying');
@@ -96,10 +98,10 @@ function VerifyEmailContent() {
           </div>
           <h2 className="text-2xl font-semibold tracking-tight text-foreground mb-2">Email Verified</h2>
           <p className="text-secondary mb-6">
-            Your email has been verified successfully. Redirecting to login...
+            {t('verified')}
           </p>
           <Link href="/login">
-            <Button>Go to Login</Button>
+            <Button>{t('goToLogin')}</Button>
           </Link>
         </div>
       </div>
@@ -121,14 +123,14 @@ function VerifyEmailContent() {
           </div>
           <h2 className="text-2xl font-semibold tracking-tight text-foreground mb-2">Verification Failed</h2>
           <p className="text-secondary mb-6">
-            {error || 'The verification link is invalid or has expired.'}
+            {error || t('invalid')}
           </p>
           <div className="space-y-4">
             <Button onClick={() => setStatus('resend')} variant="outline">
-              Request New Verification Link
+              {t('requestNew')}
             </Button>
             <Link href="/login">
-              <Button variant="ghost">Back to Login</Button>
+              <Button variant="ghost">{t('back')}</Button>
             </Link>
           </div>
         </div>
@@ -151,10 +153,10 @@ function VerifyEmailContent() {
             <Mail className="h-16 w-16 text-primary" />
           </div>
           <h2 className="mt-4 text-center text-2xl font-semibold tracking-tight text-foreground">
-            Verify Your Email
+            {t('title')}
           </h2>
           <p className="mt-2 text-center text-sm text-secondary">
-            Enter your email to receive a new verification link
+            {t('subtitle')}
           </p>
         </div>
 
@@ -162,10 +164,10 @@ function VerifyEmailContent() {
           <div className="mt-8 bg-success-subtle border border-success/20 rounded-lg p-4 text-center">
             <CheckCircle className="h-8 w-8 text-success mx-auto mb-2" />
             <p className="text-success">
-              If your email is registered and not yet verified, a new verification link has been sent.
+              {t('sent')}
             </p>
             <Link href="/login" className="mt-4 inline-block">
-              <Button>Back to Login</Button>
+              <Button>{t('back')}</Button>
             </Link>
           </div>
         ) : (
@@ -180,7 +182,7 @@ function VerifyEmailContent() {
             <div className="space-y-4">
               <div>
                 <label htmlFor="tenant" className="text-sm font-medium text-secondary mb-1.5 block">
-                  Organization Slug
+                  {t('organization')}
                 </label>
                 <Input
                   id="tenant"
@@ -195,7 +197,7 @@ function VerifyEmailContent() {
 
               <div>
                 <label htmlFor="email" className="text-sm font-medium text-secondary mb-1.5 block">
-                  Email Address
+                  {t('email')}
                 </label>
                 <Input
                   id="email"
@@ -210,12 +212,12 @@ function VerifyEmailContent() {
             </div>
 
             <Button type="submit" isLoading={isLoading}>
-              Send Verification Link
+              {t('submit')}
             </Button>
 
             <p className="text-center text-sm text-secondary">
               <Link href="/login" className="font-medium text-primary hover:text-primary-hover transition-colors">
-                Back to Login
+                {t('back')}
               </Link>
             </p>
           </form>

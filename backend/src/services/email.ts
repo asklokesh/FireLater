@@ -2,6 +2,7 @@ import sgMail from '@sendgrid/mail';
 import Handlebars from 'handlebars';
 import { config } from '../config/index.js';
 import { logger } from '../utils/logger.js';
+import { normalizeLocale, resolveLocale, t } from '../lib/i18n.js';
 
 // ============================================
 // EMAIL SENDING SERVICE
@@ -354,8 +355,10 @@ class EmailService {
     email: string,
     name: string,
     token: string,
-    tenantSlug: string
+    tenantSlug: string,
+    locale?: string
   ): Promise<boolean> {
+    const lang = resolveLocale({ user: normalizeLocale(locale) });
     const resetUrl = `${this.frontendUrl}/reset-password?token=${token}&tenant=${tenantSlug}`;
 
     const html = templates.passwordReset({
@@ -366,9 +369,9 @@ class EmailService {
 
     return this.send({
       to: email,
-      subject: `Reset Your Password - ${this.appName}`,
+      subject: `${t(lang, 'email.passwordReset.subject')} - ${this.appName}`,
       html,
-      text: `Reset your password by visiting: ${resetUrl}. This link expires in 1 hour.`,
+      text: t(lang, 'email.passwordReset.text', { url: resetUrl, hours: 1 }),
     });
   }
 
@@ -376,8 +379,10 @@ class EmailService {
     email: string,
     name: string,
     token: string,
-    tenantSlug: string
+    tenantSlug: string,
+    locale?: string
   ): Promise<boolean> {
+    const lang = resolveLocale({ user: normalizeLocale(locale) });
     const verifyUrl = `${this.frontendUrl}/verify-email?token=${token}&tenant=${tenantSlug}`;
 
     const html = templates.emailVerification({
@@ -388,9 +393,9 @@ class EmailService {
 
     return this.send({
       to: email,
-      subject: `Verify Your Email - ${this.appName}`,
+      subject: `${t(lang, 'email.verifyEmail.subject')} - ${this.appName}`,
       html,
-      text: `Verify your email by visiting: ${verifyUrl}. This link expires in 24 hours.`,
+      text: t(lang, 'email.verifyEmail.text', { url: verifyUrl, hours: 24 }),
     });
   }
 

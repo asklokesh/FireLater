@@ -37,6 +37,7 @@ import { migration034RegulatorySla } from './034_regulatory_sla.js';
 import { migration035PrivilegedGrants } from './035_privileged_grants.js';
 import { migration036VendorRisk } from './036_vendor_risk.js';
 import { migration037AdvancedSearch } from './037_advanced_search.js';
+import { migration038UserLocale } from './038_user_locale.js';
 
 interface Migration {
   name: string;
@@ -81,6 +82,7 @@ const migrations: Migration[] = [
   { name: '035_privileged_grants', up: migration035PrivilegedGrants },
   { name: '036_vendor_risk', up: migration036VendorRisk },
   { name: '037_advanced_search', up: migration037AdvancedSearch },
+  { name: '038_user_locale', up: migration038UserLocale },
 ];
 
 async function ensureMigrationsTable() {

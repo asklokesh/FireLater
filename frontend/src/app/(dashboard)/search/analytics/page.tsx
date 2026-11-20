@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useT } from '@/i18n/useT';
 import Link from 'next/link';
 import { AlertTriangle, ArrowLeft, Loader2 } from 'lucide-react';
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
@@ -31,6 +32,7 @@ function QueryTable({
   empty: string;
   showAvg?: boolean;
 }) {
+  const ta = useT('searchAnalytics');
   return (
     <div className="bg-surface rounded-xl shadow-sm p-4">
       <h2 className="text-sm font-semibold text-foreground mb-3">{title}</h2>
@@ -40,9 +42,9 @@ function QueryTable({
         <table className="w-full text-sm">
           <thead>
             <tr className="text-left text-xs text-muted">
-              <th className="pb-2 font-medium">Query</th>
-              <th className="pb-2 font-medium text-right">Searches</th>
-              {showAvg && <th className="pb-2 font-medium text-right">Avg results</th>}
+              <th className="pb-2 font-medium">{ta('query')}</th>
+              <th className="pb-2 font-medium text-right">{ta('searches')}</th>
+              {showAvg && <th className="pb-2 font-medium text-right">{ta('avgResults')}</th>}
             </tr>
           </thead>
           <tbody>
@@ -65,6 +67,7 @@ function QueryTable({
 }
 
 export default function SearchAnalyticsPage() {
+  const ta = useT('searchAnalytics');
   const [days, setDays] = useState<number>(30);
   const { data, isLoading, error } = useSearchAnalytics(days);
 
@@ -74,12 +77,12 @@ export default function SearchAnalyticsPage() {
         <div>
           <Link href="/search" className="inline-flex items-center gap-1 text-sm text-muted hover:text-foreground">
             <ArrowLeft className="h-4 w-4" />
-            Back to search
+            {ta('back')}
           </Link>
-          <h1 className="mt-1 text-2xl font-bold text-foreground">Search Analytics</h1>
-          <p className="mt-1 text-sm text-muted">What people search for and where search comes up empty.</p>
+          <h1 className="mt-1 text-2xl font-bold text-foreground">{ta('title')}</h1>
+          <p className="mt-1 text-sm text-muted">{ta('subtitle')}</p>
         </div>
-        <div className="flex rounded-lg border border-border-strong overflow-hidden" role="group" aria-label="Time range">
+        <div className="flex rounded-lg border border-border-strong overflow-hidden" role="group" aria-label={ta('timeRange')}>
           {RANGES.map((r) => (
             <button
               key={r}
@@ -88,7 +91,7 @@ export default function SearchAnalyticsPage() {
               onClick={() => setDays(r)}
               className={`px-3 py-1.5 text-sm ${days === r ? 'bg-primary text-primary-fg' : 'bg-surface text-secondary hover:bg-surface-hover'}`}
             >
-              {r} days
+              {r} {ta('daysSuffix')}
             </button>
           ))}
         </div>
@@ -96,35 +99,35 @@ export default function SearchAnalyticsPage() {
 
       {isLoading && (
         <div className="flex justify-center p-10">
-          <Loader2 className="h-6 w-6 animate-spin text-muted" aria-label="Loading analytics" />
+          <Loader2 className="h-6 w-6 animate-spin text-muted" aria-label={ta('loading')} />
         </div>
       )}
 
       {error && (
         <div className="bg-error-subtle rounded-xl p-6 text-center" role="alert">
           <AlertTriangle className="h-8 w-8 text-error mx-auto mb-2" />
-          <p className="text-error">Could not load search analytics. You need report or admin read access.</p>
+          <p className="text-error">{ta('loadError')}</p>
         </div>
       )}
 
       {data && (
         <>
           <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
-            <StatTile label="Searches" value={data.totals.searches.toLocaleString()} />
-            <StatTile label="Unique users" value={data.totals.uniqueUsers.toLocaleString()} />
-            <StatTile label="Avg results" value={data.totals.avgResults.toLocaleString()} />
+            <StatTile label={ta('searches')} value={data.totals.searches.toLocaleString()} />
+            <StatTile label={ta('uniqueUsers')} value={data.totals.uniqueUsers.toLocaleString()} />
+            <StatTile label={ta('avgResults')} value={data.totals.avgResults.toLocaleString()} />
             <StatTile
-              label="Zero-result rate"
+              label={ta('zeroRate')}
               value={`${(data.totals.zeroResultRate * 100).toFixed(1)}%`}
-              hint={`${data.totals.zeroResultSearches.toLocaleString()} searches`}
+              hint={`${data.totals.zeroResultSearches.toLocaleString()} ${ta('searchesHint')}`}
             />
-            <StatTile label="Avg response" value={`${data.totals.avgDurationMs} ms`} />
+            <StatTile label={ta('avgResponse')} value={`${data.totals.avgDurationMs} ms`} />
           </div>
 
           <div className="bg-surface rounded-xl shadow-sm p-4">
-            <h2 className="text-sm font-semibold text-foreground mb-3">Searches per day</h2>
+            <h2 className="text-sm font-semibold text-foreground mb-3">{ta('perDay')}</h2>
             {data.searchesPerDay.length === 0 ? (
-              <p className="text-sm text-muted">No searches in this period.</p>
+              <p className="text-sm text-muted">{ta('noneInPeriod')}</p>
             ) : (
               <div className="h-64" data-testid="searches-per-day-chart">
                 <ResponsiveContainer width="100%" height="100%">
@@ -133,7 +136,7 @@ export default function SearchAnalyticsPage() {
                     <XAxis dataKey="day" tick={{ fontSize: 12 }} tickLine={false} />
                     <YAxis allowDecimals={false} tick={{ fontSize: 12 }} tickLine={false} axisLine={false} width={36} />
                     <Tooltip />
-                    <Bar dataKey="count" name="Searches" fill="#c96442" radius={[4, 4, 0, 0]} />
+                    <Bar dataKey="count" name={ta('searches')} fill="#c96442" radius={[4, 4, 0, 0]} />
                   </BarChart>
                 </ResponsiveContainer>
               </div>
@@ -141,19 +144,19 @@ export default function SearchAnalyticsPage() {
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <QueryTable title="Top searches" rows={data.topQueries} empty="No searches yet." showAvg />
+            <QueryTable title={ta('top')} rows={data.topQueries} empty={ta('noneYet')} showAvg />
             <QueryTable
-              title="Searches with no results"
+              title={ta('zeroResults')}
               rows={data.zeroResultQueries}
-              empty="Every search found something."
+              empty={ta('everyFound')}
             />
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <div className="bg-surface rounded-xl shadow-sm p-4">
-              <h2 className="text-sm font-semibold text-foreground mb-3">Record types searched</h2>
+              <h2 className="text-sm font-semibold text-foreground mb-3">{ta('recordTypes')}</h2>
               {data.entityTypeUsage.length === 0 ? (
-                <p className="text-sm text-muted">No data.</p>
+                <p className="text-sm text-muted">{ta('noData')}</p>
               ) : (
                 <ul className="space-y-2">
                   {data.entityTypeUsage.map((u) => {
@@ -174,9 +177,9 @@ export default function SearchAnalyticsPage() {
               )}
             </div>
             <div className="bg-surface rounded-xl shadow-sm p-4">
-              <h2 className="text-sm font-semibold text-foreground mb-3">Most used saved searches</h2>
+              <h2 className="text-sm font-semibold text-foreground mb-3">{ta('topSaved')}</h2>
               {data.topTemplates.length === 0 ? (
-                <p className="text-sm text-muted">No saved searches have been used yet.</p>
+                <p className="text-sm text-muted">{ta('noSavedUsed')}</p>
               ) : (
                 <ul className="space-y-1.5 text-sm">
                   {data.topTemplates.map((t) => (

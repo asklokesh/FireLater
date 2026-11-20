@@ -1,5 +1,6 @@
 'use client';
 
+import { useT, useOptionalIntl } from '@/i18n/useT';
 import { useState, useEffect, useCallback } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
@@ -71,12 +72,15 @@ interface GroupData {
 }
 
 const rotationTypeLabels: Record<string, string> = {
-  daily: 'Daily',
-  weekly: 'Weekly',
-  custom: 'Custom',
+  daily: 'rDaily',
+  weekly: 'rWeekly',
+  custom: 'rCustom',
 };
 
 export default function ScheduleEditorPage() {
+  const se = useT('scheduleEditor');
+  const intl = useOptionalIntl();
+  const loc = intl?.locale ?? 'en-US';
   const params = useParams();
   const scheduleId = params.id as string;
 
@@ -143,11 +147,11 @@ export default function ScheduleEditorPage() {
       });
     } catch (err) {
       console.error('Failed to load schedule:', err);
-      setError('Failed to load schedule');
+      setError(se('loadFailed'));
     } finally {
       setIsLoading(false);
     }
-  }, [scheduleId]);
+  }, [scheduleId, se]);
 
   const loadRotationMembers = useCallback(async () => {
     try {
@@ -241,7 +245,7 @@ export default function ScheduleEditorPage() {
   };
 
   const handleRemoveMember = async (rotationId: string) => {
-    if (!confirm('Are you sure you want to remove this member from the rotation?')) return;
+    if (!confirm(se('confirmRemove'))) return;
 
     try {
       await oncallApi.removeFromRotation(scheduleId, rotationId);
@@ -307,7 +311,7 @@ export default function ScheduleEditorPage() {
   };
 
   const _formatDate = (date: Date) => {
-    return date.toLocaleDateString('en-US', {
+    return date.toLocaleDateString(loc, {
       weekday: 'short',
       month: 'short',
       day: 'numeric',
@@ -331,9 +335,9 @@ export default function ScheduleEditorPage() {
     return (
       <div className="bg-error-subtle border border-red-200 rounded-xl p-6 text-center">
         <AlertCircle className="h-12 w-12 bg-error-subtle0 mx-auto mb-4" />
-        <h3 className="text-lg font-medium text-error mb-2">{error || 'Schedule not found'}</h3>
+        <h3 className="text-lg font-medium text-error mb-2">{error || se('notFound')}</h3>
         <Link href="/oncall">
-          <Button variant="outline">Back to On-Call</Button>
+          <Button variant="outline">{se('backToOncall')}</Button>
         </Link>
       </div>
     );
@@ -370,11 +374,11 @@ export default function ScheduleEditorPage() {
               <span className={`px-2.5 py-0.5 rounded-full text-xs font-medium ${
                 schedule.is_active ? 'bg-success-subtle text-success' : 'bg-background text-foreground'
               }`}>
-                {schedule.is_active ? 'Active' : 'Inactive'}
+                {schedule.is_active ? se('active') : se('inactive')}
               </span>
             </div>
             <p className="mt-1 text-sm text-muted">
-              {rotationTypeLabels[schedule.rotation_type]} rotation | {schedule.timezone}
+              {se('rotationSuffix', { type: se(rotationTypeLabels[schedule.rotation_type]), timezone: schedule.timezone })}
             </p>
           </div>
         </div>
@@ -383,17 +387,17 @@ export default function ScheduleEditorPage() {
             <>
               <Button variant="outline" onClick={() => setIsEditing(false)}>
                 <X className="h-4 w-4 mr-2" />
-                Cancel
+                {se('cancel')}
               </Button>
               <Button onClick={handleSave} disabled={isSaving}>
                 {isSaving ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Save className="h-4 w-4 mr-2" />}
-                Save
+                {se('save')}
               </Button>
             </>
           ) : (
             <Button onClick={() => setIsEditing(true)}>
               <Edit className="h-4 w-4 mr-2" />
-              Edit Schedule
+              {se('editSchedule')}
             </Button>
           )}
         </div>
@@ -410,7 +414,7 @@ export default function ScheduleEditorPage() {
                   <ChevronLeft className="h-5 w-5 text-secondary" />
                 </button>
                 <h2 className="text-lg font-medium text-foreground">
-                  {weekDays[0].toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+                  {weekDays[0].toLocaleDateString(loc, { month: 'long', year: 'numeric' })}
                 </h2>
                 <button onClick={() => navigateWeek('next')} className="p-1 hover:bg-background rounded">
                   <ChevronRight className="h-5 w-5 text-secondary" />
@@ -418,11 +422,11 @@ export default function ScheduleEditorPage() {
               </div>
               <div className="flex items-center space-x-2">
                 <Button variant="outline" size="sm" onClick={() => setCurrentDate(new Date())}>
-                  Today
+                  {se('today')}
                 </Button>
                 <Button onClick={() => setShowOverrideModal(true)}>
                   <Plus className="h-4 w-4 mr-2" />
-                  Add Override
+                  {se('addOverride')}
                 </Button>
               </div>
             </div>
@@ -442,7 +446,7 @@ export default function ScheduleEditorPage() {
                       }`}
                     >
                       <div className="text-xs text-muted">
-                        {day.toLocaleDateString('en-US', { weekday: 'short' })}
+                        {day.toLocaleDateString(loc, { weekday: 'short' })}
                       </div>
                       <div className={`text-lg font-medium ${today ? 'text-primary' : 'text-foreground'}`}>
                         {day.getDate()}
@@ -453,7 +457,7 @@ export default function ScheduleEditorPage() {
                         }`}>
                           <div className="font-medium">{shift.user_name}</div>
                           {shift.is_override && (
-                            <div className="text-xs opacity-75">Override</div>
+                            <div className="text-xs opacity-75">{se('override')}</div>
                           )}
                         </div>
                       )}
@@ -467,10 +471,10 @@ export default function ScheduleEditorPage() {
           {/* Edit Form (when editing) */}
           {isEditing && (
             <div className="bg-surface rounded-xl shadow-sm p-6">
-              <h3 className="text-lg font-medium text-foreground mb-4">Schedule Settings</h3>
+              <h3 className="text-lg font-medium text-foreground mb-4">{se('settings')}</h3>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-secondary mb-1">Description</label>
+                  <label className="block text-sm font-medium text-secondary mb-1">{se('description')}</label>
                   <textarea
                     value={editForm.description}
                     onChange={(e) => setEditForm((p) => ({ ...p, description: e.target.value }))}
@@ -479,33 +483,33 @@ export default function ScheduleEditorPage() {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-secondary mb-1">Timezone</label>
+                  <label className="block text-sm font-medium text-secondary mb-1">{se('timezone')}</label>
                   <select
                     value={editForm.timezone}
                     onChange={(e) => setEditForm((p) => ({ ...p, timezone: e.target.value }))}
                     className="w-full px-3 py-2 border border-border-strong rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
                   >
-                    <option value="America/New_York">Eastern Time</option>
-                    <option value="America/Chicago">Central Time</option>
-                    <option value="America/Denver">Mountain Time</option>
-                    <option value="America/Los_Angeles">Pacific Time</option>
+                    <option value="America/New_York">{se('tzEastern')}</option>
+                    <option value="America/Chicago">{se('tzCentral')}</option>
+                    <option value="America/Denver">{se('tzMountain')}</option>
+                    <option value="America/Los_Angeles">{se('tzPacific')}</option>
                     <option value="UTC">UTC</option>
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-secondary mb-1">Rotation Type</label>
+                  <label className="block text-sm font-medium text-secondary mb-1">{se('rotationType')}</label>
                   <select
                     value={editForm.rotation_type}
                     onChange={(e) => setEditForm((p) => ({ ...p, rotation_type: e.target.value as typeof editForm.rotation_type }))}
                     className="w-full px-3 py-2 border border-border-strong rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
                   >
-                    <option value="daily">Daily</option>
-                    <option value="weekly">Weekly</option>
-                    <option value="custom">Custom</option>
+                    <option value="daily">{se('rDaily')}</option>
+                    <option value="weekly">{se('rWeekly')}</option>
+                    <option value="custom">{se('rCustom')}</option>
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-secondary mb-1">Handoff Time</label>
+                  <label className="block text-sm font-medium text-secondary mb-1">{se('handoffTime')}</label>
                   <input
                     type="time"
                     value={editForm.handoff_time}
@@ -515,30 +519,30 @@ export default function ScheduleEditorPage() {
                 </div>
                 {editForm.rotation_type === 'weekly' && (
                   <div>
-                    <label className="block text-sm font-medium text-secondary mb-1">Handoff Day</label>
+                    <label className="block text-sm font-medium text-secondary mb-1">{se('handoffDay')}</label>
                     <select
                       value={editForm.handoff_day}
                       onChange={(e) => setEditForm((p) => ({ ...p, handoff_day: parseInt(e.target.value) }))}
                       className="w-full px-3 py-2 border border-border-strong rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
                     >
-                      <option value={0}>Sunday</option>
-                      <option value={1}>Monday</option>
-                      <option value={2}>Tuesday</option>
-                      <option value={3}>Wednesday</option>
-                      <option value={4}>Thursday</option>
-                      <option value={5}>Friday</option>
-                      <option value={6}>Saturday</option>
+                      <option value={0}>{se('sun')}</option>
+                      <option value={1}>{se('mon')}</option>
+                      <option value={2}>{se('tue')}</option>
+                      <option value={3}>{se('wed')}</option>
+                      <option value={4}>{se('thu')}</option>
+                      <option value={5}>{se('fri')}</option>
+                      <option value={6}>{se('sat')}</option>
                     </select>
                   </div>
                 )}
                 <div>
-                  <label className="block text-sm font-medium text-secondary mb-1">Assignment Group</label>
+                  <label className="block text-sm font-medium text-secondary mb-1">{se('assignmentGroup')}</label>
                   <select
                     value={editForm.group_id}
                     onChange={(e) => setEditForm((p) => ({ ...p, group_id: e.target.value }))}
                     className="w-full px-3 py-2 border border-border-strong rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
                   >
-                    <option value="">No group</option>
+                    <option value="">{se('noGroup')}</option>
                     {groups.map((group) => (
                       <option key={group.id} value={group.id}>{group.name}</option>
                     ))}
@@ -553,7 +557,7 @@ export default function ScheduleEditorPage() {
                     className="h-4 w-4 text-primary rounded mr-2"
                   />
                   <label htmlFor="is_active" className="text-sm font-medium text-secondary">
-                    Schedule is active
+                    {se('isActive')}
                   </label>
                 </div>
               </div>
@@ -565,7 +569,7 @@ export default function ScheduleEditorPage() {
         <div className="space-y-6">
           <div className="bg-surface rounded-xl shadow-sm">
             <div className="px-6 py-4 border-b border-border flex items-center justify-between">
-              <h3 className="text-lg font-medium text-foreground">Rotation Members</h3>
+              <h3 className="text-lg font-medium text-foreground">{se('rotationMembers')}</h3>
               <Button size="sm" onClick={() => setShowAddMember(true)}>
                 <Plus className="h-4 w-4" />
               </Button>
@@ -574,10 +578,10 @@ export default function ScheduleEditorPage() {
               {rotationMembers.length === 0 ? (
                 <div className="text-center py-8">
                   <Users className="h-12 w-12 text-muted mx-auto mb-4" />
-                  <p className="text-muted">No members in rotation</p>
+                  <p className="text-muted">{se('noMembers')}</p>
                   <Button variant="outline" className="mt-4" onClick={() => setShowAddMember(true)}>
                     <Plus className="h-4 w-4 mr-2" />
-                    Add Member
+                    {se('addMember')}
                   </Button>
                 </div>
               ) : (
@@ -612,7 +616,7 @@ export default function ScheduleEditorPage() {
           {/* Who's On-Call Now */}
           <div className="bg-surface rounded-xl shadow-sm">
             <div className="px-6 py-4 border-b border-border">
-              <h3 className="text-lg font-medium text-foreground">Currently On-Call</h3>
+              <h3 className="text-lg font-medium text-foreground">{se('currentlyOncall')}</h3>
             </div>
             <div className="p-6">
               {shifts.find((s) => {
@@ -634,7 +638,7 @@ export default function ScheduleEditorPage() {
                         <div className="text-sm text-muted">{currentShift.user_email}</div>
                         {currentShift.is_override && (
                           <span className="text-xs bg-warning-subtle text-warning px-2 py-0.5 rounded">
-                            Override
+                            {se('override')}
                           </span>
                         )}
                       </div>
@@ -642,7 +646,7 @@ export default function ScheduleEditorPage() {
                   );
                 })()
               ) : (
-                <p className="text-muted text-center">No one currently on-call</p>
+                <p className="text-muted text-center">{se('noOneOncall')}</p>
               )}
             </div>
           </div>
@@ -650,30 +654,30 @@ export default function ScheduleEditorPage() {
           {/* Schedule Info */}
           <div className="bg-surface rounded-xl shadow-sm">
             <div className="px-6 py-4 border-b border-border">
-              <h3 className="text-lg font-medium text-foreground">Schedule Info</h3>
+              <h3 className="text-lg font-medium text-foreground">{se('scheduleInfo')}</h3>
             </div>
             <div className="p-6 space-y-4">
               <div className="flex items-center justify-between text-sm">
-                <span className="text-muted">Rotation</span>
+                <span className="text-muted">{se('rotation')}</span>
                 <span className="font-medium text-foreground flex items-center">
                   <RefreshCw className="h-4 w-4 mr-1 text-muted" />
-                  {rotationTypeLabels[schedule.rotation_type]}
+                  {se(rotationTypeLabels[schedule.rotation_type])}
                 </span>
               </div>
               <div className="flex items-center justify-between text-sm">
-                <span className="text-muted">Handoff</span>
+                <span className="text-muted">{se('handoff')}</span>
                 <span className="font-medium text-foreground flex items-center">
                   <Clock className="h-4 w-4 mr-1 text-muted" />
                   {schedule.handoff_time}
                 </span>
               </div>
               <div className="flex items-center justify-between text-sm">
-                <span className="text-muted">Timezone</span>
+                <span className="text-muted">{se('timezone')}</span>
                 <span className="font-medium text-foreground">{schedule.timezone}</span>
               </div>
               {schedule.group_name && (
                 <div className="flex items-center justify-between text-sm">
-                  <span className="text-muted">Group</span>
+                  <span className="text-muted">{se('group')}</span>
                   <span className="font-medium text-foreground flex items-center">
                     <Users className="h-4 w-4 mr-1 text-muted" />
                     {schedule.group_name}
@@ -689,15 +693,15 @@ export default function ScheduleEditorPage() {
       {showAddMember && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-surface rounded-xl shadow-sm-xl max-w-md w-full mx-4 p-6">
-            <h2 className="text-lg font-semibold text-foreground mb-4">Add Rotation Member</h2>
+            <h2 className="text-lg font-semibold text-foreground mb-4">{se('addMemberTitle')}</h2>
             <div className="mb-4">
-              <label className="block text-sm font-medium text-secondary mb-1">Select User</label>
+              <label className="block text-sm font-medium text-secondary mb-1">{se('selectUser')}</label>
               <select
                 value={selectedUserId}
                 onChange={(e) => setSelectedUserId(e.target.value)}
                 className="w-full px-3 py-2 border border-border-strong rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
               >
-                <option value="">Select a user...</option>
+                <option value="">{se('selectUserPh')}</option>
                 {availableUsers.map((user) => (
                   <option key={user.id} value={user.id}>
                     {user.name} ({user.email})
@@ -707,11 +711,11 @@ export default function ScheduleEditorPage() {
             </div>
             <div className="flex justify-end space-x-3">
               <Button variant="outline" onClick={() => setShowAddMember(false)}>
-                Cancel
+                {se('cancel')}
               </Button>
               <Button onClick={handleAddMember} disabled={!selectedUserId || isAddingMember}>
                 {isAddingMember ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Plus className="h-4 w-4 mr-2" />}
-                Add Member
+                {se('addMember')}
               </Button>
             </div>
           </div>
@@ -722,19 +726,19 @@ export default function ScheduleEditorPage() {
       {showOverrideModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-surface rounded-xl shadow-sm-xl max-w-md w-full mx-4 p-6">
-            <h2 className="text-lg font-semibold text-foreground mb-4">Create Override</h2>
+            <h2 className="text-lg font-semibold text-foreground mb-4">{se('createOverride')}</h2>
             <p className="text-sm text-secondary mb-4">
-              Create a temporary override to assign someone else to be on-call for a specific period.
+              {se('overrideHelp')}
             </p>
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-secondary mb-1">User</label>
+                <label className="block text-sm font-medium text-secondary mb-1">{se('user')}</label>
                 <select
                   value={overrideForm.userId}
                   onChange={(e) => setOverrideForm((p) => ({ ...p, userId: e.target.value }))}
                   className="w-full px-3 py-2 border border-border-strong rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
                 >
-                  <option value="">Select a user...</option>
+                  <option value="">{se('selectUserPh')}</option>
                   {users.map((user) => (
                     <option key={user.id} value={user.id}>
                       {user.name}
@@ -744,7 +748,7 @@ export default function ScheduleEditorPage() {
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-secondary mb-1">Start Date</label>
+                  <label className="block text-sm font-medium text-secondary mb-1">{se('startDate')}</label>
                   <input
                     type="date"
                     value={overrideForm.startDate}
@@ -753,7 +757,7 @@ export default function ScheduleEditorPage() {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-secondary mb-1">Start Time</label>
+                  <label className="block text-sm font-medium text-secondary mb-1">{se('startTime')}</label>
                   <input
                     type="time"
                     value={overrideForm.startTime}
@@ -764,7 +768,7 @@ export default function ScheduleEditorPage() {
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-secondary mb-1">End Date</label>
+                  <label className="block text-sm font-medium text-secondary mb-1">{se('endDate')}</label>
                   <input
                     type="date"
                     value={overrideForm.endDate}
@@ -773,7 +777,7 @@ export default function ScheduleEditorPage() {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-secondary mb-1">End Time</label>
+                  <label className="block text-sm font-medium text-secondary mb-1">{se('endTime')}</label>
                   <input
                     type="time"
                     value={overrideForm.endTime}
@@ -783,26 +787,26 @@ export default function ScheduleEditorPage() {
                 </div>
               </div>
               <div>
-                <label className="block text-sm font-medium text-secondary mb-1">Notes (optional)</label>
+                <label className="block text-sm font-medium text-secondary mb-1">{se('notesOptional')}</label>
                 <textarea
                   value={overrideForm.notes}
                   onChange={(e) => setOverrideForm((p) => ({ ...p, notes: e.target.value }))}
                   rows={2}
-                  placeholder="Reason for override..."
+                  placeholder={se('overridePh')}
                   className="w-full px-3 py-2 border border-border-strong rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
                 />
               </div>
             </div>
             <div className="flex justify-end space-x-3 mt-6">
               <Button variant="outline" onClick={() => setShowOverrideModal(false)}>
-                Cancel
+                {se('cancel')}
               </Button>
               <Button
                 onClick={handleCreateOverride}
                 disabled={!overrideForm.userId || !overrideForm.startDate || !overrideForm.endDate || isCreatingOverride}
               >
                 {isCreatingOverride ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Plus className="h-4 w-4 mr-2" />}
-                Create Override
+                {se('createOverrideBtn')}
               </Button>
             </div>
           </div>

@@ -1,5 +1,6 @@
 'use client';
 
+import { useT } from '@/i18n/useT';
 import { useState, useEffect } from 'react';
 import { Building2, Plus, Eye, Edit2, AlertCircle, RefreshCw, ChevronDown, ChevronUp } from 'lucide-react';
 import { api } from '@/lib/api';
@@ -39,6 +40,8 @@ interface RiskSummary {
 }
 
 export default function VendorRiskPage() {
+  const vr = useT('vendorRisk');
+  const ti = useT('issues');
   const [vendors, setVendors] = useState<Vendor[]>([]);
   const [summary, setSummary] = useState<RiskSummary>({
     total: 0,
@@ -71,7 +74,7 @@ export default function VendorRiskPage() {
       setVendors(vendorsRes.data.data || vendorsRes.data);
       setSummary(summaryRes.data);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load vendors');
+      setError(err instanceof Error ? err.message : vr('loadVendorsFailed'));
     } finally {
       setLoading(false);
     }
@@ -85,7 +88,7 @@ export default function VendorRiskPage() {
         [vendorId]: res.data.data || res.data,
       }));
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load reviews');
+      setError(err instanceof Error ? err.message : vr('loadReviewsFailed'));
     }
   };
 
@@ -95,7 +98,7 @@ export default function VendorRiskPage() {
       setShowAddModal(false);
       await loadData();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to add vendor');
+      setError(err instanceof Error ? err.message : vr('addVendorFailed'));
     }
   };
 
@@ -113,7 +116,7 @@ export default function VendorRiskPage() {
       setShowAddReview(null);
       await loadReviews(vendorId);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to add review');
+      setError(err instanceof Error ? err.message : vr('addReviewFailed'));
     }
   };
 
@@ -125,7 +128,7 @@ export default function VendorRiskPage() {
       });
       await loadData();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to update vendor');
+      setError(err instanceof Error ? err.message : vr('updateVendorFailed'));
     }
   };
 
@@ -141,8 +144,8 @@ export default function VendorRiskPage() {
         <div className="flex items-center space-x-3">
           <Building2 className="h-8 w-8 text-foreground" />
           <div>
-            <h1 className="text-2xl font-semibold text-foreground">Vendor Risk Register</h1>
-            <p className="mt-1 text-sm text-muted">Third-party vendor risk management (FFIEC, GLBA, SOC2)</p>
+            <h1 className="text-2xl font-semibold text-foreground">{vr('title')}</h1>
+            <p className="mt-1 text-sm text-muted">{vr('subtitle')}</p>
           </div>
         </div>
         <button
@@ -150,15 +153,15 @@ export default function VendorRiskPage() {
           className="inline-flex items-center px-4 py-2 border border-transparent rounded-xl shadow-sm-sm text-sm font-medium text-white bg-primary hover:hover:bg-primary-hover"
         >
           <Plus className="h-4 w-4 mr-2" />
-          Add Vendor
+          {vr('addVendor')}
         </button>
       </div>
 
       <div className="grid grid-cols-4 gap-4">
-        <StatCard label="Total Vendors" value={summary.total} />
-        <StatCard label="Critical/High Risk" value={(summary.byRiskTier['critical'] || 0) + (summary.byRiskTier['high'] || 0)} highlight="red" />
-        <StatCard label="Overdue Reviews" value={summary.overdueReviews} highlight="orange" />
-        <StatCard label="Mission Critical" value={summary.byCriticality['mission_critical'] || 0} highlight="red" />
+        <StatCard label={vr('totalVendors')} value={summary.total} />
+        <StatCard label={vr('criticalHigh')} value={(summary.byRiskTier['critical'] || 0) + (summary.byRiskTier['high'] || 0)} highlight="red" />
+        <StatCard label={vr('overdue')} value={summary.overdueReviews} highlight="orange" />
+        <StatCard label={vr('missionCritical')} value={summary.byCriticality['mission_critical'] || 0} highlight="red" />
       </div>
 
       {error && (
@@ -167,7 +170,7 @@ export default function VendorRiskPage() {
           <div className="flex-1">
             <p className="text-sm font-medium text-error">{error}</p>
             <button onClick={() => setError(null)} className="text-xs text-error mt-1">
-              Dismiss
+              {vr('dismiss')}
             </button>
           </div>
         </div>
@@ -176,7 +179,7 @@ export default function VendorRiskPage() {
       <div className="bg-surface shadow-sm rounded-xl p-4 flex items-center space-x-4">
         <input
           type="text"
-          placeholder="Search vendors by name..."
+          placeholder={vr('searchPh')}
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
           className="flex-1 px-3 py-2 border border-border-strong rounded-xl shadow-sm-sm focus:border-primary focus:ring-primary/20 focus:border-primary sm:text-sm"
@@ -186,11 +189,11 @@ export default function VendorRiskPage() {
           onChange={(e) => setRiskFilter(e.target.value)}
           className="px-3 py-2 border border-border-strong rounded-xl shadow-sm-sm focus:border-primary focus:ring-primary/20 focus:border-primary sm:text-sm"
         >
-          <option value="">All Risk Tiers</option>
-          <option value="critical">Critical</option>
-          <option value="high">High</option>
-          <option value="medium">Medium</option>
-          <option value="low">Low</option>
+          <option value="">{vr('allTiers')}</option>
+          <option value="critical">{ti('priorityCritical')}</option>
+          <option value="high">{ti('priorityHigh')}</option>
+          <option value="medium">{ti('priorityMedium')}</option>
+          <option value="low">{ti('priorityLow')}</option>
         </select>
       </div>
 
@@ -201,8 +204,8 @@ export default function VendorRiskPage() {
       ) : filteredVendors.length === 0 ? (
         <div className="text-center py-12 bg-surface border rounded-xl">
           <Building2 className="mx-auto h-12 w-12 text-muted" />
-          <h3 className="mt-2 text-sm font-medium text-foreground">No vendors found</h3>
-          <p className="mt-1 text-sm text-muted">Get started by adding your first vendor.</p>
+          <h3 className="mt-2 text-sm font-medium text-foreground">{vr('noVendors')}</h3>
+          <p className="mt-1 text-sm text-muted">{vr('noVendorsHint')}</p>
         </div>
       ) : (
         <div className="space-y-2">
@@ -241,7 +244,7 @@ export default function VendorRiskPage() {
                       <CriticalityBadge criticality={vendor.criticality} />
                     )}
                     <div className="text-sm text-muted">
-                      {vendor.primary_contact_email && `${vendor.primary_contact_name || 'Contact'}: ${vendor.primary_contact_email}`}
+                      {vendor.primary_contact_email && `${vendor.primary_contact_name || vr('contact')}: ${vendor.primary_contact_email}`}
                     </div>
                     <button
                       onClick={(e) => {
@@ -254,7 +257,7 @@ export default function VendorRiskPage() {
                           : 'bg-background text-foreground'
                       }`}
                     >
-                      {vendor.is_active ? 'Active' : 'Inactive'}
+                      {vendor.is_active ? vr('active') : vr('inactive')}
                     </button>
                   </div>
                 </div>
@@ -265,13 +268,13 @@ export default function VendorRiskPage() {
                   <div className="grid grid-cols-2 gap-4">
                     {vendor.website && (
                       <div>
-                        <p className="text-xs font-medium text-secondary">Website</p>
+                        <p className="text-xs font-medium text-secondary">{vr('website')}</p>
                         <p className="text-sm text-primary mt-1">{vendor.website}</p>
                       </div>
                     )}
                     {vendor.contract_review_date && (
                       <div>
-                        <p className="text-xs font-medium text-secondary">Last Contract Review</p>
+                        <p className="text-xs font-medium text-secondary">{vr('lastContract')}</p>
                         <p className="text-sm text-foreground mt-1">
                           {new Date(vendor.contract_review_date).toLocaleDateString()}
                         </p>
@@ -279,7 +282,7 @@ export default function VendorRiskPage() {
                     )}
                     {vendor.assessment_review_date && (
                       <div>
-                        <p className="text-xs font-medium text-secondary">Last Assessment Review</p>
+                        <p className="text-xs font-medium text-secondary">{vr('lastAssessment')}</p>
                         <p className="text-sm text-foreground mt-1">
                           {new Date(vendor.assessment_review_date).toLocaleDateString()}
                         </p>
@@ -289,19 +292,19 @@ export default function VendorRiskPage() {
 
                   {vendor.notes && (
                     <div>
-                      <p className="text-xs font-medium text-secondary">Notes</p>
+                      <p className="text-xs font-medium text-secondary">{vr('notes')}</p>
                       <p className="text-sm text-secondary mt-1">{vendor.notes}</p>
                     </div>
                   )}
 
                   <div className="border-t border-border pt-4">
                     <div className="flex items-center justify-between mb-3">
-                      <h4 className="text-sm font-medium text-foreground">Reviews</h4>
+                      <h4 className="text-sm font-medium text-foreground">{vr('reviews')}</h4>
                       <button
                         onClick={() => setShowAddReview(vendor.id)}
                         className="text-xs px-2 py-1 border border-primary text-primary rounded hover:bg-surface-hover"
                       >
-                        Add Review
+                        {vr('addReview')}
                       </button>
                     </div>
 
@@ -325,7 +328,7 @@ export default function VendorRiskPage() {
                         ))}
                       </div>
                     ) : (
-                      <p className="text-sm text-muted">No reviews scheduled yet.</p>
+                      <p className="text-sm text-muted">{vr('noReviews')}</p>
                     )}
                   </div>
                 </div>
@@ -403,6 +406,7 @@ function ReviewForm({
   onSubmit: (data: { review_type: string; due_date: string }) => void;
   onCancel: () => void;
 }) {
+  const vr = useT('vendorRisk');
   const [formData, setFormData] = useState({
     review_type: 'contract',
     due_date: new Date().toISOString().split('T')[0],
@@ -418,20 +422,20 @@ function ReviewForm({
     >
       <div className="grid grid-cols-2 gap-3">
         <div>
-          <label className="text-xs font-medium text-secondary">Review Type</label>
+          <label className="text-xs font-medium text-secondary">{vr('reviewType')}</label>
           <select
             value={formData.review_type}
             onChange={(e) => setFormData({ ...formData, review_type: e.target.value })}
             className="mt-1 block w-full rounded-xl border-border-strong text-sm"
           >
-            <option value="contract">Contract Review</option>
-            <option value="security_assessment">Security Assessment</option>
-            <option value="due_diligence">Due Diligence</option>
-            <option value="annual_review">Annual Review</option>
+            <option value="contract">{vr('contractReview')}</option>
+            <option value="security_assessment">{vr('securityAssessment')}</option>
+            <option value="due_diligence">{vr('dueDiligence')}</option>
+            <option value="annual_review">{vr('annualReview')}</option>
           </select>
         </div>
         <div>
-          <label className="text-xs font-medium text-secondary">Due Date</label>
+          <label className="text-xs font-medium text-secondary">{vr('dueDate')}</label>
           <input
             type="date"
             value={formData.due_date}
@@ -446,13 +450,13 @@ function ReviewForm({
           onClick={onCancel}
           className="text-xs px-3 py-1 border border-border-strong rounded hover:bg-surface-hover"
         >
-          Cancel
+          {vr('cancel')}
         </button>
         <button
           type="submit"
           className="text-xs px-3 py-1 bg-primary text-white rounded hover:hover:bg-primary-hover"
         >
-          Add Review
+          {vr('addReview')}
         </button>
       </div>
     </form>
@@ -466,6 +470,8 @@ function AddVendorModal({
   onSubmit: (data: Partial<Vendor>) => void;
   onClose: () => void;
 }) {
+  const vr = useT('vendorRisk');
+  const ti = useT('issues');
   const [formData, setFormData] = useState({
     name: '',
     description: '',
@@ -499,11 +505,11 @@ function AddVendorModal({
         </div>
 
         <div className="inline-block align-bottom bg-surface rounded-xl px-4 pt-5 pb-4 text-left overflow-hidden shadow-sm-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full sm:p-6">
-          <h3 className="text-lg font-medium text-foreground mb-4">Add New Vendor</h3>
+          <h3 className="text-lg font-medium text-foreground mb-4">{vr('addNewVendor')}</h3>
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-secondary">Name</label>
+              <label className="block text-sm font-medium text-secondary">{vr('name')}</label>
               <input
                 type="text"
                 required
@@ -514,7 +520,7 @@ function AddVendorModal({
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-secondary">Description</label>
+              <label className="block text-sm font-medium text-secondary">{vr('description')}</label>
               <textarea
                 value={formData.description}
                 onChange={(e) => setFormData({ ...formData, description: e.target.value })}
@@ -535,37 +541,37 @@ function AddVendorModal({
 
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-secondary">Risk Tier</label>
+                <label className="block text-sm font-medium text-secondary">{vr('riskTier')}</label>
                 <select
                   value={formData.risk_tier}
                   onChange={(e) => setFormData({ ...formData, risk_tier: e.target.value as Vendor['risk_tier'] })}
                   className="mt-1 block w-full rounded-xl border-border-strong shadow-sm-sm focus:border-primary focus:ring-primary/20 focus:border-primary sm:text-sm"
                 >
-                  <option value="critical">Critical</option>
-                  <option value="high">High</option>
-                  <option value="medium">Medium</option>
-                  <option value="low">Low</option>
+                  <option value="critical">{ti('priorityCritical')}</option>
+                  <option value="high">{ti('priorityHigh')}</option>
+                  <option value="medium">{ti('priorityMedium')}</option>
+                  <option value="low">{ti('priorityLow')}</option>
                 </select>
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-secondary">Criticality</label>
+                <label className="block text-sm font-medium text-secondary">{vr('criticality')}</label>
                 <select
                   value={formData.criticality}
                   onChange={(e) => setFormData({ ...formData, criticality: e.target.value })}
                   className="mt-1 block w-full rounded-xl border-border-strong shadow-sm-sm focus:border-primary focus:ring-primary/20 focus:border-primary sm:text-sm"
                 >
-                  <option value="">None</option>
-                  <option value="mission_critical">Mission Critical</option>
-                  <option value="important">Important</option>
-                  <option value="standard">Standard</option>
-                  <option value="non_critical">Non Critical</option>
+                  <option value="">{vr('none')}</option>
+                  <option value="mission_critical">{vr('missionCriticalOpt')}</option>
+                  <option value="important">{vr('important')}</option>
+                  <option value="standard">{vr('standard')}</option>
+                  <option value="non_critical">{vr('nonCritical')}</option>
                 </select>
               </div>
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-secondary">Primary Contact Name</label>
+              <label className="block text-sm font-medium text-secondary">{vr('contactName')}</label>
               <input
                 type="text"
                 value={formData.primary_contact_name}
@@ -575,7 +581,7 @@ function AddVendorModal({
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-secondary">Primary Contact Email</label>
+              <label className="block text-sm font-medium text-secondary">{vr('contactEmail')}</label>
               <input
                 type="email"
                 value={formData.primary_contact_email}
@@ -585,7 +591,7 @@ function AddVendorModal({
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-secondary">Notes</label>
+              <label className="block text-sm font-medium text-secondary">{vr('notes')}</label>
               <textarea
                 value={formData.notes}
                 onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
@@ -600,14 +606,14 @@ function AddVendorModal({
                 onClick={onClose}
                 className="px-4 py-2 border border-border-strong rounded-xl shadow-sm-sm text-sm font-medium text-secondary bg-surface hover:bg-surface-hover"
               >
-                Cancel
+                {vr('cancel')}
               </button>
               <button
                 type="submit"
                 disabled={loading}
                 className="px-4 py-2 border border-transparent rounded-xl shadow-sm-sm text-sm font-medium text-white bg-primary hover:hover:bg-primary-hover disabled:opacity-50"
               >
-                {loading ? 'Adding...' : 'Add Vendor'}
+                {loading ? vr('adding') : vr('addVendor')}
               </button>
             </div>
           </form>

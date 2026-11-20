@@ -1,5 +1,6 @@
 'use client';
 
+import { useT } from '@/i18n/useT';
 import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
@@ -43,17 +44,17 @@ const statusColors: Record<string, { bg: string; text: string }> = {
 };
 
 const statusLabels: Record<string, string> = {
-  draft: 'Draft',
-  submitted: 'Submitted',
-  review: 'In Review',
-  approved: 'Approved',
-  rejected: 'Rejected',
-  scheduled: 'Scheduled',
-  implementing: 'Implementing',
-  completed: 'Completed',
-  failed: 'Failed',
-  rolled_back: 'Rolled Back',
-  cancelled: 'Cancelled',
+  draft: 'sDraft',
+  submitted: 'sSubmitted',
+  review: 'sReview',
+  approved: 'sApproved',
+  rejected: 'sRejected',
+  scheduled: 'sScheduled',
+  implementing: 'sImplementing',
+  completed: 'sCompleted',
+  failed: 'sFailed',
+  rolled_back: 'sRolledBack',
+  cancelled: 'sCancelled',
 };
 
 const typeColors: Record<string, { bg: string; text: string }> = {
@@ -70,6 +71,8 @@ const riskColors: Record<string, { bg: string; text: string }> = {
 };
 
 export default function ChangeDetailPage() {
+  const cd = useT('changeDetail');
+  const ti = useT('issues');
   const params = useParams();
   const router = useRouter();
   const [newComment, setNewComment] = useState('');
@@ -153,7 +156,7 @@ export default function ChangeDetailPage() {
       });
       setIsEditing(false);
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed to update change';
+      const message = err instanceof Error ? err.message : cd('updateFailed');
       setError(message);
     }
   };
@@ -216,7 +219,7 @@ export default function ChangeDetailPage() {
       setNewComment('');
     } catch (err) {
       console.error('Failed to add comment:', err);
-      setError(err instanceof Error ? err.message : 'Failed to add comment. Please try again.');
+      setError(err instanceof Error ? err.message : cd('commentFailed'));
     }
   };
 
@@ -232,7 +235,7 @@ export default function ChangeDetailPage() {
           await changesApi.approve(changeId);
           break;
         case 'reject': {
-          const reason = window.prompt('Please provide a reason for rejection:');
+          const reason = window.prompt(cd('promptReject'));
           if (!reason) {
             setActionLoading(null);
             return;
@@ -250,7 +253,7 @@ export default function ChangeDetailPage() {
           await changesApi.complete(changeId);
           break;
         case 'fail': {
-          const failNotes = window.prompt('Please describe what went wrong:');
+          const failNotes = window.prompt(cd('promptFail'));
           if (!failNotes) {
             setActionLoading(null);
             return;
@@ -259,7 +262,7 @@ export default function ChangeDetailPage() {
           break;
         }
         case 'rollback': {
-          const rollbackNotes = window.prompt('Please describe the rollback:');
+          const rollbackNotes = window.prompt(cd('promptRollback'));
           if (!rollbackNotes) {
             setActionLoading(null);
             return;
@@ -268,7 +271,7 @@ export default function ChangeDetailPage() {
           break;
         }
         case 'cancel': {
-          const cancelReason = window.prompt('Please provide a reason for cancellation (optional):');
+          const cancelReason = window.prompt(cd('promptCancel'));
           await changesApi.cancel(changeId, cancelReason || undefined);
           break;
         }
@@ -276,7 +279,7 @@ export default function ChangeDetailPage() {
       refetch();
     } catch (err) {
       console.error(`Failed to ${action} change:`, err);
-      setError(err instanceof Error ? err.message : `Failed to ${action} change. Please try again.`);
+      setError(err instanceof Error ? err.message : cd('actionFailed'));
     } finally {
       setActionLoading(null);
     }
@@ -294,9 +297,9 @@ export default function ChangeDetailPage() {
     return (
       <div className="flex flex-col items-center justify-center h-64">
         <AlertCircle className="h-12 w-12 text-error mb-4" />
-        <h2 className="text-xl font-semibold text-foreground mb-2">Change not found</h2>
-        <p className="text-muted mb-4">The change request you&apos;re looking for doesn&apos;t exist or you don&apos;t have access to it.</p>
-        <Button onClick={() => router.push('/changes')}>Back to Changes</Button>
+        <h2 className="text-xl font-semibold text-foreground mb-2">{cd('notFound')}</h2>
+        <p className="text-muted mb-4">{cd('notFoundBody')}</p>
+        <Button onClick={() => router.push('/changes')}>{cd('backToChanges')}</Button>
       </div>
     );
   }
@@ -329,7 +332,7 @@ export default function ChangeDetailPage() {
                 {riskLevel.charAt(0).toUpperCase() + riskLevel.slice(1)} Risk
               </span>
               <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${statusStyle.bg} ${statusStyle.text}`}>
-                {statusLabels[status] || status}
+                {statusLabels[status] ? cd(statusLabels[status]) : status}
               </span>
             </div>
             {isEditing ? (
@@ -337,7 +340,7 @@ export default function ChangeDetailPage() {
                 value={editForm.title}
                 onChange={(e) => setEditForm({ ...editForm, title: e.target.value })}
                 className="mt-1 text-lg"
-                placeholder="Change title"
+                placeholder={cd('titlePh')}
               />
             ) : (
               <p className="mt-1 text-lg text-secondary">{change.title}</p>
@@ -349,7 +352,7 @@ export default function ChangeDetailPage() {
             <>
               <Button variant="outline" onClick={handleCancelEdit} disabled={updateChange.isPending}>
                 <X className="h-4 w-4 mr-2" />
-                Cancel
+                {cd('cancel')}
               </Button>
               <Button onClick={handleSaveEdit} disabled={updateChange.isPending}>
                 {updateChange.isPending ? (
@@ -357,14 +360,14 @@ export default function ChangeDetailPage() {
                 ) : (
                   <Save className="h-4 w-4 mr-2" />
                 )}
-                Save
+                {cd('save')}
               </Button>
             </>
           ) : (
             <>
               <Button variant="outline" onClick={() => setIsEditing(true)}>
                 <Edit className="h-4 w-4 mr-2" />
-                Edit
+                {cd('edit')}
               </Button>
               <Button variant="outline">
                 <MoreHorizontal className="h-4 w-4" />
@@ -388,95 +391,95 @@ export default function ChangeDetailPage() {
         <div className="lg:col-span-2 space-y-6">
           {/* Description */}
           <div className="bg-surface rounded-xl shadow-sm p-6">
-            <h2 className="text-lg font-semibold text-foreground mb-4">Description</h2>
+            <h2 className="text-lg font-semibold text-foreground mb-4">{cd('description')}</h2>
             {isEditing ? (
               <textarea
                 value={editForm.description}
                 onChange={(e) => setEditForm({ ...editForm, description: e.target.value })}
                 className="w-full px-3 py-2 border border-border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary"
                 rows={4}
-                placeholder="Describe the change..."
+                placeholder={cd('descPh')}
               />
             ) : (
-              <p className="text-secondary whitespace-pre-wrap">{change.description || 'No description provided.'}</p>
+              <p className="text-secondary whitespace-pre-wrap">{change.description || cd('noDescription')}</p>
             )}
           </div>
 
           {/* Justification */}
           <div className="bg-surface rounded-xl shadow-sm p-6">
-            <h2 className="text-lg font-semibold text-foreground mb-4">Justification</h2>
+            <h2 className="text-lg font-semibold text-foreground mb-4">{cd('justification')}</h2>
             {isEditing ? (
               <textarea
                 value={editForm.justification}
                 onChange={(e) => setEditForm({ ...editForm, justification: e.target.value })}
                 className="w-full px-3 py-2 border border-border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary"
                 rows={3}
-                placeholder="Why is this change needed?"
+                placeholder={cd('justPh')}
               />
             ) : (
-              <p className="text-secondary whitespace-pre-wrap">{change.justification || 'No justification provided.'}</p>
+              <p className="text-secondary whitespace-pre-wrap">{change.justification || cd('noJustification')}</p>
             )}
           </div>
 
           {/* Quick Actions */}
           {!isEditing && (
             <div className="bg-surface rounded-xl shadow-sm p-6">
-              <h2 className="text-lg font-semibold text-foreground mb-4">Actions</h2>
+              <h2 className="text-lg font-semibold text-foreground mb-4">{cd('actions')}</h2>
               <div className="flex flex-wrap gap-2">
                 {status === 'draft' && (
                   <Button size="sm" onClick={() => handleAction('submit')} disabled={actionLoading !== null}>
                     {actionLoading === 'submit' ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <FileText className="h-4 w-4 mr-2" />}
-                    Submit for Approval
+                    {cd('submitForApproval')}
                   </Button>
                 )}
                 {(status === 'submitted' || status === 'review') && (
                   <>
                     <Button size="sm" onClick={() => handleAction('approve')} disabled={actionLoading !== null}>
                       {actionLoading === 'approve' ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <CheckCircle className="h-4 w-4 mr-2" />}
-                      Approve
+                      {cd('approve')}
                     </Button>
                     <Button size="sm" variant="outline" onClick={() => handleAction('reject')} disabled={actionLoading !== null}>
                       {actionLoading === 'reject' ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <XCircle className="h-4 w-4 mr-2" />}
-                      Reject
+                      {cd('reject')}
                     </Button>
                   </>
                 )}
                 {status === 'approved' && (
                   <Button size="sm" onClick={() => handleAction('schedule')} disabled={actionLoading !== null}>
                     {actionLoading === 'schedule' ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Calendar className="h-4 w-4 mr-2" />}
-                    Schedule
+                    {cd('schedule')}
                   </Button>
                 )}
                 {status === 'scheduled' && (
                   <Button size="sm" onClick={() => handleAction('start')} disabled={actionLoading !== null}>
                     {actionLoading === 'start' ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Play className="h-4 w-4 mr-2" />}
-                    Start Implementation
+                    {cd('startImpl')}
                   </Button>
                 )}
                 {status === 'implementing' && (
                   <>
                     <Button size="sm" onClick={() => handleAction('complete')} disabled={actionLoading !== null}>
                       {actionLoading === 'complete' ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <CheckCircle className="h-4 w-4 mr-2" />}
-                      Complete Successfully
+                      {cd('completeOk')}
                     </Button>
                     <Button size="sm" variant="outline" onClick={() => handleAction('fail')} disabled={actionLoading !== null}>
                       {actionLoading === 'fail' ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <XCircle className="h-4 w-4 mr-2" />}
-                      Mark as Failed
+                      {cd('markFailed')}
                     </Button>
                     <Button size="sm" variant="outline" onClick={() => handleAction('rollback')} disabled={actionLoading !== null}>
                       {actionLoading === 'rollback' ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <RotateCcw className="h-4 w-4 mr-2" />}
-                      Rollback
+                      {cd('rollback')}
                     </Button>
                   </>
                 )}
                 {['draft', 'submitted', 'review', 'approved', 'scheduled'].includes(status) && (
                   <Button size="sm" variant="outline" onClick={() => handleAction('cancel')} disabled={actionLoading !== null}>
                     {actionLoading === 'cancel' ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <XCircle className="h-4 w-4 mr-2" />}
-                    Cancel
+                    {cd('cancel')}
                   </Button>
                 )}
                 {['completed', 'failed', 'rolled_back', 'cancelled'].includes(status) && (
-                  <span className="text-sm text-muted">This change is {statusLabels[status] || status}.</span>
+                  <span className="text-sm text-muted">{cd('thisChangeIs', { status: statusLabels[status] ? cd(statusLabels[status]) : status })}</span>
                 )}
               </div>
             </div>
@@ -484,54 +487,54 @@ export default function ChangeDetailPage() {
 
           {/* Implementation Plans */}
           <div className="bg-surface rounded-xl shadow-sm p-6">
-            <h2 className="text-lg font-semibold text-foreground mb-4">Implementation Plan</h2>
+            <h2 className="text-lg font-semibold text-foreground mb-4">{cd('implPlan')}</h2>
             {isEditing ? (
               <textarea
                 value={editForm.implementationPlan}
                 onChange={(e) => setEditForm({ ...editForm, implementationPlan: e.target.value })}
                 className="w-full px-3 py-2 border border-border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary"
                 rows={4}
-                placeholder="Steps to implement this change..."
+                placeholder={cd('implPh')}
               />
             ) : (
-              <p className="text-secondary whitespace-pre-wrap">{change.implementation_plan || 'No implementation plan provided.'}</p>
+              <p className="text-secondary whitespace-pre-wrap">{change.implementation_plan || cd('noImpl')}</p>
             )}
           </div>
 
           <div className="bg-surface rounded-xl shadow-sm p-6">
-            <h2 className="text-lg font-semibold text-foreground mb-4">Rollback Plan</h2>
+            <h2 className="text-lg font-semibold text-foreground mb-4">{cd('rollbackPlan')}</h2>
             {isEditing ? (
               <textarea
                 value={editForm.rollbackPlan}
                 onChange={(e) => setEditForm({ ...editForm, rollbackPlan: e.target.value })}
                 className="w-full px-3 py-2 border border-border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary"
                 rows={4}
-                placeholder="Steps to rollback if something goes wrong..."
+                placeholder={cd('rollbackPh')}
               />
             ) : (
-              <p className="text-secondary whitespace-pre-wrap">{change.rollback_plan || 'No rollback plan provided.'}</p>
+              <p className="text-secondary whitespace-pre-wrap">{change.rollback_plan || cd('noRollback')}</p>
             )}
           </div>
 
           <div className="bg-surface rounded-xl shadow-sm p-6">
-            <h2 className="text-lg font-semibold text-foreground mb-4">Test Plan</h2>
+            <h2 className="text-lg font-semibold text-foreground mb-4">{cd('testPlan')}</h2>
             {isEditing ? (
               <textarea
                 value={editForm.testPlan}
                 onChange={(e) => setEditForm({ ...editForm, testPlan: e.target.value })}
                 className="w-full px-3 py-2 border border-border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary"
                 rows={4}
-                placeholder="How will this change be tested?"
+                placeholder={cd('testPh')}
               />
             ) : (
-              <p className="text-secondary whitespace-pre-wrap">{change.test_plan || 'No test plan provided.'}</p>
+              <p className="text-secondary whitespace-pre-wrap">{change.test_plan || cd('noTest')}</p>
             )}
           </div>
 
           {/* Approvals */}
           {!isEditing && change.approvals && change.approvals.length > 0 && (
             <div className="bg-surface rounded-xl shadow-sm p-6">
-              <h2 className="text-lg font-semibold text-foreground mb-4">Approvals</h2>
+              <h2 className="text-lg font-semibold text-foreground mb-4">{cd('approvals')}</h2>
               <div className="space-y-4">
                 {change.approvals.map((approval) => (
                   <div key={approval.id} className="flex items-start space-x-3 p-3 bg-surface-hover rounded-lg">
@@ -546,7 +549,7 @@ export default function ChangeDetailPage() {
                     </div>
                     <div className="flex-1">
                       <div className="flex items-center justify-between">
-                        <p className="text-sm font-medium text-foreground">{approval.approver?.name || 'Unknown'}</p>
+                        <p className="text-sm font-medium text-foreground">{approval.approver?.name || cd('unknown')}</p>
                         <p className="text-xs text-muted">{formatDate(approval.approved_at)}</p>
                       </div>
                       {approval.comments && <p className="text-sm text-muted mt-1">{approval.comments}</p>}
@@ -565,7 +568,7 @@ export default function ChangeDetailPage() {
                   {change.outcome === 'successful' && <CheckCircle className="h-5 w-5 text-success mr-2" />}
                   {change.outcome === 'failed' && <XCircle className="h-5 w-5 text-error mr-2" />}
                   {change.outcome === 'rolled_back' && <RotateCcw className="h-5 w-5 text-warning mr-2" />}
-                  Outcome Notes
+                  {cd('outcomeNotes')}
                 </div>
               </h2>
               <p className="text-secondary whitespace-pre-wrap">{change.outcome_notes}</p>
@@ -575,7 +578,7 @@ export default function ChangeDetailPage() {
           {/* Activity / Comments */}
           {!isEditing && (
             <div className="bg-surface rounded-xl shadow-sm p-6">
-              <h2 className="text-lg font-semibold text-foreground mb-4">Comments</h2>
+              <h2 className="text-lg font-semibold text-foreground mb-4">{cd('comments')}</h2>
 
               <form onSubmit={handleSubmitComment} className="mb-6">
                 <div className="flex space-x-3">
@@ -588,14 +591,14 @@ export default function ChangeDetailPage() {
                     <textarea
                       value={newComment}
                       onChange={(e) => setNewComment(e.target.value)}
-                      placeholder="Add a comment..."
+                      placeholder={cd('commentPh')}
                       rows={3}
                       className="w-full px-3 py-2 border border-border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary resize-none"
                     />
                     <div className="mt-2 flex justify-end">
                       <Button type="submit" size="sm" disabled={!newComment.trim() || addComment.isPending}>
                         {addComment.isPending ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Send className="h-4 w-4 mr-2" />}
-                        Send
+                        {cd('send')}
                       </Button>
                     </div>
                   </div>
@@ -606,7 +609,7 @@ export default function ChangeDetailPage() {
                 {commentsLoading ? (
                   <div className="flex items-center justify-center py-4">
                     <Loader2 className="h-5 w-5 animate-spin text-muted" />
-                    <span className="ml-2 text-sm text-muted">Loading comments...</span>
+                    <span className="ml-2 text-sm text-muted">{cd('loadingComments')}</span>
                   </div>
                 ) : comments.length > 0 ? (
                   comments.map((comment: ChangeComment) => (
@@ -616,20 +619,20 @@ export default function ChangeDetailPage() {
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center justify-between">
-                          <p className="text-sm font-medium text-foreground">{comment.user_name || 'Unknown User'}</p>
+                          <p className="text-sm font-medium text-foreground">{comment.user_name || cd('unknownUser')}</p>
                           <p className="text-xs text-muted">{formatRelativeTime(comment.created_at)}</p>
                         </div>
                         <p className="text-sm text-secondary mt-1 whitespace-pre-wrap">{comment.content}</p>
                         {comment.is_internal && (
                           <span className="inline-flex items-center px-2 py-0.5 mt-1 rounded text-xs font-medium bg-warning-subtle text-warning">
-                            Internal Note
+                            {cd('internalNote')}
                           </span>
                         )}
                       </div>
                     </div>
                   ))
                 ) : (
-                  <p className="text-sm text-muted">No comments yet</p>
+                  <p className="text-sm text-muted">{cd('noComments')}</p>
                 )}
               </div>
             </div>
@@ -640,10 +643,10 @@ export default function ChangeDetailPage() {
         <div className="space-y-6">
           {/* Schedule Card */}
           <div className="bg-surface rounded-xl shadow-sm p-6">
-            <h2 className="text-lg font-semibold text-foreground mb-4">Schedule</h2>
+            <h2 className="text-lg font-semibold text-foreground mb-4">{cd('scheduleTitle')}</h2>
             <dl className="space-y-4">
               <div>
-                <dt className="text-sm font-medium text-muted">Planned Start</dt>
+                <dt className="text-sm font-medium text-muted">{cd('plannedStart')}</dt>
                 {isEditing ? (
                   <input
                     type="datetime-local"
@@ -659,7 +662,7 @@ export default function ChangeDetailPage() {
                 )}
               </div>
               <div>
-                <dt className="text-sm font-medium text-muted">Planned End</dt>
+                <dt className="text-sm font-medium text-muted">{cd('plannedEnd')}</dt>
                 {isEditing ? (
                   <input
                     type="datetime-local"
@@ -676,19 +679,19 @@ export default function ChangeDetailPage() {
               </div>
               {!isEditing && change.actual_start && (
                 <div>
-                  <dt className="text-sm font-medium text-muted">Actual Start</dt>
+                  <dt className="text-sm font-medium text-muted">{cd('actualStart')}</dt>
                   <dd className="mt-1 text-sm text-foreground">{formatDate(change.actual_start)}</dd>
                 </div>
               )}
               {!isEditing && change.actual_end && (
                 <div>
-                  <dt className="text-sm font-medium text-muted">Actual End</dt>
+                  <dt className="text-sm font-medium text-muted">{cd('actualEnd')}</dt>
                   <dd className="mt-1 text-sm text-foreground">{formatDate(change.actual_end)}</dd>
                 </div>
               )}
               {!isEditing && change.downtime_minutes && (
                 <div>
-                  <dt className="text-sm font-medium text-muted">Estimated Downtime</dt>
+                  <dt className="text-sm font-medium text-muted">{cd('estDowntime')}</dt>
                   <dd className="mt-1 text-sm text-foreground">{change.downtime_minutes} minutes</dd>
                 </div>
               )}
@@ -697,84 +700,84 @@ export default function ChangeDetailPage() {
 
           {/* Details Card */}
           <div className="bg-surface rounded-xl shadow-sm p-6">
-            <h2 className="text-lg font-semibold text-foreground mb-4">Details</h2>
+            <h2 className="text-lg font-semibold text-foreground mb-4">{cd('details')}</h2>
             <dl className="space-y-4">
               {isEditing ? (
                 <>
                   <div>
-                    <dt className="text-sm font-medium text-muted">Type</dt>
+                    <dt className="text-sm font-medium text-muted">{cd('type')}</dt>
                     <select
                       value={editForm.type}
                       onChange={(e) => setEditForm({ ...editForm, type: e.target.value as 'standard' | 'normal' | 'emergency' })}
                       className="mt-1 w-full px-3 py-2 border border-border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary"
                     >
-                      <option value="standard">Standard</option>
-                      <option value="normal">Normal</option>
-                      <option value="emergency">Emergency</option>
+                      <option value="standard">{cd('tStandard')}</option>
+                      <option value="normal">{cd('tNormal')}</option>
+                      <option value="emergency">{cd('tEmergency')}</option>
                     </select>
                   </div>
                   <div>
-                    <dt className="text-sm font-medium text-muted">Risk Level</dt>
+                    <dt className="text-sm font-medium text-muted">{cd('riskLevel')}</dt>
                     <select
                       value={editForm.riskLevel}
                       onChange={(e) => setEditForm({ ...editForm, riskLevel: e.target.value as 'low' | 'medium' | 'high' | 'critical' })}
                       className="mt-1 w-full px-3 py-2 border border-border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary"
                     >
-                      <option value="low">Low</option>
-                      <option value="medium">Medium</option>
-                      <option value="high">High</option>
-                      <option value="critical">Critical</option>
+                      <option value="low">{ti('priorityLow')}</option>
+                      <option value="medium">{ti('priorityMedium')}</option>
+                      <option value="high">{ti('priorityHigh')}</option>
+                      <option value="critical">{ti('priorityCritical')}</option>
                     </select>
                   </div>
                   <div>
-                    <dt className="text-sm font-medium text-muted">Impact</dt>
+                    <dt className="text-sm font-medium text-muted">{cd('impact')}</dt>
                     <select
                       value={editForm.impact}
                       onChange={(e) => setEditForm({ ...editForm, impact: e.target.value as '' | 'none' | 'minor' | 'moderate' | 'significant' | 'major' })}
                       className="mt-1 w-full px-3 py-2 border border-border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary"
                     >
-                      <option value="">Select impact...</option>
-                      <option value="none">None</option>
-                      <option value="minor">Minor</option>
-                      <option value="moderate">Moderate</option>
-                      <option value="significant">Significant</option>
-                      <option value="major">Major</option>
+                      <option value="">{cd('selectImpact')}</option>
+                      <option value="none">{cd('iNone')}</option>
+                      <option value="minor">{cd('iMinor')}</option>
+                      <option value="moderate">{cd('iModerate')}</option>
+                      <option value="significant">{cd('iSignificant')}</option>
+                      <option value="major">{cd('iMajor')}</option>
                     </select>
                   </div>
                   <div>
-                    <dt className="text-sm font-medium text-muted">Implementer</dt>
+                    <dt className="text-sm font-medium text-muted">{cd('implementer')}</dt>
                     <select
                       value={editForm.implementerId}
                       onChange={(e) => setEditForm({ ...editForm, implementerId: e.target.value })}
                       className="mt-1 w-full px-3 py-2 border border-border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary"
                     >
-                      <option value="">Select implementer...</option>
+                      <option value="">{cd('selectImplementer')}</option>
                       {users.map((user: { id: string; name: string }) => (
                         <option key={user.id} value={user.id}>{user.name}</option>
                       ))}
                     </select>
                   </div>
                   <div>
-                    <dt className="text-sm font-medium text-muted">Assignment Group</dt>
+                    <dt className="text-sm font-medium text-muted">{cd('assignmentGroup')}</dt>
                     <select
                       value={editForm.assignedGroup}
                       onChange={(e) => setEditForm({ ...editForm, assignedGroup: e.target.value })}
                       className="mt-1 w-full px-3 py-2 border border-border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary"
                     >
-                      <option value="">Select group...</option>
+                      <option value="">{cd('selectGroup')}</option>
                       {groups.map((group: { id: string; name: string }) => (
                         <option key={group.id} value={group.id}>{group.name}</option>
                       ))}
                     </select>
                   </div>
                   <div>
-                    <dt className="text-sm font-medium text-muted">Application</dt>
+                    <dt className="text-sm font-medium text-muted">{cd('application')}</dt>
                     <select
                       value={editForm.applicationId}
                       onChange={(e) => setEditForm({ ...editForm, applicationId: e.target.value })}
                       className="mt-1 w-full px-3 py-2 border border-border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary"
                     >
-                      <option value="">Select application...</option>
+                      <option value="">{cd('selectApp')}</option>
                       {applications.map((app: { id: string; name: string }) => (
                         <option key={app.id} value={app.id}>{app.name}</option>
                       ))}
@@ -785,7 +788,7 @@ export default function ChangeDetailPage() {
                 <>
                   {change.requester_name && (
                     <div>
-                      <dt className="text-sm font-medium text-muted">Requested By</dt>
+                      <dt className="text-sm font-medium text-muted">{cd('requestedBy')}</dt>
                       <dd className="mt-1 flex items-center">
                         <div className="h-8 w-8 rounded-full bg-surface-hover flex items-center justify-center text-sm font-medium text-secondary">
                           {change.requester_name.charAt(0)}
@@ -799,7 +802,7 @@ export default function ChangeDetailPage() {
                   )}
                   {change.implementer_name && (
                     <div>
-                      <dt className="text-sm font-medium text-muted">Implementer</dt>
+                      <dt className="text-sm font-medium text-muted">{cd('implementer')}</dt>
                       <dd className="mt-1 flex items-center">
                         <div className="h-8 w-8 rounded-full bg-surface-hover flex items-center justify-center text-sm font-medium text-secondary">
                           {change.implementer_name.charAt(0)}
@@ -813,7 +816,7 @@ export default function ChangeDetailPage() {
                   )}
                   {change.assigned_group_name && (
                     <div>
-                      <dt className="text-sm font-medium text-muted">Assignment Group</dt>
+                      <dt className="text-sm font-medium text-muted">{cd('assignmentGroup')}</dt>
                       <dd className="mt-1 flex items-center text-sm text-foreground">
                         <Users className="h-4 w-4 mr-2 text-muted" />
                         {change.assigned_group_name}
@@ -822,7 +825,7 @@ export default function ChangeDetailPage() {
                   )}
                   {change.application_name && (
                     <div>
-                      <dt className="text-sm font-medium text-muted">Application</dt>
+                      <dt className="text-sm font-medium text-muted">{cd('application')}</dt>
                       <dd className="mt-1">
                         <Link
                           href={`/applications/${change.application_id}`}
@@ -835,37 +838,37 @@ export default function ChangeDetailPage() {
                   )}
                   {change.environment_name && (
                     <div>
-                      <dt className="text-sm font-medium text-muted">Environment</dt>
+                      <dt className="text-sm font-medium text-muted">{cd('environment')}</dt>
                       <dd className="mt-1 text-sm text-foreground">{change.environment_name}</dd>
                     </div>
                   )}
                   {change.impact && (
                     <div>
-                      <dt className="text-sm font-medium text-muted">Impact</dt>
+                      <dt className="text-sm font-medium text-muted">{cd('impact')}</dt>
                       <dd className="mt-1 text-sm text-foreground capitalize">{change.impact}</dd>
                     </div>
                   )}
                   {change.urgency && (
                     <div>
-                      <dt className="text-sm font-medium text-muted">Urgency</dt>
+                      <dt className="text-sm font-medium text-muted">{cd('urgency')}</dt>
                       <dd className="mt-1 text-sm text-foreground capitalize">{change.urgency}</dd>
                     </div>
                   )}
                   {change.cab_required && (
                     <div>
-                      <dt className="text-sm font-medium text-muted">CAB Review</dt>
+                      <dt className="text-sm font-medium text-muted">{cd('cabReview')}</dt>
                       <dd className="mt-1 flex items-center text-sm text-foreground">
                         <AlertTriangle className="h-4 w-4 mr-2 text-warning" />
-                        Required {change.cab_date && `(${formatDate(change.cab_date)})`}
+                        {cd('cabRequired')} {change.cab_date && `(${formatDate(change.cab_date)})`}
                       </dd>
                     </div>
                   )}
                   <div className="border-t border-border pt-4">
-                    <dt className="text-sm font-medium text-muted">Created</dt>
+                    <dt className="text-sm font-medium text-muted">{cd('created')}</dt>
                     <dd className="mt-1 text-sm text-foreground">{formatDate(change.created_at)}</dd>
                   </div>
                   <div>
-                    <dt className="text-sm font-medium text-muted">Last Updated</dt>
+                    <dt className="text-sm font-medium text-muted">{cd('lastUpdated')}</dt>
                     <dd className="mt-1 text-sm text-foreground">{formatDate(change.updated_at)}</dd>
                   </div>
                 </>

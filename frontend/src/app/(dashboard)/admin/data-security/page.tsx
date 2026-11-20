@@ -1,5 +1,6 @@
 'use client';
 
+import { useT } from '@/i18n/useT';
 import { useState, useEffect } from 'react';
 import { Lock, Plus, Trash2, Loader2, AlertCircle, CheckCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -33,6 +34,7 @@ const classificationColors: Record<string, { bg: string; text: string }> = {
 };
 
 export default function DataSecurityPage() {
+  const ds = useT('dataSecurity');
   // State for settings
   const [settings, setSettings] = useState<DataSecuritySettings | null>(null);
   const [formData, setFormData] = useState({
@@ -85,7 +87,7 @@ export default function DataSecurityPage() {
 
       setClassifications(classificationsRes.data.classifications || []);
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed to load data security settings';
+      const message = err instanceof Error ? err.message : ds('loadFailed');
       setError(message);
     } finally {
       setIsLoading(false);
@@ -99,10 +101,10 @@ export default function DataSecurityPage() {
 
       const response = await api.put('/v1/data-security/settings', formData);
       setSettings(response.data);
-      setSuccessMessage('Settings saved successfully');
+      setSuccessMessage(ds('settingsSaved'));
       setTimeout(() => setSuccessMessage(null), 3000);
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed to save settings';
+      const message = err instanceof Error ? err.message : ds('saveFailed');
       setError(message);
     } finally {
       setIsSaving(false);
@@ -116,7 +118,7 @@ export default function DataSecurityPage() {
 
       await api.post('/v1/data-security/classifications', newClassification);
 
-      setSuccessMessage('Classification added successfully');
+      setSuccessMessage(ds('classificationAdded'));
       setTimeout(() => setSuccessMessage(null), 3000);
 
       // Reset form
@@ -132,7 +134,7 @@ export default function DataSecurityPage() {
       // Reload classifications
       await loadData();
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed to add classification';
+      const message = err instanceof Error ? err.message : ds('addFailed');
       setError(message);
     } finally {
       setIsAddingClassification(false);
@@ -140,18 +142,18 @@ export default function DataSecurityPage() {
   };
 
   const handleDeleteClassification = async (id: string) => {
-    if (!confirm('Are you sure you want to delete this classification?')) return;
+    if (!confirm(ds('confirmDelete'))) return;
 
     try {
       setError(null);
       await api.delete(`/v1/data-security/classifications/${id}`);
 
-      setSuccessMessage('Classification deleted successfully');
+      setSuccessMessage(ds('classificationDeleted'));
       setTimeout(() => setSuccessMessage(null), 3000);
 
       await loadData();
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed to delete classification';
+      const message = err instanceof Error ? err.message : ds('deleteFailed');
       setError(message);
     }
   };
@@ -184,7 +186,7 @@ export default function DataSecurityPage() {
             onClick={() => setError(null)}
             className="text-error hover:text-error font-medium"
           >
-            Dismiss
+            {ds('dismiss')}
           </button>
         </div>
       )}
@@ -200,25 +202,25 @@ export default function DataSecurityPage() {
         <div className="flex items-center gap-3">
           <Lock className="h-8 w-8 text-primary" />
           <div>
-            <h1 className="text-2xl font-bold text-foreground">Data Security</h1>
+            <h1 className="text-2xl font-bold text-foreground">{ds('title')}</h1>
             <p className="mt-1 text-sm text-muted">
-              Manage PII masking, PCI tokenization, and data residency controls
+              {ds('subtitle')}
             </p>
           </div>
         </div>
       </div>
 
       <div className="bg-surface rounded-xl shadow-sm p-6 space-y-4">
-        <h2 className="text-lg font-semibold text-foreground">Security Settings</h2>
+        <h2 className="text-lg font-semibold text-foreground">{ds('securitySettings')}</h2>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
             <label className="block text-sm font-medium text-secondary mb-1">
-              Data Residency Region
+              {ds('residency')}
             </label>
             <input
               type="text"
-              placeholder="e.g., us-east-1"
+              placeholder={ds('residencyPh')}
               value={formData.data_residency_region}
               onChange={(e) =>
                 setFormData((prev) => ({
@@ -232,11 +234,11 @@ export default function DataSecurityPage() {
 
           <div>
             <label className="block text-sm font-medium text-secondary mb-1">
-              Encryption Key ID <span className="text-muted">(optional)</span>
+              {ds('encKey')} <span className="text-muted">{ds('optional')}</span>
             </label>
             <input
               type="text"
-              placeholder="e.g., key-12345"
+              placeholder={ds('encKeyPh')}
               value={formData.encryption_key_id}
               onChange={(e) =>
                 setFormData((prev) => ({
@@ -251,7 +253,7 @@ export default function DataSecurityPage() {
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
           <div className="flex items-center justify-between p-3 border border-border rounded-xl">
-            <label className="text-sm font-medium text-secondary">PII Masking Enabled</label>
+            <label className="text-sm font-medium text-secondary">{ds('piiMasking')}</label>
             <button
               onClick={() =>
                 setFormData((prev) => ({
@@ -272,7 +274,7 @@ export default function DataSecurityPage() {
           </div>
 
           <div className="flex items-center justify-between p-3 border border-border rounded-xl">
-            <label className="text-sm font-medium text-secondary">PCI Tokenization Enabled</label>
+            <label className="text-sm font-medium text-secondary">{ds('pciTokenization')}</label>
             <button
               onClick={() =>
                 setFormData((prev) => ({
@@ -296,17 +298,17 @@ export default function DataSecurityPage() {
         <div className="flex justify-end pt-2">
           <Button onClick={handleSaveSettings} disabled={isSaving}>
             {isSaving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-            {isSaving ? 'Saving...' : 'Save Settings'}
+            {isSaving ? ds('saving') : ds('saveSettings')}
           </Button>
         </div>
       </div>
 
       <div className="bg-surface rounded-xl shadow-sm">
         <div className="flex items-center justify-between p-6 border-b border-border">
-          <h2 className="text-lg font-semibold text-foreground">Field Classifications</h2>
+          <h2 className="text-lg font-semibold text-foreground">{ds('fieldClassifications')}</h2>
           <Button onClick={() => setShowAddModal(true)} size="sm">
             <Plus className="h-4 w-4 mr-2" />
-            Add Classification
+            {ds('addClassification')}
           </Button>
         </div>
 
@@ -316,25 +318,25 @@ export default function DataSecurityPage() {
               <thead className="bg-background">
                 <tr>
                   <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">
-                    Table Name
+                    {ds('tableName')}
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">
-                    Field Name
+                    {ds('fieldName')}
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">
-                    Classification
+                    {ds('classification')}
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">
-                    Masking Strategy
+                    {ds('maskingStrategy')}
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">
-                    Unmask Permission
+                    {ds('unmaskPermission')}
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">
-                    Created At
+                    {ds('createdAt')}
                   </th>
                   <th className="px-6 py-3 text-right text-xs font-medium text-muted uppercase tracking-wider">
-                    Actions
+                    {ds('actions')}
                   </th>
                 </tr>
               </thead>
@@ -385,12 +387,12 @@ export default function DataSecurityPage() {
           ) : (
             <div className="text-center py-12">
               <Lock className="h-12 w-12 text-muted mx-auto mb-4" />
-              <h3 className="text-lg font-medium text-foreground mb-2">No classifications yet</h3>
+              <h3 className="text-lg font-medium text-foreground mb-2">{ds('noClassifications')}</h3>
               <p className="text-muted mb-4">
-                Add field classifications to control data masking and protection
+                {ds('noClassificationsHint')}
               </p>
               <Button onClick={() => setShowAddModal(true)} variant="outline" size="sm">
-                Add First Classification
+                {ds('addFirst')}
               </Button>
             </div>
           )}
@@ -400,16 +402,16 @@ export default function DataSecurityPage() {
       {showAddModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
           <div className="bg-surface rounded-xl shadow-sm-lg max-w-md w-full mx-4 p-6 space-y-4">
-            <h3 className="text-lg font-semibold text-foreground">Add Field Classification</h3>
+            <h3 className="text-lg font-semibold text-foreground">{ds('addTitle')}</h3>
 
             <div className="space-y-3">
               <div>
                 <label className="block text-sm font-medium text-secondary mb-1">
-                  Table Name
+                  {ds('tableName')}
                 </label>
                 <input
                   type="text"
-                  placeholder="e.g., users"
+                  placeholder={ds('tablePh')}
                   value={newClassification.table_name}
                   onChange={(e) =>
                     setNewClassification((prev) => ({
@@ -423,11 +425,11 @@ export default function DataSecurityPage() {
 
               <div>
                 <label className="block text-sm font-medium text-secondary mb-1">
-                  Field Name
+                  {ds('fieldName')}
                 </label>
                 <input
                   type="text"
-                  placeholder="e.g., email"
+                  placeholder={ds('fieldPh')}
                   value={newClassification.field_name}
                   onChange={(e) =>
                     setNewClassification((prev) => ({
@@ -441,7 +443,7 @@ export default function DataSecurityPage() {
 
               <div>
                 <label className="block text-sm font-medium text-secondary mb-1">
-                  Classification
+                  {ds('classification')}
                 </label>
                 <select
                   value={newClassification.classification}
@@ -462,7 +464,7 @@ export default function DataSecurityPage() {
 
               <div>
                 <label className="block text-sm font-medium text-secondary mb-1">
-                  Masking Strategy
+                  {ds('maskingStrategy')}
                 </label>
                 <select
                   value={newClassification.masking_strategy}
@@ -474,20 +476,20 @@ export default function DataSecurityPage() {
                   }
                   className="w-full px-3 py-2 border border-border-strong rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
                 >
-                  <option value="full">Full Masking</option>
-                  <option value="partial">Partial Masking</option>
-                  <option value="tokenize">Tokenization</option>
-                  <option value="hash">Hashing</option>
+                  <option value="full">{ds('fullMasking')}</option>
+                  <option value="partial">{ds('partialMasking')}</option>
+                  <option value="tokenize">{ds('tokenization')}</option>
+                  <option value="hash">{ds('hashing')}</option>
                 </select>
               </div>
 
               <div>
                 <label className="block text-sm font-medium text-secondary mb-1">
-                  Unmask Permission
+                  {ds('unmaskPermission')}
                 </label>
                 <input
                   type="text"
-                  placeholder="e.g., admin:write"
+                  placeholder={ds('permPh')}
                   value={newClassification.unmask_permission}
                   onChange={(e) =>
                     setNewClassification((prev) => ({
@@ -506,11 +508,11 @@ export default function DataSecurityPage() {
                 onClick={() => setShowAddModal(false)}
                 disabled={isAddingClassification}
               >
-                Cancel
+                {ds('cancel')}
               </Button>
               <Button onClick={handleAddClassification} disabled={isAddingClassification}>
                 {isAddingClassification && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-                {isAddingClassification ? 'Adding...' : 'Add Classification'}
+                {isAddingClassification ? ds('adding') : ds('addClassification')}
               </Button>
             </div>
           </div>

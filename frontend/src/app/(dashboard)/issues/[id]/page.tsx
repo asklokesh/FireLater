@@ -1,5 +1,6 @@
 'use client';
 
+import { useT } from '@/i18n/useT';
 import { useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
@@ -58,22 +59,24 @@ const statusColors: Record<string, { bg: string; text: string }> = {
 };
 
 const priorityColors: Record<string, { bg: string; text: string; label: string }> = {
-  critical: { bg: 'bg-error-subtle', text: 'text-error', label: 'Critical' },
-  high: { bg: 'bg-warning-subtle', text: 'text-warning', label: 'High' },
-  medium: { bg: 'bg-warning-subtle', text: 'text-warning', label: 'Medium' },
-  low: { bg: 'bg-primary-subtle', text: 'text-primary', label: 'Low' },
+  critical: { bg: 'bg-error-subtle', text: 'text-error', label: 'priorityCritical' },
+  high: { bg: 'bg-warning-subtle', text: 'text-warning', label: 'priorityHigh' },
+  medium: { bg: 'bg-warning-subtle', text: 'text-warning', label: 'priorityMedium' },
+  low: { bg: 'bg-primary-subtle', text: 'text-primary', label: 'priorityLow' },
 };
 
 const statusLabels: Record<string, string> = {
-  new: 'New',
-  assigned: 'Assigned',
-  in_progress: 'In Progress',
-  pending: 'Pending',
-  resolved: 'Resolved',
-  closed: 'Closed',
+  new: 'statusNew',
+  assigned: 'statusAssigned',
+  in_progress: 'statusInProgress',
+  pending: 'statusPending',
+  resolved: 'statusResolved',
+  closed: 'statusClosed',
 };
 
 export default function IssueDetailPage() {
+  const id = useT('issueDetail');
+  const ti = useT('issues');
   const params = useParams();
   const router = useRouter();
   const [isEditing, setIsEditing] = useState(false);
@@ -182,7 +185,7 @@ export default function IssueDetailPage() {
       });
       setIsEditing(false);
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed to update issue';
+      const message = err instanceof Error ? err.message : id('updateFailed');
       setError(message);
     }
   };
@@ -212,7 +215,7 @@ export default function IssueDetailPage() {
       await addComment.mutateAsync({ id: issueId, content: newComment });
       setNewComment('');
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed to add comment';
+      const message = err instanceof Error ? err.message : id('commentFailed');
       setError(message);
     }
   };
@@ -222,7 +225,7 @@ export default function IssueDetailPage() {
     try {
       await changeStatus.mutateAsync({ id: issueId, status: newStatus });
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed to update status';
+      const message = err instanceof Error ? err.message : id('statusFailed');
       setError(message);
     }
   };
@@ -233,7 +236,7 @@ export default function IssueDetailPage() {
       await assignIssue.mutateAsync({ id: issueId, assignedTo: userId });
       setShowAssignModal(false);
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed to assign issue';
+      const message = err instanceof Error ? err.message : id('assignFailed');
       setError(message);
     }
   };
@@ -250,7 +253,7 @@ export default function IssueDetailPage() {
       setShowLinkProblemModal(false);
       setSelectedProblemId('');
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed to link to problem';
+      const message = err instanceof Error ? err.message : id('linkProblemFailed');
       setError(message);
     }
   };
@@ -260,7 +263,7 @@ export default function IssueDetailPage() {
     try {
       await unlinkFromProblem.mutateAsync(issueId);
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed to unlink from problem';
+      const message = err instanceof Error ? err.message : id('unlinkFailed');
       setError(message);
     }
   };
@@ -276,7 +279,7 @@ export default function IssueDetailPage() {
       setShowLinkKBModal(false);
       setSelectedKBArticleId('');
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed to link KB article';
+      const message = err instanceof Error ? err.message : id('linkKbFailed');
       setError(message);
     }
   };
@@ -293,9 +296,9 @@ export default function IssueDetailPage() {
     return (
       <div className="flex flex-col items-center justify-center h-64">
         <AlertCircle className="h-12 w-12 text-error mb-4" />
-        <h2 className="text-xl font-semibold text-foreground mb-2">Issue not found</h2>
-        <p className="text-muted mb-4">The issue you&apos;re looking for doesn&apos;t exist or you don&apos;t have access to it.</p>
-        <Button onClick={() => router.push('/issues')}>Back to Issues</Button>
+        <h2 className="text-xl font-semibold text-foreground mb-2">{id('notFound')}</h2>
+        <p className="text-muted mb-4">{id('notFoundBody')}</p>
+        <Button onClick={() => router.push('/issues')}>{id('backToIssues')}</Button>
       </div>
     );
   }
@@ -322,12 +325,12 @@ export default function IssueDetailPage() {
               <span
                 className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${priorityColor.bg} ${priorityColor.text}`}
               >
-                {priorityColor.label}
+                {ti(priorityColor.label)}
               </span>
               <span
                 className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${statusColor.bg} ${statusColor.text}`}
               >
-                {statusLabels[currentStatus] || currentStatus}
+                {statusLabels[currentStatus] ? ti(statusLabels[currentStatus]) : currentStatus}
               </span>
             </div>
             {!isEditing ? (
@@ -340,7 +343,7 @@ export default function IssueDetailPage() {
             <>
               <Button variant="outline" onClick={handleCancelEdit}>
                 <X className="h-4 w-4 mr-2" />
-                Cancel
+                {id('cancel')}
               </Button>
               <Button onClick={handleSaveEdit} disabled={updateIssue.isPending}>
                 {updateIssue.isPending ? (
@@ -348,13 +351,13 @@ export default function IssueDetailPage() {
                 ) : (
                   <Save className="h-4 w-4 mr-2" />
                 )}
-                Save
+                {id('save')}
               </Button>
             </>
           ) : (
             <Button variant="outline" onClick={handleStartEditing}>
               <Edit className="h-4 w-4 mr-2" />
-              Edit
+              {id('edit')}
             </Button>
           )}
         </div>
@@ -377,28 +380,28 @@ export default function IssueDetailPage() {
                 <Input
                   id="title"
                   type="text"
-                  label="Title"
+                  label={id('title')}
                   value={editForm.title}
                   onChange={(e) => setEditForm({ ...editForm, title: e.target.value })}
                   required
                 />
                 <div>
                   <label className="block text-sm font-medium text-secondary mb-1">
-                    Description
+                    {id('description')}
                   </label>
                   <textarea
                     rows={5}
                     value={editForm.description}
                     onChange={(e) => setEditForm({ ...editForm, description: e.target.value })}
                     className="w-full px-3 py-2 border border-border-strong rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary"
-                    placeholder="Describe the issue..."
+                    placeholder={id('descPh')}
                   />
                 </div>
               </div>
             ) : (
               <>
-                <h2 className="text-lg font-semibold text-foreground mb-4">Description</h2>
-                <p className="text-secondary whitespace-pre-wrap">{issue.description || 'No description provided'}</p>
+                <h2 className="text-lg font-semibold text-foreground mb-4">{id('description')}</h2>
+                <p className="text-secondary whitespace-pre-wrap">{issue.description || id('noDescription')}</p>
               </>
             )}
           </div>
@@ -406,60 +409,60 @@ export default function IssueDetailPage() {
           {/* Quick Actions - only show when not editing */}
           {!isEditing && (
             <div className="bg-surface rounded-xl shadow-sm p-6">
-              <h2 className="text-lg font-semibold text-foreground mb-4">Actions</h2>
+              <h2 className="text-lg font-semibold text-foreground mb-4">{id('actions')}</h2>
               <div className="flex flex-wrap gap-2">
                 {currentStatus === 'new' && (
                   <>
                     <Button size="sm" onClick={() => setShowAssignModal(true)} disabled={assignIssue.isPending}>
                       <User className="h-4 w-4 mr-2" />
-                      Assign
+                      {id('assign')}
                     </Button>
                     <Button size="sm" onClick={() => handleStatusChange('in_progress')} disabled={changeStatus.isPending}>
                       <Play className="h-4 w-4 mr-2" />
-                      Start Working
+                      {id('startWorking')}
                     </Button>
                   </>
                 )}
                 {currentStatus === 'assigned' && (
                   <Button size="sm" onClick={() => handleStatusChange('in_progress')} disabled={changeStatus.isPending}>
                     <Play className="h-4 w-4 mr-2" />
-                    Start Working
+                    {id('startWorking')}
                   </Button>
                 )}
                 {currentStatus === 'in_progress' && (
                   <>
                     <Button size="sm" variant="outline" onClick={() => handleStatusChange('pending')} disabled={changeStatus.isPending}>
                       <Pause className="h-4 w-4 mr-2" />
-                      Put On Hold
+                      {id('putOnHold')}
                     </Button>
                     <Button size="sm" onClick={() => handleStatusChange('resolved')} disabled={changeStatus.isPending}>
                       <CheckCircle className="h-4 w-4 mr-2" />
-                      Resolve
+                      {id('resolve')}
                     </Button>
                   </>
                 )}
                 {currentStatus === 'pending' && (
                   <Button size="sm" onClick={() => handleStatusChange('in_progress')} disabled={changeStatus.isPending}>
                     <Play className="h-4 w-4 mr-2" />
-                    Resume
+                    {id('resume')}
                   </Button>
                 )}
                 {currentStatus === 'resolved' && (
                   <>
                     <Button size="sm" onClick={() => handleStatusChange('closed')} disabled={changeStatus.isPending}>
                       <CheckCircle className="h-4 w-4 mr-2" />
-                      Close
+                      {id('close')}
                     </Button>
                     <Button size="sm" variant="outline" onClick={() => handleStatusChange('in_progress')} disabled={changeStatus.isPending}>
                       <XCircle className="h-4 w-4 mr-2" />
-                      Reopen
+                      {id('reopen')}
                     </Button>
                   </>
                 )}
                 {currentStatus !== 'closed' && currentStatus !== 'resolved' && (
                   <Button size="sm" variant="outline" onClick={() => handleStatusChange('closed')} disabled={changeStatus.isPending}>
                     <XCircle className="h-4 w-4 mr-2" />
-                    Close
+                    {id('close')}
                   </Button>
                 )}
               </div>
@@ -468,7 +471,7 @@ export default function IssueDetailPage() {
 
           {/* Activity / Comments */}
           <div className="bg-surface rounded-xl shadow-sm p-6">
-            <h2 className="text-lg font-semibold text-foreground mb-4">Activity</h2>
+            <h2 className="text-lg font-semibold text-foreground mb-4">{id('activity')}</h2>
 
             {/* Add Comment */}
             <form onSubmit={handleSubmitComment} className="mb-6">
@@ -482,7 +485,7 @@ export default function IssueDetailPage() {
                   <textarea
                     value={newComment}
                     onChange={(e) => setNewComment(e.target.value)}
-                    placeholder="Add a comment..."
+                    placeholder={id('commentPh')}
                     rows={3}
                     className="w-full px-3 py-2 border border-border-strong rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary resize-none"
                   />
@@ -495,7 +498,7 @@ export default function IssueDetailPage() {
                     </button>
                     <Button type="submit" size="sm" disabled={!newComment.trim() || addComment.isPending}>
                       <Send className="h-4 w-4 mr-2" />
-                      {addComment.isPending ? 'Sending...' : 'Send'}
+                      {addComment.isPending ? id('sending') : id('send')}
                     </Button>
                   </div>
                 </div>
@@ -507,7 +510,7 @@ export default function IssueDetailPage() {
               {commentsLoading ? (
                 <div className="flex items-center justify-center py-4">
                   <Loader2 className="h-5 w-5 animate-spin text-muted" />
-                  <span className="ml-2 text-sm text-muted">Loading comments...</span>
+                  <span className="ml-2 text-sm text-muted">{id('loadingComments')}</span>
                 </div>
               ) : comments.length > 0 ? (
                 comments.map((comment: IssueComment) => (
@@ -518,7 +521,7 @@ export default function IssueDetailPage() {
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center justify-between">
                         <p className="text-sm font-medium text-foreground">
-                          {comment.user_name || 'Unknown User'}
+                          {comment.user_name || id('unknownUser')}
                         </p>
                         <p className="text-xs text-muted">
                           {formatRelativeTime(comment.created_at)}
@@ -527,14 +530,14 @@ export default function IssueDetailPage() {
                       <p className="text-sm text-secondary mt-1 whitespace-pre-wrap">{comment.content}</p>
                       {comment.is_internal && (
                         <span className="inline-flex items-center px-2 py-0.5 mt-1 rounded text-xs font-medium bg-warning-subtle text-warning">
-                          Internal Note
+                          {id('internalNote')}
                         </span>
                       )}
                     </div>
                   </div>
                 ))
               ) : (
-                <p className="text-sm text-muted">No comments yet</p>
+                <p className="text-sm text-muted">{id('noComments')}</p>
               )}
             </div>
           </div>
@@ -544,70 +547,70 @@ export default function IssueDetailPage() {
         <div className="space-y-6">
           {/* Details Card */}
           <div className="bg-surface rounded-xl shadow-sm p-6">
-            <h2 className="text-lg font-semibold text-foreground mb-4">Details</h2>
+            <h2 className="text-lg font-semibold text-foreground mb-4">{id('details')}</h2>
             {isEditing ? (
               <div className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-secondary mb-1">Priority</label>
+                  <label className="block text-sm font-medium text-secondary mb-1">{id('priority')}</label>
                   <select
                     value={editForm.priority}
                     onChange={(e) => setEditForm({ ...editForm, priority: e.target.value as 'critical' | 'high' | 'medium' | 'low' })}
                     className="w-full px-3 py-2 border border-border-strong rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary"
                   >
-                    <option value="critical">Critical</option>
-                    <option value="high">High</option>
-                    <option value="medium">Medium</option>
-                    <option value="low">Low</option>
+                    <option value="critical">{ti('priorityCritical')}</option>
+                    <option value="high">{ti('priorityHigh')}</option>
+                    <option value="medium">{ti('priorityMedium')}</option>
+                    <option value="low">{id('cLow')}</option>
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-secondary mb-1">Severity</label>
+                  <label className="block text-sm font-medium text-secondary mb-1">{id('severity')}</label>
                   <select
                     value={editForm.severity}
                     onChange={(e) => setEditForm({ ...editForm, severity: e.target.value as '' | 'S1' | 'S2' | 'S3' | 'S4' })}
                     className="w-full px-3 py-2 border border-border-strong rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary"
                   >
-                    <option value="">Select severity</option>
-                    <option value="S1">S1 - Critical</option>
-                    <option value="S2">S2 - Major</option>
-                    <option value="S3">S3 - Minor</option>
-                    <option value="S4">S4 - Cosmetic</option>
+                    <option value="">{id('selectSeverity')}</option>
+                    <option value="S1">{id('sev1')}</option>
+                    <option value="S2">{id('sev2')}</option>
+                    <option value="S3">{id('sev3')}</option>
+                    <option value="S4">{id('sev4')}</option>
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-secondary mb-1">Assigned To</label>
+                  <label className="block text-sm font-medium text-secondary mb-1">{id('assignedTo')}</label>
                   <select
                     value={editForm.assignedTo}
                     onChange={(e) => setEditForm({ ...editForm, assignedTo: e.target.value })}
                     className="w-full px-3 py-2 border border-border-strong rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary"
                   >
-                    <option value="">Unassigned</option>
+                    <option value="">{id('unassigned')}</option>
                     {users.map((user: { id: string; name: string }) => (
                       <option key={user.id} value={user.id}>{user.name}</option>
                     ))}
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-secondary mb-1">Assignment Group</label>
+                  <label className="block text-sm font-medium text-secondary mb-1">{id('assignmentGroup')}</label>
                   <select
                     value={editForm.assignedGroup}
                     onChange={(e) => setEditForm({ ...editForm, assignedGroup: e.target.value })}
                     className="w-full px-3 py-2 border border-border-strong rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary"
                   >
-                    <option value="">No group</option>
+                    <option value="">{id('noGroup')}</option>
                     {groups.map((group: { id: string; name: string }) => (
                       <option key={group.id} value={group.id}>{group.name}</option>
                     ))}
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-secondary mb-1">Application</label>
+                  <label className="block text-sm font-medium text-secondary mb-1">{id('application')}</label>
                   <select
                     value={editForm.applicationId}
                     onChange={(e) => setEditForm({ ...editForm, applicationId: e.target.value })}
                     className="w-full px-3 py-2 border border-border-strong rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary"
                   >
-                    <option value="">No application</option>
+                    <option value="">{id('noApplication')}</option>
                     {applications.map((app: { id: string; name: string }) => (
                       <option key={app.id} value={app.id}>{app.name}</option>
                     ))}
@@ -617,7 +620,7 @@ export default function IssueDetailPage() {
             ) : (
               <dl className="space-y-4">
                 <div>
-                  <dt className="text-sm font-medium text-muted">Assigned To</dt>
+                  <dt className="text-sm font-medium text-muted">{id('assignedTo')}</dt>
                   <dd className="mt-1">
                     {issue.assignee_name ? (
                       <div className="flex items-center">
@@ -634,13 +637,13 @@ export default function IssueDetailPage() {
                         </div>
                       </div>
                     ) : (
-                      <span className="text-sm text-muted italic">Unassigned</span>
+                      <span className="text-sm text-muted italic">{id('unassigned')}</span>
                     )}
                   </dd>
                 </div>
 
                 <div>
-                  <dt className="text-sm font-medium text-muted">Assignment Group</dt>
+                  <dt className="text-sm font-medium text-muted">{id('assignmentGroup')}</dt>
                   <dd className="mt-1 text-sm text-foreground">
                     {issue.assigned_group_name || '-'}
                   </dd>
@@ -648,7 +651,7 @@ export default function IssueDetailPage() {
 
                 {issue.reporter_name && (
                   <div>
-                    <dt className="text-sm font-medium text-muted">Reporter</dt>
+                    <dt className="text-sm font-medium text-muted">{id('reporter')}</dt>
                     <dd className="mt-1">
                       <div className="flex items-center">
                         <div className="h-8 w-8 rounded-full bg-surface-hover flex items-center justify-center text-sm font-medium text-secondary">
@@ -668,7 +671,7 @@ export default function IssueDetailPage() {
                 )}
 
                 <div>
-                  <dt className="text-sm font-medium text-muted">Application</dt>
+                  <dt className="text-sm font-medium text-muted">{id('application')}</dt>
                   <dd className="mt-1 text-sm text-foreground">
                     {issue.application_id && issue.application_name ? (
                       <Link
@@ -684,41 +687,41 @@ export default function IssueDetailPage() {
                 </div>
 
                 <div className="border-t border-border pt-4">
-                  <dt className="text-sm font-medium text-muted">Priority</dt>
+                  <dt className="text-sm font-medium text-muted">{id('priority')}</dt>
                   <dd className="mt-1">
                     <span
                       className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${priorityColor.bg} ${priorityColor.text}`}
                     >
-                      {priorityColor.label}
+                      {ti(priorityColor.label)}
                     </span>
                   </dd>
                 </div>
 
                 {issue.severity && (
                   <div>
-                    <dt className="text-sm font-medium text-muted">Severity</dt>
+                    <dt className="text-sm font-medium text-muted">{id('severity')}</dt>
                     <dd className="mt-1 text-sm text-foreground">{issue.severity}</dd>
                   </div>
                 )}
 
                 {issue.urgency && (
                   <div>
-                    <dt className="text-sm font-medium text-muted">Urgency</dt>
+                    <dt className="text-sm font-medium text-muted">{id('urgency')}</dt>
                     <dd className="mt-1 text-sm text-foreground capitalize">{issue.urgency}</dd>
                   </div>
                 )}
 
                 {issue.impact && (
                   <div>
-                    <dt className="text-sm font-medium text-muted">Impact</dt>
+                    <dt className="text-sm font-medium text-muted">{id('impact')}</dt>
                     <dd className="mt-1 text-sm text-foreground capitalize">{issue.impact}</dd>
                   </div>
                 )}
 
                 {issue.sla_breached && (
                   <div>
-                    <dt className="text-sm font-medium text-muted">SLA Status</dt>
-                    <dd className="mt-1 text-sm text-error font-medium">Breached</dd>
+                    <dt className="text-sm font-medium text-muted">{id('slaStatus')}</dt>
+                    <dd className="mt-1 text-sm text-error font-medium">{id('breached')}</dd>
                   </div>
                 )}
               </dl>
@@ -728,25 +731,25 @@ export default function IssueDetailPage() {
           {/* Dates Card - only show when not editing */}
           {!isEditing && (
             <div className="bg-surface rounded-xl shadow-sm p-6">
-              <h2 className="text-lg font-semibold text-foreground mb-4">Timeline</h2>
+              <h2 className="text-lg font-semibold text-foreground mb-4">{id('timeline')}</h2>
               <dl className="space-y-4">
                 <div>
-                  <dt className="text-sm font-medium text-muted">Created</dt>
+                  <dt className="text-sm font-medium text-muted">{id('created')}</dt>
                   <dd className="mt-1 text-sm text-foreground">{formatDate(issue.created_at)}</dd>
                 </div>
                 <div>
-                  <dt className="text-sm font-medium text-muted">Last Updated</dt>
+                  <dt className="text-sm font-medium text-muted">{id('lastUpdated')}</dt>
                   <dd className="mt-1 text-sm text-foreground">{formatDate(issue.updated_at)}</dd>
                 </div>
                 {issue.first_response_at && (
                   <div>
-                    <dt className="text-sm font-medium text-muted">First Response</dt>
+                    <dt className="text-sm font-medium text-muted">{id('firstResponse')}</dt>
                     <dd className="mt-1 text-sm text-foreground">{formatDate(issue.first_response_at)}</dd>
                   </div>
                 )}
                 {issue.sla_breached_at && (
                   <div>
-                    <dt className="text-sm font-medium text-muted">SLA Breached At</dt>
+                    <dt className="text-sm font-medium text-muted">{id('slaBreachedAt')}</dt>
                     <dd className="mt-1 text-sm text-error font-medium">
                       {formatDate(issue.sla_breached_at)}
                     </dd>
@@ -754,13 +757,13 @@ export default function IssueDetailPage() {
                 )}
                 {issue.resolved_at && (
                   <div>
-                    <dt className="text-sm font-medium text-muted">Resolved</dt>
+                    <dt className="text-sm font-medium text-muted">{id('resolved')}</dt>
                     <dd className="mt-1 text-sm text-foreground">{formatDate(issue.resolved_at)}</dd>
                   </div>
                 )}
                 {issue.closed_at && (
                   <div>
-                    <dt className="text-sm font-medium text-muted">Closed</dt>
+                    <dt className="text-sm font-medium text-muted">{id('closed')}</dt>
                     <dd className="mt-1 text-sm text-foreground">{formatDate(issue.closed_at)}</dd>
                   </div>
                 )}
@@ -772,7 +775,7 @@ export default function IssueDetailPage() {
           {!isEditing && (
             <div className="bg-surface rounded-xl shadow-sm p-6">
               <div className="flex items-center justify-between mb-4">
-                <h2 className="text-lg font-semibold text-foreground">Linked Problem</h2>
+                <h2 className="text-lg font-semibold text-foreground">{id('linkedProblem')}</h2>
                 {!linkedProblem && (
                   <Button
                     size="sm"
@@ -780,7 +783,7 @@ export default function IssueDetailPage() {
                     onClick={() => setShowLinkProblemModal(true)}
                   >
                     <Link2 className="h-4 w-4 mr-1" />
-                    Link
+                    {id('link')}
                   </Button>
                 )}
               </div>
@@ -807,13 +810,13 @@ export default function IssueDetailPage() {
                           </span>
                           {linkedProblem.is_known_error && (
                             <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-primary-subtle text-primary">
-                              Known Error
+                              {id('knownError')}
                             </span>
                           )}
                         </div>
                         {linkedProblem.workaround && (
                           <p className="text-xs text-muted mt-2">
-                            <span className="font-medium">Workaround:</span> {linkedProblem.workaround.substring(0, 100)}...
+                            <span className="font-medium">{id('workaround')}</span> {linkedProblem.workaround.substring(0, 100)}...
                           </p>
                         )}
                       </div>
@@ -831,13 +834,13 @@ export default function IssueDetailPage() {
                       className="text-error hover:text-error hover:bg-error-subtle"
                     >
                       <Unlink className="h-4 w-4 mr-1" />
-                      Unlink
+                      {id('unlink')}
                     </Button>
                   </div>
                 </div>
               ) : (
                 <div className="text-sm text-muted">
-                  No linked problem. Link this issue to a problem for root cause analysis.
+                  {id('noLinkedProblem')}
                 </div>
               )}
             </div>
@@ -847,14 +850,14 @@ export default function IssueDetailPage() {
           {!isEditing && (
             <div className="bg-surface rounded-xl shadow-sm p-6">
               <div className="flex items-center justify-between mb-4">
-                <h2 className="text-lg font-semibold text-foreground">Knowledge Base</h2>
+                <h2 className="text-lg font-semibold text-foreground">{id('kb')}</h2>
                 <Button
                   size="sm"
                   variant="outline"
                   onClick={() => setShowLinkKBModal(true)}
                 >
                   <Plus className="h-4 w-4 mr-1" />
-                  Link
+                  {id('link')}
                 </Button>
               </div>
               {linkedKBArticles.length > 0 ? (
@@ -891,7 +894,7 @@ export default function IssueDetailPage() {
                 </div>
               ) : (
                 <div className="text-sm text-muted">
-                  No linked articles. Link KB articles to help resolve this issue.
+                  {id('noLinkedArticles')}
                 </div>
               )}
             </div>
@@ -906,7 +909,7 @@ export default function IssueDetailPage() {
             <div className="fixed inset-0 bg-black bg-opacity-30" onClick={() => setShowAssignModal(false)} />
             <div className="relative bg-surface rounded-xl shadow-sm-xl max-w-md w-full p-6">
               <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-semibold text-foreground">Assign Issue</h3>
+                <h3 className="text-lg font-semibold text-foreground">{id('assignTitle')}</h3>
                 <button
                   onClick={() => setShowAssignModal(false)}
                   className="text-muted hover:text-muted"
@@ -914,7 +917,7 @@ export default function IssueDetailPage() {
                   <X className="h-5 w-5" />
                 </button>
               </div>
-              <p className="text-sm text-muted mb-4">Select a user to assign this issue to:</p>
+              <p className="text-sm text-muted mb-4">{id('assignBody')}</p>
               <div className="max-h-64 overflow-y-auto space-y-2">
                 {users.map((user: { id: string; name: string; email: string }) => (
                   <button
@@ -933,12 +936,12 @@ export default function IssueDetailPage() {
                   </button>
                 ))}
                 {users.length === 0 && (
-                  <p className="text-sm text-muted text-center py-4">No users available</p>
+                  <p className="text-sm text-muted text-center py-4">{id('noUsers')}</p>
                 )}
               </div>
               <div className="mt-4 flex justify-end">
                 <Button variant="outline" onClick={() => setShowAssignModal(false)}>
-                  Cancel
+                  {id('cancel')}
                 </Button>
               </div>
             </div>
@@ -953,7 +956,7 @@ export default function IssueDetailPage() {
             <div className="fixed inset-0 bg-black bg-opacity-30" onClick={() => setShowLinkProblemModal(false)} />
             <div className="relative bg-surface rounded-xl shadow-sm-xl max-w-lg w-full p-6">
               <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-semibold text-foreground">Link to Problem</h3>
+                <h3 className="text-lg font-semibold text-foreground">{id('linkProblemTitle')}</h3>
                 <button
                   onClick={() => setShowLinkProblemModal(false)}
                   className="text-muted hover:text-muted"
@@ -962,20 +965,20 @@ export default function IssueDetailPage() {
                 </button>
               </div>
               <p className="text-sm text-muted mb-4">
-                Link this issue to an existing problem for root cause analysis. This helps identify recurring issues.
+                {id('linkProblemBody')}
               </p>
 
               <div className="space-y-4">
                 <div>
                   <label className="block text-sm font-medium text-secondary mb-1">
-                    Select Problem
+                    {id('selectProblem')}
                   </label>
                   <select
                     value={selectedProblemId}
                     onChange={(e) => setSelectedProblemId(e.target.value)}
                     className="w-full px-3 py-2 border border-border-strong rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary"
                   >
-                    <option value="">Choose a problem...</option>
+                    <option value="">{id('chooseProblem')}</option>
                     {problems.map((problem: { id: string; problem_number: string; title: string; status: string }) => (
                       <option key={problem.id} value={problem.id}>
                         {problem.problem_number} - {problem.title} ({problem.status})
@@ -984,30 +987,30 @@ export default function IssueDetailPage() {
                   </select>
                   {problems.length === 0 && (
                     <p className="mt-1 text-xs text-muted">
-                      No problems found. <Link href="/problems/new" className="text-primary hover:text-primary">Create a new problem</Link>
+                      {id('noProblemsFound')} <Link href="/problems/new" className="text-primary hover:text-primary">{id('createProblem')}</Link>
                     </p>
                   )}
                 </div>
 
                 <div>
                   <label className="block text-sm font-medium text-secondary mb-1">
-                    Relationship Type
+                    {id('relationship')}
                   </label>
                   <select
                     value={linkRelationshipType}
                     onChange={(e) => setLinkRelationshipType(e.target.value)}
                     className="w-full px-3 py-2 border border-border-strong rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary"
                   >
-                    <option value="caused_by">Caused by (this issue is a symptom of the problem)</option>
-                    <option value="related_to">Related to (this issue is related but not directly caused)</option>
-                    <option value="duplicate_of">Duplicate of (this issue is a duplicate of an existing problem)</option>
+                    <option value="caused_by">{id('caused')}</option>
+                    <option value="related_to">{id('related')}</option>
+                    <option value="duplicate_of">{id('duplicate')}</option>
                   </select>
                 </div>
               </div>
 
               <div className="mt-6 flex justify-end space-x-3">
                 <Button variant="outline" onClick={() => setShowLinkProblemModal(false)}>
-                  Cancel
+                  {id('cancel')}
                 </Button>
                 <Button
                   onClick={handleLinkToProblem}
@@ -1016,12 +1019,12 @@ export default function IssueDetailPage() {
                   {linkToProblem.isPending ? (
                     <>
                       <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                      Linking...
+                      {id('linking')}
                     </>
                   ) : (
                     <>
                       <Link2 className="h-4 w-4 mr-2" />
-                      Link to Problem
+                      {id('linkToProblem')}
                     </>
                   )}
                 </Button>
@@ -1038,7 +1041,7 @@ export default function IssueDetailPage() {
             <div className="fixed inset-0 bg-black bg-opacity-30" onClick={() => setShowLinkKBModal(false)} />
             <div className="relative bg-surface rounded-xl shadow-sm-xl max-w-lg w-full p-6">
               <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-semibold text-foreground">Link Knowledge Base Article</h3>
+                <h3 className="text-lg font-semibold text-foreground">{id('linkKbTitle')}</h3>
                 <button
                   onClick={() => setShowLinkKBModal(false)}
                   className="text-muted hover:text-muted"
@@ -1047,20 +1050,20 @@ export default function IssueDetailPage() {
                 </button>
               </div>
               <p className="text-sm text-muted mb-4">
-                Link a published KB article to help resolve this issue.
+                {id('linkKbBody')}
               </p>
 
               <div className="space-y-4">
                 <div>
                   <label className="block text-sm font-medium text-secondary mb-1">
-                    Select Article
+                    {id('selectArticle')}
                   </label>
                   <select
                     value={selectedKBArticleId}
                     onChange={(e) => setSelectedKBArticleId(e.target.value)}
                     className="w-full px-3 py-2 border border-border-strong rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary"
                   >
-                    <option value="">Choose an article...</option>
+                    <option value="">{id('chooseArticle')}</option>
                     {allKBArticles
                       .filter((article: KBArticle) => !linkedKBArticles.some((linked: KBArticle) => linked.id === article.id))
                       .map((article: KBArticle) => (
@@ -1071,7 +1074,7 @@ export default function IssueDetailPage() {
                   </select>
                   {allKBArticles.length === 0 && (
                     <p className="mt-1 text-xs text-muted">
-                      No published articles found. <Link href="/knowledge-base/new" className="text-primary hover:text-primary">Create a new article</Link>
+                      {id('noArticlesFound')} <Link href="/knowledge-base/new" className="text-primary hover:text-primary">{id('createArticle')}</Link>
                     </p>
                   )}
                 </div>
@@ -1079,7 +1082,7 @@ export default function IssueDetailPage() {
 
               <div className="mt-6 flex justify-end space-x-3">
                 <Button variant="outline" onClick={() => setShowLinkKBModal(false)}>
-                  Cancel
+                  {id('cancel')}
                 </Button>
                 <Button
                   onClick={handleLinkKBArticle}
@@ -1088,12 +1091,12 @@ export default function IssueDetailPage() {
                   {linkKBArticle.isPending ? (
                     <>
                       <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                      Linking...
+                      {id('linking')}
                     </>
                   ) : (
                     <>
                       <BookOpen className="h-4 w-4 mr-2" />
-                      Link Article
+                      {id('linkArticle')}
                     </>
                   )}
                 </Button>

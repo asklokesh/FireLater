@@ -1,5 +1,6 @@
 'use client';
 
+import { useT } from '@/i18n/useT';
 import { Component, ReactNode } from 'react';
 import Link from 'next/link';
 import { AlertTriangle, RefreshCw, Home } from 'lucide-react';
@@ -84,6 +85,7 @@ interface ErrorDisplayProps {
 }
 
 export function ErrorDisplay({ error, reset, title, message }: ErrorDisplayProps) {
+  const sh = useT('shared');
   return (
     <div className="min-h-[400px] flex items-center justify-center p-6">
       <div className="text-center max-w-md">
@@ -91,10 +93,10 @@ export function ErrorDisplay({ error, reset, title, message }: ErrorDisplayProps
           <AlertTriangle className="w-7 h-7 text-error" />
         </div>
         <h2 className="text-xl font-semibold text-foreground mb-2">
-          {title || 'Something went wrong'}
+          {title || sh('somethingWrong')}
         </h2>
         <p className="text-secondary mb-6">
-          {message || error?.message || 'An unexpected error occurred. Please try again.'}
+          {message || error?.message || sh('unexpectedTryAgain')}
         </p>
         <div className="flex items-center justify-center gap-3">
           {reset && (

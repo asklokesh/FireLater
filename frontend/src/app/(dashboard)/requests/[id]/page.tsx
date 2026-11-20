@@ -1,5 +1,6 @@
 'use client';
 
+import { useT } from '@/i18n/useT';
 import { useState, useEffect, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
@@ -119,7 +120,11 @@ const priorityConfig: Record<string, { bg: string; text: string }> = {
   critical: { bg: 'bg-error-subtle', text: 'text-error' },
 };
 
+const PROGRESS_KEYS: Record<string, string> = { submitted: 'pSubmitted', pending_approval: 'pPending', approved: 'pApproved', in_progress: 'pInProgress', completed: 'pCompleted' };
+
 export default function RequestDetailPage() {
+  const rd = useT('requestDetail');
+  const ti = useT('issues');
   const params = useParams();
   const _router = useRouter();
   const requestId = params.id as string;
@@ -159,11 +164,11 @@ export default function RequestDetailPage() {
       setRequest(data);
     } catch (err) {
       console.error('Failed to load request:', err);
-      setError('Failed to load request details');
+      setError(rd('loadFailed'));
     } finally {
       setIsLoading(false);
     }
-  }, [requestId]);
+  }, [requestId, rd]);
 
   const loadApprovals = useCallback(async () => {
     try {
@@ -232,7 +237,7 @@ export default function RequestDetailPage() {
       loadRequest();
       loadHistory();
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed to update request';
+      const message = err instanceof Error ? err.message : rd('updateFailed');
       setActionError(message);
     } finally {
       setIsSubmitting(false);
@@ -261,7 +266,7 @@ export default function RequestDetailPage() {
       loadApprovals();
       loadHistory();
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed to approve request';
+      const message = err instanceof Error ? err.message : rd('approveFailed');
       setActionError(message);
     } finally {
       setIsSubmitting(false);
@@ -278,7 +283,7 @@ export default function RequestDetailPage() {
       loadApprovals();
       loadHistory();
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed to reject request';
+      const message = err instanceof Error ? err.message : rd('rejectFailed');
       setActionError(message);
     } finally {
       setIsSubmitting(false);
@@ -296,7 +301,7 @@ export default function RequestDetailPage() {
       setNewComment('');
       loadComments();
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed to add comment';
+      const message = err instanceof Error ? err.message : rd('commentFailed');
       setActionError(message);
     } finally {
       setIsSubmitting(false);
@@ -314,7 +319,7 @@ export default function RequestDetailPage() {
       loadRequest();
       loadHistory();
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed to assign request';
+      const message = err instanceof Error ? err.message : rd('assignFailed');
       setActionError(message);
     } finally {
       setIsSubmitting(false);
@@ -329,7 +334,7 @@ export default function RequestDetailPage() {
       loadRequest();
       loadHistory();
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed to start request';
+      const message = err instanceof Error ? err.message : rd('startFailed');
       setActionError(message);
     } finally {
       setIsSubmitting(false);
@@ -344,7 +349,7 @@ export default function RequestDetailPage() {
       loadRequest();
       loadHistory();
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed to complete request';
+      const message = err instanceof Error ? err.message : rd('completeFailed');
       setActionError(message);
     } finally {
       setIsSubmitting(false);
@@ -363,7 +368,7 @@ export default function RequestDetailPage() {
       loadRequest();
       loadHistory();
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed to cancel request';
+      const message = err instanceof Error ? err.message : rd('cancelFailed');
       setActionError(message);
     } finally {
       setIsSubmitting(false);
@@ -393,9 +398,9 @@ export default function RequestDetailPage() {
     return (
       <div className="bg-error-subtle border border-red-200 rounded-lg p-6 text-center">
         <AlertCircle className="h-12 w-12 text-error mx-auto mb-4" />
-        <h3 className="text-lg font-medium text-error mb-2">{error || 'Request not found'}</h3>
+        <h3 className="text-lg font-medium text-error mb-2">{error || rd('notFound')}</h3>
         <Link href="/catalog">
-          <Button variant="outline">Back to Catalog</Button>
+          <Button variant="outline">{rd('backToCatalog')}</Button>
         </Link>
       </div>
     );
@@ -421,7 +426,7 @@ export default function RequestDetailPage() {
             onClick={() => setActionError(null)}
             className="ml-auto text-error hover:text-error"
           >
-            Dismiss
+            {rd('dismiss')}
           </button>
         </div>
       )}
@@ -447,10 +452,10 @@ export default function RequestDetailPage() {
                   onChange={(e) => setEditForm({ ...editForm, priority: e.target.value as 'low' | 'medium' | 'high' | 'critical' })}
                   className="px-2 py-1 border border-border-strong rounded-md text-xs focus:outline-none focus:ring-2 focus:ring-primary"
                 >
-                  <option value="low">Low</option>
-                  <option value="medium">Medium</option>
-                  <option value="high">High</option>
-                  <option value="critical">Critical</option>
+                  <option value="low">{ti('priorityLow')}</option>
+                  <option value="medium">{ti('priorityMedium')}</option>
+                  <option value="high">{ti('priorityHigh')}</option>
+                  <option value="critical">{ti('priorityCritical')}</option>
                 </select>
               ) : (
                 <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${priorityCfg.bg} ${priorityCfg.text}`}>
@@ -466,7 +471,7 @@ export default function RequestDetailPage() {
             <>
               <Button variant="outline" onClick={handleCancelEdit} disabled={isSubmitting}>
                 <X className="h-4 w-4 mr-2" />
-                Cancel
+                {rd('cancel')}
               </Button>
               <Button onClick={handleSaveEdit} disabled={isSubmitting}>
                 {isSubmitting ? (
@@ -474,7 +479,7 @@ export default function RequestDetailPage() {
                 ) : (
                   <Save className="h-4 w-4 mr-2" />
                 )}
-                Save
+                {rd('save')}
               </Button>
             </>
           ) : (
@@ -482,25 +487,25 @@ export default function RequestDetailPage() {
               {canEdit && (
                 <Button variant="outline" onClick={() => setIsEditing(true)}>
                   <Edit className="h-4 w-4 mr-2" />
-                  Edit
+                  {rd('edit')}
                 </Button>
               )}
               {canStart && (
                 <Button onClick={handleStart} disabled={isSubmitting}>
                   <Play className="h-4 w-4 mr-2" />
-                  Start Work
+                  {rd('startWork')}
                 </Button>
               )}
               {canComplete && (
                 <Button onClick={handleComplete} disabled={isSubmitting}>
                   <CheckCircle className="h-4 w-4 mr-2" />
-                  Complete
+                  {rd('complete')}
                 </Button>
               )}
               {canCancel && (
                 <Button variant="outline" onClick={() => setShowCancelModal(true)}>
                   <Ban className="h-4 w-4 mr-2" />
-                  Cancel
+                  {rd('cancel')}
                 </Button>
               )}
             </>
@@ -517,10 +522,10 @@ export default function RequestDetailPage() {
             <div className="border-b border-border">
               <nav className="flex -mb-px">
                 {[
-                  { id: 'details', label: 'Details', icon: ShoppingCart },
-                  { id: 'approvals', label: 'Approvals', icon: CheckCircle },
-                  { id: 'comments', label: 'Comments', icon: MessageSquare },
-                  { id: 'history', label: 'History', icon: History },
+                  { id: 'details', label: rd('tabDetails'), icon: ShoppingCart },
+                  { id: 'approvals', label: rd('tabApprovals'), icon: CheckCircle },
+                  { id: 'comments', label: rd('tabComments'), icon: MessageSquare },
+                  { id: 'history', label: rd('tabHistory'), icon: History },
                 ].map((tab) => (
                   <button
                     key={tab.id}
@@ -553,27 +558,27 @@ export default function RequestDetailPage() {
               {activeTab === 'details' && (
                 <div className="space-y-6">
                   <div>
-                    <h3 className="text-sm font-medium text-muted mb-2">Description</h3>
+                    <h3 className="text-sm font-medium text-muted mb-2">{rd('description')}</h3>
                     <p className="text-foreground">{request.catalog_item.description}</p>
                   </div>
 
                   <div>
-                    <h3 className="text-sm font-medium text-muted mb-2">Additional Notes</h3>
+                    <h3 className="text-sm font-medium text-muted mb-2">{rd('additionalNotes')}</h3>
                     {isEditing ? (
                       <textarea
                         value={editForm.notes}
                         onChange={(e) => setEditForm({ ...editForm, notes: e.target.value })}
                         className="w-full px-3 py-2 border border-border-strong rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary"
                         rows={3}
-                        placeholder="Add additional notes..."
+                        placeholder={rd('notesPh')}
                       />
                     ) : (
-                      <p className="text-foreground">{request.notes || 'No additional notes'}</p>
+                      <p className="text-foreground">{request.notes || rd('noNotes')}</p>
                     )}
                   </div>
 
                   <div>
-                    <h3 className="text-sm font-medium text-muted mb-2">Form Data</h3>
+                    <h3 className="text-sm font-medium text-muted mb-2">{rd('formData')}</h3>
                     <div className="bg-surface-hover rounded-lg p-4">
                       {Object.entries(request.form_data).length > 0 ? (
                         <dl className="space-y-2">
@@ -587,14 +592,14 @@ export default function RequestDetailPage() {
                           ))}
                         </dl>
                       ) : (
-                        <p className="text-sm text-muted">No form data submitted</p>
+                        <p className="text-sm text-muted">{rd('noFormData')}</p>
                       )}
                     </div>
                   </div>
 
                   {request.cancel_reason && (
                     <div className="bg-error-subtle border border-red-200 rounded-lg p-4">
-                      <h3 className="text-sm font-medium text-error mb-1">Cancellation Reason</h3>
+                      <h3 className="text-sm font-medium text-error mb-1">{rd('cancellationReason')}</h3>
                       <p className="text-sm text-error">{request.cancel_reason}</p>
                     </div>
                   )}
@@ -605,7 +610,7 @@ export default function RequestDetailPage() {
               {activeTab === 'approvals' && (
                 <div className="space-y-4">
                   {approvals.length === 0 ? (
-                    <p className="text-muted text-center py-8">No approvals required for this request</p>
+                    <p className="text-muted text-center py-8">{rd('noApprovals')}</p>
                   ) : (
                     approvals.map((approval) => (
                       <div key={approval.id} className="border border-border rounded-lg p-4">
@@ -613,7 +618,7 @@ export default function RequestDetailPage() {
                           <div>
                             <h4 className="font-medium text-foreground">{approval.step_name}</h4>
                             <p className="text-sm text-muted">
-                              {approval.approver_name || 'Pending assignment'}
+                              {approval.approver_name || rd('pendingAssignment')}
                             </p>
                           </div>
                           <span className={`px-2.5 py-0.5 rounded-full text-xs font-medium ${
@@ -634,7 +639,7 @@ export default function RequestDetailPage() {
                             <textarea
                               value={approvalComment}
                               onChange={(e) => setApprovalComment(e.target.value)}
-                              placeholder="Add comments (optional)"
+                              placeholder={rd('approvalCommentsPh')}
                               rows={2}
                               className="w-full px-3 py-2 border border-border-strong rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary"
                             />
@@ -645,7 +650,7 @@ export default function RequestDetailPage() {
                                 size="sm"
                               >
                                 <CheckCircle className="h-4 w-4 mr-1" />
-                                Approve
+                                {rd('approve')}
                               </Button>
                               <Button
                                 onClick={() => handleReject(approval.id)}
@@ -655,7 +660,7 @@ export default function RequestDetailPage() {
                                 className="text-error border-red-300 hover:bg-error-subtle"
                               >
                                 <XCircle className="h-4 w-4 mr-1" />
-                                Reject
+                                {rd('reject')}
                               </Button>
                             </div>
                           </div>
@@ -663,7 +668,7 @@ export default function RequestDetailPage() {
 
                         {(approval.approved_at || approval.rejected_at) && (
                           <p className="text-xs text-muted mt-2">
-                            {approval.status === 'approved' ? 'Approved' : 'Rejected'} on{' '}
+                            {approval.status === 'approved' ? rd('approvedOn') : rd('rejectedOn')}{' '}
                             {formatDate(approval.approved_at || approval.rejected_at || '')}
                           </p>
                         )}
@@ -681,7 +686,7 @@ export default function RequestDetailPage() {
                     <textarea
                       value={newComment}
                       onChange={(e) => setNewComment(e.target.value)}
-                      placeholder="Add a comment..."
+                      placeholder={rd('commentPh')}
                       rows={3}
                       className="w-full px-3 py-2 border border-border-strong rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary"
                     />
@@ -697,7 +702,7 @@ export default function RequestDetailPage() {
                       </label>
                       <Button type="submit" disabled={isSubmitting || !newComment.trim()} size="sm">
                         <Send className="h-4 w-4 mr-1" />
-                        Send
+                        {rd('send')}
                       </Button>
                     </div>
                   </form>
@@ -705,7 +710,7 @@ export default function RequestDetailPage() {
                   {/* Comments List */}
                   <div className="space-y-4">
                     {comments.length === 0 ? (
-                      <p className="text-muted text-center py-8">No comments yet</p>
+                      <p className="text-muted text-center py-8">{rd('noComments')}</p>
                     ) : (
                       comments.map((comment) => (
                         <div
@@ -726,7 +731,7 @@ export default function RequestDetailPage() {
                             </div>
                             {comment.is_internal && (
                               <span className="text-xs bg-warning-subtle text-warning px-2 py-0.5 rounded">
-                                Internal
+                                {rd('internal')}
                               </span>
                             )}
                           </div>
@@ -742,7 +747,7 @@ export default function RequestDetailPage() {
               {activeTab === 'history' && (
                 <div className="space-y-4">
                   {history.length === 0 ? (
-                    <p className="text-muted text-center py-8">No history available</p>
+                    <p className="text-muted text-center py-8">{rd('noHistory')}</p>
                   ) : (
                     <div className="flow-root">
                       <ul className="-mb-8">
@@ -794,10 +799,10 @@ export default function RequestDetailPage() {
         <div className="space-y-6">
           {/* Request Info */}
           <div className="bg-surface rounded-lg shadow p-6">
-            <h3 className="text-lg font-medium text-foreground mb-4">Request Information</h3>
+            <h3 className="text-lg font-medium text-foreground mb-4">{rd('requestInfo')}</h3>
             <dl className="space-y-4">
               <div>
-                <dt className="text-sm text-muted">Requester</dt>
+                <dt className="text-sm text-muted">{rd('requester')}</dt>
                 <dd className="mt-1 flex items-center">
                   <User className="h-4 w-4 text-muted mr-2" />
                   <span className="text-sm font-medium text-foreground">{request.requester.name}</span>
@@ -806,7 +811,7 @@ export default function RequestDetailPage() {
 
               {request.requested_for && request.requested_for.id !== request.requester.id && (
                 <div>
-                  <dt className="text-sm text-muted">Requested For</dt>
+                  <dt className="text-sm text-muted">{rd('requestedFor')}</dt>
                   <dd className="mt-1 flex items-center">
                     <User className="h-4 w-4 text-muted mr-2" />
                     <span className="text-sm font-medium text-foreground">{request.requested_for.name}</span>
@@ -815,7 +820,7 @@ export default function RequestDetailPage() {
               )}
 
               <div>
-                <dt className="text-sm text-muted">Created</dt>
+                <dt className="text-sm text-muted">{rd('created')}</dt>
                 <dd className="mt-1 flex items-center">
                   <Clock className="h-4 w-4 text-muted mr-2" />
                   <span className="text-sm text-foreground">{formatDate(request.created_at)}</span>
@@ -824,7 +829,7 @@ export default function RequestDetailPage() {
 
               {request.due_date && (
                 <div>
-                  <dt className="text-sm text-muted">Due Date</dt>
+                  <dt className="text-sm text-muted">{rd('dueDate')}</dt>
                   <dd className="mt-1 flex items-center">
                     <Clock className="h-4 w-4 text-muted mr-2" />
                     <span className="text-sm text-foreground">{formatDate(request.due_date)}</span>
@@ -833,13 +838,13 @@ export default function RequestDetailPage() {
               )}
 
               <div>
-                <dt className="text-sm text-muted">Cost Center</dt>
+                <dt className="text-sm text-muted">{rd('costCenter')}</dt>
                 {isEditing ? (
                   <dd className="mt-1">
                     <Input
                       value={editForm.costCenter}
                       onChange={(e) => setEditForm({ ...editForm, costCenter: e.target.value })}
-                      placeholder="Enter cost center..."
+                      placeholder={rd('costCenterPh')}
                       className="text-sm"
                     />
                   </dd>
@@ -850,7 +855,7 @@ export default function RequestDetailPage() {
 
               {request.completed_at && (
                 <div>
-                  <dt className="text-sm text-muted">Completed</dt>
+                  <dt className="text-sm text-muted">{rd('completed')}</dt>
                   <dd className="mt-1 flex items-center">
                     <CheckCircle className="h-4 w-4 text-success mr-2" />
                     <span className="text-sm text-foreground">{formatDate(request.completed_at)}</span>
@@ -862,7 +867,7 @@ export default function RequestDetailPage() {
 
           {/* Assignment */}
           <div className="bg-surface rounded-lg shadow p-6">
-            <h3 className="text-lg font-medium text-foreground mb-4">Assignment</h3>
+            <h3 className="text-lg font-medium text-foreground mb-4">{rd('assignment')}</h3>
             {request.assigned_to ? (
               <div className="flex items-center">
                 <div className="h-10 w-10 rounded-full bg-surface-hover flex items-center justify-center text-sm font-medium text-secondary">
@@ -875,14 +880,14 @@ export default function RequestDetailPage() {
               </div>
             ) : (
               <div className="space-y-3">
-                <p className="text-sm text-muted">Not assigned</p>
+                <p className="text-sm text-muted">{rd('notAssigned')}</p>
                 <div className="flex space-x-2">
                   <select
                     value={selectedAssignee}
                     onChange={(e) => setSelectedAssignee(e.target.value)}
                     className="flex-1 px-3 py-2 border border-border-strong rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary"
                   >
-                    <option value="">Select user...</option>
+                    <option value="">{rd('selectUser')}</option>
                     {users.map((user) => (
                       <option key={user.id} value={user.id}>
                         {user.name}
@@ -890,7 +895,7 @@ export default function RequestDetailPage() {
                     ))}
                   </select>
                   <Button onClick={handleAssign} disabled={!selectedAssignee || isSubmitting} size="sm">
-                    Assign
+                    {rd('assign')}
                   </Button>
                 </div>
               </div>
@@ -899,7 +904,7 @@ export default function RequestDetailPage() {
 
           {/* Timeline Summary */}
           <div className="bg-surface rounded-lg shadow p-6">
-            <h3 className="text-lg font-medium text-foreground mb-4">Progress</h3>
+            <h3 className="text-lg font-medium text-foreground mb-4">{rd('progress')}</h3>
             <div className="space-y-3">
               {['submitted', 'pending_approval', 'approved', 'in_progress', 'completed'].map((status, _idx) => {
                 const isActive = request.status === status;
@@ -919,7 +924,7 @@ export default function RequestDetailPage() {
                     <span className={`ml-3 text-sm ${
                       isActive ? 'text-primary font-medium' : isPast ? 'text-foreground' : 'text-muted'
                     }`}>
-                      {status.replace('_', ' ').charAt(0).toUpperCase() + status.replace('_', ' ').slice(1)}
+                      {rd(PROGRESS_KEYS[status])}
                     </span>
                   </div>
                 );
@@ -927,13 +932,13 @@ export default function RequestDetailPage() {
               {request.status === 'cancelled' && (
                 <div className="flex items-center">
                   <div className="h-3 w-3 rounded-full bg-error" />
-                  <span className="ml-3 text-sm text-error font-medium">Cancelled</span>
+                  <span className="ml-3 text-sm text-error font-medium">{rd('cancelled')}</span>
                 </div>
               )}
               {request.status === 'rejected' && (
                 <div className="flex items-center">
                   <div className="h-3 w-3 rounded-full bg-error" />
-                  <span className="ml-3 text-sm text-error font-medium">Rejected</span>
+                  <span className="ml-3 text-sm text-error font-medium">{rd('rejected')}</span>
                 </div>
               )}
             </div>
@@ -945,27 +950,27 @@ export default function RequestDetailPage() {
       {showCancelModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-surface rounded-lg shadow-xl max-w-md w-full mx-4 p-6">
-            <h2 className="text-lg font-semibold text-foreground mb-4">Cancel Request</h2>
+            <h2 className="text-lg font-semibold text-foreground mb-4">{rd('cancelTitle')}</h2>
             <p className="text-sm text-secondary mb-4">
-              Please provide a reason for cancelling this request.
+              {rd('cancelBody')}
             </p>
             <textarea
               value={cancelReason}
               onChange={(e) => setCancelReason(e.target.value)}
-              placeholder="Reason for cancellation..."
+              placeholder={rd('cancelReasonPh')}
               rows={3}
               className="w-full px-3 py-2 border border-border-strong rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary mb-4"
             />
             <div className="flex justify-end space-x-3">
               <Button variant="outline" onClick={() => setShowCancelModal(false)}>
-                Keep Request
+                {rd('keepRequest')}
               </Button>
               <Button
                 onClick={handleCancel}
                 disabled={!cancelReason.trim() || isSubmitting}
                 className="bg-error hover:bg-error"
               >
-                Cancel Request
+                {rd('cancelRequest')}
               </Button>
             </div>
           </div>

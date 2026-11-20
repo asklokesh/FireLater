@@ -1,5 +1,6 @@
 'use client';
 
+import { useT } from '@/i18n/useT';
 import { ReactNode } from 'react';
 import { LucideIcon, Inbox, Plus } from 'lucide-react';
 
@@ -75,18 +76,19 @@ interface NoResultsProps {
 }
 
 export function NoResults({ query, onClear }: NoResultsProps) {
+  const sh = useT('shared');
   return (
     <EmptyState
-      title="No results found"
+      title={sh('noResults')}
       description={
         query
-          ? `No items match "${query}". Try adjusting your search or filters.`
-          : 'No items match your current filters.'
+          ? sh('noMatchQuery', { query })
+          : sh('noMatchFilters')
       }
       action={
         onClear
           ? {
-              label: 'Clear filters',
+              label: sh('clearFilters'),
               onClick: onClear,
             }
           : undefined

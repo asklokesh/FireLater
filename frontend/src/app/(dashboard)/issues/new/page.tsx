@@ -1,5 +1,6 @@
 'use client';
 
+import { useT } from '@/i18n/useT';
 import { useState, FormEvent } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
@@ -9,6 +10,8 @@ import { Input } from '@/components/ui/input';
 import { useCreateIssue, useApplications, useUsers, useGroups } from '@/hooks/useApi';
 
 export default function NewIssuePage() {
+  const tf = useT('forms');
+  const ti = useT('issues');
   const router = useRouter();
   const searchParams = useSearchParams();
   const applicationId = searchParams.get('application');
@@ -101,9 +104,9 @@ export default function NewIssuePage() {
           <ArrowLeft className="h-5 w-5 text-secondary" />
         </button>
         <div>
-          <h1 className="text-2xl font-bold text-foreground">Create New Issue</h1>
+          <h1 className="text-2xl font-bold text-foreground">{tf('createIssueTitle')}</h1>
           <p className="mt-1 text-sm text-secondary">
-            Report a new IT incident or problem
+            {tf('createIssueSubtitle')}
           </p>
         </div>
       </div>
@@ -118,13 +121,13 @@ export default function NewIssuePage() {
         )}
 
         <div className="bg-surface border border-border rounded-xl p-6 space-y-6">
-          <h2 className="text-lg font-semibold text-foreground">Issue Details</h2>
+          <h2 className="text-lg font-semibold text-foreground">{tf('issueDetails')}</h2>
 
           <Input
             id="title"
             type="text"
-            label="Title"
-            placeholder="Brief summary of the issue"
+            label={tf('title')}
+            placeholder={tf('issueTitlePh')}
             value={formData.title}
             onChange={handleChange('title')}
             error={errors.title}
@@ -136,12 +139,12 @@ export default function NewIssuePage() {
               htmlFor="description"
               className="block text-sm font-medium text-foreground mb-1"
             >
-              Description <span className="text-error">*</span>
+              {tf('description')} <span className="text-error">*</span>
             </label>
             <textarea
               id="description"
               rows={5}
-              placeholder="Detailed description of the issue, including steps to reproduce, error messages, etc."
+              placeholder={tf('issueDescPh')}
               value={formData.description}
               onChange={handleChange('description')}
               className={`w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary ${
@@ -159,7 +162,7 @@ export default function NewIssuePage() {
               htmlFor="applicationId"
               className="block text-sm font-medium text-foreground mb-1"
             >
-              Application
+              {tf('application')}
             </label>
             <select
               id="applicationId"
@@ -167,7 +170,7 @@ export default function NewIssuePage() {
               onChange={handleChange('applicationId')}
               className="w-full px-3 py-2 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary"
             >
-              <option value="">Select an application (optional)</option>
+              <option value="">{tf('selectApp')}</option>
               {applications.map((app: { id: string; name: string }) => (
                 <option key={app.id} value={app.id}>
                   {app.name}
@@ -178,7 +181,7 @@ export default function NewIssuePage() {
         </div>
 
         <div className="bg-surface border border-border rounded-xl p-6 space-y-6">
-          <h2 className="text-lg font-semibold text-foreground">Priority & Impact</h2>
+          <h2 className="text-lg font-semibold text-foreground">{tf('priorityImpact')}</h2>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
@@ -186,7 +189,7 @@ export default function NewIssuePage() {
                 htmlFor="priority"
                 className="block text-sm font-medium text-foreground mb-1"
               >
-                Priority
+                {ti('priority')}
               </label>
               <select
                 id="priority"
@@ -194,10 +197,10 @@ export default function NewIssuePage() {
                 onChange={handleChange('priority')}
                 className="w-full px-3 py-2 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary"
               >
-                <option value="critical">Critical</option>
-                <option value="high">High</option>
-                <option value="medium">Medium</option>
-                <option value="low">Low</option>
+                <option value="critical">{ti('priorityCritical')}</option>
+                <option value="high">{ti('priorityHigh')}</option>
+                <option value="medium">{ti('priorityMedium')}</option>
+                <option value="low">{ti('priorityLow')}</option>
               </select>
             </div>
 
@@ -206,7 +209,7 @@ export default function NewIssuePage() {
                 htmlFor="urgency"
                 className="block text-sm font-medium text-foreground mb-1"
               >
-                Urgency
+                {tf('urgency')}
               </label>
               <select
                 id="urgency"
@@ -214,10 +217,10 @@ export default function NewIssuePage() {
                 onChange={handleChange('urgency')}
                 className="w-full px-3 py-2 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary"
               >
-                <option value="immediate">Immediate</option>
-                <option value="high">High</option>
-                <option value="medium">Medium</option>
-                <option value="low">Low</option>
+                <option value="immediate">{tf('immediate')}</option>
+                <option value="high">{ti('priorityHigh')}</option>
+                <option value="medium">{ti('priorityMedium')}</option>
+                <option value="low">{ti('priorityLow')}</option>
               </select>
             </div>
 
@@ -226,7 +229,7 @@ export default function NewIssuePage() {
                 htmlFor="impact"
                 className="block text-sm font-medium text-foreground mb-1"
               >
-                Impact
+                {tf('impact')}
               </label>
               <select
                 id="impact"
@@ -234,17 +237,17 @@ export default function NewIssuePage() {
                 onChange={handleChange('impact')}
                 className="w-full px-3 py-2 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary"
               >
-                <option value="widespread">Widespread</option>
-                <option value="significant">Significant</option>
-                <option value="moderate">Moderate</option>
-                <option value="minor">Minor</option>
+                <option value="widespread">{tf('widespread')}</option>
+                <option value="significant">{tf('significant')}</option>
+                <option value="moderate">{tf('moderate')}</option>
+                <option value="minor">{tf('minor')}</option>
               </select>
             </div>
           </div>
         </div>
 
         <div className="bg-surface border border-border rounded-xl p-6 space-y-6">
-          <h2 className="text-lg font-semibold text-foreground">Assignment</h2>
+          <h2 className="text-lg font-semibold text-foreground">{tf('assignment')}</h2>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
@@ -252,7 +255,7 @@ export default function NewIssuePage() {
                 htmlFor="assignedGroup"
                 className="block text-sm font-medium text-foreground mb-1"
               >
-                Assignment Group
+                {tf('assignmentGroup')}
               </label>
               <select
                 id="assignedGroup"
@@ -260,7 +263,7 @@ export default function NewIssuePage() {
                 onChange={handleChange('assignedGroup')}
                 className="w-full px-3 py-2 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary"
               >
-                <option value="">Select a group (optional)</option>
+                <option value="">{tf('selectGroup')}</option>
                 {groups.map((group: { id: string; name: string }) => (
                   <option key={group.id} value={group.id}>
                     {group.name}
@@ -282,7 +285,7 @@ export default function NewIssuePage() {
                 onChange={handleChange('assignedTo')}
                 className="w-full px-3 py-2 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary"
               >
-                <option value="">Select a user (optional)</option>
+                <option value="">{tf('selectUser')}</option>
                 {users.map((user: { id: string; name: string }) => (
                   <option key={user.id} value={user.id}>
                     {user.name}
@@ -297,11 +300,11 @@ export default function NewIssuePage() {
         <div className="flex justify-end space-x-4">
           <Link href="/issues">
             <Button type="button" variant="outline">
-              Cancel
+              {tf('cancel')}
             </Button>
           </Link>
           <Button type="submit" isLoading={createIssue.isPending}>
-            Create Issue
+            {tf('createIssueBtn')}
           </Button>
         </div>
       </form>

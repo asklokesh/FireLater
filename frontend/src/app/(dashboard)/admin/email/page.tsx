@@ -1,5 +1,6 @@
 'use client';
 
+import { useT } from '@/i18n/useT';
 import { useState } from 'react';
 import {
   Mail,
@@ -33,6 +34,7 @@ import { useApplications, useGroups } from '@/hooks/useApi';
 type TabType = 'configs' | 'logs' | 'setup';
 
 export default function EmailIntegrationPage() {
+  const el = useT('adminEmail');
   const [activeTab, setActiveTab] = useState<TabType>('configs');
   const [showConfigModal, setShowConfigModal] = useState(false);
   const [editingConfig, setEditingConfig] = useState<EmailConfig | null>(null);
@@ -61,9 +63,9 @@ export default function EmailIntegrationPage() {
   };
 
   const tabs = [
-    { id: 'configs' as TabType, label: 'Configurations', icon: Settings2 },
-    { id: 'logs' as TabType, label: 'Email Logs', icon: Clock },
-    { id: 'setup' as TabType, label: 'Setup Guide', icon: Info },
+    { id: 'configs' as TabType, label: el('tabConfigs'), icon: Settings2 },
+    { id: 'logs' as TabType, label: el('tabLogs'), icon: Clock },
+    { id: 'setup' as TabType, label: el('tabSetup'), icon: Info },
   ];
 
   return (
@@ -71,9 +73,9 @@ export default function EmailIntegrationPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-semibold text-foreground">Email Integration</h1>
+          <h1 className="text-2xl font-semibold text-foreground">{el('title')}</h1>
           <p className="mt-1 text-sm text-muted">
-            Configure email-to-ticket integration for automatic issue creation
+            {el('subtitle')}
           </p>
         </div>
         <button
@@ -81,7 +83,7 @@ export default function EmailIntegrationPage() {
           className="inline-flex items-center px-4 py-2 border border-transparent rounded-xl shadow-sm text-sm font-medium text-white bg-primary hover:bg-primary-hover"
         >
           <Plus className="h-4 w-4 mr-2" />
-          Add Configuration
+          {el('addConfig')}
         </button>
       </div>
 
@@ -153,6 +155,7 @@ function ConfigurationsTab({
   loading: boolean;
   onEdit: (config: EmailConfig) => void;
 }) {
+  const el = useT('adminEmail');
   const updateConfig = useUpdateEmailConfig();
   const deleteConfig = useDeleteEmailConfig();
 
@@ -164,7 +167,7 @@ function ConfigurationsTab({
   };
 
   const handleDelete = async (config: EmailConfig) => {
-    if (confirm(`Are you sure you want to delete "${config.name}"? This action cannot be undone.`)) {
+    if (confirm(el('confirmDelete', { name: config.name }))) {
       await deleteConfig.mutateAsync(config.id);
     }
   };
@@ -188,9 +191,9 @@ function ConfigurationsTab({
     return (
       <div className="text-center py-12">
         <Mail className="mx-auto h-12 w-12 text-muted" />
-        <h3 className="mt-2 text-sm font-medium text-foreground">No email configurations</h3>
+        <h3 className="mt-2 text-sm font-medium text-foreground">{el('noConfigs')}</h3>
         <p className="mt-1 text-sm text-muted">
-          Get started by creating a new email configuration.
+          {el('noConfigsHint')}
         </p>
       </div>
     );
@@ -235,24 +238,24 @@ function ConfigurationsTab({
                         : 'bg-background text-secondary'
                     }`}
                   >
-                    {config.is_active ? 'Active' : 'Inactive'}
+                    {config.is_active ? el('active') : el('inactive')}
                   </span>
                 </div>
               </div>
 
               <div className="mt-4 flex items-center justify-between">
                 <div className="flex items-center space-x-6 text-sm text-muted">
-                  <span>Priority: {config.default_priority}</span>
+                  <span>{el('priority', { value: config.default_priority })}</span>
                   {config.auto_reply_enabled && (
                     <span className="flex items-center">
                       <Check className="h-4 w-4 text-success mr-1" />
-                      Auto-reply
+                      {el('autoReply')}
                     </span>
                   )}
                   {config.spam_filter_enabled && (
                     <span className="flex items-center">
                       <Check className="h-4 w-4 text-success mr-1" />
-                      Spam filter
+                      {el('spamFilter')}
                     </span>
                   )}
                 </div>
@@ -264,7 +267,7 @@ function ConfigurationsTab({
                         ? 'text-success hover:bg-success-subtle'
                         : 'text-muted hover:bg-surface-hover'
                     }`}
-                    title={config.is_active ? 'Deactivate' : 'Activate'}
+                    title={config.is_active ? el('deactivate') : el('activate')}
                   >
                     {config.is_active ? (
                       <Power className="h-5 w-5" />
@@ -275,14 +278,14 @@ function ConfigurationsTab({
                   <button
                     onClick={() => onEdit(config)}
                     className="p-2 text-muted hover:text-secondary hover:bg-surface-hover rounded-xl"
-                    title="Edit"
+                    title={el('edit')}
                   >
                     <Settings2 className="h-5 w-5" />
                   </button>
                   <button
                     onClick={() => handleDelete(config)}
                     className="p-2 text-error hover:text-error hover:bg-error-subtle rounded-xl"
-                    title="Delete"
+                    title={el('delete')}
                   >
                     <Trash2 className="h-5 w-5" />
                   </button>
@@ -310,6 +313,7 @@ function LogsTab({
   filters: { configId: string; action: string; success: string };
   onFilterChange: (filters: { configId: string; action: string; success: string }) => void;
 }) {
+  const el = useT('adminEmail');
   const actionColors: Record<string, string> = {
     created_issue: 'bg-success-subtle text-success',
     added_comment: 'bg-primary-subtle text-primary',
@@ -320,12 +324,12 @@ function LogsTab({
   };
 
   const actionLabels: Record<string, string> = {
-    created_issue: 'Created Issue',
-    added_comment: 'Added Comment',
-    rejected_spam: 'Rejected (Spam)',
-    rejected_config_disabled: 'Rejected (Disabled)',
-    rejected_no_config: 'Rejected (No Config)',
-    error: 'Error',
+    created_issue: 'aCreated',
+    added_comment: 'aComment',
+    rejected_spam: 'aSpam',
+    rejected_config_disabled: 'aDisabled',
+    rejected_no_config: 'aNoConfig',
+    error: 'aError',
   };
 
   return (
@@ -335,14 +339,14 @@ function LogsTab({
         <div className="flex items-center space-x-4">
           <div className="flex items-center">
             <Filter className="h-5 w-5 text-muted mr-2" />
-            <span className="text-sm font-medium text-secondary">Filters:</span>
+            <span className="text-sm font-medium text-secondary">{el('filters')}</span>
           </div>
           <select
             value={filters.configId}
             onChange={(e) => onFilterChange({ ...filters, configId: e.target.value })}
             className="block rounded-xl border-border-strong shadow-sm focus:border-primary focus:ring-primary/20 focus:border-primary sm:text-sm"
           >
-            <option value="">All Configurations</option>
+            <option value="">{el('allConfigs')}</option>
             {configs.map((config) => (
               <option key={config.id} value={config.id}>
                 {config.name}
@@ -354,27 +358,27 @@ function LogsTab({
             onChange={(e) => onFilterChange({ ...filters, action: e.target.value })}
             className="block rounded-xl border-border-strong shadow-sm focus:border-primary focus:ring-primary/20 focus:border-primary sm:text-sm"
           >
-            <option value="">All Actions</option>
-            <option value="created_issue">Created Issue</option>
-            <option value="added_comment">Added Comment</option>
-            <option value="rejected_spam">Rejected (Spam)</option>
-            <option value="error">Error</option>
+            <option value="">{el('allActions')}</option>
+            <option value="created_issue">{el('aCreated')}</option>
+            <option value="added_comment">{el('aComment')}</option>
+            <option value="rejected_spam">{el('aSpam')}</option>
+            <option value="error">{el('aError')}</option>
           </select>
           <select
             value={filters.success}
             onChange={(e) => onFilterChange({ ...filters, success: e.target.value })}
             className="block rounded-xl border-border-strong shadow-sm focus:border-primary focus:ring-primary/20 focus:border-primary sm:text-sm"
           >
-            <option value="">All Results</option>
-            <option value="true">Successful</option>
-            <option value="false">Failed</option>
+            <option value="">{el('allResults')}</option>
+            <option value="true">{el('successful')}</option>
+            <option value="false">{el('failed')}</option>
           </select>
           {(filters.configId || filters.action || filters.success) && (
             <button
               onClick={() => onFilterChange({ configId: '', action: '', success: '' })}
               className="text-sm text-muted hover:text-secondary"
             >
-              Clear filters
+              {el('clearFilters')}
             </button>
           )}
         </div>
@@ -389,9 +393,9 @@ function LogsTab({
         ) : logs.length === 0 ? (
           <div className="text-center py-12">
             <Clock className="mx-auto h-12 w-12 text-muted" />
-            <h3 className="mt-2 text-sm font-medium text-foreground">No email logs</h3>
+            <h3 className="mt-2 text-sm font-medium text-foreground">{el('noLogs')}</h3>
             <p className="mt-1 text-sm text-muted">
-              Email processing logs will appear here.
+              {el('noLogsHint')}
             </p>
           </div>
         ) : (
@@ -399,19 +403,19 @@ function LogsTab({
             <thead className="bg-surface-hover">
               <tr>
                 <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">
-                  From
+                  {el('colFrom')}
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">
-                  Subject
+                  {el('colSubject')}
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">
-                  Action
+                  {el('colAction')}
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">
-                  Result
+                  {el('colResult')}
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">
-                  Time
+                  {el('colTime')}
                 </th>
               </tr>
             </thead>
@@ -440,19 +444,19 @@ function LogsTab({
                         actionColors[log.action] || 'bg-background text-secondary'
                       }`}
                     >
-                      {actionLabels[log.action] || log.action}
+                      {actionLabels[log.action] ? el(actionLabels[log.action]) : log.action}
                     </span>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     {log.success ? (
                       <span className="inline-flex items-center text-success">
                         <Check className="h-4 w-4 mr-1" />
-                        Success
+                        {el('success')}
                       </span>
                     ) : (
                       <span className="inline-flex items-center text-error">
                         <AlertCircle className="h-4 w-4 mr-1" />
-                        Failed
+                        {el('failed')}
                       </span>
                     )}
                     {log.error_message && (
@@ -476,6 +480,7 @@ function LogsTab({
 
 // Setup Guide Tab
 function SetupGuideTab({ webhookUrls }: { webhookUrls?: { sendgrid: string; mailgun: string; generic: string; instructions: { sendgrid: string; mailgun: string; generic: string } } }) {
+  const el = useT('adminEmail');
   const [copiedUrl, setCopiedUrl] = useState<string | null>(null);
 
   const copyToClipboard = (url: string, provider: string) => {
@@ -488,13 +493,13 @@ function SetupGuideTab({ webhookUrls }: { webhookUrls?: { sendgrid: string; mail
     <div className="space-y-6">
       {/* Overview */}
       <div className="bg-surface shadow rounded-lg p-6">
-        <h3 className="text-lg font-medium text-foreground mb-4">How Email-to-Ticket Works</h3>
+        <h3 className="text-lg font-medium text-foreground mb-4">{el('how')}</h3>
         <div className="prose prose-sm text-secondary">
           <ol className="space-y-2">
-            <li>Create an email configuration for each support email address you want to use</li>
-            <li>Configure your email provider to forward incoming emails to our webhook URL</li>
-            <li>When an email arrives, we automatically create a ticket or add a comment to an existing one</li>
-            <li>Replies to tickets are matched using the issue number in the subject line</li>
+            <li>{el('how1')}</li>
+            <li>{el('how2')}</li>
+            <li>{el('how3')}</li>
+            <li>{el('how4')}</li>
           </ol>
         </div>
       </div>
@@ -502,17 +507,17 @@ function SetupGuideTab({ webhookUrls }: { webhookUrls?: { sendgrid: string; mail
       {/* Webhook URLs */}
       {webhookUrls && (
         <div className="bg-surface shadow rounded-lg p-6">
-          <h3 className="text-lg font-medium text-foreground mb-4">Webhook URLs</h3>
+          <h3 className="text-lg font-medium text-foreground mb-4">{el('webhookUrls')}</h3>
           <p className="text-sm text-secondary mb-4">
-            Use these URLs to configure your email provider to forward incoming emails.
+            {el('webhookUrlsHint')}
           </p>
           <div className="space-y-4">
             {/* SendGrid */}
             <div className="border rounded-lg p-4">
               <div className="flex items-center justify-between mb-2">
-                <h4 className="font-medium text-foreground">SendGrid Inbound Parse</h4>
+                <h4 className="font-medium text-foreground">{el('sgTitle')}</h4>
                 <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-primary-subtle text-primary">
-                  Recommended
+                  {el('recommended')}
                 </span>
               </div>
               <div className="flex items-center space-x-2">
@@ -535,7 +540,7 @@ function SetupGuideTab({ webhookUrls }: { webhookUrls?: { sendgrid: string; mail
 
             {/* Mailgun */}
             <div className="border rounded-lg p-4">
-              <h4 className="font-medium text-foreground mb-2">Mailgun Routes</h4>
+              <h4 className="font-medium text-foreground mb-2">{el('mgTitle')}</h4>
               <div className="flex items-center space-x-2">
                 <code className="flex-1 bg-surface-hover px-3 py-2 rounded text-sm text-secondary break-all">
                   {webhookUrls.mailgun}
@@ -556,7 +561,7 @@ function SetupGuideTab({ webhookUrls }: { webhookUrls?: { sendgrid: string; mail
 
             {/* Generic */}
             <div className="border rounded-lg p-4">
-              <h4 className="font-medium text-foreground mb-2">Generic / Custom Integration</h4>
+              <h4 className="font-medium text-foreground mb-2">{el('genericTitle')}</h4>
               <div className="flex items-center space-x-2">
                 <code className="flex-1 bg-surface-hover px-3 py-2 rounded text-sm text-secondary break-all">
                   {webhookUrls.generic}
@@ -580,34 +585,34 @@ function SetupGuideTab({ webhookUrls }: { webhookUrls?: { sendgrid: string; mail
 
       {/* Provider Setup Instructions */}
       <div className="bg-surface shadow rounded-lg p-6">
-        <h3 className="text-lg font-medium text-foreground mb-4">Provider Setup Instructions</h3>
+        <h3 className="text-lg font-medium text-foreground mb-4">{el('providerSetup')}</h3>
         <div className="space-y-6">
           <div>
-            <h4 className="font-medium text-foreground mb-2">SendGrid Inbound Parse</h4>
+            <h4 className="font-medium text-foreground mb-2">{el('sgTitle')}</h4>
             <ol className="list-decimal list-inside text-sm text-secondary space-y-1">
-              <li>Go to SendGrid Settings {'>'} Inbound Parse</li>
-              <li>Add your domain and configure MX records</li>
-              <li>Set the destination URL to our SendGrid webhook URL</li>
-              <li>Enable &quot;POST the raw, full MIME message&quot; for attachments</li>
-              <li>Check &quot;Send Raw&quot; if you need full email headers</li>
+              <li>{el('sg1')}</li>
+              <li>{el('sg2')}</li>
+              <li>{el('sg3')}</li>
+              <li>{el('sg4')}</li>
+              <li>{el('sg5')}</li>
             </ol>
           </div>
 
           <div>
-            <h4 className="font-medium text-foreground mb-2">Mailgun Routes</h4>
+            <h4 className="font-medium text-foreground mb-2">{el('mgTitle')}</h4>
             <ol className="list-decimal list-inside text-sm text-secondary space-y-1">
-              <li>Go to Mailgun {'>'} Receiving {'>'} Create Route</li>
-              <li>Set expression type to &quot;Match Recipient&quot; with your support email</li>
-              <li>Add a &quot;Forward&quot; action with our Mailgun webhook URL</li>
-              <li>Set priority and save the route</li>
+              <li>{el('mg1')}</li>
+              <li>{el('mg2')}</li>
+              <li>{el('mg3')}</li>
+              <li>{el('mg4')}</li>
             </ol>
           </div>
 
           <div>
-            <h4 className="font-medium text-foreground mb-2">Custom SMTP / Forwarding</h4>
+            <h4 className="font-medium text-foreground mb-2">{el('smtpTitle')}</h4>
             <ol className="list-decimal list-inside text-sm text-secondary space-y-1">
-              <li>Configure your mail server to forward emails to a processing script</li>
-              <li>Use the generic webhook URL with JSON payload</li>
+              <li>{el('smtp1')}</li>
+              <li>{el('smtp2')}</li>
               <li>
                 Required fields: <code className="bg-background px-1 rounded">from</code>,{' '}
                 <code className="bg-background px-1 rounded">to</code>,{' '}
@@ -635,6 +640,7 @@ function ConfigModal({
   config: EmailConfig | null;
   onClose: () => void;
 }) {
+  const el = useT('adminEmail');
   const createConfig = useCreateEmailConfig();
   const updateConfig = useUpdateEmailConfig();
   const { data: appsData } = useApplications();
@@ -686,10 +692,10 @@ function ConfigModal({
   };
 
   const settingsTabs = [
-    { id: 'general' as const, label: 'General' },
-    { id: 'defaults' as const, label: 'Defaults' },
-    { id: 'spam' as const, label: 'Spam Filter' },
-    { id: 'autoreply' as const, label: 'Auto-Reply' },
+    { id: 'general' as const, label: el('tGeneral') },
+    { id: 'defaults' as const, label: el('tDefaults') },
+    { id: 'spam' as const, label: el('tSpam') },
+    { id: 'autoreply' as const, label: el('tAutoReply') },
   ];
 
   return (
@@ -702,7 +708,7 @@ function ConfigModal({
         <div className="inline-block align-bottom bg-surface rounded-lg px-4 pt-5 pb-4 text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full sm:p-6">
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-lg font-medium text-foreground">
-              {config ? 'Edit Email Configuration' : 'New Email Configuration'}
+              {config ? el('editConfig') : el('newConfig')}
             </h3>
             <button onClick={onClose} className="text-muted hover:text-muted">
               <X className="h-6 w-6" />
@@ -736,19 +742,19 @@ function ConfigModal({
             {activeSettingsTab === 'general' && (
               <>
                 <div>
-                  <label className="block text-sm font-medium text-secondary">Name</label>
+                  <label className="block text-sm font-medium text-secondary">{el('name')}</label>
                   <input
                     type="text"
                     required
                     value={formData.name}
                     onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                     className="mt-1 block w-full rounded-xl border-border-strong shadow-sm focus:border-primary focus:ring-primary/20 focus:border-primary sm:text-sm"
-                    placeholder="Support Inbox"
+                    placeholder={el('namePh')}
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-secondary">Email Address</label>
+                  <label className="block text-sm font-medium text-secondary">{el('emailAddress')}</label>
                   <input
                     type="email"
                     required
@@ -756,15 +762,15 @@ function ConfigModal({
                     value={formData.emailAddress}
                     onChange={(e) => setFormData({ ...formData, emailAddress: e.target.value })}
                     className="mt-1 block w-full rounded-xl border-border-strong shadow-sm focus:border-primary focus:ring-primary/20 focus:border-primary sm:text-sm disabled:bg-background"
-                    placeholder="support@company.com"
+                    placeholder={el('emailPh')}
                   />
                   {config && (
-                    <p className="mt-1 text-xs text-muted">Email address cannot be changed</p>
+                    <p className="mt-1 text-xs text-muted">{el('emailLocked')}</p>
                   )}
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-secondary">Provider</label>
+                  <label className="block text-sm font-medium text-secondary">{el('provider')}</label>
                   <select
                     value={formData.provider}
                     onChange={(e) =>
@@ -775,7 +781,7 @@ function ConfigModal({
                     <option value="sendgrid">SendGrid</option>
                     <option value="mailgun">Mailgun</option>
                     <option value="postmark">Postmark</option>
-                    <option value="smtp">Custom SMTP</option>
+                    <option value="smtp">{el('customSmtp')}</option>
                   </select>
                 </div>
               </>
@@ -786,7 +792,7 @@ function ConfigModal({
               <>
                 <div>
                   <label className="block text-sm font-medium text-secondary">
-                    Default Priority
+                    {el('defaultPriority')}
                   </label>
                   <select
                     value={formData.defaultPriority}
@@ -798,16 +804,16 @@ function ConfigModal({
                     }
                     className="mt-1 block w-full rounded-xl border-border-strong shadow-sm focus:border-primary focus:ring-primary/20 focus:border-primary sm:text-sm"
                   >
-                    <option value="low">Low</option>
-                    <option value="medium">Medium</option>
-                    <option value="high">High</option>
-                    <option value="critical">Critical</option>
+                    <option value="low">{el('pLow')}</option>
+                    <option value="medium">{el('pMedium')}</option>
+                    <option value="high">{el('pHigh')}</option>
+                    <option value="critical">{el('pCritical')}</option>
                   </select>
                 </div>
 
                 <div>
                   <label className="block text-sm font-medium text-secondary">
-                    Default Application
+                    {el('defaultApp')}
                   </label>
                   <select
                     value={formData.defaultApplicationId}
@@ -816,7 +822,7 @@ function ConfigModal({
                     }
                     className="mt-1 block w-full rounded-xl border-border-strong shadow-sm focus:border-primary focus:ring-primary/20 focus:border-primary sm:text-sm"
                   >
-                    <option value="">None</option>
+                    <option value="">{el('none')}</option>
                     {applications.map((app: { id: string; name: string }) => (
                       <option key={app.id} value={app.id}>
                         {app.name}
@@ -827,7 +833,7 @@ function ConfigModal({
 
                 <div>
                   <label className="block text-sm font-medium text-secondary">
-                    Default Assigned Group
+                    {el('defaultGroup')}
                   </label>
                   <select
                     value={formData.defaultAssignedGroup}
@@ -836,7 +842,7 @@ function ConfigModal({
                     }
                     className="mt-1 block w-full rounded-xl border-border-strong shadow-sm focus:border-primary focus:ring-primary/20 focus:border-primary sm:text-sm"
                   >
-                    <option value="">None</option>
+                    <option value="">{el('none')}</option>
                     {groups.map((group: { id: string; name: string }) => (
                       <option key={group.id} value={group.id}>
                         {group.name}
@@ -859,14 +865,14 @@ function ConfigModal({
                     }
                     className="h-4 w-4 text-primary focus:ring-primary/20 focus:border-primary border-border-strong rounded"
                   />
-                  <label className="ml-2 block text-sm text-foreground">Enable spam filtering</label>
+                  <label className="ml-2 block text-sm text-foreground">{el('enableSpam')}</label>
                 </div>
 
                 {formData.spamFilterEnabled && (
                   <>
                     <div>
                       <label className="block text-sm font-medium text-secondary">
-                        Allowed Domains (one per line)
+                        {el('allowedDomains')}
                       </label>
                       <textarea
                         value={formData.allowedDomains}
@@ -875,10 +881,10 @@ function ConfigModal({
                         }
                         rows={3}
                         className="mt-1 block w-full rounded-xl border-border-strong shadow-sm focus:border-primary focus:ring-primary/20 focus:border-primary sm:text-sm"
-                        placeholder="company.com&#10;partner.com"
+                        placeholder={el('allowedPh')}
                       />
                       <p className="mt-1 text-xs text-muted">
-                        If specified, only emails from these domains will be accepted
+                        {el('allowedHelp')}
                       </p>
                     </div>
 
@@ -893,10 +899,10 @@ function ConfigModal({
                         }
                         rows={3}
                         className="mt-1 block w-full rounded-xl border-border-strong shadow-sm focus:border-primary focus:ring-primary/20 focus:border-primary sm:text-sm"
-                        placeholder="spam.com&#10;blocked.org"
+                        placeholder={el('blockedPh')}
                       />
                       <p className="mt-1 text-xs text-muted">
-                        Emails from these domains will be rejected
+                        {el('blockedHelp')}
                       </p>
                     </div>
                   </>
@@ -917,14 +923,14 @@ function ConfigModal({
                     className="h-4 w-4 text-primary focus:ring-primary/20 focus:border-primary border-border-strong rounded"
                   />
                   <label className="ml-2 block text-sm text-foreground">
-                    Send auto-reply when ticket is created
+                    {el('sendAutoReply')}
                   </label>
                 </div>
 
                 {formData.autoReplyEnabled && (
                   <div>
                     <label className="block text-sm font-medium text-secondary">
-                      Auto-Reply Template
+                      {el('template')}
                     </label>
                     <textarea
                       value={formData.autoReplyTemplate}
@@ -950,7 +956,7 @@ function ConfigModal({
                 onClick={onClose}
                 className="px-4 py-2 border border-border-strong rounded-xl shadow-sm text-sm font-medium text-secondary bg-surface hover:bg-surface-hover"
               >
-                Cancel
+                {el('cancel')}
               </button>
               <button
                 type="submit"
@@ -958,10 +964,10 @@ function ConfigModal({
                 className="px-4 py-2 border border-transparent rounded-xl shadow-sm text-sm font-medium text-white bg-primary hover:bg-primary-hover disabled:opacity-50"
               >
                 {createConfig.isPending || updateConfig.isPending
-                  ? 'Saving...'
+                  ? el('saving')
                   : config
-                  ? 'Save Changes'
-                  : 'Create Configuration'}
+                  ? el('saveChanges')
+                  : el('createConfigBtn')}
               </button>
             </div>
           </form>

@@ -1,7 +1,8 @@
 import { FastifyInstance } from 'fastify';
 import { z } from 'zod';
 import { userService } from '../services/users.js';
-import { requirePermission } from '../middleware/auth.js';
+import { authenticate, requirePermission } from '../middleware/auth.js';
+import { DEFAULT_LOCALE, RTL_LOCALES, SUPPORTED_LOCALES, isRtl, normalizeLocale, t, type Locale } from '../lib/i18n.js';
 import { parsePagination, createPaginatedResponse } from '../utils/pagination.js';
 
 const createUserSchema = z.object({
@@ -21,6 +22,12 @@ const updateUserSchema = z.object({
   status: z.enum(['active', 'inactive', 'pending']).optional(),
   avatarUrl: z.string().url().optional(),
   settings: z.record(z.unknown()).optional(),
+  locale: z.enum(SUPPORTED_LOCALES).optional(),
+});
+
+const setLocaleSchema = z.object({
+  // Accepts region tags such as "pt-BR" or "ar_SA"; stored as the base language.
+  locale: z.string().min(2).max(10).refine((v) => normalizeLocale(v) !== null, 'Unsupported locale'),
 });
 
 const assignRolesSchema = z.object({
@@ -33,6 +40,29 @@ const userIdParamSchema = z.object({
 });
 
 export default async function userRoutes(app: FastifyInstance) {
+  const localeResponse = (locale: Locale) => ({
+    locale,
+    dir: isRtl(locale) ? 'rtl' : 'ltr',
+    supported: SUPPORTED_LOCALES.map((code) => ({ code, name: t(code, 'language.name'), rtl: RTL_LOCALES.includes(code) })),
+    default: DEFAULT_LOCALE,
+  });
+
+  // Current user's language preference (any authenticated user)
+  app.get('/me/locale', { preHandler: [authenticate] }, async (request, reply) => {
+    const { tenantSlug, userId } = request.user;
+    const saved = normalizeLocale(await userService.getLocale(tenantSlug, userId));
+    reply.send(localeResponse(saved ?? request.locale ?? DEFAULT_LOCALE));
+  });
+
+  // Update current user's language preference
+  app.put('/me/locale', { preHandler: [authenticate] }, async (request, reply) => {
+    const { tenantSlug, userId } = request.user;
+    const body = setLocaleSchema.parse(request.body);
+    const locale = normalizeLocale(body.locale) as Locale;
+    await userService.setLocale(tenantSlug, userId, locale);
+    reply.header('Content-Language', locale).send(localeResponse(locale));
+  });
+
   // List users
   app.get('/', {
     preHandler: [requirePermission('users:read')],

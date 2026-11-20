@@ -1,5 +1,6 @@
 'use client';
 
+import { useT } from '@/i18n/useT';
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
@@ -12,6 +13,10 @@ import { Button } from '@/components/ui/button';
 import { useCreateKBArticle, useKBCategories, KBCategory } from '@/hooks/useApi';
 
 export default function NewArticlePage() {
+  const kb = useT('kbForm');
+  const tm = useT('listpages2');
+  const tl = useT('listpages');
+  const tf = useT('forms');
   const router = useRouter();
   const { data: categoriesData } = useKBCategories();
   const categories = categoriesData ?? [];
@@ -69,8 +74,8 @@ export default function NewArticlePage() {
             <ArrowLeft className="h-5 w-5" />
           </Link>
           <div>
-            <h1 className="text-2xl font-bold text-foreground">New Article</h1>
-            <p className="mt-1 text-sm text-muted">Create a new knowledge base article</p>
+            <h1 className="text-2xl font-bold text-foreground">{kb('title')}</h1>
+            <p className="mt-1 text-sm text-muted">{kb('subtitle')}</p>
           </div>
         </div>
       </div>
@@ -87,7 +92,7 @@ export default function NewArticlePage() {
           {/* Title */}
           <div>
             <label htmlFor="title" className="block text-sm font-medium text-secondary mb-1">
-              Title <span className="text-error">*</span>
+              {kb('titleLabel')} <span className="text-error">*</span>
             </label>
             <input
               id="title"
@@ -95,7 +100,7 @@ export default function NewArticlePage() {
               value={formData.title}
               onChange={(e) => setFormData({ ...formData, title: e.target.value })}
               className="w-full px-4 py-2 border border-border-strong rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary"
-              placeholder="Enter article title"
+              placeholder={kb('titlePh')}
               required
             />
           </div>
@@ -103,7 +108,7 @@ export default function NewArticlePage() {
           {/* Summary */}
           <div>
             <label htmlFor="summary" className="block text-sm font-medium text-secondary mb-1">
-              Summary
+              {kb('summary')}
             </label>
             <textarea
               id="summary"
@@ -111,14 +116,14 @@ export default function NewArticlePage() {
               onChange={(e) => setFormData({ ...formData, summary: e.target.value })}
               rows={2}
               className="w-full px-4 py-2 border border-border-strong rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary"
-              placeholder="Brief summary of the article"
+              placeholder={kb('summaryPh')}
             />
           </div>
 
           {/* Content */}
           <div>
             <label htmlFor="content" className="block text-sm font-medium text-secondary mb-1">
-              Content <span className="text-error">*</span>
+              {kb('content')} <span className="text-error">*</span>
             </label>
             <textarea
               id="content"
@@ -126,17 +131,17 @@ export default function NewArticlePage() {
               onChange={(e) => setFormData({ ...formData, content: e.target.value })}
               rows={12}
               className="w-full px-4 py-2 border border-border-strong rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary font-mono"
-              placeholder="Article content (Markdown supported)"
+              placeholder={kb('contentPh')}
               required
             />
-            <p className="mt-1 text-xs text-muted">Supports Markdown formatting</p>
+            <p className="mt-1 text-xs text-muted">{kb('markdownHint')}</p>
           </div>
 
           {/* Type and Visibility */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div>
               <label htmlFor="type" className="block text-sm font-medium text-secondary mb-1">
-                Article Type
+                {kb('articleType')}
               </label>
               <select
                 id="type"
@@ -144,17 +149,17 @@ export default function NewArticlePage() {
                 onChange={(e) => setFormData({ ...formData, type: e.target.value as typeof formData.type })}
                 className="w-full px-4 py-2 border border-border-strong rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary"
               >
-                <option value="how_to">How-To Guide</option>
-                <option value="troubleshooting">Troubleshooting</option>
-                <option value="faq">FAQ</option>
-                <option value="reference">Reference</option>
-                <option value="policy">Policy</option>
-                <option value="known_error">Known Error</option>
+                <option value="how_to">{kb('howToGuide')}</option>
+                <option value="troubleshooting">{tm('troubleshooting')}</option>
+                <option value="faq">{tm('faq')}</option>
+                <option value="reference">{tm('reference')}</option>
+                <option value="policy">{tm('policy')}</option>
+                <option value="known_error">{tl('knownError')}</option>
               </select>
             </div>
             <div>
               <label htmlFor="visibility" className="block text-sm font-medium text-secondary mb-1">
-                Visibility
+                {kb('visibility')}
               </label>
               <select
                 id="visibility"
@@ -162,14 +167,14 @@ export default function NewArticlePage() {
                 onChange={(e) => setFormData({ ...formData, visibility: e.target.value as typeof formData.visibility })}
                 className="w-full px-4 py-2 border border-border-strong rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary"
               >
-                <option value="public">Public</option>
-                <option value="internal">Internal</option>
-                <option value="restricted">Restricted</option>
+                <option value="public">{kb('public')}</option>
+                <option value="internal">{kb('internal')}</option>
+                <option value="restricted">{kb('restricted')}</option>
               </select>
             </div>
             <div>
               <label htmlFor="category" className="block text-sm font-medium text-secondary mb-1">
-                Category
+                {kb('category')}
               </label>
               <select
                 id="category"
@@ -177,7 +182,7 @@ export default function NewArticlePage() {
                 onChange={(e) => setFormData({ ...formData, categoryId: e.target.value })}
                 className="w-full px-4 py-2 border border-border-strong rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary"
               >
-                <option value="">No Category</option>
+                <option value="">{kb('noCategory')}</option>
                 {categories.map((cat: KBCategory) => (
                   <option key={cat.id} value={cat.id}>{cat.name}</option>
                 ))}
@@ -189,7 +194,7 @@ export default function NewArticlePage() {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label htmlFor="tags" className="block text-sm font-medium text-secondary mb-1">
-                Tags
+                {kb('tags')}
               </label>
               <input
                 id="tags"
@@ -197,13 +202,13 @@ export default function NewArticlePage() {
                 value={formData.tags}
                 onChange={(e) => setFormData({ ...formData, tags: e.target.value })}
                 className="w-full px-4 py-2 border border-border-strong rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary"
-                placeholder="tag1, tag2, tag3"
+                placeholder={kb('tagsPh')}
               />
-              <p className="mt-1 text-xs text-muted">Comma-separated list</p>
+              <p className="mt-1 text-xs text-muted">{kb('commaHint')}</p>
             </div>
             <div>
               <label htmlFor="keywords" className="block text-sm font-medium text-secondary mb-1">
-                Keywords
+                {kb('keywords')}
               </label>
               <input
                 id="keywords"
@@ -211,9 +216,9 @@ export default function NewArticlePage() {
                 value={formData.keywords}
                 onChange={(e) => setFormData({ ...formData, keywords: e.target.value })}
                 className="w-full px-4 py-2 border border-border-strong rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary"
-                placeholder="keyword1, keyword2, keyword3"
+                placeholder={kb('keywordsPh')}
               />
-              <p className="mt-1 text-xs text-muted">Comma-separated list for search</p>
+              <p className="mt-1 text-xs text-muted">{kb('commaSearchHint')}</p>
             </div>
           </div>
         </div>
@@ -222,19 +227,19 @@ export default function NewArticlePage() {
         <div className="px-6 py-4 border-t border-border flex justify-end space-x-3">
           <Link href="/knowledge-base">
             <Button variant="outline" type="button">
-              Cancel
+              {tf('cancel')}
             </Button>
           </Link>
           <Button type="submit" disabled={createArticle.isPending}>
             {createArticle.isPending ? (
               <>
                 <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                Creating...
+                {kb('creating')}
               </>
             ) : (
               <>
                 <Save className="h-4 w-4 mr-2" />
-                Create Article
+                {kb('create')}
               </>
             )}
           </Button>

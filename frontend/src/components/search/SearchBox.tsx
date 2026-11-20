@@ -1,5 +1,6 @@
 'use client';
 
+import { useT } from '@/i18n/useT';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Search, History, TrendingUp, FileText, X } from 'lucide-react';
@@ -19,6 +20,7 @@ interface SearchBoxProps {
 }
 
 export function SearchBox({ value, onChange, onSubmit, placeholder, autoFocus }: SearchBoxProps) {
+  const sh = useT('shared');
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [active, setActive] = useState(-1);
@@ -96,13 +98,13 @@ export function SearchBox({ value, onChange, onSubmit, placeholder, autoFocus }:
       <input
         type="search"
         role="combobox"
-        aria-label="Search"
+        aria-label={sh('search')}
         aria-expanded={showList}
         aria-controls="search-suggestions"
         aria-autocomplete="list"
         autoFocus={autoFocus}
         value={value}
-        placeholder={placeholder ?? 'Search issues, problems, changes and articles'}
+        placeholder={placeholder ?? sh('searchPh')}
         onChange={(e) => {
           onChange(e.target.value);
           setOpen(true);
@@ -115,7 +117,7 @@ export function SearchBox({ value, onChange, onSubmit, placeholder, autoFocus }:
       {value && (
         <button
           type="button"
-          aria-label="Clear search"
+          aria-label={sh('clearSearch')}
           onClick={() => {
             onChange('');
             onSubmit('');

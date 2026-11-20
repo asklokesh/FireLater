@@ -51,12 +51,25 @@ export function getCsrfToken(): string | null {
   return csrfToken;
 }
 
+// Locale chosen in the language switcher (NEXT_LOCALE cookie)
+export function getLocaleCookie(): string | null {
+  if (typeof document === 'undefined') return null;
+  const match = document.cookie.match(/(?:^|;\s*)NEXT_LOCALE=([^;]+)/);
+  return match ? decodeURIComponent(match[1]) : null;
+}
+
 // Request interceptor to add auth header and CSRF token
 api.interceptors.request.use(
   async (config: InternalAxiosRequestConfig) => {
     const token = getAccessToken();
     if (token && config.headers) {
       config.headers.Authorization = `Bearer ${token}`;
+    }
+
+    // Let the backend localize error messages in the user's chosen language
+    const lang = getLocaleCookie();
+    if (lang && config.headers) {
+      config.headers['Accept-Language'] = lang;
     }
 
     // Add CSRF token for state-changing operations

@@ -26,6 +26,7 @@ interface UpdateUserParams {
   status?: string;
   avatarUrl?: string;
   settings?: Record<string, unknown>;
+  locale?: string;
 }
 
 interface User {
@@ -35,6 +36,7 @@ interface User {
   avatar_url: string | null;
   phone: string | null;
   timezone: string;
+  locale?: string;
   status: string;
   auth_provider: string;
   last_login_at: Date | null;
@@ -81,7 +83,7 @@ export class UserService {
         const total = parseInt(countResult.rows[0].count, 10);
 
         const result = await pool.query(
-          `SELECT u.id, u.email, u.name, u.avatar_url, u.phone, u.timezone, u.status,
+          `SELECT u.id, u.email, u.name, u.avatar_url, u.phone, u.timezone, u.locale, u.status,
                   u.auth_provider, u.last_login_at, u.settings, u.created_at, u.updated_at,
                   array_agg(r.name) FILTER (WHERE r.name IS NOT NULL) as roles
            FROM ${schema}.users u
@@ -109,7 +111,7 @@ export class UserService {
         const schema = tenantService.getSchemaName(tenantSlug);
 
         const result = await pool.query(
-          `SELECT u.id, u.email, u.name, u.avatar_url, u.phone, u.timezone, u.status,
+          `SELECT u.id, u.email, u.name, u.avatar_url, u.phone, u.timezone, u.locale, u.status,
                   u.auth_provider, u.last_login_at, u.settings, u.created_at, u.updated_at,
                   array_agg(r.name) FILTER (WHERE r.name IS NOT NULL) as roles
            FROM ${schema}.users u
@@ -263,6 +265,10 @@ export class UserService {
       updates.push(`status = $${paramIndex++}`);
       values.push(params.status);
     }
+    if (params.locale !== undefined) {
+      updates.push(`locale = $${paramIndex++}`);
+      values.push(params.locale);
+    }
     if (params.avatarUrl !== undefined) {
       updates.push(`avatar_url = $${paramIndex++}`);
       values.push(params.avatarUrl);
@@ -296,6 +302,27 @@ export class UserService {
 
     logger.info({ userId }, 'User updated');
     return this.findById(tenantSlug, userId) as Promise<User>;
+  }
+
+  /** Saved language preference of a user, or null if the user does not exist. Not cached: used on error paths. */
+  async getLocale(tenantSlug: string, userId: string): Promise<string | null> {
+    const schema = tenantService.getSchemaName(tenantSlug);
+    const result = await pool.query(`SELECT locale FROM ${schema}.users WHERE id = $1`, [userId]);
+    return result.rows[0]?.locale ?? null;
+  }
+
+  /** Persist the user's own language preference. */
+  async setLocale(tenantSlug: string, userId: string, locale: string): Promise<string> {
+    const schema = tenantService.getSchemaName(tenantSlug);
+    const result = await pool.query(
+      `UPDATE ${schema}.users SET locale = $1, updated_at = NOW() WHERE id = $2 RETURNING locale`,
+      [locale, userId]
+    );
+    if (result.rowCount === 0) {
+      throw new NotFoundError('User', userId);
+    }
+    await cacheService.invalidateTenant(tenantSlug, 'users');
+    return result.rows[0].locale;
   }
 
   async delete(tenantSlug: string, userId: string, deletedBy: string): Promise<void> {

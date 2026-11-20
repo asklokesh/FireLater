@@ -35,6 +35,10 @@ import {
   Building2,
 } from 'lucide-react';
 import { useAuthStore } from '@/stores/auth';
+import { useT } from '@/i18n/useT';
+
+// English nav label -> key in the "nav" message namespace
+const NAV_KEYS: Record<string, string> = {'Dashboard':'dashboard','Search':'search','Issues':'issues','Problems':'problems','Changes':'changes','Service Catalog':'serviceCatalog','Applications':'applications','Assets':'assets','Knowledge Base':'knowledgeBase','On-Call':'onCall','Cloud':'cloud','Reports':'reports','Users':'users','SLA Policies':'slaPolicies','Workflows':'workflows','Email Integration':'emailIntegration','Integrations':'integrations','Audit Logs':'auditLogs','SoD Policies':'sodPolicies','Data Security':'dataSecurity','Maker-Checker':'makerChecker','Compliance Reports':'complianceReports','Recertification':'recertification','PAM Grants':'pamGrants','Vendor Risk':'vendorRisk','Settings':'settings'};
 
 const navigation = [
   { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
@@ -81,6 +85,7 @@ function NavItem({
   isActive: boolean;
   onClick?: () => void;
 }) {
+  const t = useT('nav');
   return (
     <Link
       href={item.href}
@@ -100,12 +105,13 @@ function NavItem({
       <item.icon
         className={`h-[18px] w-[18px] flex-shrink-0 ${isActive ? 'text-sidebar-active-fg' : 'text-muted'}`}
       />
-      {item.name}
+      {NAV_KEYS[item.name] ? t(NAV_KEYS[item.name]) : item.name}
     </Link>
   );
 }
 
 export function Sidebar({ className = '' }: SidebarProps) {
+  const tNav = useT('nav');
   const pathname = usePathname();
   const { user, logout } = useAuthStore();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -201,7 +207,7 @@ export function Sidebar({ className = '' }: SidebarProps) {
           <button
             onClick={() => logout()}
             className="p-1.5 rounded-lg text-muted hover:text-foreground hover:bg-sidebar-hover transition-colors duration-150 flex-shrink-0"
-            title="Sign out"
+            title={tNav('signOut')}
           >
             <LogOut className="h-4 w-4" />
           </button>

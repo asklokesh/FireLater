@@ -1,5 +1,6 @@
 'use client';
 
+import { useT } from '@/i18n/useT';
 import { useState, FormEvent } from 'react';
 import Link from 'next/link';
 import {
@@ -90,12 +91,12 @@ const severityColors: Record<string, { bg: string; text: string }> = {
 };
 
 const swapStatusColors: Record<ShiftSwapStatus, { bg: string; text: string; label: string }> = {
-  pending: { bg: 'bg-warning-subtle', text: 'text-warning', label: 'Pending' },
-  accepted: { bg: 'bg-success-subtle', text: 'text-success', label: 'Accepted' },
-  rejected: { bg: 'bg-error-subtle', text: 'text-error', label: 'Rejected' },
-  cancelled: { bg: 'bg-background', text: 'text-foreground', label: 'Cancelled' },
-  expired: { bg: 'bg-background', text: 'text-secondary', label: 'Expired' },
-  completed: { bg: 'bg-primary-subtle', text: 'text-primary', label: 'Completed' },
+  pending: { bg: 'bg-warning-subtle', text: 'text-warning', label: 'sPending' },
+  accepted: { bg: 'bg-success-subtle', text: 'text-success', label: 'sAccepted' },
+  rejected: { bg: 'bg-error-subtle', text: 'text-error', label: 'sRejected' },
+  cancelled: { bg: 'bg-background', text: 'text-foreground', label: 'sCancelled' },
+  expired: { bg: 'bg-background', text: 'text-secondary', label: 'sExpired' },
+  completed: { bg: 'bg-primary-subtle', text: 'text-primary', label: 'sCompleted' },
 };
 
 // Create Swap Request Dialog
@@ -110,6 +111,7 @@ function CreateSwapDialog({
   schedules: OncallSchedule[];
   users: { id: string; name: string; email?: string }[];
 }) {
+  const oc = useT('oncall');
   const [formData, setFormData] = useState({
     scheduleId: '',
     originalStart: '',
@@ -127,23 +129,23 @@ function CreateSwapDialog({
     const newErrors: Record<string, string> = {};
 
     if (!formData.scheduleId) {
-      newErrors.scheduleId = 'Please select a schedule';
+      newErrors.scheduleId = oc('vSchedule');
     }
     if (!formData.originalStart) {
-      newErrors.originalStart = 'Start date/time is required';
+      newErrors.originalStart = oc('vStart');
     }
     if (!formData.originalEnd) {
-      newErrors.originalEnd = 'End date/time is required';
+      newErrors.originalEnd = oc('vEnd');
     }
     if (formData.originalStart && formData.originalEnd) {
       const start = new Date(formData.originalStart);
       const end = new Date(formData.originalEnd);
       if (end <= start) {
-        newErrors.originalEnd = 'End must be after start';
+        newErrors.originalEnd = oc('vEndAfter');
       }
     }
     if (formData.offerToSpecific && !formData.offeredToUserId) {
-      newErrors.offeredToUserId = 'Please select a user';
+      newErrors.offeredToUserId = oc('vUser');
     }
 
     setErrors(newErrors);
@@ -185,7 +187,7 @@ function CreateSwapDialog({
       <div className="fixed inset-0 bg-black/50" onClick={onClose} />
       <div className="relative bg-surface rounded-xl shadow-sm w-full max-w-lg mx-4 max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between p-4 border-b border-border">
-          <h2 className="text-lg font-semibold text-foreground">Request Shift Swap</h2>
+          <h2 className="text-lg font-semibold text-foreground">{oc('requestSwapTitle')}</h2>
           <button onClick={onClose} className="p-1 hover:bg-surface-hover rounded">
             <X className="h-5 w-5 text-muted" />
           </button>
@@ -203,7 +205,7 @@ function CreateSwapDialog({
                 errors.scheduleId ? 'border-error' : 'border-border-strong'
               }`}
             >
-              <option value="">Select a schedule</option>
+              <option value="">{oc('selectSchedule')}</option>
               {schedules.map((schedule) => (
                 <option key={schedule.id} value={schedule.id}>
                   {schedule.name}
@@ -253,7 +255,7 @@ function CreateSwapDialog({
               className="h-4 w-4 text-primary focus:ring-primary/20 border-border rounded"
             />
             <label htmlFor="offerToSpecific" className="text-sm text-secondary">
-              Offer to a specific person
+              {oc('offerSpecific')}
             </label>
           </div>
 
@@ -269,7 +271,7 @@ function CreateSwapDialog({
                   errors.offeredToUserId ? 'border-error' : 'border-border-strong'
                 }`}
               >
-                <option value="">Select a user</option>
+                <option value="">{oc('selectUser')}</option>
                 {users.map((user) => (
                   <option key={user.id} value={user.id}>
                     {user.name} {user.email ? `(${user.email})` : ''}
@@ -281,34 +283,34 @@ function CreateSwapDialog({
           )}
 
           <div>
-            <label className="block text-sm font-medium text-secondary mb-1">Reason</label>
+            <label className="block text-sm font-medium text-secondary mb-1">{oc('reason')}</label>
             <textarea
               value={formData.reason}
               onChange={(e) => setFormData({ ...formData, reason: e.target.value })}
               rows={3}
-              placeholder="Why do you need to swap this shift?"
+              placeholder={oc('reasonPh')}
               className="w-full px-3 py-2 border border-border-strong rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-secondary mb-1">Request Expires At</label>
+            <label className="block text-sm font-medium text-secondary mb-1">{oc('expiresAtReq')}</label>
             <input
               type="datetime-local"
               value={formData.expiresAt}
               onChange={(e) => setFormData({ ...formData, expiresAt: e.target.value })}
               className="w-full px-3 py-2 border border-border-strong rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
             />
-            <p className="mt-1 text-xs text-muted">Leave empty for no expiration</p>
+            <p className="mt-1 text-xs text-muted">{oc('noExpiry')}</p>
           </div>
 
           <div className="flex justify-end space-x-3 pt-4 border-t border-border">
             <Button type="button" variant="outline" onClick={onClose}>
-              Cancel
+              {oc('cancel')}
             </Button>
             <Button type="submit" isLoading={createSwap.isPending}>
               <Send className="h-4 w-4 mr-2" />
-              Submit Request
+              {oc('submit')}
             </Button>
           </div>
         </form>
@@ -329,6 +331,7 @@ function SwapDetailDialog({
   onClose: () => void;
   isMyRequest: boolean;
 }) {
+  const oc = useT('oncall');
   const [acceptMessage, setAcceptMessage] = useState('');
   const [rejectMessage, setRejectMessage] = useState('');
   const [showAcceptForm, setShowAcceptForm] = useState(false);
@@ -400,40 +403,40 @@ function SwapDetailDialog({
         <div className="p-4 space-y-4">
           {/* Status Badge */}
           <div className="flex items-center justify-between">
-            <span className="text-sm text-muted">Status</span>
+            <span className="text-sm text-muted">{oc('status')}</span>
             <span className={`px-2.5 py-0.5 rounded-full text-xs font-medium ${status.bg} ${status.text}`}>
-              {status.label}
+              {oc(status.label)}
             </span>
           </div>
 
           {/* Schedule */}
           <div className="flex items-center justify-between">
-            <span className="text-sm text-muted">Schedule</span>
+            <span className="text-sm text-muted">{oc('schedule')}</span>
             <span className="text-sm font-medium text-foreground">{swap.schedule_name}</span>
           </div>
 
           {/* Shift Dates */}
           <div className="bg-surface-hover rounded-lg p-3 space-y-2">
             <div className="flex items-center justify-between">
-              <span className="text-sm text-muted">Shift Start</span>
+              <span className="text-sm text-muted">{oc('shiftStart')}</span>
               <span className="text-sm font-medium text-foreground">{formatDate(swap.original_start)}</span>
             </div>
             <div className="flex items-center justify-between">
-              <span className="text-sm text-muted">Shift End</span>
+              <span className="text-sm text-muted">{oc('shiftEnd')}</span>
               <span className="text-sm font-medium text-foreground">{formatDate(swap.original_end)}</span>
             </div>
           </div>
 
           {/* Requester */}
           <div className="flex items-center justify-between">
-            <span className="text-sm text-muted">Requested By</span>
+            <span className="text-sm text-muted">{oc('requestedBy')}</span>
             <span className="text-sm font-medium text-foreground">{swap.requester_name}</span>
           </div>
 
           {/* Offered To */}
           {swap.offered_to_name && (
             <div className="flex items-center justify-between">
-              <span className="text-sm text-muted">Offered To</span>
+              <span className="text-sm text-muted">{oc('offeredTo')}</span>
               <span className="text-sm font-medium text-foreground">{swap.offered_to_name}</span>
             </div>
           )}
@@ -441,7 +444,7 @@ function SwapDetailDialog({
           {/* Accepter */}
           {swap.accepter_name && (
             <div className="flex items-center justify-between">
-              <span className="text-sm text-muted">Accepted By</span>
+              <span className="text-sm text-muted">{oc('acceptedBy')}</span>
               <span className="text-sm font-medium text-success">{swap.accepter_name}</span>
             </div>
           )}
@@ -449,7 +452,7 @@ function SwapDetailDialog({
           {/* Reason */}
           {swap.reason && (
             <div>
-              <span className="text-sm text-muted">Reason</span>
+              <span className="text-sm text-muted">{oc('reason')}</span>
               <p className="mt-1 text-sm text-foreground bg-surface-hover rounded-lg p-2">{swap.reason}</p>
             </div>
           )}
@@ -457,29 +460,29 @@ function SwapDetailDialog({
           {/* Expires At */}
           {swap.expires_at && (
             <div className="flex items-center justify-between">
-              <span className="text-sm text-muted">Expires At</span>
+              <span className="text-sm text-muted">{oc('expiresAt')}</span>
               <span className="text-sm font-medium text-foreground">{formatDate(swap.expires_at)}</span>
             </div>
           )}
 
           {/* Timeline */}
           <div className="border-t border-border pt-4">
-            <h4 className="text-sm font-medium text-foreground mb-3">Timeline</h4>
+            <h4 className="text-sm font-medium text-foreground mb-3">{oc('timeline')}</h4>
             <div className="space-y-2 text-sm">
               <div className="flex items-center space-x-2 text-secondary">
                 <Clock className="h-4 w-4" />
-                <span>Created {formatDate(swap.created_at)}</span>
+                <span>{oc('created', { date: formatDate(swap.created_at) })}</span>
               </div>
               {swap.status === 'accepted' && swap.responded_at && (
                 <div className="flex items-center space-x-2 text-success">
                   <Check className="h-4 w-4" />
-                  <span>Accepted {formatDate(swap.responded_at)}</span>
+                  <span>{oc('acceptedAt', { date: formatDate(swap.responded_at) })}</span>
                 </div>
               )}
               {swap.status === 'rejected' && swap.responded_at && (
                 <div className="flex items-center space-x-2 text-error">
                   <XCircle className="h-4 w-4" />
-                  <span>Rejected {formatDate(swap.responded_at)}</span>
+                  <span>{oc('rejectedAt', { date: formatDate(swap.responded_at) })}</span>
                 </div>
               )}
             </div>
@@ -488,12 +491,12 @@ function SwapDetailDialog({
           {/* Accept Form */}
           {showAcceptForm && canAcceptOrReject && (
             <div className="border-t border-border pt-4 space-y-3">
-              <label className="block text-sm font-medium text-secondary">Message (optional)</label>
+              <label className="block text-sm font-medium text-secondary">{oc('messageOptional')}</label>
               <textarea
                 value={acceptMessage}
                 onChange={(e) => setAcceptMessage(e.target.value)}
                 rows={2}
-                placeholder="Add a message..."
+                placeholder={oc('messagePh')}
                 className="w-full px-3 py-2 border border-border-strong rounded-md text-sm"
               />
               <div className="flex justify-end space-x-2">
@@ -503,7 +506,7 @@ function SwapDetailDialog({
                   size="sm"
                   onClick={() => setShowAcceptForm(false)}
                 >
-                  Back
+                  {oc('back')}
                 </Button>
                 <Button
                   type="button"
@@ -512,7 +515,7 @@ function SwapDetailDialog({
                   isLoading={acceptSwap.isPending}
                 >
                   <Check className="h-4 w-4 mr-1" />
-                  Confirm Accept
+                  {oc('confirmAccept')}
                 </Button>
               </div>
             </div>
@@ -521,12 +524,12 @@ function SwapDetailDialog({
           {/* Reject Form */}
           {showRejectForm && canAcceptOrReject && (
             <div className="border-t border-border pt-4 space-y-3">
-              <label className="block text-sm font-medium text-secondary">Reason for rejection (optional)</label>
+              <label className="block text-sm font-medium text-secondary">{oc('reasonRejectOptional')}</label>
               <textarea
                 value={rejectMessage}
                 onChange={(e) => setRejectMessage(e.target.value)}
                 rows={2}
-                placeholder="Add a reason..."
+                placeholder={oc('reasonPh2')}
                 className="w-full px-3 py-2 border border-border-strong rounded-md text-sm"
               />
               <div className="flex justify-end space-x-2">
@@ -536,7 +539,7 @@ function SwapDetailDialog({
                   size="sm"
                   onClick={() => setShowRejectForm(false)}
                 >
-                  Back
+                  {oc('back')}
                 </Button>
                 <Button
                   type="button"
@@ -546,7 +549,7 @@ function SwapDetailDialog({
                   isLoading={rejectSwap.isPending}
                 >
                   <XCircle className="h-4 w-4 mr-1" />
-                  Confirm Reject
+                  {oc('confirmReject')}
                 </Button>
               </div>
             </div>
@@ -563,7 +566,7 @@ function SwapDetailDialog({
                   isLoading={cancelSwap.isPending}
                 >
                   <Trash2 className="h-4 w-4 mr-2" />
-                  Cancel Request
+                  {oc('cancelRequest')}
                 </Button>
               )}
               {canAcceptOrReject && (
@@ -574,17 +577,17 @@ function SwapDetailDialog({
                     onClick={() => setShowRejectForm(true)}
                   >
                     <XCircle className="h-4 w-4 mr-2" />
-                    Reject
+                    {oc('reject')}
                   </Button>
                   <Button type="button" onClick={() => setShowAcceptForm(true)}>
                     <Check className="h-4 w-4 mr-2" />
-                    Accept
+                    {oc('accept')}
                   </Button>
                 </>
               )}
               {!canCancel && !canAcceptOrReject && (
                 <Button type="button" variant="outline" onClick={onClose}>
-                  Close
+                  {oc('close')}
                 </Button>
               )}
             </div>
@@ -597,6 +600,7 @@ function SwapDetailDialog({
 
 // Shift Swaps Tab Component
 function ShiftSwapsTab({ schedules }: { schedules: OncallSchedule[] }) {
+  const oc = useT('oncall');
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [selectedSwap, setSelectedSwap] = useState<ShiftSwapRequest | null>(null);
   const [showDetailDialog, setShowDetailDialog] = useState(false);
@@ -631,7 +635,7 @@ function ShiftSwapsTab({ schedules }: { schedules: OncallSchedule[] }) {
   };
 
   const handleQuickCancel = async (id: string) => {
-    if (confirm('Are you sure you want to cancel this swap request?')) {
+    if (confirm(oc('confirmCancelSwap'))) {
       await cancelSwap.mutateAsync(id);
     }
   };
@@ -657,7 +661,7 @@ function ShiftSwapsTab({ schedules }: { schedules: OncallSchedule[] }) {
                 : 'text-secondary hover:bg-surface-hover'
             }`}
           >
-            My Requests
+            {oc('tabMine')}
             {myRequests.length > 0 && (
               <span className="ml-2 bg-primary text-white px-2 py-0.5 rounded-full text-xs">
                 {myRequests.length}
@@ -672,7 +676,7 @@ function ShiftSwapsTab({ schedules }: { schedules: OncallSchedule[] }) {
                 : 'text-secondary hover:bg-surface-hover'
             }`}
           >
-            Available Swaps
+            {oc('tabAvailable')}
             {availableSwaps.length > 0 && (
               <span className="ml-2 bg-success text-white px-2 py-0.5 rounded-full text-xs">
                 {availableSwaps.length}
@@ -682,7 +686,7 @@ function ShiftSwapsTab({ schedules }: { schedules: OncallSchedule[] }) {
         </div>
         <Button onClick={() => setShowCreateDialog(true)}>
           <Plus className="h-4 w-4 mr-2" />
-          Request Swap
+          {oc('requestSwap')}
         </Button>
       </div>
 
@@ -690,13 +694,13 @@ function ShiftSwapsTab({ schedules }: { schedules: OncallSchedule[] }) {
       {activeSection === 'my-requests' && (
         <div className="bg-surface rounded-xl shadow-sm overflow-hidden">
           <div className="px-6 py-4 border-b border-border">
-            <h2 className="text-lg font-semibold text-foreground">My Swap Requests</h2>
-            <p className="mt-1 text-sm text-muted">Swap requests you have created</p>
+            <h2 className="text-lg font-semibold text-foreground">{oc('mySwaps')}</h2>
+            <p className="mt-1 text-sm text-muted">{oc('mySwapsHint')}</p>
           </div>
           {myRequestsLoading ? (
             <div className="flex items-center justify-center h-48">
               <Loader2 className="h-6 w-6 animate-spin text-primary" />
-              <span className="ml-2 text-muted">Loading your requests...</span>
+              <span className="ml-2 text-muted">{oc('loadingMine')}</span>
             </div>
           ) : myRequests.length > 0 ? (
             <ul className="divide-y divide-border">
@@ -708,7 +712,7 @@ function ShiftSwapsTab({ schedules }: { schedules: OncallSchedule[] }) {
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center space-x-3">
                           <span className={`px-2.5 py-0.5 rounded-full text-xs font-medium ${status.bg} ${status.text}`}>
-                            {status.label}
+                            {oc(status.label)}
                           </span>
                           <span className="text-sm font-medium text-foreground">{swap.schedule_name}</span>
                           <span className="text-xs text-muted">{swap.swap_number}</span>
@@ -759,11 +763,11 @@ function ShiftSwapsTab({ schedules }: { schedules: OncallSchedule[] }) {
           ) : (
             <div className="text-center py-12">
               <ArrowRightLeft className="h-12 w-12 text-muted mx-auto mb-4" />
-              <h3 className="text-lg font-medium text-foreground mb-2">No swap requests</h3>
-              <p className="text-muted mb-4">You have not created any swap requests yet</p>
+              <h3 className="text-lg font-medium text-foreground mb-2">{oc('noSwaps')}</h3>
+              <p className="text-muted mb-4">{oc('noSwapsHint')}</p>
               <Button onClick={() => setShowCreateDialog(true)}>
                 <Plus className="h-4 w-4 mr-2" />
-                Request Swap
+                {oc('requestSwap')}
               </Button>
             </div>
           )}
@@ -774,13 +778,13 @@ function ShiftSwapsTab({ schedules }: { schedules: OncallSchedule[] }) {
       {activeSection === 'available' && (
         <div className="bg-surface rounded-xl shadow-sm overflow-hidden">
           <div className="px-6 py-4 border-b border-border">
-            <h2 className="text-lg font-semibold text-foreground">Available Swaps</h2>
-            <p className="mt-1 text-sm text-muted">Swap requests you can accept</p>
+            <h2 className="text-lg font-semibold text-foreground">{oc('availableSwaps')}</h2>
+            <p className="mt-1 text-sm text-muted">{oc('availableHint')}</p>
           </div>
           {availableLoading ? (
             <div className="flex items-center justify-center h-48">
               <Loader2 className="h-6 w-6 animate-spin text-primary" />
-              <span className="ml-2 text-muted">Loading available swaps...</span>
+              <span className="ml-2 text-muted">{oc('loadingAvailable')}</span>
             </div>
           ) : availableSwaps.length > 0 ? (
             <ul className="divide-y divide-border">
@@ -820,7 +824,7 @@ function ShiftSwapsTab({ schedules }: { schedules: OncallSchedule[] }) {
                         isLoading={rejectSwap.isPending}
                       >
                         <XCircle className="h-4 w-4 mr-1 text-error" />
-                        Reject
+                        {oc('reject')}
                       </Button>
                       <Button
                         size="sm"
@@ -828,7 +832,7 @@ function ShiftSwapsTab({ schedules }: { schedules: OncallSchedule[] }) {
                         isLoading={acceptSwap.isPending}
                       >
                         <Check className="h-4 w-4 mr-1" />
-                        Accept
+                        {oc('accept')}
                       </Button>
                       <Button
                         variant="ghost"
@@ -845,8 +849,8 @@ function ShiftSwapsTab({ schedules }: { schedules: OncallSchedule[] }) {
           ) : (
             <div className="text-center py-12">
               <ArrowRightLeft className="h-12 w-12 text-muted mx-auto mb-4" />
-              <h3 className="text-lg font-medium text-foreground mb-2">No available swaps</h3>
-              <p className="text-muted">There are no swap requests available for you to accept</p>
+              <h3 className="text-lg font-medium text-foreground mb-2">{oc('noAvailable')}</h3>
+              <p className="text-muted">{oc('noAvailableHint')}</p>
             </div>
           )}
         </div>
@@ -875,6 +879,7 @@ function ShiftSwapsTab({ schedules }: { schedules: OncallSchedule[] }) {
 }
 
 export default function OnCallPage() {
+  const oc = useT('oncall');
   const [activeTab, setActiveTab] = useState<'schedules' | 'incidents' | 'shifts' | 'swaps'>('schedules');
 
   const { data: schedulesData, isLoading: schedulesLoading, error: schedulesError } = useOncallSchedules({ is_active: true });
@@ -899,24 +904,24 @@ export default function OnCallPage() {
   };
 
   const formatTimeRemaining = (dateString?: string) => {
-    if (!dateString) return 'No rotation scheduled';
+    if (!dateString) return oc('noRotation');
     const date = new Date(dateString);
     const now = new Date();
     const diffMs = date.getTime() - now.getTime();
     const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
     const diffDays = Math.floor(diffHours / 24);
 
-    if (diffDays > 0) return `${diffDays}d ${diffHours % 24}h remaining`;
-    if (diffHours > 0) return `${diffHours}h remaining`;
-    return 'Ending soon';
+    if (diffDays > 0) return oc('remainingDH', { days: diffDays, hours: diffHours % 24 });
+    if (diffHours > 0) return oc('remainingH', { hours: diffHours });
+    return oc('endingSoon');
   };
 
   if (schedulesError) {
     return (
       <div className="bg-error-subtle border border-error rounded-lg p-6 text-center">
         <Phone className="h-12 w-12 text-error mx-auto mb-4" />
-        <h3 className="text-lg font-medium text-error mb-2">Error loading on-call data</h3>
-        <p className="text-error">Please try refreshing the page</p>
+        <h3 className="text-lg font-medium text-error mb-2">{oc('errorLoading')}</h3>
+        <p className="text-error">{oc('tryRefresh')}</p>
       </div>
     );
   }
@@ -926,15 +931,15 @@ export default function OnCallPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-foreground">On-Call Management</h1>
+          <h1 className="text-2xl font-bold text-foreground">{oc('title')}</h1>
           <p className="mt-1 text-sm text-muted">
-            Manage on-call schedules and incidents
+            {oc('subtitle')}
           </p>
         </div>
         <Link href="/oncall/schedules/new">
           <Button>
             <Plus className="h-4 w-4 mr-2" />
-            New Schedule
+            {oc('newSchedule')}
           </Button>
         </Link>
       </div>
@@ -967,7 +972,7 @@ export default function OnCallPage() {
                 </div>
                 <div className="flex items-center space-x-2">
                   {!incident.acknowledged_at && (
-                    <span className="text-xs text-error font-medium">UNACKNOWLEDGED</span>
+                    <span className="text-xs text-error font-medium">{oc('unacknowledged')}</span>
                   )}
                   <ChevronRight className="h-4 w-4 text-muted" />
                 </div>
@@ -988,7 +993,7 @@ export default function OnCallPage() {
                 : 'border-transparent text-secondary hover:text-foreground hover:border-border-strong'
             }`}
           >
-            Schedules
+            {oc('tabSchedules')}
           </button>
           <button
             onClick={() => setActiveTab('incidents')}
@@ -998,7 +1003,7 @@ export default function OnCallPage() {
                 : 'border-transparent text-secondary hover:text-foreground hover:border-border-strong'
             }`}
           >
-            Incidents
+            {oc('tabIncidents')}
             {activeIncidents.length > 0 && (
               <span className="ml-2 bg-error-subtle text-error py-0.5 px-2 rounded-full text-xs">
                 {activeIncidents.length}
@@ -1013,7 +1018,7 @@ export default function OnCallPage() {
                 : 'border-transparent text-secondary hover:text-foreground hover:border-border-strong'
             }`}
           >
-            Who is On-Call
+            {oc('tabWho')}
           </button>
           <button
             onClick={() => setActiveTab('swaps')}
@@ -1024,7 +1029,7 @@ export default function OnCallPage() {
             }`}
           >
             <ArrowRightLeft className="h-4 w-4 mr-1" />
-            Shift Swaps
+            {oc('tabSwaps')}
           </button>
         </nav>
       </div>
@@ -1034,7 +1039,7 @@ export default function OnCallPage() {
         schedulesLoading ? (
           <div className="flex items-center justify-center h-64">
             <Loader2 className="h-8 w-8 animate-spin text-primary" />
-            <span className="ml-2 text-muted">Loading schedules...</span>
+            <span className="ml-2 text-muted">{oc('loadingSchedules')}</span>
           </div>
         ) : schedules.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -1054,7 +1059,7 @@ export default function OnCallPage() {
                 </div>
 
                 <h3 className="mt-4 font-semibold text-foreground">{schedule.name}</h3>
-                <p className="mt-1 text-sm text-muted">{schedule.description || 'No description'}</p>
+                <p className="mt-1 text-sm text-muted">{schedule.description || oc('noDescription')}</p>
 
                 <div className="mt-4 space-y-3">
                   {schedule.current_on_call ? (
@@ -1066,19 +1071,19 @@ export default function OnCallPage() {
                         <p className="text-sm font-medium text-foreground">
                           {schedule.current_on_call.name}
                         </p>
-                        <p className="text-xs text-muted">Currently on-call</p>
+                        <p className="text-xs text-muted">{oc('currentlyOncall')}</p>
                       </div>
                     </div>
                   ) : (
                     <div className="flex items-center text-sm text-muted">
                       <User className="h-4 w-4 mr-2" />
-                      No one currently on-call
+                      {oc('noOneOncall')}
                     </div>
                   )}
 
                   <div className="flex items-center text-sm text-muted">
                     <Shield className="h-4 w-4 mr-2" />
-                    {schedule.escalation_policy?.name || 'No escalation policy'}
+                    {schedule.escalation_policy?.name || oc('noEscalation')}
                   </div>
                 </div>
               </Link>
@@ -1087,12 +1092,12 @@ export default function OnCallPage() {
         ) : (
           <div className="bg-surface rounded-xl shadow-sm p-12 text-center">
             <Phone className="h-12 w-12 text-muted mx-auto mb-4" />
-            <h3 className="text-lg font-medium text-foreground mb-2">No schedules found</h3>
-            <p className="text-muted">Create your first on-call schedule</p>
+            <h3 className="text-lg font-medium text-foreground mb-2">{oc('noSchedules')}</h3>
+            <p className="text-muted">{oc('noSchedulesHint')}</p>
             <Link href="/oncall/schedules/new">
               <Button className="mt-4">
                 <Plus className="h-4 w-4 mr-2" />
-                New Schedule
+                {oc('newSchedule')}
               </Button>
             </Link>
           </div>
@@ -1105,7 +1110,7 @@ export default function OnCallPage() {
           {issuesLoading ? (
             <div className="flex items-center justify-center h-48">
               <Loader2 className="h-6 w-6 animate-spin text-primary" />
-              <span className="ml-2 text-muted">Loading incidents...</span>
+              <span className="ml-2 text-muted">{oc('loadingIncidents')}</span>
             </div>
           ) : activeIncidents.length > 0 ? (
             <ul className="divide-y divide-border">
@@ -1135,7 +1140,7 @@ export default function OnCallPage() {
                         <div className="mt-1 flex items-center space-x-4 text-sm text-secondary">
                           <span className="flex items-center">
                             <User className="h-4 w-4 mr-1" />
-                            {incident.assigned_to?.name || 'Unassigned'}
+                            {incident.assigned_to?.name || oc('unassigned')}
                           </span>
                           <span className="flex items-center">
                             <Clock className="h-4 w-4 mr-1" />
@@ -1145,9 +1150,9 @@ export default function OnCallPage() {
                       </div>
                       <div className="flex items-center space-x-2">
                         {incident.acknowledged_at ? (
-                          <span className="text-xs text-success font-medium">ACKNOWLEDGED</span>
+                          <span className="text-xs text-success font-medium">{oc('acknowledged')}</span>
                         ) : (
-                          <span className="text-xs text-error font-medium">UNACKNOWLEDGED</span>
+                          <span className="text-xs text-error font-medium">{oc('unacknowledged')}</span>
                         )}
                         <ChevronRight className="h-4 w-4 text-muted" />
                       </div>
@@ -1159,8 +1164,8 @@ export default function OnCallPage() {
           ) : (
             <div className="text-center py-12">
               <Phone className="h-12 w-12 text-muted mx-auto mb-4" />
-              <h3 className="text-lg font-medium text-foreground mb-2">No active incidents</h3>
-              <p className="text-muted">All systems operational</p>
+              <h3 className="text-lg font-medium text-foreground mb-2">{oc('noIncidents')}</h3>
+              <p className="text-muted">{oc('allOperational')}</p>
             </div>
           )}
         </div>
@@ -1170,12 +1175,12 @@ export default function OnCallPage() {
       {activeTab === 'shifts' && (
         <div className="bg-surface rounded-xl shadow-sm overflow-hidden">
           <div className="px-6 py-4 border-b border-border">
-            <h2 className="text-lg font-semibold text-foreground">Currently On-Call</h2>
+            <h2 className="text-lg font-semibold text-foreground">{oc('currentlyOncallTitle')}</h2>
           </div>
           {whoIsOnCallLoading ? (
             <div className="flex items-center justify-center h-48">
               <Loader2 className="h-6 w-6 animate-spin text-primary" />
-              <span className="ml-2 text-muted">Loading on-call information...</span>
+              <span className="ml-2 text-muted">{oc('loadingOncall')}</span>
             </div>
           ) : whoIsOnCall.length > 0 ? (
             <ul className="divide-y divide-border">
@@ -1193,7 +1198,7 @@ export default function OnCallPage() {
                           )}
                         </div>
                       ) : (
-                        <p className="mt-1 text-sm text-muted italic">No one currently on-call</p>
+                        <p className="mt-1 text-sm text-muted italic">{oc('noOneOncall')}</p>
                       )}
                       {entry.end_time && (
                         <div className="mt-1 flex items-center text-sm text-secondary">
@@ -1204,7 +1209,7 @@ export default function OnCallPage() {
                     </div>
                     <Link href={`/oncall/schedules/${entry.schedule_id}`}>
                       <Button variant="outline" size="sm">
-                        View Schedule
+                        {oc('viewSchedule')}
                       </Button>
                     </Link>
                   </div>
@@ -1214,8 +1219,8 @@ export default function OnCallPage() {
           ) : (
             <div className="text-center py-12">
               <Calendar className="h-12 w-12 text-muted mx-auto mb-4" />
-              <h3 className="text-lg font-medium text-foreground mb-2">No on-call entries</h3>
-              <p className="text-muted">Set up schedules to see who is on-call</p>
+              <h3 className="text-lg font-medium text-foreground mb-2">{oc('noOncallEntries')}</h3>
+              <p className="text-muted">{oc('noOncallEntriesHint')}</p>
             </div>
           )}
         </div>

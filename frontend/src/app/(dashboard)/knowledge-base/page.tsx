@@ -1,5 +1,6 @@
 'use client';
 
+import { useT } from '@/i18n/useT';
 import { useState } from 'react';
 import Link from 'next/link';
 import {
@@ -55,6 +56,10 @@ const visibilityColors: Record<string, { bg: string; text: string }> = {
 };
 
 export default function KnowledgeBasePage() {
+  const tm = useT('listpages2');
+  const ti = useT('issues');
+  const tl = useT('listpages');
+  const tp = useT('pages');
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [typeFilter, setTypeFilter] = useState<string>('all');
@@ -101,15 +106,15 @@ export default function KnowledgeBasePage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-foreground">Knowledge Base</h1>
+          <h1 className="text-2xl font-bold text-foreground">{tp('knowledgeBase')}</h1>
           <p className="mt-1 text-sm text-muted">
-            Documentation, guides, and troubleshooting articles
+            {tm('kbSubtitle')}
           </p>
         </div>
         <Link href="/knowledge-base/new">
           <Button>
             <Plus className="h-4 w-4 mr-2" />
-            New Article
+            {tp('newArticle')}
           </Button>
         </Link>
       </div>
@@ -129,7 +134,7 @@ export default function KnowledgeBasePage() {
           <div className="flex items-center">
             <Eye className="h-8 w-8 text-success mr-3" />
             <div>
-              <p className="text-sm text-muted">Published</p>
+              <p className="text-sm text-muted">{tm('published')}</p>
               <p className="text-2xl font-bold text-foreground">{articles.filter((a: KBArticle) => a.status === 'published').length}</p>
             </div>
           </div>
@@ -161,7 +166,7 @@ export default function KnowledgeBasePage() {
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted" />
             <input
               type="text"
-              placeholder="Search articles..."
+              placeholder={tm('kbSearch')}
               value={searchQuery}
               onChange={(e) => {
                 setSearchQuery(e.target.value);
@@ -176,7 +181,7 @@ export default function KnowledgeBasePage() {
             className="flex items-center"
           >
             <Filter className="h-4 w-4 mr-2" />
-            Filters
+            {tp('filters')}
             <ChevronDown className={`h-4 w-4 ml-2 transition-transform ${showFilters ? 'rotate-180' : ''}`} />
           </Button>
         </div>
@@ -184,7 +189,7 @@ export default function KnowledgeBasePage() {
         {showFilters && (
           <div className="mt-4 pt-4 border-t border-border grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div>
-              <label className="block text-sm font-medium text-secondary mb-1">Status</label>
+              <label className="block text-sm font-medium text-secondary mb-1">{ti('status')}</label>
               <select
                 value={statusFilter}
                 onChange={(e) => {
@@ -193,11 +198,11 @@ export default function KnowledgeBasePage() {
                 }}
                 className="w-full px-3 py-2 border border-border-strong rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary"
               >
-                <option value="all">All Status</option>
-                <option value="draft">Draft</option>
-                <option value="review">In Review</option>
-                <option value="published">Published</option>
-                <option value="archived">Archived</option>
+                <option value="all">{ti('allStatus')}</option>
+                <option value="draft">{tl('draft')}</option>
+                <option value="review">{tl('inReview')}</option>
+                <option value="published">{tm('published')}</option>
+                <option value="archived">{tm('archived')}</option>
               </select>
             </div>
             <div>
@@ -210,13 +215,13 @@ export default function KnowledgeBasePage() {
                 }}
                 className="w-full px-3 py-2 border border-border-strong rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary"
               >
-                <option value="all">All Types</option>
-                <option value="how_to">How-To</option>
-                <option value="troubleshooting">Troubleshooting</option>
-                <option value="faq">FAQ</option>
-                <option value="reference">Reference</option>
-                <option value="policy">Policy</option>
-                <option value="known_error">Known Error</option>
+                <option value="all">{tl('allTypes')}</option>
+                <option value="how_to">{tm('howTo')}</option>
+                <option value="troubleshooting">{tm('troubleshooting')}</option>
+                <option value="faq">{tm('faq')}</option>
+                <option value="reference">{tm('reference')}</option>
+                <option value="policy">{tm('policy')}</option>
+                <option value="known_error">{tl('knownError')}</option>
               </select>
             </div>
             <div>
@@ -229,7 +234,7 @@ export default function KnowledgeBasePage() {
                 }}
                 className="w-full px-3 py-2 border border-border-strong rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary"
               >
-                <option value="all">All Categories</option>
+                <option value="all">{tm('allCategories')}</option>
                 {categories.map((cat: KBCategory) => (
                   <option key={cat.id} value={cat.id}>{cat.name}</option>
                 ))}
@@ -252,25 +257,25 @@ export default function KnowledgeBasePage() {
               <thead className="bg-surface-hover">
                 <tr>
                   <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">
-                    Article
+                    {tm('colArticle')}
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">
-                    Type / Category
+                    {tm('colTypeCategory')}
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">
-                    Status
+                    {ti('status')}
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">
-                    Author
+                    {tm('colAuthor')}
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">
-                    Views / Helpful
+                    {tm('colViews')}
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">
-                    Updated
+                    {ti('colUpdated')}
                   </th>
                   <th className="px-6 py-3 text-right text-xs font-medium text-muted uppercase tracking-wider">
-                    Actions
+                    {ti('colActions')}
                   </th>
                 </tr>
               </thead>
@@ -393,7 +398,7 @@ export default function KnowledgeBasePage() {
                   disabled={page <= 1}
                   onClick={() => setPage(p => Math.max(1, p - 1))}
                 >
-                  Previous
+                  {ti('previous')}
                 </Button>
                 <Button
                   variant="outline"
@@ -401,7 +406,7 @@ export default function KnowledgeBasePage() {
                   disabled={page >= pagination.totalPages}
                   onClick={() => setPage(p => p + 1)}
                 >
-                  Next
+                  {ti('next')}
                 </Button>
               </div>
             </div>

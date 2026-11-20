@@ -1,5 +1,6 @@
 'use client';
 
+import { useT } from '@/i18n/useT';
 import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import {
@@ -43,6 +44,12 @@ const statusColors: Record<string, { bg: string; text: string; icon: typeof Chec
 };
 
 export default function UsersPage() {
+  const au = useT('adminUsers');
+  const tv = useT('nav');
+  const tm = useT('listpages2');
+  const ti = useT('issues');
+  const tl = useT('listpages');
+  const tp = useT('pages');
   const [searchQuery, setSearchQuery] = useState('');
   const [roleFilter, setRoleFilter] = useState<string>('all');
   const [statusFilter, setStatusFilter] = useState<string>('all');
@@ -122,7 +129,7 @@ export default function UsersPage() {
             onClick={() => setError(null)}
             className="ml-auto text-error hover:text-error"
           >
-            Dismiss
+            {au('dismiss')}
           </button>
         </div>
       )}
@@ -130,15 +137,15 @@ export default function UsersPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-foreground">Users</h1>
+          <h1 className="text-2xl font-bold text-foreground">{tv('users')}</h1>
           <p className="mt-1 text-sm text-muted">
-            Manage user accounts and permissions
+            {au('subtitle')}
           </p>
         </div>
         <Link href="/admin/users/new">
           <Button>
             <Plus className="h-4 w-4 mr-2" />
-            Add User
+            {au('addUser')}
           </Button>
         </Link>
       </div>
@@ -151,7 +158,7 @@ export default function UsersPage() {
               <User className="h-5 w-5 text-primary" />
             </div>
             <div className="ml-4">
-              <p className="text-sm text-muted">Total Users</p>
+              <p className="text-sm text-muted">{au('totalUsers')}</p>
               <p className="text-2xl font-semibold text-foreground">{total}</p>
             </div>
           </div>
@@ -162,7 +169,7 @@ export default function UsersPage() {
               <CheckCircle className="h-5 w-5 text-success" />
             </div>
             <div className="ml-4">
-              <p className="text-sm text-muted">Active</p>
+              <p className="text-sm text-muted">{tm('active')}</p>
               <p className="text-2xl font-semibold text-foreground">{activeCount}</p>
             </div>
           </div>
@@ -173,7 +180,7 @@ export default function UsersPage() {
               <Clock className="h-5 w-5 text-warning" />
             </div>
             <div className="ml-4">
-              <p className="text-sm text-muted">Pending</p>
+              <p className="text-sm text-muted">{ti('statusPending')}</p>
               <p className="text-2xl font-semibold text-foreground">{pendingCount}</p>
             </div>
           </div>
@@ -184,7 +191,7 @@ export default function UsersPage() {
               <Shield className="h-5 w-5 text-error" />
             </div>
             <div className="ml-4">
-              <p className="text-sm text-muted">Admins</p>
+              <p className="text-sm text-muted">{au('admins')}</p>
               <p className="text-2xl font-semibold text-foreground">{adminCount}</p>
             </div>
           </div>
@@ -198,7 +205,7 @@ export default function UsersPage() {
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted" />
             <input
               type="text"
-              placeholder="Search by name or email..."
+              placeholder={au('searchPh')}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="w-full pl-10 pr-4 py-2 border border-border-strong rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
@@ -210,7 +217,7 @@ export default function UsersPage() {
             className="flex items-center"
           >
             <Filter className="h-4 w-4 mr-2" />
-            Filters
+            {tp('filters')}
             <ChevronDown className={`h-4 w-4 ml-2 transition-transform ${showFilters ? 'rotate-180' : ''}`} />
           </Button>
         </div>
@@ -218,30 +225,30 @@ export default function UsersPage() {
         {showFilters && (
           <div className="mt-4 pt-4 border-t border-border grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-secondary mb-1">Role</label>
+              <label className="block text-sm font-medium text-secondary mb-1">{au('role')}</label>
               <select
                 value={roleFilter}
                 onChange={(e) => setRoleFilter(e.target.value)}
                 className="w-full px-3 py-2 border border-border-strong rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
               >
-                <option value="all">All Roles</option>
-                <option value="admin">Admin</option>
-                <option value="manager">Manager</option>
-                <option value="itil_agent">ITIL Agent</option>
-                <option value="user">User</option>
+                <option value="all">{au('allRoles')}</option>
+                <option value="admin">{au('roleAdmin')}</option>
+                <option value="manager">{au('roleManager')}</option>
+                <option value="itil_agent">{au('roleItil')}</option>
+                <option value="user">{au('colUser')}</option>
               </select>
             </div>
             <div>
-              <label className="block text-sm font-medium text-secondary mb-1">Status</label>
+              <label className="block text-sm font-medium text-secondary mb-1">{ti('status')}</label>
               <select
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value)}
                 className="w-full px-3 py-2 border border-border-strong rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
               >
-                <option value="all">All Statuses</option>
-                <option value="active">Active</option>
-                <option value="inactive">Inactive</option>
-                <option value="pending">Pending</option>
+                <option value="all">{tl('allStatuses')}</option>
+                <option value="active">{tm('active')}</option>
+                <option value="inactive">{tm('inactive')}</option>
+                <option value="pending">{ti('statusPending')}</option>
               </select>
             </div>
           </div>
@@ -254,22 +261,22 @@ export default function UsersPage() {
           <thead className="bg-background">
             <tr>
               <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">
-                User
+                {au('colUser')}
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">
-                Primary Role
+                {au('primaryRole')}
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">
-                All Roles
+                {au('allRoles')}
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">
-                Status
+                {ti('status')}
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">
-                Last Login
+                {au('lastLogin')}
               </th>
               <th className="px-6 py-3 text-right text-xs font-medium text-muted uppercase tracking-wider">
-                Actions
+                {ti('colActions')}
               </th>
             </tr>
           </thead>
@@ -330,8 +337,8 @@ export default function UsersPage() {
         {filteredUsers.length === 0 && (
           <div className="text-center py-12">
             <User className="h-12 w-12 text-muted mx-auto mb-4" />
-            <h3 className="text-lg font-medium text-foreground mb-2">No users found</h3>
-            <p className="text-muted">Try adjusting your search or filters</p>
+            <h3 className="text-lg font-medium text-foreground mb-2">{au('noUsers')}</h3>
+            <p className="text-muted">{ti('adjustFilters')}</p>
           </div>
         )}
 
@@ -347,7 +354,7 @@ export default function UsersPage() {
               disabled={page <= 1}
               onClick={() => setPage((p) => Math.max(1, p - 1))}
             >
-              Previous
+              {ti('previous')}
             </Button>
             <Button
               variant="outline"
@@ -355,7 +362,7 @@ export default function UsersPage() {
               disabled={page * limit >= total}
               onClick={() => setPage((p) => p + 1)}
             >
-              Next
+              {ti('next')}
             </Button>
           </div>
         </div>

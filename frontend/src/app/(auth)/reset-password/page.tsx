@@ -1,5 +1,6 @@
 'use client';
 
+import { useT } from '@/i18n/useT';
 import { Suspense } from 'react';
 import { useState, FormEvent, useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
@@ -11,6 +12,7 @@ import { authApi } from '@/lib/api';
 import { AxiosError } from 'axios';
 
 function ResetPasswordContent() {
+  const t = useT('auth.resetPassword');
   const searchParams = useSearchParams();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -78,11 +80,11 @@ function ResetPasswordContent() {
           </div>
           <h2 className="text-2xl font-semibold tracking-tight text-foreground mb-2">Password Reset Successful</h2>
           <p className="text-secondary mb-6">
-            Your password has been reset successfully. You can now login with your new password.
+            {t('success')}
           </p>
           <Link href="/login">
             <Button>
-              Go to Login
+              {t('goToLogin')}
             </Button>
           </Link>
         </div>
@@ -101,10 +103,10 @@ function ResetPasswordContent() {
             </span>
           </div>
           <h2 className="text-2xl font-semibold tracking-tight text-foreground mt-6 mb-1">
-            Set new password
+            {t('title')}
           </h2>
           <p className="text-sm text-secondary mb-6">
-            Enter your new password below.
+            {t('subtitle')}
           </p>
         </div>
 
@@ -119,7 +121,7 @@ function ResetPasswordContent() {
           {!searchParams.get('tenant') && (
             <div>
               <label htmlFor="tenant" className="text-sm font-medium text-secondary mb-1.5 block">
-                Organization slug
+                {t('organization')}
               </label>
               <Input
                 id="tenant"
@@ -135,7 +137,7 @@ function ResetPasswordContent() {
           {!searchParams.get('token') && (
             <div>
               <label htmlFor="token" className="text-sm font-medium text-secondary mb-1.5 block">
-                Reset token
+                {t('token')}
               </label>
               <Input
                 id="token"
@@ -150,7 +152,7 @@ function ResetPasswordContent() {
 
           <div>
             <label htmlFor="password" className="text-sm font-medium text-secondary mb-1.5 block">
-              New password
+              {t('newPassword')}
             </label>
             <div className="relative">
               <Input
@@ -174,7 +176,7 @@ function ResetPasswordContent() {
 
           <div>
             <label htmlFor="confirmPassword" className="text-sm font-medium text-secondary mb-1.5 block">
-              Confirm password
+              {t('confirmPassword')}
             </label>
             <Input
               id="confirmPassword"
@@ -188,7 +190,7 @@ function ResetPasswordContent() {
           </div>
 
           <Button type="submit" isLoading={isLoading}>
-            Reset Password
+            {t('submit')}
           </Button>
 
           <div className="text-center">
@@ -197,7 +199,7 @@ function ResetPasswordContent() {
               className="text-sm font-medium text-primary hover:text-primary-hover transition-colors flex items-center justify-center"
             >
               <ArrowLeft className="h-4 w-4 mr-1" />
-              Back to Login
+              {t('back')}
             </Link>
           </div>
         </form>

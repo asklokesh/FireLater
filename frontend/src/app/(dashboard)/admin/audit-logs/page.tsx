@@ -1,5 +1,6 @@
 'use client';
 
+import { useT } from '@/i18n/useT';
 import { useState, useEffect, useCallback } from 'react';
 import {
   ScrollText,
@@ -39,6 +40,8 @@ interface VerifyResult {
 type TabType = 'trail' | 'verify';
 
 export default function AuditLogsPage() {
+  const al = useT('auditLogs');
+  const ti = useT('issues');
   const [activeTab, setActiveTab] = useState<TabType>('trail');
   const [logs, setLogs] = useState<AuditEntry[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -75,12 +78,12 @@ export default function AuditLogsPage() {
       setLogs(response.data?.data || response.data || []);
       setTotal(response.data?.pagination?.total || response.data?.total || 0);
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed to load audit logs';
+      const message = err instanceof Error ? err.message : al('loadFailed');
       setError(message);
     } finally {
       setIsLoading(false);
     }
-  }, [page, fromDate, toDate, actionFilter, userSearch]);
+  }, [page, fromDate, toDate, actionFilter, userSearch, al]);
 
   useEffect(() => {
     loadLogs();
@@ -93,7 +96,7 @@ export default function AuditLogsPage() {
       const response = await api.get('/v1/audit/verify');
       setVerifyResult(response.data);
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed to verify integrity';
+      const message = err instanceof Error ? err.message : al('verifyFailed');
       setVerifyError(message);
     } finally {
       setIsVerifying(false);
@@ -139,9 +142,9 @@ export default function AuditLogsPage() {
       <div className="flex items-center gap-3">
         <ScrollText className="h-8 w-8 text-secondary" />
         <div>
-          <h1 className="text-2xl font-bold text-foreground">Audit Logs</h1>
+          <h1 className="text-2xl font-bold text-foreground">{al('title')}</h1>
           <p className="mt-1 text-sm text-secondary">
-            Track system activities and verify log integrity
+            {al('subtitle')}
           </p>
         </div>
       </div>
@@ -157,7 +160,7 @@ export default function AuditLogsPage() {
                 : 'border-transparent text-secondary hover:text-foreground'
             }`}
           >
-            Audit Trail
+            {al('tabTrail')}
           </button>
           <button
             onClick={() => setActiveTab('verify')}
@@ -167,7 +170,7 @@ export default function AuditLogsPage() {
                 : 'border-transparent text-secondary hover:text-foreground'
             }`}
           >
-            Chain Verification
+            {al('tabChain')}
           </button>
         </div>
       </div>
@@ -181,7 +184,7 @@ export default function AuditLogsPage() {
               <div>
                 <label className="block text-sm font-medium text-secondary mb-1">
                   <Calendar className="h-4 w-4 inline mr-1" />
-                  From Date
+                  {al('fromDate')}
                 </label>
                 <input
                   type="date"
@@ -196,7 +199,7 @@ export default function AuditLogsPage() {
               <div>
                 <label className="block text-sm font-medium text-secondary mb-1">
                   <Calendar className="h-4 w-4 inline mr-1" />
-                  To Date
+                  {al('toDate')}
                 </label>
                 <input
                   type="date"
@@ -211,11 +214,11 @@ export default function AuditLogsPage() {
               <div>
                 <label className="block text-sm font-medium text-secondary mb-1">
                   <Zap className="h-4 w-4 inline mr-1" />
-                  Action
+                  {al('action')}
                 </label>
                 <input
                   type="text"
-                  placeholder="e.g., create, update, delete"
+                  placeholder={al('actionPh')}
                   value={actionFilter}
                   onChange={(e) => {
                     setActionFilter(e.target.value);
@@ -227,11 +230,11 @@ export default function AuditLogsPage() {
               <div>
                 <label className="block text-sm font-medium text-secondary mb-1">
                   <User className="h-4 w-4 inline mr-1" />
-                  User Email
+                  {al('userEmail')}
                 </label>
                 <input
                   type="text"
-                  placeholder="Search by email"
+                  placeholder={al('emailPh')}
                   value={userSearch}
                   onChange={(e) => {
                     setUserSearch(e.target.value);
@@ -264,22 +267,22 @@ export default function AuditLogsPage() {
                   <thead className="bg-background">
                     <tr>
                       <th className="px-6 py-3 text-left text-xs font-medium text-secondary uppercase tracking-wider">
-                        Timestamp
+                        {al('colTimestamp')}
                       </th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-secondary uppercase tracking-wider">
-                        User
+                        {al('colUser')}
                       </th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-secondary uppercase tracking-wider">
-                        Action
+                        {al('action')}
                       </th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-secondary uppercase tracking-wider">
-                        Entity Type
+                        {al('colEntityType')}
                       </th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-secondary uppercase tracking-wider">
-                        Entity Name
+                        {al('colEntityName')}
                       </th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-secondary uppercase tracking-wider">
-                        Hash
+                        {al('colHash')}
                       </th>
                     </tr>
                   </thead>
@@ -293,7 +296,7 @@ export default function AuditLogsPage() {
                           {entry.user_email ? (
                             <span className="text-foreground font-medium">{entry.user_email}</span>
                           ) : (
-                            <span className="text-muted">System</span>
+                            <span className="text-muted">{al('system')}</span>
                           )}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
@@ -320,7 +323,7 @@ export default function AuditLogsPage() {
                               <button
                                 onClick={() => copyToClipboard(entry.hash || '')}
                                 className="text-muted hover:text-secondary"
-                                title="Copy hash"
+                                title={al('copyHash')}
                               >
                                 <Copy className="h-4 w-4" />
                               </button>
@@ -335,8 +338,8 @@ export default function AuditLogsPage() {
                 {logs.length === 0 && (
                   <div className="text-center py-12">
                     <ScrollText className="h-12 w-12 text-muted mx-auto mb-4" />
-                    <h3 className="text-lg font-medium text-foreground mb-2">No audit log entries found</h3>
-                    <p className="text-secondary">Try adjusting your filters</p>
+                    <h3 className="text-lg font-medium text-foreground mb-2">{al('noEntries')}</h3>
+                    <p className="text-secondary">{al('adjustFilters')}</p>
                   </div>
                 )}
 
@@ -352,7 +355,7 @@ export default function AuditLogsPage() {
                       disabled={page <= 1}
                       onClick={() => setPage((p) => Math.max(1, p - 1))}
                     >
-                      Previous
+                      {ti('previous')}
                     </Button>
                     <Button
                       variant="outline"
@@ -360,7 +363,7 @@ export default function AuditLogsPage() {
                       disabled={page * limit >= total}
                       onClick={() => setPage((p) => p + 1)}
                     >
-                      Next
+                      {ti('next')}
                     </Button>
                   </div>
                 </div>
@@ -375,9 +378,9 @@ export default function AuditLogsPage() {
           <div className="bg-surface rounded-xl shadow-sm p-6">
             <div className="flex items-start justify-between mb-6">
               <div>
-                <h2 className="text-lg font-semibold text-foreground">Verify Log Chain Integrity</h2>
+                <h2 className="text-lg font-semibold text-foreground">{al('verifyTitle')}</h2>
                 <p className="mt-1 text-sm text-secondary">
-                  Verify that all audit logs form an unbroken cryptographic chain
+                  {al('verifyDesc')}
                 </p>
               </div>
               <Button
@@ -388,10 +391,10 @@ export default function AuditLogsPage() {
                 {isVerifying ? (
                   <>
                     <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    Verifying...
+                    {al('verifying')}
                   </>
                 ) : (
-                  'Verify Integrity'
+                  al('verifyBtn')
                 )}
               </Button>
             </div>
@@ -421,13 +424,13 @@ export default function AuditLogsPage() {
                   <div>
                     <p className="font-medium">
                       {verifyResult.valid
-                        ? 'Chain Integrity Verified'
-                        : 'Chain Integrity Failed'}
+                        ? al('verified')
+                        : al('failed')}
                     </p>
                     <p className="text-sm mt-1">
                       {verifyResult.valid
-                        ? 'All audit logs form an unbroken cryptographic chain.'
-                        : 'The audit log chain has been compromised or tampered with.'}
+                        ? al('verifiedDesc')
+                        : al('failedDesc')}
                     </p>
                   </div>
                 </div>
@@ -435,11 +438,11 @@ export default function AuditLogsPage() {
                 {/* Stats */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div className="bg-background rounded-xl p-4">
-                    <p className="text-sm text-secondary mb-1">Total Entries</p>
+                    <p className="text-sm text-secondary mb-1">{al('totalEntries')}</p>
                     <p className="text-2xl font-bold text-foreground">{verifyResult.totalEntries}</p>
                   </div>
                   <div className="bg-background rounded-xl p-4">
-                    <p className="text-sm text-secondary mb-1">First Entry</p>
+                    <p className="text-sm text-secondary mb-1">{al('firstEntry')}</p>
                     <p className="text-sm font-mono text-foreground">
                       {verifyResult.firstEntry
                         ? formatDate(verifyResult.firstEntry.created_at)
@@ -447,7 +450,7 @@ export default function AuditLogsPage() {
                     </p>
                   </div>
                   <div className="bg-background rounded-xl p-4">
-                    <p className="text-sm text-secondary mb-1">Last Entry</p>
+                    <p className="text-sm text-secondary mb-1">{al('lastEntry')}</p>
                     <p className="text-sm font-mono text-foreground">
                       {verifyResult.lastEntry
                         ? formatDate(verifyResult.lastEntry.created_at)

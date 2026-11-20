@@ -1,5 +1,6 @@
 'use client';
 
+import { useT } from '@/i18n/useT';
 import { Suspense, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -46,6 +47,8 @@ function formatDate(value: string): string {
 }
 
 function SearchPageContent() {
+  const tp = useT('pages');
+  const tn = useT('listpages3');
   const router = useRouter();
   const searchParams = useSearchParams();
   const initialQ = searchParams.get('q') ?? '';
@@ -170,9 +173,9 @@ function SearchPageContent() {
     <div className="space-y-6">
       <div className="flex items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-foreground">Search</h1>
+          <h1 className="text-2xl font-bold text-foreground">{tp('search')}</h1>
           <p className="mt-1 text-sm text-muted">
-            Full-text search across issues, problems, changes and knowledge articles, ranked by relevance.
+            {tn('searchSubtitle')}
           </p>
         </div>
         <Link href="/search/analytics">
@@ -197,9 +200,9 @@ function SearchPageContent() {
             }}
             className="px-3 py-2 border border-border-strong rounded-xl text-sm bg-surface"
           >
-            <option value="">Best match</option>
-            <option value="updated">Recently updated</option>
-            <option value="created">Newest</option>
+            <option value="">{tn('bestMatch')}</option>
+            <option value="updated">{tn('recentlyUpdated')}</option>
+            <option value="created">{tn('newest')}</option>
           </select>
           <Button variant="outline" onClick={() => setShowFilters((s) => !s)} aria-expanded={showFilters}>
             <Filter className="h-4 w-4" />
@@ -240,7 +243,7 @@ function SearchPageContent() {
               <h2 className="text-sm font-semibold text-foreground">Refine</h2>
               {filterCount > 0 && (
                 <button type="button" onClick={resetFilters} className="text-xs text-primary hover:underline">
-                  Clear all
+                  {tn('clearAll')}
                 </button>
               )}
             </div>
@@ -319,7 +322,7 @@ function SearchPageContent() {
         <section aria-label="Search results" className="space-y-3">
           {!hasCriteria && (
             <div className="bg-surface rounded-xl shadow-sm p-10 text-center text-muted">
-              Enter a search term or pick a filter to get started.
+              {tn('startHint')}
             </div>
           )}
 

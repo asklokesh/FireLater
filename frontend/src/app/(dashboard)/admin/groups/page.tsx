@@ -1,5 +1,6 @@
 'use client';
 
+import { useT } from '@/i18n/useT';
 import { useState, useEffect, useCallback } from 'react';
 import {
   Plus,
@@ -52,12 +53,15 @@ interface UserData {
 }
 
 const typeConfig: Record<string, { icon: typeof Users; bg: string; text: string; label: string }> = {
-  team: { icon: Users, bg: 'bg-primary-subtle', text: 'text-primary', label: 'Team' },
-  department: { icon: Building2, bg: 'bg-info-subtle', text: 'text-info', label: 'Department' },
-  distribution: { icon: Send, bg: 'bg-success-subtle', text: 'text-success', label: 'Distribution' },
+  team: { icon: Users, bg: 'bg-primary-subtle', text: 'text-primary', label: 'typeTeam' },
+  department: { icon: Building2, bg: 'bg-info-subtle', text: 'text-info', label: 'typeDepartment' },
+  distribution: { icon: Send, bg: 'bg-success-subtle', text: 'text-success', label: 'typeDistribution' },
 };
 
 export default function GroupsPage() {
+  const ag = useT('adminGroups');
+  const ti = useT('issues');
+  const tp = useT('pages');
   const [searchQuery, setSearchQuery] = useState('');
   const [typeFilter, setTypeFilter] = useState<string>('all');
   const [showFilters, setShowFilters] = useState(false);
@@ -159,7 +163,7 @@ export default function GroupsPage() {
       setFormData({ name: '', description: '', type: 'team', email: '', managerId: '' });
       loadGroups();
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : 'Failed to create group';
+      const message = err instanceof Error ? err.message : ag('createFailed');
       setFormError(message);
     } finally {
       setIsSubmitting(false);
@@ -167,7 +171,7 @@ export default function GroupsPage() {
   };
 
   const handleDelete = async (groupId: string) => {
-    if (!confirm('Are you sure you want to delete this group?')) return;
+    if (!confirm(ag('confirmDeleteGroup'))) return;
     try {
       await groupsApi.delete(groupId);
       loadGroups();
@@ -194,7 +198,7 @@ export default function GroupsPage() {
 
   const handleRemoveMember = async (userId: string) => {
     if (!selectedGroup) return;
-    if (!confirm('Are you sure you want to remove this member?')) return;
+    if (!confirm(ag('confirmRemoveMember'))) return;
 
     try {
       await groupsApi.removeMember(selectedGroup.id, userId);
@@ -221,14 +225,14 @@ export default function GroupsPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-foreground">Groups</h1>
+          <h1 className="text-2xl font-bold text-foreground">{ag('title')}</h1>
           <p className="mt-1 text-sm text-muted">
-            Manage teams, departments, and distribution groups
+            {ag('subtitle')}
           </p>
         </div>
         <Button onClick={() => setShowCreateModal(true)}>
           <Plus className="h-4 w-4 mr-2" />
-          Add Group
+          {ag('addGroup')}
         </Button>
       </div>
 
@@ -240,7 +244,7 @@ export default function GroupsPage() {
               <Users className="h-5 w-5 text-primary" />
             </div>
             <div className="ml-4">
-              <p className="text-sm text-muted">Total Groups</p>
+              <p className="text-sm text-muted">{ag('totalGroups')}</p>
               <p className="text-2xl font-semibold text-foreground">{total}</p>
             </div>
           </div>
@@ -251,7 +255,7 @@ export default function GroupsPage() {
               <Users className="h-5 w-5 text-primary" />
             </div>
             <div className="ml-4">
-              <p className="text-sm text-muted">Teams</p>
+              <p className="text-sm text-muted">{ag('teams')}</p>
               <p className="text-2xl font-semibold text-foreground">{teamCount}</p>
             </div>
           </div>
@@ -262,7 +266,7 @@ export default function GroupsPage() {
               <Building2 className="h-5 w-5 text-info" />
             </div>
             <div className="ml-4">
-              <p className="text-sm text-muted">Departments</p>
+              <p className="text-sm text-muted">{ag('departments')}</p>
               <p className="text-2xl font-semibold text-foreground">{departmentCount}</p>
             </div>
           </div>
@@ -273,7 +277,7 @@ export default function GroupsPage() {
               <Send className="h-5 w-5 text-success" />
             </div>
             <div className="ml-4">
-              <p className="text-sm text-muted">Distribution</p>
+              <p className="text-sm text-muted">{ag('distribution')}</p>
               <p className="text-2xl font-semibold text-foreground">{total - teamCount - departmentCount}</p>
             </div>
           </div>
@@ -287,7 +291,7 @@ export default function GroupsPage() {
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted" />
             <input
               type="text"
-              placeholder="Search by name..."
+              placeholder={ag('searchPh')}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="w-full pl-10 pr-4 py-2 border border-border-strong rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
@@ -299,7 +303,7 @@ export default function GroupsPage() {
             className="flex items-center"
           >
             <Filter className="h-4 w-4 mr-2" />
-            Filters
+            {tp('filters')}
             <ChevronDown className={`h-4 w-4 ml-2 transition-transform ${showFilters ? 'rotate-180' : ''}`} />
           </Button>
         </div>
@@ -307,16 +311,16 @@ export default function GroupsPage() {
         {showFilters && (
           <div className="mt-4 pt-4 border-t border-border">
             <div>
-              <label className="block text-sm font-medium text-secondary mb-1">Type</label>
+              <label className="block text-sm font-medium text-secondary mb-1">{ag('type')}</label>
               <select
                 value={typeFilter}
                 onChange={(e) => setTypeFilter(e.target.value)}
                 className="w-full sm:w-48 px-3 py-2 border border-border-strong rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
               >
-                <option value="all">All Types</option>
-                <option value="team">Team</option>
-                <option value="department">Department</option>
-                <option value="distribution">Distribution</option>
+                <option value="all">{ag('allTypes')}</option>
+                <option value="team">{ag('typeTeam')}</option>
+                <option value="department">{ag('typeDepartment')}</option>
+                <option value="distribution">{ag('typeDistribution')}</option>
               </select>
             </div>
           </div>
@@ -329,22 +333,22 @@ export default function GroupsPage() {
           <thead className="bg-surface-hover">
             <tr>
               <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">
-                Group
+                {ag('colGroup')}
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">
-                Type
+                {ag('type')}
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">
-                Members
+                {ag('colMembers')}
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">
-                Manager
+                {ag('colManager')}
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">
-                Email
+                {ag('colEmail')}
               </th>
               <th className="px-6 py-3 text-right text-xs font-medium text-muted uppercase tracking-wider">
-                Actions
+                {ti('colActions')}
               </th>
             </tr>
           </thead>
@@ -373,7 +377,7 @@ export default function GroupsPage() {
                     <span
                       className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${config.bg} ${config.text}`}
                     >
-                      {config.label}
+                      {ag(config.label)}
                     </span>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-muted">
@@ -411,21 +415,21 @@ export default function GroupsPage() {
                             className="w-full text-left px-4 py-2 text-sm text-secondary hover:bg-background flex items-center"
                           >
                             <UserPlus className="h-4 w-4 mr-2" />
-                            Manage Members
+                            {ag('manageMembers')}
                           </button>
                           <button
                             onClick={() => setShowDropdown(null)}
                             className="w-full text-left px-4 py-2 text-sm text-secondary hover:bg-background flex items-center"
                           >
                             <Edit className="h-4 w-4 mr-2" />
-                            Edit Group
+                            {ag('editGroup')}
                           </button>
                           <button
                             onClick={() => handleDelete(group.id)}
                             className="w-full text-left px-4 py-2 text-sm text-error hover:bg-error-subtle flex items-center"
                           >
                             <Trash2 className="h-4 w-4 mr-2" />
-                            Delete Group
+                            {ag('deleteGroup')}
                           </button>
                         </div>
                       </div>
@@ -440,11 +444,11 @@ export default function GroupsPage() {
         {groups.length === 0 && (
           <div className="text-center py-12">
             <Users className="h-12 w-12 text-muted mx-auto mb-4" />
-            <h3 className="text-lg font-medium text-foreground mb-2">No groups found</h3>
-            <p className="text-muted mb-4">Get started by creating your first group</p>
+            <h3 className="text-lg font-medium text-foreground mb-2">{ag('noGroups')}</h3>
+            <p className="text-muted mb-4">{ag('noGroupsHint')}</p>
             <Button onClick={() => setShowCreateModal(true)}>
               <Plus className="h-4 w-4 mr-2" />
-              Add Group
+              {ag('addGroup')}
             </Button>
           </div>
         )}
@@ -462,7 +466,7 @@ export default function GroupsPage() {
                 disabled={page <= 1}
                 onClick={() => setPage((p) => Math.max(1, p - 1))}
               >
-                Previous
+                {ti('previous')}
               </Button>
               <Button
                 variant="outline"
@@ -470,7 +474,7 @@ export default function GroupsPage() {
                 disabled={page * limit >= total}
                 onClick={() => setPage((p) => p + 1)}
               >
-                Next
+                {ti('next')}
               </Button>
             </div>
           </div>
@@ -482,7 +486,7 @@ export default function GroupsPage() {
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-surface rounded-lg shadow-xl max-w-md w-full mx-4">
             <div className="flex items-center justify-between px-6 py-4 border-b border-border">
-              <h2 className="text-lg font-semibold text-foreground">Create Group</h2>
+              <h2 className="text-lg font-semibold text-foreground">{ag('createGroup')}</h2>
               <button onClick={() => setShowCreateModal(false)} className="text-muted hover:text-secondary">
                 <X className="h-5 w-5" />
               </button>
@@ -495,53 +499,53 @@ export default function GroupsPage() {
               )}
 
               <Input
-                label="Name"
+                label={ag('name')}
                 value={formData.name}
                 onChange={(e) => setFormData((p) => ({ ...p, name: e.target.value }))}
-                placeholder="Engineering Team"
+                placeholder={ag('namePh')}
                 required
               />
 
               <div>
-                <label className="block text-sm font-medium text-secondary mb-1">Description</label>
+                <label className="block text-sm font-medium text-secondary mb-1">{ag('description')}</label>
                 <textarea
                   value={formData.description}
                   onChange={(e) => setFormData((p) => ({ ...p, description: e.target.value }))}
-                  placeholder="Optional description..."
+                  placeholder={ag('descPh')}
                   rows={3}
                   className="w-full px-3 py-2 border border-border-strong rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-secondary mb-1">Type</label>
+                <label className="block text-sm font-medium text-secondary mb-1">{ag('type')}</label>
                 <select
                   value={formData.type}
                   onChange={(e) => setFormData((p) => ({ ...p, type: e.target.value as typeof formData.type }))}
                   className="w-full px-3 py-2 border border-border-strong rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
                 >
-                  <option value="team">Team</option>
-                  <option value="department">Department</option>
-                  <option value="distribution">Distribution</option>
+                  <option value="team">{ag('typeTeam')}</option>
+                  <option value="department">{ag('typeDepartment')}</option>
+                  <option value="distribution">{ag('typeDistribution')}</option>
                 </select>
               </div>
 
               <Input
-                label="Email (optional)"
+                label={ag('emailOptional')}
                 type="email"
                 value={formData.email}
                 onChange={(e) => setFormData((p) => ({ ...p, email: e.target.value }))}
-                placeholder="team@company.com"
+                placeholder={ag('emailPh')}
               />
 
               <div>
-                <label className="block text-sm font-medium text-secondary mb-1">Manager (optional)</label>
+                <label className="block text-sm font-medium text-secondary mb-1">{ag('managerOptional')}</label>
                 <select
                   value={formData.managerId}
                   onChange={(e) => setFormData((p) => ({ ...p, managerId: e.target.value }))}
                   className="w-full px-3 py-2 border border-border-strong rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
                 >
-                  <option value="">Select a manager...</option>
+                  <option value="">{ag('selectManager')}</option>
                   {users.map((user) => (
                     <option key={user.id} value={user.id}>{user.name} ({user.email})</option>
                   ))}
@@ -550,10 +554,10 @@ export default function GroupsPage() {
 
               <div className="flex justify-end space-x-3 pt-4">
                 <Button type="button" variant="outline" onClick={() => setShowCreateModal(false)}>
-                  Cancel
+                  {ag('cancel')}
                 </Button>
                 <Button type="submit" isLoading={isSubmitting}>
-                  Create Group
+                  {ag('createBtn')}
                 </Button>
               </div>
             </form>
@@ -568,7 +572,7 @@ export default function GroupsPage() {
             <div className="flex items-center justify-between px-6 py-4 border-b border-border">
               <div>
                 <h2 className="text-lg font-semibold text-foreground">{selectedGroup.name}</h2>
-                <p className="text-sm text-muted">Manage group members</p>
+                <p className="text-sm text-muted">{ag('manageGroupMembers')}</p>
               </div>
               <button onClick={() => setShowMembersModal(false)} className="text-muted hover:text-secondary">
                 <X className="h-5 w-5" />
@@ -579,13 +583,13 @@ export default function GroupsPage() {
             <form onSubmit={handleAddMember} className="px-6 py-4 border-b border-border bg-surface-hover">
               <div className="flex items-end gap-3">
                 <div className="flex-1">
-                  <label className="block text-sm font-medium text-secondary mb-1">Add Member</label>
+                  <label className="block text-sm font-medium text-secondary mb-1">{ag('addMember')}</label>
                   <select
                     value={selectedUserId}
                     onChange={(e) => setSelectedUserId(e.target.value)}
                     className="w-full px-3 py-2 border border-border-strong rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
                   >
-                    <option value="">Select a user...</option>
+                    <option value="">{ag('selectUser')}</option>
                     {users
                       .filter((u) => !members.some((m) => m.user_id === u.id))
                       .map((user) => (
@@ -594,19 +598,19 @@ export default function GroupsPage() {
                   </select>
                 </div>
                 <div className="w-32">
-                  <label className="block text-sm font-medium text-secondary mb-1">Role</label>
+                  <label className="block text-sm font-medium text-secondary mb-1">{ag('role')}</label>
                   <select
                     value={memberRole}
                     onChange={(e) => setMemberRole(e.target.value as 'member' | 'lead')}
                     className="w-full px-3 py-2 border border-border-strong rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
                   >
-                    <option value="member">Member</option>
-                    <option value="lead">Lead</option>
+                    <option value="member">{ag('roleMember')}</option>
+                    <option value="lead">{ag('roleLead')}</option>
                   </select>
                 </div>
                 <Button type="submit" disabled={!selectedUserId}>
                   <UserPlus className="h-4 w-4 mr-1" />
-                  Add
+                  {ag('add')}
                 </Button>
               </div>
             </form>
@@ -620,7 +624,7 @@ export default function GroupsPage() {
               ) : members.length === 0 ? (
                 <div className="text-center py-8">
                   <Users className="h-12 w-12 text-muted mx-auto mb-4" />
-                  <p className="text-muted">No members in this group yet</p>
+                  <p className="text-muted">{ag('noMembers')}</p>
                 </div>
               ) : (
                 <div className="space-y-2">
@@ -663,7 +667,7 @@ export default function GroupsPage() {
 
             <div className="px-6 py-4 border-t border-border flex justify-end">
               <Button variant="outline" onClick={() => setShowMembersModal(false)}>
-                Close
+                {ag('close')}
               </Button>
             </div>
           </div>

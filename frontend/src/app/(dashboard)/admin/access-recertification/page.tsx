@@ -1,5 +1,6 @@
 'use client';
 
+import { useT } from '@/i18n/useT';
 import { useState, useEffect, useCallback } from 'react';
 import {
   UserCheck,
@@ -50,14 +51,13 @@ const statusColors: Record<string, { bg: string; text: string }> = {
 
 type ScopeType = 'all_users' | 'role' | 'group' | 'resource';
 
-const scopeLabels: Record<ScopeType, string> = {
-  all_users: 'All Users',
-  role: 'By Role',
-  group: 'By Group',
-  resource: 'By Resource',
-};
+
+const SCOPE_KEYS: Record<ScopeType, string> = { all_users: 'scopeAll', role: 'scopeRole', group: 'scopeGroup', resource: 'scopeResource' };
+const STATUS_KEYS: Record<string, string> = { draft: 'statusDraft', active: 'statusActive', completed: 'statusCompleted', cancelled: 'statusCancelled' };
+const DECISION_KEYS: Record<string, string> = { approved: 'decApproved', revoked: 'decRevoked', delegated: 'decDelegated' };
 
 export default function AccessRecertificationPage() {
+  const rc = useT('recertification');
   const user = useAuthStore((state) => state.user);
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -84,12 +84,12 @@ export default function AccessRecertificationPage() {
       const response = await api.get('/v1/recertification/campaigns');
       setCampaigns(response.data.data || []);
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed to load campaigns';
+      const message = err instanceof Error ? err.message : rc('loadCampaignsFailed');
       setError(message);
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [rc]);
 
   const loadCampaignItems = async (campaignId: string) => {
     if (campaignItems[campaignId]) return;
@@ -102,7 +102,7 @@ export default function AccessRecertificationPage() {
         [campaignId]: response.data.data || [],
       }));
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed to load items';
+      const message = err instanceof Error ? err.message : rc('loadItemsFailed');
       setError(message);
     } finally {
       setLoadingItems((prev) => ({ ...prev, [campaignId]: false }));
@@ -147,7 +147,7 @@ export default function AccessRecertificationPage() {
       });
       loadCampaigns();
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed to create campaign';
+      const message = err instanceof Error ? err.message : rc('createFailed');
       setError(message);
     } finally {
       setIsCreating(false);
@@ -159,7 +159,7 @@ export default function AccessRecertificationPage() {
       await api.post(`/v1/recertification/campaigns/${campaignId}/launch`);
       loadCampaigns();
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed to launch campaign';
+      const message = err instanceof Error ? err.message : rc('launchFailed');
       setError(message);
     }
   };
@@ -169,7 +169,7 @@ export default function AccessRecertificationPage() {
       await api.post(`/v1/recertification/campaigns/${campaignId}/complete`);
       loadCampaigns();
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed to complete campaign';
+      const message = err instanceof Error ? err.message : rc('completeFailed');
       setError(message);
     }
   };
@@ -186,7 +186,7 @@ export default function AccessRecertificationPage() {
         await loadCampaignItems(expandedCampaign);
       }
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed to decide item';
+      const message = err instanceof Error ? err.message : rc('decideFailed');
       setError(message);
     }
   };
@@ -214,7 +214,7 @@ export default function AccessRecertificationPage() {
           <XCircle className="h-4 w-4" />
           {error}
           <button onClick={() => setError(null)} className="ml-auto text-error hover:text-error">
-            Dismiss
+            {rc('dismiss')}
           </button>
         </div>
       )}
@@ -223,21 +223,21 @@ export default function AccessRecertificationPage() {
         <div className="flex items-center gap-2">
           <UserCheck className="h-6 w-6 text-secondary" />
           <div>
-            <h1 className="text-2xl font-bold text-foreground">Access Recertification</h1>
-            <p className="text-sm text-muted">Periodic user access reviews for SOX ITGC and GLBA compliance</p>
+            <h1 className="text-2xl font-bold text-foreground">{rc('title')}</h1>
+            <p className="text-sm text-muted">{rc('subtitle')}</p>
           </div>
         </div>
         <Button onClick={() => setShowCreateModal(true)}>
           <Plus className="h-4 w-4 mr-2" />
-          New Campaign
+          {rc('newCampaign')}
         </Button>
       </div>
 
       {campaigns.length === 0 ? (
         <div className="bg-surface rounded-xl shadow-sm p-12 text-center">
           <UserCheck className="h-12 w-12 text-muted mx-auto mb-4" />
-          <h3 className="text-lg font-medium text-foreground mb-2">No campaigns yet</h3>
-          <p className="text-muted">Create your first access recertification campaign</p>
+          <h3 className="text-lg font-medium text-foreground mb-2">{rc('noCampaigns')}</h3>
+          <p className="text-muted">{rc('noCampaignsHint')}</p>
         </div>
       ) : (
         <div className="space-y-4">
@@ -261,18 +261,18 @@ export default function AccessRecertificationPage() {
                     </div>
                     <div className="hidden sm:flex items-center gap-6">
                       <div className="text-right">
-                        <p className="text-sm font-medium text-foreground">{scopeLabels[campaign.scope_type]}</p>
+                        <p className="text-sm font-medium text-foreground">{rc(SCOPE_KEYS[campaign.scope_type])}</p>
                         {campaign.scope_value && <p className="text-xs text-muted">{campaign.scope_value}</p>}
                       </div>
                       <div className="text-right">
                         <p className="text-sm font-medium text-foreground">
                           {campaign.reviewed_items}/{campaign.total_items}
                         </p>
-                        <p className="text-xs text-muted">{progressPercent}% reviewed</p>
+                        <p className="text-xs text-muted">{rc('reviewedPct', { percent: progressPercent })}</p>
                       </div>
                       <div>
                         <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${statusColors[campaign.status].bg} ${statusColors[campaign.status].text}`}>
-                          {campaign.status.charAt(0).toUpperCase() + campaign.status.slice(1)}
+                          {rc(STATUS_KEYS[campaign.status] ?? 'statusDraft')}
                         </span>
                       </div>
                     </div>
@@ -283,15 +283,15 @@ export default function AccessRecertificationPage() {
                   <div className="border-t border-border p-6 space-y-4">
                     <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
                       <div>
-                        <p className="text-xs text-muted uppercase tracking-wider">Due Date</p>
+                        <p className="text-xs text-muted uppercase tracking-wider">{rc('dueDate')}</p>
                         <p className="text-sm font-medium text-foreground">{formatDate(campaign.due_date)}</p>
                       </div>
                       <div>
-                        <p className="text-xs text-muted uppercase tracking-wider">Owner</p>
+                        <p className="text-xs text-muted uppercase tracking-wider">{rc('owner')}</p>
                         <p className="text-sm font-medium text-foreground">{campaign.owner_email}</p>
                       </div>
                       <div>
-                        <p className="text-xs text-muted uppercase tracking-wider">Progress</p>
+                        <p className="text-xs text-muted uppercase tracking-wider">{rc('progress')}</p>
                         <div className="mt-1 w-full bg-surface-hover rounded-full h-2">
                           <div className="bg-primary h-2 rounded-full" style={{ width: `${progressPercent}%` }} />
                         </div>
@@ -299,12 +299,12 @@ export default function AccessRecertificationPage() {
                       <div className="flex gap-2">
                         {campaign.status === 'draft' && (
                           <Button size="sm" onClick={() => handleLaunchCampaign(campaign.id)}>
-                            Launch
+                            {rc('launch')}
                           </Button>
                         )}
                         {campaign.status === 'active' && (
                           <Button size="sm" variant="outline" onClick={() => handleCompleteCampaign(campaign.id)}>
-                            Complete
+                            {rc('complete')}
                           </Button>
                         )}
                       </div>
@@ -316,7 +316,7 @@ export default function AccessRecertificationPage() {
                       </div>
                     ) : items.length === 0 ? (
                       <div className="text-center py-8">
-                        <p className="text-muted">No items to review</p>
+                        <p className="text-muted">{rc('noItems')}</p>
                       </div>
                     ) : (
                       <div className="overflow-x-auto">
@@ -324,19 +324,19 @@ export default function AccessRecertificationPage() {
                           <thead className="bg-background">
                             <tr>
                               <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">
-                                User
+                                {rc('colUser')}
                               </th>
                               <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">
-                                Resource
+                                {rc('colResource')}
                               </th>
                               <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">
-                                Status
+                                {rc('colStatus')}
                               </th>
                               <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">
-                                Decision
+                                {rc('colDecision')}
                               </th>
                               <th className="px-6 py-3 text-right text-xs font-medium text-muted uppercase tracking-wider">
-                                Actions
+                                {rc('colActions')}
                               </th>
                             </tr>
                           </thead>
@@ -379,10 +379,10 @@ export default function AccessRecertificationPage() {
                                             : 'bg-info-subtle text-foreground'
                                       }`}
                                     >
-                                      {item.decision.charAt(0).toUpperCase() + item.decision.slice(1)}
+                                      {rc(DECISION_KEYS[item.decision] ?? 'decApproved')}
                                     </span>
                                   ) : (
-                                    <span className="text-muted">Pending</span>
+                                    <span className="text-muted">{rc('pending')}</span>
                                   )}
                                 </td>
                                 <td className="px-6 py-4 whitespace-nowrap text-right space-x-2">
@@ -393,14 +393,14 @@ export default function AccessRecertificationPage() {
                                         className="inline-flex items-center px-3 py-1 rounded-xl text-xs font-medium bg-success-subtle text-success hover:bg-success-subtle"
                                       >
                                         <Check className="h-3 w-3 mr-1" />
-                                        Approve
+                                        {rc('approve')}
                                       </button>
                                       <button
                                         onClick={() => handleDecideItem(item.id, 'revoked')}
                                         className="inline-flex items-center px-3 py-1 rounded-xl text-xs font-medium bg-error-subtle text-error hover:bg-error-subtle"
                                       >
                                         <X className="h-3 w-3 mr-1" />
-                                        Revoke
+                                        {rc('revoke')}
                                       </button>
                                     </>
                                   )}
@@ -423,11 +423,11 @@ export default function AccessRecertificationPage() {
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-surface rounded-xl shadow-sm-lg max-w-md w-full mx-4">
             <div className="px-6 py-4 border-b border-border">
-              <h2 className="text-lg font-semibold text-foreground">Create Campaign</h2>
+              <h2 className="text-lg font-semibold text-foreground">{rc('createTitle')}</h2>
             </div>
             <form onSubmit={handleCreateCampaign} className="p-6 space-y-4">
               <div>
-                <label className="block text-sm font-medium text-secondary mb-1">Campaign Name</label>
+                <label className="block text-sm font-medium text-secondary mb-1">{rc('campaignName')}</label>
                 <input
                   type="text"
                   required
@@ -437,7 +437,7 @@ export default function AccessRecertificationPage() {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-secondary mb-1">Description</label>
+                <label className="block text-sm font-medium text-secondary mb-1">{rc('description')}</label>
                 <textarea
                   value={createForm.description}
                   onChange={(e) => setCreateForm({ ...createForm, description: e.target.value })}
@@ -446,22 +446,22 @@ export default function AccessRecertificationPage() {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-secondary mb-1">Scope Type</label>
+                <label className="block text-sm font-medium text-secondary mb-1">{rc('scopeType')}</label>
                 <select
                   value={createForm.scopeType}
                   onChange={(e) => setCreateForm({ ...createForm, scopeType: e.target.value as ScopeType })}
                   className="w-full px-3 py-2 border border-border-strong rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
                 >
-                  {Object.entries(scopeLabels).map(([key, label]) => (
+                  {(Object.keys(SCOPE_KEYS) as ScopeType[]).map((key) => (
                     <option key={key} value={key}>
-                      {label}
+                      {rc(SCOPE_KEYS[key as ScopeType])}
                     </option>
                   ))}
                 </select>
               </div>
               {createForm.scopeType !== 'all_users' && (
                 <div>
-                  <label className="block text-sm font-medium text-secondary mb-1">Scope Value</label>
+                  <label className="block text-sm font-medium text-secondary mb-1">{rc('scopeValue')}</label>
                   <input
                     type="text"
                     value={createForm.scopeValue}
@@ -472,7 +472,7 @@ export default function AccessRecertificationPage() {
                 </div>
               )}
               <div>
-                <label className="block text-sm font-medium text-secondary mb-1">Owner Email</label>
+                <label className="block text-sm font-medium text-secondary mb-1">{rc('ownerEmail')}</label>
                 <input
                   type="email"
                   required
@@ -482,7 +482,7 @@ export default function AccessRecertificationPage() {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-secondary mb-1">Due Date</label>
+                <label className="block text-sm font-medium text-secondary mb-1">{rc('dueDate')}</label>
                 <input
                   type="date"
                   required
@@ -498,11 +498,11 @@ export default function AccessRecertificationPage() {
                   onClick={() => setShowCreateModal(false)}
                   className="flex-1"
                 >
-                  Cancel
+                  {rc('cancel')}
                 </Button>
                 <Button type="submit" disabled={isCreating} className="flex-1">
                   {isCreating && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-                  Create
+                  {rc('create')}
                 </Button>
               </div>
             </form>

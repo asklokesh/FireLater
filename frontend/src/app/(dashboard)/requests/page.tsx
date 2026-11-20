@@ -1,5 +1,6 @@
 'use client';
 
+import { useT } from '@/i18n/useT';
 import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -48,6 +49,10 @@ const priorityColors: Record<string, { bg: string; text: string; label: string }
 };
 
 export default function RequestsPage() {
+  const tm = useT('listpages2');
+  const ti = useT('issues');
+  const tl = useT('listpages');
+  const tp = useT('pages');
   const router = useRouter();
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
@@ -125,22 +130,22 @@ export default function RequestsPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-foreground">Service Requests</h1>
+          <h1 className="text-2xl font-bold text-foreground">{tp('serviceRequests')}</h1>
           <p className="mt-1 text-sm text-muted">
-            View and manage all service requests
+            {tm('reqSubtitle')}
           </p>
         </div>
         <div className="flex space-x-3">
           <Link href="/requests/approvals">
             <Button variant="outline">
               <CheckCircle className="h-4 w-4 mr-2" />
-              Pending Approvals
+              {tm('pendingApprovals')}
             </Button>
           </Link>
           <Link href="/catalog">
             <Button>
               <FileText className="h-4 w-4 mr-2" />
-              Service Catalog
+              {tp('serviceCatalog')}
             </Button>
           </Link>
         </div>
@@ -153,7 +158,7 @@ export default function RequestsPage() {
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted" />
             <input
               type="text"
-              placeholder="Search by request number or catalog item..."
+              placeholder={tm('reqSearch')}
               value={searchQuery}
               onChange={(e) => {
                 setSearchQuery(e.target.value);
@@ -168,7 +173,7 @@ export default function RequestsPage() {
             className="flex items-center"
           >
             <Filter className="h-4 w-4 mr-2" />
-            Filters
+            {tp('filters')}
             <ChevronDown className={`h-4 w-4 ml-2 transition-transform ${showFilters ? 'rotate-180' : ''}`} />
           </Button>
         </div>
@@ -176,7 +181,7 @@ export default function RequestsPage() {
         {showFilters && (
           <div className="mt-4 pt-4 border-t border-border grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-secondary mb-1">Status</label>
+              <label className="block text-sm font-medium text-secondary mb-1">{ti('status')}</label>
               <select
                 value={statusFilter}
                 onChange={(e) => {
@@ -185,20 +190,20 @@ export default function RequestsPage() {
                 }}
                 className="w-full px-3 py-2 border border-border-strong rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary"
               >
-                <option value="all">All Status</option>
-                <option value="submitted">Submitted</option>
-                <option value="pending_approval">Pending Approval</option>
-                <option value="approved">Approved</option>
-                <option value="rejected">Rejected</option>
-                <option value="assigned">Assigned</option>
-                <option value="in_progress">In Progress</option>
-                <option value="pending">Pending</option>
-                <option value="completed">Completed</option>
-                <option value="cancelled">Cancelled</option>
+                <option value="all">{ti('allStatus')}</option>
+                <option value="submitted">{tl('submitted')}</option>
+                <option value="pending_approval">{tm('pendingApproval')}</option>
+                <option value="approved">{tl('approved')}</option>
+                <option value="rejected">{tm('rejected')}</option>
+                <option value="assigned">{ti('statusAssigned')}</option>
+                <option value="in_progress">{ti('statusInProgress')}</option>
+                <option value="pending">{ti('statusPending')}</option>
+                <option value="completed">{tl('completed')}</option>
+                <option value="cancelled">{tl('cancelled')}</option>
               </select>
             </div>
             <div>
-              <label className="block text-sm font-medium text-secondary mb-1">Priority</label>
+              <label className="block text-sm font-medium text-secondary mb-1">{ti('priority')}</label>
               <select
                 value={priorityFilter}
                 onChange={(e) => {
@@ -207,11 +212,11 @@ export default function RequestsPage() {
                 }}
                 className="w-full px-3 py-2 border border-border-strong rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary"
               >
-                <option value="all">All Priorities</option>
-                <option value="critical">Critical</option>
-                <option value="high">High</option>
-                <option value="medium">Medium</option>
-                <option value="low">Low</option>
+                <option value="all">{ti('allPriorities')}</option>
+                <option value="critical">{ti('priorityCritical')}</option>
+                <option value="high">{ti('priorityHigh')}</option>
+                <option value="medium">{ti('priorityMedium')}</option>
+                <option value="low">{ti('priorityLow')}</option>
               </select>
             </div>
           </div>
@@ -231,25 +236,25 @@ export default function RequestsPage() {
               <thead className="bg-surface-hover">
                 <tr>
                   <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">
-                    Request
+                    {tm('colRequest')}
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">
-                    Catalog Item
+                    {tm('colCatalogItem')}
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">
-                    Priority
+                    {ti('priority')}
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">
-                    Status
+                    {ti('status')}
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">
-                    Requester
+                    {tm('colRequester')}
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">
-                    Created
+                    {tm('colCreated')}
                   </th>
                   <th className="px-6 py-3 text-right text-xs font-medium text-muted uppercase tracking-wider">
-                    Actions
+                    {ti('colActions')}
                   </th>
                 </tr>
               </thead>
@@ -331,19 +336,19 @@ export default function RequestsPage() {
                         >
                           <DropdownMenuItem onClick={() => router.push(`/requests/${request.id}`)}>
                             <Eye className="h-4 w-4 mr-2" />
-                            View Details
+                            {ti('viewDetails')}
                           </DropdownMenuItem>
                           <DropdownMenuDivider />
                           {(request.status === 'approved' || request.status === 'assigned') && (
                             <DropdownMenuItem onClick={() => handleStart(request.id)}>
                               <Play className="h-4 w-4 mr-2" />
-                              Start Fulfillment
+                              {tm('startFulfillment')}
                             </DropdownMenuItem>
                           )}
                           {request.status === 'in_progress' && (
                             <DropdownMenuItem onClick={() => handleComplete(request.id)}>
                               <CheckCircle className="h-4 w-4 mr-2" />
-                              Mark Complete
+                              {tm('markComplete')}
                             </DropdownMenuItem>
                           )}
                           {!['completed', 'cancelled', 'rejected'].includes(request.status) && (
@@ -354,7 +359,7 @@ export default function RequestsPage() {
                                 onClick={() => handleCancel(request.id, request.request_number)}
                               >
                                 <XCircle className="h-4 w-4 mr-2" />
-                                Cancel Request
+                                {tm('cancelRequest')}
                               </DropdownMenuItem>
                             </>
                           )}
@@ -372,7 +377,7 @@ export default function RequestsPage() {
                 <h3 className="text-lg font-medium text-foreground mb-2">No requests found</h3>
                 <p className="text-muted mb-4">Try adjusting your search or filters</p>
                 <Link href="/catalog">
-                  <Button>Browse Service Catalog</Button>
+                  <Button>{tm('browseCatalog')}</Button>
                 </Link>
               </div>
             )}
@@ -390,7 +395,7 @@ export default function RequestsPage() {
                     disabled={page <= 1}
                     onClick={() => setPage(p => Math.max(1, p - 1))}
                   >
-                    Previous
+                    {ti('previous')}
                   </Button>
                   <Button
                     variant="outline"
@@ -398,7 +403,7 @@ export default function RequestsPage() {
                     disabled={page >= pagination.totalPages}
                     onClick={() => setPage(p => p + 1)}
                   >
-                    Next
+                    {ti('next')}
                   </Button>
                 </div>
               </div>

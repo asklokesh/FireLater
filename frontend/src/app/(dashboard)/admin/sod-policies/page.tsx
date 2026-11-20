@@ -1,5 +1,6 @@
 'use client';
 
+import { useT } from '@/i18n/useT';
 import { useState, useEffect, useCallback } from 'react';
 import {
   GitBranch,
@@ -29,6 +30,8 @@ interface SodPolicy {
 type SeverityLevel = 'critical' | 'high' | 'medium' | 'low';
 
 export default function SodPoliciesPage() {
+  const sp = useT('sodPolicies');
+  const ti = useT('issues');
   const [policies, setPolicies] = useState<SodPolicy[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -53,12 +56,12 @@ export default function SodPoliciesPage() {
       const response = await api.get('/v1/sod/policies');
       setPolicies(response.data?.policies || response.data || []);
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed to load SoD policies';
+      const message = err instanceof Error ? err.message : sp('loadFailed');
       setError(message);
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [sp]);
 
   useEffect(() => {
     loadPolicies();
@@ -88,7 +91,7 @@ export default function SodPoliciesPage() {
       });
       await loadPolicies();
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : 'Failed to create policy';
+      const message = err instanceof Error ? err.message : sp('createFailed');
       setSubmitError(message);
     } finally {
       setIsSubmitting(false);
@@ -102,7 +105,7 @@ export default function SodPoliciesPage() {
       });
       await loadPolicies();
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed to update policy';
+      const message = err instanceof Error ? err.message : sp('updateFailed');
       setError(message);
     }
   };
@@ -113,7 +116,7 @@ export default function SodPoliciesPage() {
       setDeleteConfirm(null);
       await loadPolicies();
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed to delete policy';
+      const message = err instanceof Error ? err.message : sp('deleteFailed');
       setError(message);
     }
   };
@@ -153,15 +156,15 @@ export default function SodPoliciesPage() {
         <div className="flex items-center gap-3">
           <GitBranch className="h-8 w-8 text-secondary" />
           <div>
-            <h1 className="text-2xl font-bold text-foreground">Segregation of Duties Policies</h1>
+            <h1 className="text-2xl font-bold text-foreground">{sp('title')}</h1>
             <p className="mt-1 text-sm text-muted">
-              Prevent conflicting role combinations to meet SOX ITGC requirements
+              {sp('subtitle')}
             </p>
           </div>
         </div>
         <Button onClick={() => setShowCreateModal(true)}>
           <Plus className="h-4 w-4 mr-2" />
-          Add Policy
+          {sp('addPolicy')}
         </Button>
       </div>
 
@@ -174,7 +177,7 @@ export default function SodPoliciesPage() {
             onClick={() => setError(null)}
             className="ml-auto text-error hover:text-error"
           >
-            Dismiss
+            {sp('dismiss')}
           </button>
         </div>
       )}
@@ -190,22 +193,22 @@ export default function SodPoliciesPage() {
             <thead className="bg-background">
               <tr>
                 <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">
-                  Role A
+                  {sp('roleA')}
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">
-                  Role B
+                  {sp('roleB')}
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">
-                  Description
+                  {sp('description')}
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">
-                  Severity
+                  {sp('severity')}
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">
-                  Status
+                  {sp('status')}
                 </th>
                 <th className="px-6 py-3 text-right text-xs font-medium text-muted uppercase tracking-wider">
-                  Actions
+                  {sp('actions')}
                 </th>
               </tr>
             </thead>
@@ -233,11 +236,11 @@ export default function SodPoliciesPage() {
                   <td className="px-6 py-4 whitespace-nowrap">
                     {policy.is_active ? (
                       <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-success-subtle text-success">
-                        Active
+                        {sp('active')}
                       </span>
                     ) : (
                       <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-background text-foreground">
-                        Inactive
+                        {sp('inactive')}
                       </span>
                     )}
                   </td>
@@ -245,7 +248,7 @@ export default function SodPoliciesPage() {
                     <button
                       onClick={() => handleToggleActive(policy.id, policy.is_active)}
                       className="text-muted hover:text-secondary"
-                      title={policy.is_active ? 'Disable policy' : 'Enable policy'}
+                      title={policy.is_active ? sp('disablePolicy') : sp('enablePolicy')}
                     >
                       {policy.is_active ? (
                         <ToggleRight className="h-5 w-5 text-success" />
@@ -256,7 +259,7 @@ export default function SodPoliciesPage() {
                     <button
                       onClick={() => setDeleteConfirm(policy.id)}
                       className="text-muted hover:text-error"
-                      title="Delete policy"
+                      title={sp('deletePolicy')}
                     >
                       <Trash2 className="h-5 w-5" />
                     </button>
@@ -269,11 +272,11 @@ export default function SodPoliciesPage() {
           {policies.length === 0 && (
             <div className="text-center py-12">
               <GitBranch className="h-12 w-12 text-muted mx-auto mb-4" />
-              <h3 className="text-lg font-medium text-foreground mb-2">No policies found</h3>
-              <p className="text-muted mb-4">Create your first SoD policy to get started</p>
+              <h3 className="text-lg font-medium text-foreground mb-2">{sp('noPolicies')}</h3>
+              <p className="text-muted mb-4">{sp('noPoliciesHint')}</p>
               <Button onClick={() => setShowCreateModal(true)} size="sm">
                 <Plus className="h-4 w-4 mr-2" />
-                Add Policy
+                {sp('addPolicy')}
               </Button>
             </div>
           )}
@@ -285,7 +288,7 @@ export default function SodPoliciesPage() {
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-surface rounded-xl shadow-sm-xl max-w-md w-full max-h-[90vh] overflow-hidden flex flex-col">
             <div className="flex items-center justify-between px-6 py-4 border-b border-border">
-              <h2 className="text-lg font-semibold text-foreground">Create SoD Policy</h2>
+              <h2 className="text-lg font-semibold text-foreground">{sp('createTitle')}</h2>
               <button
                 onClick={() => {
                   setShowCreateModal(false);
@@ -308,7 +311,7 @@ export default function SodPoliciesPage() {
 
                 <div>
                   <label className="block text-sm font-medium text-secondary mb-1">
-                    Role A
+                    {sp('roleA')}
                   </label>
                   <Input
                     type="text"
@@ -316,14 +319,14 @@ export default function SodPoliciesPage() {
                     onChange={(e) =>
                       setFormData((prev) => ({ ...prev, role_a: e.target.value }))
                     }
-                    placeholder="e.g., Approver"
+                    placeholder={sp('roleAPh')}
                     required
                   />
                 </div>
 
                 <div>
                   <label className="block text-sm font-medium text-secondary mb-1">
-                    Role B
+                    {sp('roleB')}
                   </label>
                   <Input
                     type="text"
@@ -331,21 +334,21 @@ export default function SodPoliciesPage() {
                     onChange={(e) =>
                       setFormData((prev) => ({ ...prev, role_b: e.target.value }))
                     }
-                    placeholder="e.g., Preparer"
+                    placeholder={sp('roleBPh')}
                     required
                   />
                 </div>
 
                 <div>
                   <label className="block text-sm font-medium text-secondary mb-1">
-                    Description
+                    {sp('description')}
                   </label>
                   <textarea
                     value={formData.description}
                     onChange={(e) =>
                       setFormData((prev) => ({ ...prev, description: e.target.value }))
                     }
-                    placeholder="Explain why these roles conflict (optional)"
+                    placeholder={sp('descPh')}
                     rows={2}
                     className="w-full px-3 py-2 border border-border-strong rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
                   />
@@ -353,7 +356,7 @@ export default function SodPoliciesPage() {
 
                 <div>
                   <label className="block text-sm font-medium text-secondary mb-1">
-                    Severity
+                    {sp('severity')}
                   </label>
                   <select
                     value={formData.severity}
@@ -365,10 +368,10 @@ export default function SodPoliciesPage() {
                     }
                     className="w-full px-3 py-2 border border-border-strong rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
                   >
-                    <option value="critical">Critical</option>
-                    <option value="high">High</option>
-                    <option value="medium">Medium</option>
-                    <option value="low">Low</option>
+                    <option value="critical">{ti('priorityCritical')}</option>
+                    <option value="high">{ti('priorityHigh')}</option>
+                    <option value="medium">{ti('priorityMedium')}</option>
+                    <option value="low">{ti('priorityLow')}</option>
                   </select>
                 </div>
 
@@ -386,7 +389,7 @@ export default function SodPoliciesPage() {
                     htmlFor="is_active"
                     className="text-sm font-medium text-secondary cursor-pointer"
                   >
-                    Activate policy immediately
+                    {sp('activateNow')}
                   </label>
                 </div>
               </div>
@@ -400,10 +403,10 @@ export default function SodPoliciesPage() {
                     setSubmitError(null);
                   }}
                 >
-                  Cancel
+                  {sp('cancel')}
                 </Button>
                 <Button type="submit" isLoading={isSubmitting} disabled={isSubmitting}>
-                  Create Policy
+                  {sp('createBtn')}
                 </Button>
               </div>
             </form>
@@ -420,10 +423,10 @@ export default function SodPoliciesPage() {
                 <AlertCircle className="h-6 w-6 text-error" />
               </div>
               <h3 className="text-lg font-medium text-foreground text-center mb-2">
-                Delete Policy
+                {sp('deleteTitle')}
               </h3>
               <p className="text-sm text-secondary text-center mb-6">
-                Are you sure you want to delete this SoD policy? This action cannot be undone.
+                {sp('deleteBody')}
               </p>
               <div className="flex gap-3">
                 <Button
@@ -432,14 +435,14 @@ export default function SodPoliciesPage() {
                   onClick={() => setDeleteConfirm(null)}
                   className="flex-1"
                 >
-                  Cancel
+                  {sp('cancel')}
                 </Button>
                 <Button
                   type="button"
                   onClick={() => handleDeletePolicy(deleteConfirm)}
                   className="flex-1 bg-primary hover:bg-error"
                 >
-                  Delete
+                  {sp('delete')}
                 </Button>
               </div>
             </div>

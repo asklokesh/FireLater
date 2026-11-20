@@ -1,5 +1,6 @@
 'use client';
 
+import { useT } from '@/i18n/useT';
 import { useState, FormEvent } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
@@ -9,6 +10,8 @@ import { Input } from '@/components/ui/input';
 import { useCreateProblem, useApplications, useUsers, useGroups } from '@/hooks/useApi';
 
 export default function NewProblemPage() {
+  const tf = useT('forms');
+  const ti = useT('issues');
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
 
@@ -101,9 +104,9 @@ export default function NewProblemPage() {
           <ArrowLeft className="h-5 w-5 text-muted" />
         </button>
         <div>
-          <h1 className="text-2xl font-bold text-foreground">Create New Problem</h1>
+          <h1 className="text-2xl font-bold text-foreground">{tf('createProblemTitle')}</h1>
           <p className="mt-1 text-sm text-muted">
-            Initiate root cause analysis for recurring or significant issues
+            {tf('createProblemSubtitle')}
           </p>
         </div>
       </div>
@@ -118,13 +121,13 @@ export default function NewProblemPage() {
         )}
 
         <div className="bg-surface rounded-xl shadow-sm p-6 space-y-6">
-          <h2 className="text-lg font-semibold text-foreground">Problem Details</h2>
+          <h2 className="text-lg font-semibold text-foreground">{tf('problemDetails')}</h2>
 
           <Input
             id="title"
             type="text"
-            label="Title"
-            placeholder="Brief summary of the problem"
+            label={tf('title')}
+            placeholder={tf('problemTitlePh')}
             value={formData.title}
             onChange={handleChange('title')}
             error={errors.title}
@@ -136,12 +139,12 @@ export default function NewProblemPage() {
               htmlFor="description"
               className="block text-sm font-medium text-secondary mb-1"
             >
-              Description <span className="text-error">*</span>
+              {tf('description')} <span className="text-error">*</span>
             </label>
             <textarea
               id="description"
               rows={5}
-              placeholder="Detailed description of the problem, symptoms, and patterns observed..."
+              placeholder={tf('problemDescPh')}
               value={formData.description}
               onChange={handleChange('description')}
               className={`w-full px-3 py-2 border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 ${
@@ -160,7 +163,7 @@ export default function NewProblemPage() {
                 htmlFor="problemType"
                 className="block text-sm font-medium text-secondary mb-1"
               >
-                Problem Type
+                {tf('problemType')}
               </label>
               <select
                 id="problemType"
@@ -168,11 +171,11 @@ export default function NewProblemPage() {
                 onChange={handleChange('problemType')}
                 className="w-full px-3 py-2 border border-border-strong rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
               >
-                <option value="reactive">Reactive (from incident)</option>
-                <option value="proactive">Proactive (trend analysis)</option>
+                <option value="reactive">{tf('reactiveOpt')}</option>
+                <option value="proactive">{tf('proactiveOpt')}</option>
               </select>
               <p className="mt-1 text-xs text-muted">
-                Reactive: Created from recurring incidents. Proactive: Identified through trend analysis.
+                {tf('problemTypeHelp')}
               </p>
             </div>
 
@@ -181,7 +184,7 @@ export default function NewProblemPage() {
                 htmlFor="applicationId"
                 className="block text-sm font-medium text-secondary mb-1"
               >
-                Application
+                {tf('application')}
               </label>
               <select
                 id="applicationId"
@@ -189,7 +192,7 @@ export default function NewProblemPage() {
                 onChange={handleChange('applicationId')}
                 className="w-full px-3 py-2 border border-border-strong rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
               >
-                <option value="">Select an application (optional)</option>
+                <option value="">{tf('selectApp')}</option>
                 {applications.map((app: { id: string; name: string }) => (
                   <option key={app.id} value={app.id}>
                     {app.name}
@@ -201,7 +204,7 @@ export default function NewProblemPage() {
         </div>
 
         <div className="bg-surface rounded-xl shadow-sm p-6 space-y-6">
-          <h2 className="text-lg font-semibold text-foreground">Priority & Impact</h2>
+          <h2 className="text-lg font-semibold text-foreground">{tf('priorityImpact')}</h2>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
@@ -209,7 +212,7 @@ export default function NewProblemPage() {
                 htmlFor="priority"
                 className="block text-sm font-medium text-secondary mb-1"
               >
-                Priority
+                {ti('priority')}
               </label>
               <select
                 id="priority"
@@ -217,10 +220,10 @@ export default function NewProblemPage() {
                 onChange={handleChange('priority')}
                 className="w-full px-3 py-2 border border-border-strong rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
               >
-                <option value="critical">Critical</option>
-                <option value="high">High</option>
-                <option value="medium">Medium</option>
-                <option value="low">Low</option>
+                <option value="critical">{ti('priorityCritical')}</option>
+                <option value="high">{ti('priorityHigh')}</option>
+                <option value="medium">{ti('priorityMedium')}</option>
+                <option value="low">{ti('priorityLow')}</option>
               </select>
             </div>
 
@@ -229,7 +232,7 @@ export default function NewProblemPage() {
                 htmlFor="urgency"
                 className="block text-sm font-medium text-secondary mb-1"
               >
-                Urgency
+                {tf('urgency')}
               </label>
               <select
                 id="urgency"
@@ -237,10 +240,10 @@ export default function NewProblemPage() {
                 onChange={handleChange('urgency')}
                 className="w-full px-3 py-2 border border-border-strong rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
               >
-                <option value="immediate">Immediate</option>
-                <option value="high">High</option>
-                <option value="medium">Medium</option>
-                <option value="low">Low</option>
+                <option value="immediate">{tf('immediate')}</option>
+                <option value="high">{ti('priorityHigh')}</option>
+                <option value="medium">{ti('priorityMedium')}</option>
+                <option value="low">{ti('priorityLow')}</option>
               </select>
             </div>
 
@@ -249,7 +252,7 @@ export default function NewProblemPage() {
                 htmlFor="impact"
                 className="block text-sm font-medium text-secondary mb-1"
               >
-                Impact
+                {tf('impact')}
               </label>
               <select
                 id="impact"
@@ -257,17 +260,17 @@ export default function NewProblemPage() {
                 onChange={handleChange('impact')}
                 className="w-full px-3 py-2 border border-border-strong rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
               >
-                <option value="widespread">Widespread</option>
-                <option value="significant">Significant</option>
-                <option value="moderate">Moderate</option>
-                <option value="minor">Minor</option>
+                <option value="widespread">{tf('widespread')}</option>
+                <option value="significant">{tf('significant')}</option>
+                <option value="moderate">{tf('moderate')}</option>
+                <option value="minor">{tf('minor')}</option>
               </select>
             </div>
           </div>
         </div>
 
         <div className="bg-surface rounded-xl shadow-sm p-6 space-y-6">
-          <h2 className="text-lg font-semibold text-foreground">Assignment</h2>
+          <h2 className="text-lg font-semibold text-foreground">{tf('assignment')}</h2>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
@@ -275,7 +278,7 @@ export default function NewProblemPage() {
                 htmlFor="assignedGroup"
                 className="block text-sm font-medium text-secondary mb-1"
               >
-                Assignment Group
+                {tf('assignmentGroup')}
               </label>
               <select
                 id="assignedGroup"
@@ -283,7 +286,7 @@ export default function NewProblemPage() {
                 onChange={handleChange('assignedGroup')}
                 className="w-full px-3 py-2 border border-border-strong rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
               >
-                <option value="">Select a group (optional)</option>
+                <option value="">{tf('selectGroup')}</option>
                 {groups.map((group: { id: string; name: string }) => (
                   <option key={group.id} value={group.id}>
                     {group.name}
@@ -305,7 +308,7 @@ export default function NewProblemPage() {
                 onChange={handleChange('assignedTo')}
                 className="w-full px-3 py-2 border border-border-strong rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
               >
-                <option value="">Select a user (optional)</option>
+                <option value="">{tf('selectUser')}</option>
                 {users.map((user: { id: string; name: string }) => (
                   <option key={user.id} value={user.id}>
                     {user.name}
@@ -320,11 +323,11 @@ export default function NewProblemPage() {
         <div className="flex justify-end space-x-4">
           <Link href="/problems">
             <Button type="button" variant="outline">
-              Cancel
+              {tf('cancel')}
             </Button>
           </Link>
           <Button type="submit" isLoading={createProblem.isPending}>
-            Create Problem
+            {tf('createProblemBtn')}
           </Button>
         </div>
       </form>

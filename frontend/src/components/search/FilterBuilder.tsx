@@ -1,5 +1,6 @@
 'use client';
 
+import { useT } from '@/i18n/useT';
 import { useMemo } from 'react';
 import { Plus, Trash2 } from 'lucide-react';
 import type { SearchFieldsResponse, SearchFilterOperator } from '@/lib/api';
@@ -30,6 +31,7 @@ function placeholderFor(type: string | undefined, operator: SearchFilterOperator
 }
 
 export function FilterBuilder({ fields, rows, op, onChange }: FilterBuilderProps) {
+  const sh = useT('shared');
   // Union of fields across the entity types the user can search.
   const fieldTypes = useMemo(() => {
     const map = new Map<string, 'text' | 'uuid' | 'date' | 'boolean'>();
@@ -49,12 +51,12 @@ export function FilterBuilder({ fields, rows, op, onChange }: FilterBuilderProps
   };
 
   return (
-    <div className="space-y-3" aria-label="Advanced filters">
+    <div className="space-y-3" aria-label={sh('advancedFilters')}>
       {rows.length > 1 && (
         <div className="flex items-center gap-2 text-sm text-secondary">
-          Match
+          {sh('match')}
           <select
-            aria-label="Combine filters with"
+            aria-label={sh('combineWith')}
             value={op}
             onChange={(e) => onChange(rows, e.target.value as 'and' | 'or')}
             className={inputClass}
@@ -72,7 +74,7 @@ export function FilterBuilder({ fields, rows, op, onChange }: FilterBuilderProps
           <div key={row.id} className="flex flex-wrap items-center gap-2" data-testid="filter-row">
             <span className="w-10 text-xs uppercase text-muted">{index === 0 ? 'where' : op}</span>
             <select
-              aria-label="Field"
+              aria-label={sh('field')}
               value={row.field}
               onChange={(e) => {
                 const nextType = fieldTypes.get(e.target.value) ?? 'text';
@@ -92,7 +94,7 @@ export function FilterBuilder({ fields, rows, op, onChange }: FilterBuilderProps
               ))}
             </select>
             <select
-              aria-label="Operator"
+              aria-label={sh('operator')}
               value={row.operator}
               onChange={(e) => update(row.id, { operator: e.target.value as SearchFilterOperator })}
               className={inputClass}
@@ -106,18 +108,18 @@ export function FilterBuilder({ fields, rows, op, onChange }: FilterBuilderProps
             {operatorNeedsValue(row.operator) &&
               (type === 'boolean' ? (
                 <select
-                  aria-label="Value"
+                  aria-label={sh('value')}
                   value={row.value}
                   onChange={(e) => update(row.id, { value: e.target.value })}
                   className={inputClass}
                 >
-                  <option value="">Select</option>
+                  <option value="">{sh('select')}</option>
                   <option value="true">Yes</option>
                   <option value="false">No</option>
                 </select>
               ) : (
                 <input
-                  aria-label="Value"
+                  aria-label={sh('value')}
                   value={row.value}
                   placeholder={placeholderFor(type, row.operator)}
                   onChange={(e) => update(row.id, { value: e.target.value })}
@@ -126,7 +128,7 @@ export function FilterBuilder({ fields, rows, op, onChange }: FilterBuilderProps
               ))}
             <button
               type="button"
-              aria-label="Remove filter"
+              aria-label={sh('removeFilter')}
               onClick={() => onChange(rows.filter((r) => r.id !== row.id), op)}
               className="p-1.5 text-muted hover:text-error rounded-lg hover:bg-surface-hover"
             >
@@ -142,7 +144,7 @@ export function FilterBuilder({ fields, rows, op, onChange }: FilterBuilderProps
         className="inline-flex items-center gap-1.5 text-sm font-medium text-primary hover:underline"
       >
         <Plus className="h-4 w-4" />
-        Add condition
+        {sh('addCondition')}
       </button>
     </div>
   );

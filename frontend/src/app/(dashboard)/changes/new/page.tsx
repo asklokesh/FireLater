@@ -1,5 +1,6 @@
 'use client';
 
+import { useT } from '@/i18n/useT';
 import { useState, FormEvent } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
@@ -9,6 +10,9 @@ import { Input } from '@/components/ui/input';
 import { useCreateChange, useApplications, useUsers, useGroups } from '@/hooks/useApi';
 
 export default function NewChangePage() {
+  const cf = useT('changeForm');
+  const tf = useT('forms');
+  const ti = useT('issues');
   const router = useRouter();
   const searchParams = useSearchParams();
   const applicationId = searchParams.get('application');
@@ -133,9 +137,9 @@ export default function NewChangePage() {
           <ArrowLeft className="h-5 w-5 text-secondary" />
         </button>
         <div>
-          <h1 className="text-2xl font-bold text-foreground">Create Change Request</h1>
+          <h1 className="text-2xl font-bold text-foreground">{cf('title')}</h1>
           <p className="mt-1 text-sm text-secondary">
-            Submit a new change request for approval
+            {cf('subtitle')}
           </p>
         </div>
       </div>
@@ -150,13 +154,13 @@ export default function NewChangePage() {
         )}
 
         <div className="bg-surface border border-border rounded-xl p-6 space-y-6">
-          <h2 className="text-lg font-semibold text-foreground">Change Details</h2>
+          <h2 className="text-lg font-semibold text-foreground">{cf('details')}</h2>
 
           <Input
             id="title"
             type="text"
-            label="Title"
-            placeholder="Brief summary of the change"
+            label={tf('title')}
+            placeholder={cf('briefPh')}
             value={formData.title}
             onChange={handleChange('title')}
             error={errors.title}
@@ -168,12 +172,12 @@ export default function NewChangePage() {
               htmlFor="description"
               className="block text-sm font-medium text-foreground mb-1"
             >
-              Description <span className="text-error">*</span>
+              {tf('description')} <span className="text-error">*</span>
             </label>
             <textarea
               id="description"
               rows={5}
-              placeholder="Detailed description of the change, including scope, steps, and expected outcome"
+              placeholder={cf('descPh')}
               value={formData.description}
               onChange={handleChange('description')}
               className={`w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary ${
@@ -191,12 +195,12 @@ export default function NewChangePage() {
               htmlFor="justification"
               className="block text-sm font-medium text-foreground mb-1"
             >
-              Business Justification
+              {cf('justification')}
             </label>
             <textarea
               id="justification"
               rows={3}
-              placeholder="Why is this change needed?"
+              placeholder={cf('justificationPh')}
               value={formData.justification}
               onChange={handleChange('justification')}
               className="w-full px-3 py-2 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary"
@@ -208,7 +212,7 @@ export default function NewChangePage() {
               htmlFor="applicationId"
               className="block text-sm font-medium text-foreground mb-1"
             >
-              Application
+              {tf('application')}
             </label>
             <select
               id="applicationId"
@@ -216,7 +220,7 @@ export default function NewChangePage() {
               onChange={handleChange('applicationId')}
               className="w-full px-3 py-2 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary"
             >
-              <option value="">Select an application (optional)</option>
+              <option value="">{tf('selectApp')}</option>
               {applications.map((app: { id: string; name: string }) => (
                 <option key={app.id} value={app.id}>
                   {app.name}
@@ -227,7 +231,7 @@ export default function NewChangePage() {
         </div>
 
         <div className="bg-surface border border-border rounded-xl p-6 space-y-6">
-          <h2 className="text-lg font-semibold text-foreground">Classification</h2>
+          <h2 className="text-lg font-semibold text-foreground">{cf('classification')}</h2>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
@@ -235,7 +239,7 @@ export default function NewChangePage() {
                 htmlFor="type"
                 className="block text-sm font-medium text-foreground mb-1"
               >
-                Change Type
+                {cf('changeType')}
               </label>
               <select
                 id="type"
@@ -243,9 +247,9 @@ export default function NewChangePage() {
                 onChange={handleChange('type')}
                 className="w-full px-3 py-2 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary"
               >
-                <option value="standard">Standard (Pre-approved)</option>
-                <option value="normal">Normal (Requires CAB approval)</option>
-                <option value="emergency">Emergency (Expedited approval)</option>
+                <option value="standard">{cf('typeStandard')}</option>
+                <option value="normal">{cf('typeNormal')}</option>
+                <option value="emergency">{cf('typeEmergency')}</option>
               </select>
             </div>
 
@@ -254,7 +258,7 @@ export default function NewChangePage() {
                 htmlFor="riskLevel"
                 className="block text-sm font-medium text-foreground mb-1"
               >
-                Risk Level
+                {cf('riskLevel')}
               </label>
               <select
                 id="riskLevel"
@@ -262,10 +266,10 @@ export default function NewChangePage() {
                 onChange={handleChange('riskLevel')}
                 className="w-full px-3 py-2 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary"
               >
-                <option value="low">Low</option>
-                <option value="medium">Medium</option>
-                <option value="high">High</option>
-                <option value="critical">Critical</option>
+                <option value="low">{ti('priorityLow')}</option>
+                <option value="medium">{ti('priorityMedium')}</option>
+                <option value="high">{ti('priorityHigh')}</option>
+                <option value="critical">{ti('priorityCritical')}</option>
               </select>
             </div>
 
@@ -274,7 +278,7 @@ export default function NewChangePage() {
                 htmlFor="impact"
                 className="block text-sm font-medium text-foreground mb-1"
               >
-                Impact
+                {tf('impact')}
               </label>
               <select
                 id="impact"
@@ -282,18 +286,18 @@ export default function NewChangePage() {
                 onChange={handleChange('impact')}
                 className="w-full px-3 py-2 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary"
               >
-                <option value="none">None</option>
-                <option value="minor">Minor</option>
-                <option value="moderate">Moderate</option>
-                <option value="significant">Significant</option>
-                <option value="major">Major</option>
+                <option value="none">{cf('impactNone')}</option>
+                <option value="minor">{tf('minor')}</option>
+                <option value="moderate">{tf('moderate')}</option>
+                <option value="significant">{tf('significant')}</option>
+                <option value="major">{cf('impactMajor')}</option>
               </select>
             </div>
           </div>
         </div>
 
         <div className="bg-surface border border-border rounded-xl p-6 space-y-6">
-          <h2 className="text-lg font-semibold text-foreground">Schedule</h2>
+          <h2 className="text-lg font-semibold text-foreground">{cf('schedule')}</h2>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
@@ -301,7 +305,7 @@ export default function NewChangePage() {
                 htmlFor="plannedStart"
                 className="block text-sm font-medium text-foreground mb-1"
               >
-                Planned Start <span className="text-error">*</span>
+                {cf('plannedStart')} <span className="text-error">*</span>
               </label>
               <input
                 type="datetime-local"
@@ -323,7 +327,7 @@ export default function NewChangePage() {
                 htmlFor="plannedEnd"
                 className="block text-sm font-medium text-foreground mb-1"
               >
-                Planned End <span className="text-error">*</span>
+                {cf('plannedEnd')} <span className="text-error">*</span>
               </label>
               <input
                 type="datetime-local"
@@ -343,7 +347,7 @@ export default function NewChangePage() {
         </div>
 
         <div className="bg-surface border border-border rounded-xl p-6 space-y-6">
-          <h2 className="text-lg font-semibold text-foreground">Assignment</h2>
+          <h2 className="text-lg font-semibold text-foreground">{tf('assignment')}</h2>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
@@ -351,7 +355,7 @@ export default function NewChangePage() {
                 htmlFor="assignedGroup"
                 className="block text-sm font-medium text-foreground mb-1"
               >
-                Assignment Group
+                {tf('assignmentGroup')}
               </label>
               <select
                 id="assignedGroup"
@@ -359,7 +363,7 @@ export default function NewChangePage() {
                 onChange={handleChange('assignedGroup')}
                 className="w-full px-3 py-2 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary"
               >
-                <option value="">Select a group</option>
+                <option value="">{cf('groupSelect')}</option>
                 {groups.map((group: { id: string; name: string }) => (
                   <option key={group.id} value={group.id}>
                     {group.name}
@@ -376,19 +380,19 @@ export default function NewChangePage() {
         </div>
 
         <div className="bg-surface border border-border rounded-xl p-6 space-y-6">
-          <h2 className="text-lg font-semibold text-foreground">Implementation Plans</h2>
+          <h2 className="text-lg font-semibold text-foreground">{cf('implPlans')}</h2>
 
           <div>
             <label
               htmlFor="implementationPlan"
               className="block text-sm font-medium text-foreground mb-1"
             >
-              Implementation Plan
+              {cf('implPlan')}
             </label>
             <textarea
               id="implementationPlan"
               rows={4}
-              placeholder="Step-by-step instructions for implementing the change"
+              placeholder={cf('implPlanPh')}
               value={formData.implementationPlan}
               onChange={handleChange('implementationPlan')}
               className="w-full px-3 py-2 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary"
@@ -400,12 +404,12 @@ export default function NewChangePage() {
               htmlFor="rollbackPlan"
               className="block text-sm font-medium text-foreground mb-1"
             >
-              Rollback Plan <span className="text-error">*</span>
+              {cf('rollbackPlan')} <span className="text-error">*</span>
             </label>
             <textarea
               id="rollbackPlan"
               rows={4}
-              placeholder="Steps to rollback the change if issues occur"
+              placeholder={cf('rollbackPh')}
               value={formData.rollbackPlan}
               onChange={handleChange('rollbackPlan')}
               className={`w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary ${
@@ -423,12 +427,12 @@ export default function NewChangePage() {
               htmlFor="testPlan"
               className="block text-sm font-medium text-foreground mb-1"
             >
-              Test Plan
+              {cf('testPlan')}
             </label>
             <textarea
               id="testPlan"
               rows={4}
-              placeholder="Steps to verify the change was successful"
+              placeholder={cf('testPh')}
               value={formData.testPlan}
               onChange={handleChange('testPlan')}
               className="w-full px-3 py-2 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary"
@@ -440,11 +444,11 @@ export default function NewChangePage() {
         <div className="flex justify-end space-x-4">
           <Link href="/changes">
             <Button type="button" variant="outline">
-              Cancel
+              {tf('cancel')}
             </Button>
           </Link>
           <Button type="submit" isLoading={createChange.isPending}>
-            Submit for Approval
+            {cf('submit')}
           </Button>
         </div>
       </form>

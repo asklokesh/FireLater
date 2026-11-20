@@ -65,6 +65,7 @@ declare module 'fastify' {
     tenantSlug?: string;
     tenant?: { id: string; name: string; slug: string };
     startTime?: number;
+    locale?: import("../lib/i18n.js").Locale;
     csrfProtection?: () => Promise<void>;
   }
 }

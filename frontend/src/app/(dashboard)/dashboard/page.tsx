@@ -1,5 +1,6 @@
 'use client';
 
+import { useT } from '@/i18n/useT';
 import { useState, useMemo, useCallback } from 'react';
 import Link from 'next/link';
 import {
@@ -39,10 +40,11 @@ const riskColors: Record<string, string> = {
 
 // Simple line chart component
 function IssueTrendsChart({ data }: { data: { date: string; created: number; resolved: number }[] }) {
+  const t = useT('dashboard');
   if (!data || data.length === 0) {
     return (
       <div className="flex items-center justify-center h-48 text-muted">
-        No trend data available
+        {t('noTrendData')}
       </div>
     );
   }
@@ -77,7 +79,7 @@ function IssueTrendsChart({ data }: { data: { date: string; created: number; res
         </div>
         <div className={`flex items-center text-sm ${trend ? 'text-success' : 'text-error'}`}>
           {trend ? <ArrowDown className="h-4 w-4 mr-1" /> : <ArrowUp className="h-4 w-4 mr-1" />}
-          {trend ? 'Backlog decreasing' : 'Backlog increasing'}
+          {trend ? t('backlogDecreasing') : t('backlogIncreasing')}
         </div>
       </div>
       <svg viewBox={`0 0 ${chartWidth} ${chartHeight}`} className="w-full h-48">
@@ -114,10 +116,11 @@ function IssueTrendsChart({ data }: { data: { date: string; created: number; res
 
 // Priority distribution bar chart
 function PriorityDistributionChart({ data }: { data: { priority: string; count: number }[] }) {
+  const t = useT('dashboard');
   if (!data || data.length === 0) {
     return (
       <div className="flex items-center justify-center h-32 text-muted">
-        No data available
+        {t('noData')}
       </div>
     );
   }
@@ -156,6 +159,7 @@ function PriorityDistributionChart({ data }: { data: { priority: string; count: 
 }
 
 export default function DashboardPage() {
+  const t = useT('dashboard');
   const [autoRefresh, setAutoRefresh] = useState(true);
   const [lastUpdatedKey, setLastUpdatedKey] = useState(0);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -219,7 +223,7 @@ export default function DashboardPage() {
     return (
       <div className="bg-error-subtle border border-error rounded-lg p-6 text-center">
         <AlertCircle className="h-12 w-12 text-error mx-auto mb-4" />
-        <h3 className="text-lg font-medium text-error mb-2">Error loading dashboard</h3>
+        <h3 className="text-lg font-medium text-error mb-2">{t('errorLoading')}</h3>
         <p className="text-error">Please try refreshing the page</p>
       </div>
     );
@@ -227,7 +231,7 @@ export default function DashboardPage() {
 
   const stats = [
     {
-      name: 'Open Issues',
+      name: t('openIssues'),
       value: dashboardData?.issues?.open ?? 0,
       subValue: dashboardData?.issues?.critical_open ? `${dashboardData.issues.critical_open} critical` : null,
       icon: AlertCircle,
@@ -235,7 +239,7 @@ export default function DashboardPage() {
       href: '/issues',
     },
     {
-      name: 'Pending Changes',
+      name: t('pendingChanges'),
       value: (dashboardData?.changes?.scheduled ?? 0) + (dashboardData?.changes?.in_progress ?? 0),
       subValue: dashboardData?.changes?.scheduled ? `${dashboardData.changes.scheduled} scheduled` : null,
       icon: RefreshCw,
@@ -243,7 +247,7 @@ export default function DashboardPage() {
       href: '/changes',
     },
     {
-      name: 'Active Requests',
+      name: t('activeRequests'),
       value: dashboardData?.requests?.pending ?? 0,
       subValue: dashboardData?.requests?.total ? `${dashboardData.requests.total} this month` : null,
       icon: ShoppingCart,
@@ -251,7 +255,7 @@ export default function DashboardPage() {
       href: '/catalog',
     },
     {
-      name: 'Avg Health Score',
+      name: t('avgHealth'),
       value: dashboardData?.health?.avg_score ? `${dashboardData.health.avg_score}%` : 'N/A',
       subValue: dashboardData?.health?.critical ? `${dashboardData.health.critical} critical` : null,
       icon: Server,
@@ -267,9 +271,9 @@ export default function DashboardPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-foreground">Dashboard</h1>
+          <h1 className="text-2xl font-bold text-foreground">{t('title')}</h1>
           <p className="mt-1 text-sm text-secondary">
-            Overview of your IT service management metrics
+            {t('overview')}
           </p>
         </div>
         <div className="flex items-center space-x-4">
@@ -294,12 +298,12 @@ export default function DashboardPage() {
             {autoRefresh ? (
               <>
                 <Pause className="h-4 w-4 mr-1.5" />
-                Live
+                {t('live')}
               </>
             ) : (
               <>
                 <Play className="h-4 w-4 mr-1.5" />
-                Paused
+                {t('paused')}
               </>
             )}
           </button>
@@ -311,7 +315,7 @@ export default function DashboardPage() {
             className="flex items-center px-3 py-1.5 bg-primary text-primary-fg rounded-md text-sm font-medium hover:bg-primary-hover disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           >
             <RefreshCw className={`h-4 w-4 mr-1.5 ${isRefreshing ? 'animate-spin' : ''}`} />
-            Refresh
+            {t('refresh')}
           </button>
         </div>
       </div>
@@ -346,9 +350,9 @@ export default function DashboardPage() {
         <div className="bg-surface border border-border rounded-xl shadow-sm overflow-hidden">
           <div className="px-5 py-4 border-b border-border">
             <div className="flex items-center justify-between">
-              <h3 className="text-lg font-medium text-foreground">Issue Trends (14 days)</h3>
+              <h3 className="text-lg font-medium text-foreground">{t('issueTrends')}</h3>
               <Link href="/reports" className="text-sm text-primary hover:text-primary-hover">
-                View reports
+                {t('viewReports')}
               </Link>
             </div>
           </div>
@@ -367,9 +371,9 @@ export default function DashboardPage() {
         <div className="bg-surface border border-border rounded-xl shadow-sm overflow-hidden">
           <div className="px-5 py-4 border-b border-border">
             <div className="flex items-center justify-between">
-              <h3 className="text-lg font-medium text-foreground">Open Issues by Priority</h3>
+              <h3 className="text-lg font-medium text-foreground">{t('openByPriority')}</h3>
               <Link href="/issues" className="text-sm text-primary hover:text-primary-hover">
-                View all
+                {t('viewAll')}
               </Link>
             </div>
           </div>
@@ -391,9 +395,9 @@ export default function DashboardPage() {
         <div className="bg-surface border border-border rounded-xl shadow-sm overflow-hidden">
           <div className="px-5 py-4 border-b border-border">
             <div className="flex items-center justify-between">
-              <h3 className="text-lg font-medium text-foreground">Recent Activity</h3>
+              <h3 className="text-lg font-medium text-foreground">{t('recentActivity')}</h3>
               <Link href="/issues" className="text-sm text-primary hover:text-primary-hover">
-                View all
+                {t('viewAll')}
               </Link>
             </div>
           </div>
@@ -433,7 +437,7 @@ export default function DashboardPage() {
             </ul>
           ) : (
             <div className="p-8 text-center text-secondary">
-              No recent activity
+              {t('noRecentActivity')}
             </div>
           )}
         </div>
@@ -442,9 +446,9 @@ export default function DashboardPage() {
         <div className="bg-surface border border-border rounded-xl shadow-sm overflow-hidden">
           <div className="px-5 py-4 border-b border-border">
             <div className="flex items-center justify-between">
-              <h3 className="text-lg font-medium text-foreground">Upcoming Changes</h3>
+              <h3 className="text-lg font-medium text-foreground">{t('upcomingChanges')}</h3>
               <Link href="/changes" className="text-sm text-primary hover:text-primary-hover">
-                View all
+                {t('viewAll')}
               </Link>
             </div>
           </div>
@@ -483,7 +487,7 @@ export default function DashboardPage() {
             </ul>
           ) : (
             <div className="p-8 text-center text-secondary">
-              No upcoming changes
+              {t('noUpcomingChanges')}
             </div>
           )}
         </div>

@@ -7,9 +7,12 @@ import { AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useAuthStore } from '@/stores/auth';
+import { useT } from '@/i18n/useT';
+import { LanguageSwitcher } from '@/components/i18n/LanguageSwitcher';
 
 export default function LoginPage() {
   const router = useRouter();
+  const t = useT('auth.login');
   const { login, isLoading, error, clearError } = useAuthStore();
   const [tenant, setTenant] = useState('');
   const [email, setEmail] = useState('');
@@ -31,6 +34,9 @@ export default function LoginPage() {
     <div className="min-h-screen flex items-center justify-center bg-background py-12 px-4 sm:px-6 lg:px-8">
       <div className="w-full max-w-md bg-surface rounded-2xl border border-border shadow-sm p-8">
         <div>
+          <div className="flex justify-end mb-2">
+            <LanguageSwitcher />
+          </div>
           <div className="flex items-center justify-center gap-2 mb-6">
             <div className="h-8 w-8 rounded-lg bg-primary" />
             <span className="text-xl font-semibold tracking-tight text-foreground">
@@ -38,10 +44,10 @@ export default function LoginPage() {
             </span>
           </div>
           <h2 className="text-2xl font-semibold tracking-tight text-foreground mt-6 mb-1">
-            Sign in to your account
+            {t('title')}
           </h2>
           <p className="text-sm text-secondary mb-6">
-            IT Service Management Platform
+            {t('subtitle')}
           </p>
         </div>
 
@@ -56,7 +62,7 @@ export default function LoginPage() {
           <div className="space-y-4">
             <div>
               <label htmlFor="tenant" className="text-sm font-medium text-secondary mb-1.5 block">
-                Organization
+                {t('organization')}
               </label>
               <Input
                 id="tenant"
@@ -67,13 +73,13 @@ export default function LoginPage() {
                 required
               />
               <p className="text-xs text-muted mt-1.5">
-                Enter your organization slug (e.g., my-company)
+                {t('organizationHint')}
               </p>
             </div>
 
             <div>
               <label htmlFor="email" className="text-sm font-medium text-secondary mb-1.5 block">
-                Email address
+                {t('email')}
               </label>
               <Input
                 id="email"
@@ -88,12 +94,12 @@ export default function LoginPage() {
 
             <div>
               <label htmlFor="password" className="text-sm font-medium text-secondary mb-1.5 block">
-                Password
+                {t('password')}
               </label>
               <Input
                 id="password"
                 type="password"
-                placeholder="Enter your password"
+                placeholder={t('passwordPlaceholder')}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
@@ -110,26 +116,26 @@ export default function LoginPage() {
                 type="checkbox"
                 className="h-4 w-4 rounded border-border-strong accent-primary cursor-pointer"
               />
-              <label htmlFor="remember-me" className="ml-2 block text-sm text-foreground">
-                Remember me
+              <label htmlFor="remember-me" className="ms-2 block text-sm text-foreground">
+                {t('rememberMe')}
               </label>
             </div>
 
             <div className="text-sm">
               <Link href="/forgot-password" className="font-medium text-primary hover:text-primary-hover transition-colors">
-                Forgot your password?
+                {t('forgotPassword')}
               </Link>
             </div>
           </div>
 
           <Button type="submit" isLoading={isLoading}>
-            Sign in
+            {t('signIn')}
           </Button>
 
           <p className="text-center text-sm text-secondary">
-            Don&apos;t have an account?{' '}
+            {t('noAccount')}{' '}
             <Link href="/register" className="font-medium text-primary hover:text-primary-hover transition-colors">
-              Sign up
+              {t('signUp')}
             </Link>
           </p>
         </form>

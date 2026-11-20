@@ -1,5 +1,6 @@
 'use client';
 
+import { useT } from '@/i18n/useT';
 import { useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
@@ -21,14 +22,14 @@ import { Button } from '@/components/ui/button';
 import { useApplication, useApplicationHealth, useIssues, useChanges } from '@/hooks/useApi';
 
 const statusColors: Record<string, { bg: string; text: string; label: string }> = {
-  active: { bg: 'bg-success-subtle', text: 'text-success', label: 'Active' },
-  inactive: { bg: 'bg-background', text: 'text-secondary', label: 'Inactive' },
-  deprecated: { bg: 'bg-error-subtle', text: 'text-error', label: 'Deprecated' },
-  operational: { bg: 'bg-success-subtle', text: 'text-success', label: 'Operational' },
-  degraded: { bg: 'bg-warning-subtle', text: 'text-warning', label: 'Degraded' },
-  partial_outage: { bg: 'bg-warning-subtle', text: 'text-warning', label: 'Partial Outage' },
-  major_outage: { bg: 'bg-error-subtle', text: 'text-error', label: 'Major Outage' },
-  maintenance: { bg: 'bg-primary-subtle', text: 'text-primary', label: 'Maintenance' },
+  active: { bg: 'bg-success-subtle', text: 'text-success', label: 'sActive' },
+  inactive: { bg: 'bg-background', text: 'text-secondary', label: 'sInactive' },
+  deprecated: { bg: 'bg-error-subtle', text: 'text-error', label: 'sDeprecated' },
+  operational: { bg: 'bg-success-subtle', text: 'text-success', label: 'sOperational' },
+  degraded: { bg: 'bg-warning-subtle', text: 'text-warning', label: 'sDegraded' },
+  partial_outage: { bg: 'bg-warning-subtle', text: 'text-warning', label: 'sPartial' },
+  major_outage: { bg: 'bg-error-subtle', text: 'text-error', label: 'sMajor' },
+  maintenance: { bg: 'bg-primary-subtle', text: 'text-primary', label: 'sMaintenance' },
 };
 
 const criticalityColors: Record<string, { bg: string; text: string }> = {
@@ -54,6 +55,7 @@ const getHealthScoreColor = (score: number) => {
 };
 
 export default function ApplicationDetailPage() {
+  const ad = useT('appDetail');
   const params = useParams();
   const router = useRouter();
   const [activeTab, setActiveTab] = useState<'overview' | 'issues' | 'changes' | 'health'>('overview');
@@ -96,9 +98,9 @@ export default function ApplicationDetailPage() {
     return (
       <div className="flex flex-col items-center justify-center h-64">
         <AlertCircle className="h-12 w-12 text-error mb-4" />
-        <h2 className="text-xl font-semibold text-foreground mb-2">Application not found</h2>
-        <p className="text-muted mb-4">The application you&apos;re looking for doesn&apos;t exist or you don&apos;t have access to it.</p>
-        <Button onClick={() => router.push('/applications')}>Back to Applications</Button>
+        <h2 className="text-xl font-semibold text-foreground mb-2">{ad('notFound')}</h2>
+        <p className="text-muted mb-4">{ad('notFoundBody')}</p>
+        <Button onClick={() => router.push('/applications')}>{ad('backToApps')}</Button>
       </div>
     );
   }
@@ -142,7 +144,7 @@ export default function ApplicationDetailPage() {
               >
                 {status === 'active' && <CheckCircle className="h-3 w-3 mr-1" />}
                 {status === 'deprecated' && <AlertTriangle className="h-3 w-3 mr-1" />}
-                {statusColors[status]?.label || status}
+                {statusColors[status]?.label ? ad(statusColors[status].label) : status}
               </span>
             </div>
           </div>
@@ -151,7 +153,7 @@ export default function ApplicationDetailPage() {
           <Link href={`/applications/${params.id}/edit`}>
             <Button variant="outline">
               <Edit className="h-4 w-4 mr-2" />
-              Edit
+              {ad('edit')}
             </Button>
           </Link>
           <Button variant="outline">
@@ -165,7 +167,7 @@ export default function ApplicationDetailPage() {
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-6">
             <div>
-              <p className="text-sm text-muted">Health Score</p>
+              <p className="text-sm text-muted">{ad('healthScore')}</p>
               <div className="flex items-center">
                 <span className={`text-4xl font-bold ${getHealthScoreColor(healthScore)}`}>
                   {healthScore}%
@@ -188,22 +190,22 @@ export default function ApplicationDetailPage() {
             </div>
             <div className="h-12 border-l border-border" />
             <div>
-              <p className="text-sm text-muted">Open Issues</p>
+              <p className="text-sm text-muted">{ad('openIssues')}</p>
               <p className="text-2xl font-semibold text-foreground">
                 {openIssueCount}
               </p>
             </div>
             <div>
-              <p className="text-sm text-muted">Pending Changes</p>
+              <p className="text-sm text-muted">{ad('pendingChanges')}</p>
               <p className="text-2xl font-semibold text-foreground">{relatedChanges.length}</p>
             </div>
           </div>
           <div className="flex space-x-2">
             <Link href={`/issues/new?application=${params.id}`}>
-              <Button size="sm">Report Issue</Button>
+              <Button size="sm">{ad('reportIssue')}</Button>
             </Link>
             <Link href={`/changes/new?application=${params.id}`}>
-              <Button size="sm" variant="outline">Request Change</Button>
+              <Button size="sm" variant="outline">{ad('requestChange')}</Button>
             </Link>
           </div>
         </div>
@@ -233,13 +235,13 @@ export default function ApplicationDetailPage() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="lg:col-span-2 space-y-6">
             <div className="bg-surface rounded-lg shadow-sm p-6">
-              <h2 className="text-lg font-semibold text-foreground mb-4">Description</h2>
+              <h2 className="text-lg font-semibold text-foreground mb-4">{ad('description')}</h2>
               <p className="text-secondary">{app.description}</p>
             </div>
 
             {app.metadata && (app.metadata as Record<string, string>).url && (
               <div className="bg-surface rounded-lg shadow-sm p-6">
-                <h2 className="text-lg font-semibold text-foreground mb-4">Quick Links</h2>
+                <h2 className="text-lg font-semibold text-foreground mb-4">{ad('quickLinks')}</h2>
                 <div className="space-y-3">
                   <a
                     href={(app.metadata as Record<string, string>).url}
@@ -248,7 +250,7 @@ export default function ApplicationDetailPage() {
                     className="flex items-center text-primary hover:text-primary-hover"
                   >
                     <ExternalLink className="h-4 w-4 mr-2" />
-                    Application URL
+                    {ad('appUrl')}
                   </a>
                 </div>
               </div>
@@ -257,11 +259,11 @@ export default function ApplicationDetailPage() {
 
           <div className="space-y-6">
             <div className="bg-surface rounded-lg shadow-sm p-6">
-              <h2 className="text-lg font-semibold text-foreground mb-4">Details</h2>
+              <h2 className="text-lg font-semibold text-foreground mb-4">{ad('details')}</h2>
               <dl className="space-y-4">
                 {app.owner_user_name && (
                   <div>
-                    <dt className="text-sm font-medium text-muted">Owner</dt>
+                    <dt className="text-sm font-medium text-muted">{ad('owner')}</dt>
                     <dd className="mt-1 flex items-center">
                       <div className="h-8 w-8 rounded-full bg-surface-hover flex items-center justify-center text-sm font-medium text-secondary">
                         {app.owner_user_name.charAt(0)}
@@ -275,7 +277,7 @@ export default function ApplicationDetailPage() {
                 )}
                 {app.support_group_name && (
                   <div>
-                    <dt className="text-sm font-medium text-muted">Support Group</dt>
+                    <dt className="text-sm font-medium text-muted">{ad('supportGroup')}</dt>
                     <dd className="mt-1 flex items-center text-sm text-foreground">
                       <Users className="h-4 w-4 mr-2 text-muted" />
                       {app.support_group_name}
@@ -284,12 +286,12 @@ export default function ApplicationDetailPage() {
                 )}
                 {app.lifecycle_stage && (
                   <div>
-                    <dt className="text-sm font-medium text-muted">Lifecycle Stage</dt>
+                    <dt className="text-sm font-medium text-muted">{ad('lifecycle')}</dt>
                     <dd className="mt-1 text-sm text-foreground capitalize">{app.lifecycle_stage.replace('_', ' ')}</dd>
                   </div>
                 )}
                 <div>
-                  <dt className="text-sm font-medium text-muted">Last Updated</dt>
+                  <dt className="text-sm font-medium text-muted">{ad('lastUpdated')}</dt>
                   <dd className="mt-1 text-sm text-foreground">{formatDate(app.updated_at)}</dd>
                 </div>
               </dl>
@@ -301,9 +303,9 @@ export default function ApplicationDetailPage() {
       {activeTab === 'issues' && (
         <div className="bg-surface rounded-lg shadow-sm overflow-hidden">
           <div className="px-6 py-4 border-b border-border flex items-center justify-between">
-            <h2 className="text-lg font-semibold text-foreground">Related Issues</h2>
+            <h2 className="text-lg font-semibold text-foreground">{ad('relatedIssues')}</h2>
             <Link href={`/issues/new?application=${params.id}`}>
-              <Button size="sm">New Issue</Button>
+              <Button size="sm">{ad('newIssue')}</Button>
             </Link>
           </div>
           {relatedIssues.length > 0 ? (
@@ -333,7 +335,7 @@ export default function ApplicationDetailPage() {
             </ul>
           ) : (
             <div className="text-center py-12">
-              <p className="text-muted">No related issues</p>
+              <p className="text-muted">{ad('noIssues')}</p>
             </div>
           )}
         </div>
@@ -342,9 +344,9 @@ export default function ApplicationDetailPage() {
       {activeTab === 'changes' && (
         <div className="bg-surface rounded-lg shadow-sm overflow-hidden">
           <div className="px-6 py-4 border-b border-border flex items-center justify-between">
-            <h2 className="text-lg font-semibold text-foreground">Related Changes</h2>
+            <h2 className="text-lg font-semibold text-foreground">{ad('relatedChanges')}</h2>
             <Link href={`/changes/new?application=${params.id}`}>
-              <Button size="sm">New Change</Button>
+              <Button size="sm">{ad('newChange')}</Button>
             </Link>
           </div>
           {relatedChanges.length > 0 ? (
@@ -379,7 +381,7 @@ export default function ApplicationDetailPage() {
             </ul>
           ) : (
             <div className="text-center py-12">
-              <p className="text-muted">No related changes</p>
+              <p className="text-muted">{ad('noChanges')}</p>
             </div>
           )}
         </div>
@@ -387,7 +389,7 @@ export default function ApplicationDetailPage() {
 
       {activeTab === 'health' && (
         <div className="bg-surface rounded-lg shadow-sm p-6">
-          <h2 className="text-lg font-semibold text-foreground mb-4">Health History</h2>
+          <h2 className="text-lg font-semibold text-foreground mb-4">{ad('healthHistory')}</h2>
           <div className="space-y-4">
             {healthData?.history && healthData.history.length > 0 ? (
               healthData.history.map((entry: { date: string; score: number }) => (
@@ -413,7 +415,7 @@ export default function ApplicationDetailPage() {
                 </div>
               ))
             ) : (
-              <p className="text-sm text-muted">No health history available</p>
+              <p className="text-sm text-muted">{ad('noHistory')}</p>
             )}
           </div>
         </div>

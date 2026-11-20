@@ -1,5 +1,6 @@
 'use client';
 
+import { useT } from '@/i18n/useT';
 import { useMemo } from 'react';
 import { Server, AlertTriangle, CheckCircle, XCircle } from 'lucide-react';
 
@@ -18,11 +19,11 @@ interface HealthDistributionChartProps {
 
 // Health score ranges and their configurations
 const healthRanges = {
-  critical: { label: 'Critical (0-25)', color: 'bg-red-500', textColor: 'text-red-600', icon: XCircle },
-  poor: { label: 'Poor (26-50)', color: 'bg-orange-500', textColor: 'text-orange-600', icon: AlertTriangle },
-  fair: { label: 'Fair (51-75)', color: 'bg-yellow-500', textColor: 'text-yellow-600', icon: AlertTriangle },
-  good: { label: 'Good (76-90)', color: 'bg-green-400', textColor: 'text-green-500', icon: CheckCircle },
-  excellent: { label: 'Excellent (91-100)', color: 'bg-green-600', textColor: 'text-green-700', icon: CheckCircle },
+  critical: { label: 'bCritical', color: 'bg-red-500', textColor: 'text-red-600', icon: XCircle },
+  poor: { label: 'bPoor', color: 'bg-orange-500', textColor: 'text-orange-600', icon: AlertTriangle },
+  fair: { label: 'bFair', color: 'bg-yellow-500', textColor: 'text-yellow-600', icon: AlertTriangle },
+  good: { label: 'bGood', color: 'bg-green-400', textColor: 'text-green-500', icon: CheckCircle },
+  excellent: { label: 'bExcellent', color: 'bg-green-600', textColor: 'text-green-700', icon: CheckCircle },
 };
 
 export function HealthDistributionChart({
@@ -31,6 +32,7 @@ export function HealthDistributionChart({
   showPercentages = true,
   className = '',
 }: HealthDistributionChartProps) {
+  const sh = useT('shared');
   // Calculate totals
   const totals = useMemo(() => {
     const total = data.reduce((sum, d) => sum + d.count, 0);
@@ -54,7 +56,7 @@ export function HealthDistributionChart({
       <div className={`bg-white rounded-lg shadow p-6 ${className}`}>
         <h3 className="text-lg font-medium text-gray-900 mb-4">{title}</h3>
         <div className="flex items-center justify-center h-48 text-gray-500">
-          No data available
+          {sh('noData')}
         </div>
       </div>
     );
@@ -74,14 +76,14 @@ export function HealthDistributionChart({
               <Server className="h-5 w-5 text-gray-400 mr-2" />
               <span className="text-2xl font-bold text-gray-900">{totals.total}</span>
             </div>
-            <p className="text-sm text-gray-500">Total Apps</p>
+            <p className="text-sm text-gray-500">{sh('totalApps')}</p>
           </div>
           <div className="text-center p-4 bg-green-50 rounded-lg">
             <div className="flex items-center justify-center mb-1">
               <CheckCircle className="h-5 w-5 text-green-500 mr-2" />
               <span className="text-2xl font-bold text-green-600">{totals.healthy}</span>
             </div>
-            <p className="text-sm text-green-600">Healthy</p>
+            <p className="text-sm text-green-600">{sh('healthy')}</p>
             <p className="text-xs text-green-500">{totals.healthyPercentage.toFixed(0)}%</p>
           </div>
           <div className="text-center p-4 bg-red-50 rounded-lg">
@@ -89,7 +91,7 @@ export function HealthDistributionChart({
               <XCircle className="h-5 w-5 text-red-500 mr-2" />
               <span className="text-2xl font-bold text-red-600">{totals.critical}</span>
             </div>
-            <p className="text-sm text-red-600">Critical</p>
+            <p className="text-sm text-red-600">{sh('critical')}</p>
           </div>
         </div>
 
@@ -105,7 +107,7 @@ export function HealthDistributionChart({
                   key={item.range}
                   className={`${config.color} flex items-center justify-center transition-all hover:opacity-80`}
                   style={{ width: `${item.percentage}%` }}
-                  title={`${config.label}: ${item.count} apps (${item.percentage.toFixed(1)}%)`}
+                  title={`${sh(config.label)}: ${item.count} apps (${item.percentage.toFixed(1)}%)`}
                 >
                   {item.percentage > 10 && (
                     <span className="text-white text-xs font-medium">{item.count}</span>
@@ -129,7 +131,7 @@ export function HealthDistributionChart({
                 <div className="flex items-center">
                   <div className={`h-3 w-3 rounded ${config.color} mr-3`} />
                   <Icon className={`h-4 w-4 ${config.textColor} mr-2`} />
-                  <span className="text-sm text-gray-700">{config.label}</span>
+                  <span className="text-sm text-gray-700">{sh(config.label)}</span>
                 </div>
                 <div className="flex items-center space-x-4">
                   <span className="text-sm font-medium text-gray-900">{count}</span>
@@ -156,6 +158,7 @@ interface HealthDonutChartProps {
 }
 
 export function HealthDonutChart({ data, size = 120, className = '' }: HealthDonutChartProps) {
+  const sh = useT('shared');
   const total = data.reduce((sum, d) => sum + d.count, 0);
   const healthyCount = data
     .filter((d) => ['good', 'excellent'].includes(d.range))
@@ -218,7 +221,7 @@ export function HealthDonutChart({ data, size = 120, className = '' }: HealthDon
         {/* Center text */}
         <div className="absolute inset-0 flex flex-col items-center justify-center">
           <span className="text-2xl font-bold text-gray-900">{healthyPercentage.toFixed(0)}%</span>
-          <span className="text-xs text-gray-500">Healthy</span>
+          <span className="text-xs text-gray-500">{sh('healthy')}</span>
         </div>
       </div>
     </div>
@@ -233,12 +236,13 @@ interface HealthIndicatorProps {
 }
 
 export function HealthIndicator({ score, size = 'md', showLabel = true }: HealthIndicatorProps) {
+  const sh = useT('shared');
   const getHealthConfig = (value: number) => {
-    if (value <= 25) return { label: 'Critical', color: 'text-red-600', bg: 'bg-red-100' };
-    if (value <= 50) return { label: 'Poor', color: 'text-orange-600', bg: 'bg-orange-100' };
-    if (value <= 75) return { label: 'Fair', color: 'text-yellow-600', bg: 'bg-yellow-100' };
-    if (value <= 90) return { label: 'Good', color: 'text-green-500', bg: 'bg-green-100' };
-    return { label: 'Excellent', color: 'text-green-700', bg: 'bg-green-100' };
+    if (value <= 25) return { label: 'critical', color: 'text-red-600', bg: 'bg-red-100' };
+    if (value <= 50) return { label: 'poor', color: 'text-orange-600', bg: 'bg-orange-100' };
+    if (value <= 75) return { label: 'fair', color: 'text-yellow-600', bg: 'bg-yellow-100' };
+    if (value <= 90) return { label: 'good', color: 'text-green-500', bg: 'bg-green-100' };
+    return { label: 'excellent', color: 'text-green-700', bg: 'bg-green-100' };
   };
 
   const config = getHealthConfig(score);
@@ -255,7 +259,7 @@ export function HealthIndicator({ score, size = 'md', showLabel = true }: Health
         {score}%
       </div>
       {showLabel && (
-        <span className={`text-sm ${config.color}`}>{config.label}</span>
+        <span className={`text-sm ${config.color}`}>{sh(config.label)}</span>
       )}
     </div>
   );

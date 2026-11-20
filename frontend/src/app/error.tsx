@@ -1,5 +1,6 @@
 'use client';
 
+import { useT } from '@/i18n/useT';
 import { useEffect } from 'react';
 import { ErrorDisplay } from '@/components/ui/error-boundary';
 
@@ -10,6 +11,7 @@ export default function GlobalError({
   error: Error & { digest?: string };
   reset: () => void;
 }) {
+  const sh = useT('shared');
   useEffect(() => {
     console.error('Application error:', error);
   }, [error]);
@@ -19,8 +21,8 @@ export default function GlobalError({
       <ErrorDisplay
         error={error}
         reset={reset}
-        title="Application Error"
-        message="We encountered an unexpected error. Our team has been notified."
+        title={sh('errTitle')}
+        message={sh('errBody')}
       />
     </div>
   );

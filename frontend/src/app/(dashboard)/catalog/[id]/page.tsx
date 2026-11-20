@@ -1,5 +1,6 @@
 'use client';
 
+import { useT } from '@/i18n/useT';
 import { useState, FormEvent } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
@@ -17,6 +18,7 @@ import { Input } from '@/components/ui/input';
 import { useCatalogItem, useSubmitCatalogRequest, CatalogItemOption } from '@/hooks/useApi';
 
 export default function CatalogItemPage() {
+  const tc = useT('catalogItem');
   const { id } = useParams();
   const router = useRouter();
   const [submitted, setSubmitted] = useState(false);
@@ -71,9 +73,9 @@ export default function CatalogItemPage() {
     return (
       <div className="flex flex-col items-center justify-center h-64">
         <AlertCircle className="h-12 w-12 text-error mb-4" />
-        <h2 className="text-xl font-semibold text-foreground mb-2">Service not found</h2>
-        <p className="text-muted mb-4">The catalog item you&apos;re looking for doesn&apos;t exist or you don&apos;t have access to it.</p>
-        <Button onClick={() => router.push('/catalog')}>Back to Catalog</Button>
+        <h2 className="text-xl font-semibold text-foreground mb-2">{tc('notFound')}</h2>
+        <p className="text-muted mb-4">{tc('notFoundBody')}</p>
+        <Button onClick={() => router.push('/catalog')}>{tc('backToCatalog')}</Button>
       </div>
     );
   }
@@ -94,22 +96,21 @@ export default function CatalogItemPage() {
           <div className="flex justify-center mb-4">
             <CheckCircle className="h-16 w-16 text-success" />
           </div>
-          <h2 className="text-2xl font-bold text-foreground mb-2">Request Submitted!</h2>
+          <h2 className="text-2xl font-bold text-foreground mb-2">{tc('submittedTitle')}</h2>
           <p className="text-secondary mb-6">
-            Your request for &quot;{item.name}&quot; has been submitted successfully.
-            You will receive an email confirmation shortly.
+            {tc('submittedBody', { name: item.name })}
           </p>
           {requestNumber && (
             <p className="text-sm text-muted mb-6">
-              Request Number: <span className="font-medium">{requestNumber}</span>
+              {tc('requestNumber')} <span className="font-medium">{requestNumber}</span>
             </p>
           )}
           <div className="flex justify-center space-x-4">
             <Link href="/catalog">
-              <Button variant="outline">Back to Catalog</Button>
+              <Button variant="outline">{tc('backToCatalog')}</Button>
             </Link>
             <Link href="/catalog?tab=requests">
-              <Button>View My Requests</Button>
+              <Button>{tc('viewMyRequests')}</Button>
             </Link>
           </div>
         </div>
@@ -130,7 +131,7 @@ export default function CatalogItemPage() {
         <div>
           <div className="flex items-center space-x-2 text-sm text-muted mb-1">
             <Link href="/catalog" className="hover:text-secondary">
-              Service Catalog
+              {tc('serviceCatalog')}
             </Link>
             <ChevronRight className="h-4 w-4" />
             <Link href={`/catalog/category/${item.category.id}`} className="hover:text-secondary">
@@ -146,13 +147,13 @@ export default function CatalogItemPage() {
         <div className="lg:col-span-2 space-y-6">
           {/* Description */}
           <div className="bg-surface rounded-lg shadow p-6">
-            <h2 className="text-lg font-semibold text-foreground mb-4">Description</h2>
+            <h2 className="text-lg font-semibold text-foreground mb-4">{tc('description')}</h2>
             <p className="text-secondary">{item.description}</p>
           </div>
 
           {/* What's Included */}
           <div className="bg-surface rounded-lg shadow p-6">
-            <h2 className="text-lg font-semibold text-foreground mb-4">What&apos;s Included</h2>
+            <h2 className="text-lg font-semibold text-foreground mb-4">{tc('whatsIncluded')}</h2>
             <ul className="space-y-2">
               {item.includes?.map((included: string, index: number) => (
                 <li key={index} className="flex items-start">
@@ -165,7 +166,7 @@ export default function CatalogItemPage() {
 
           {/* Request Form */}
           <form onSubmit={handleSubmit} className="bg-surface rounded-lg shadow p-6 space-y-6">
-            <h2 className="text-lg font-semibold text-foreground">Request Details</h2>
+            <h2 className="text-lg font-semibold text-foreground">{tc('requestDetails')}</h2>
 
             {item.options?.map((option: CatalogItemOption) => (
               <div key={option.id}>
@@ -187,7 +188,7 @@ export default function CatalogItemPage() {
                       }`}
                       required={option.required}
                     >
-                      <option value="">Select an option</option>
+                      <option value="">{tc('selectOption')}</option>
                       {option.choices?.map((choice) => (
                         <option key={choice.value} value={choice.value}>
                           {choice.label}
@@ -243,7 +244,7 @@ export default function CatalogItemPage() {
 
             <div className="pt-4 border-t border-border">
               <Button type="submit" className="w-full" isLoading={submitRequest.isPending}>
-                Submit Request
+                {tc('submit')}
               </Button>
             </div>
           </form>
@@ -253,12 +254,12 @@ export default function CatalogItemPage() {
         <div className="space-y-6">
           {/* Quick Info */}
           <div className="bg-surface rounded-lg shadow p-6">
-            <h2 className="text-lg font-semibold text-foreground mb-4">Quick Info</h2>
+            <h2 className="text-lg font-semibold text-foreground mb-4">{tc('quickInfo')}</h2>
             <dl className="space-y-4">
               <div className="flex items-center">
                 <Clock className="h-5 w-5 text-muted mr-3" />
                 <div>
-                  <dt className="text-sm text-muted">Estimated Time</dt>
+                  <dt className="text-sm text-muted">{tc('estimatedTime')}</dt>
                   <dd className="text-sm font-medium text-foreground">{item.estimatedTime}</dd>
                 </div>
               </div>
@@ -269,18 +270,18 @@ export default function CatalogItemPage() {
                   <CheckCircle className="h-5 w-5 text-success mr-3" />
                 )}
                 <div>
-                  <dt className="text-sm text-muted">Approval</dt>
+                  <dt className="text-sm text-muted">{tc('approval')}</dt>
                   <dd className="text-sm font-medium text-foreground">
-                    {item.approvalRequired ? 'Required' : 'Auto-approved'}
+                    {item.approvalRequired ? tc('required') : tc('autoApproved')}
                   </dd>
                 </div>
               </div>
               <div className="flex items-center">
                 <Star className="h-5 w-5 text-yellow-400 mr-3" />
                 <div>
-                  <dt className="text-sm text-muted">Popularity</dt>
+                  <dt className="text-sm text-muted">{tc('popularity')}</dt>
                   <dd className="text-sm font-medium text-foreground">
-                    {item.popularity} requests this month
+                    {tc('requestsThisMonth', { count: item.popularity })}
                   </dd>
                 </div>
               </div>
@@ -289,7 +290,7 @@ export default function CatalogItemPage() {
 
           {/* Requirements */}
           <div className="bg-surface rounded-lg shadow p-6">
-            <h2 className="text-lg font-semibold text-foreground mb-4">Requirements</h2>
+            <h2 className="text-lg font-semibold text-foreground mb-4">{tc('requirements')}</h2>
             <ul className="space-y-2">
               {item.requirements?.map((req: string, index: number) => (
                 <li key={index} className="flex items-start text-sm">
@@ -302,7 +303,7 @@ export default function CatalogItemPage() {
 
           {/* Related Items */}
           <div className="bg-surface rounded-lg shadow p-6">
-            <h2 className="text-lg font-semibold text-foreground mb-4">Related Services</h2>
+            <h2 className="text-lg font-semibold text-foreground mb-4">{tc('relatedServices')}</h2>
             <ul className="space-y-3">
               {item.relatedItems?.map((related: { id: string; name: string; estimatedTime: string }) => (
                 <li key={related.id}>

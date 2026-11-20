@@ -1,5 +1,6 @@
 'use client';
 
+import { useT } from '@/i18n/useT';
 import { useState } from 'react';
 import Link from 'next/link';
 import {
@@ -64,6 +65,8 @@ const statusColors: Record<string, { bg: string; text: string; label: string }> 
 };
 
 export default function CatalogPage() {
+  const tn = useT('listpages3');
+  const tp = useT('pages');
   const [searchQuery, setSearchQuery] = useState('');
   const [activeTab, setActiveTab] = useState<'browse' | 'requests'>('browse');
 
@@ -117,9 +120,9 @@ export default function CatalogPage() {
     <div className="space-y-6">
       {/* Header */}
       <div>
-        <h1 className="text-2xl font-bold text-foreground">Service Catalog</h1>
+        <h1 className="text-2xl font-bold text-foreground">{tp('serviceCatalog')}</h1>
         <p className="mt-1 text-sm text-muted">
-          Browse and request IT services
+          {tn('catSubtitle')}
         </p>
       </div>
 
@@ -128,7 +131,7 @@ export default function CatalogPage() {
         <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted" />
         <input
           type="text"
-          placeholder="Search for services, software, hardware..."
+          placeholder={tn('catSearch')}
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
           className="w-full pl-12 pr-4 py-3 border border-border-strong rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary shadow-sm"
@@ -173,7 +176,7 @@ export default function CatalogPage() {
                 : 'border-transparent text-muted hover:text-secondary hover:border-border-strong'
             }`}
           >
-            Browse Catalog
+            {tn('browseCatalog')}
           </button>
           <button
             onClick={() => setActiveTab('requests')}
@@ -183,7 +186,7 @@ export default function CatalogPage() {
                 : 'border-transparent text-muted hover:text-secondary hover:border-border-strong'
             }`}
           >
-            My Requests
+            {tn('myRequests')}
             <span className="ml-2 bg-background text-secondary py-0.5 px-2 rounded-full text-xs">
               {myRequests.length}
             </span>
@@ -355,7 +358,7 @@ export default function CatalogPage() {
               <ShoppingCart className="h-12 w-12 text-muted mx-auto mb-4" />
               <p className="text-muted">No service requests yet</p>
               <Button className="mt-4" onClick={() => setActiveTab('browse')}>
-                Browse Catalog
+                {tn('browseCatalog')}
               </Button>
             </div>
           )}

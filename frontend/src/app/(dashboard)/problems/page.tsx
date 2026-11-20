@@ -1,5 +1,6 @@
 'use client';
 
+import { useT } from '@/i18n/useT';
 import { useState } from 'react';
 import Link from 'next/link';
 import {
@@ -50,6 +51,9 @@ const typeColors: Record<string, { bg: string; text: string }> = {
 };
 
 export default function ProblemsPage() {
+  const tl = useT('listpages');
+  const ti = useT('issues');
+  const tp = useT('pages');
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [priorityFilter, setPriorityFilter] = useState<string>('all');
@@ -94,15 +98,15 @@ export default function ProblemsPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-foreground">Problems</h1>
+          <h1 className="text-2xl font-bold text-foreground">{tp('problems')}</h1>
           <p className="mt-1 text-sm text-muted">
-            Root cause analysis and known error management
+            {tl('problemsSubtitle')}
           </p>
         </div>
         <Link href="/problems/new">
           <Button>
             <Plus className="h-4 w-4 mr-2" />
-            New Problem
+            {tp('newProblem')}
           </Button>
         </Link>
       </div>
@@ -131,7 +135,7 @@ export default function ProblemsPage() {
           <div className="flex items-center">
             <Search className="h-8 w-8 text-primary mr-3" />
             <div>
-              <p className="text-sm text-muted">Investigating</p>
+              <p className="text-sm text-muted">{tl('investigating')}</p>
               <p className="text-2xl font-bold text-foreground">{problems.filter((p: Problem) => p.status === 'investigating').length}</p>
             </div>
           </div>
@@ -140,7 +144,7 @@ export default function ProblemsPage() {
           <div className="flex items-center">
             <CheckCircle className="h-8 w-8 text-success mr-3" />
             <div>
-              <p className="text-sm text-muted">Resolved</p>
+              <p className="text-sm text-muted">{ti('statusResolved')}</p>
               <p className="text-2xl font-bold text-foreground">{problems.filter((p: Problem) => p.status === 'resolved').length}</p>
             </div>
           </div>
@@ -154,7 +158,7 @@ export default function ProblemsPage() {
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted" />
             <input
               type="text"
-              placeholder="Search by number or title..."
+              placeholder={ti('searchPlaceholder')}
               value={searchQuery}
               onChange={(e) => {
                 setSearchQuery(e.target.value);
@@ -169,7 +173,7 @@ export default function ProblemsPage() {
             className="flex items-center"
           >
             <Filter className="h-4 w-4 mr-2" />
-            Filters
+            {tp('filters')}
             <ChevronDown className={`h-4 w-4 ml-2 transition-transform ${showFilters ? 'rotate-180' : ''}`} />
           </Button>
         </div>
@@ -177,7 +181,7 @@ export default function ProblemsPage() {
         {showFilters && (
           <div className="mt-4 pt-4 border-t border-border grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div>
-              <label className="block text-sm font-medium text-secondary mb-1">Status</label>
+              <label className="block text-sm font-medium text-secondary mb-1">{ti('status')}</label>
               <select
                 value={statusFilter}
                 onChange={(e) => {
@@ -186,18 +190,18 @@ export default function ProblemsPage() {
                 }}
                 className="w-full px-3 py-2 border border-border-strong rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
               >
-                <option value="all">All Status</option>
-                <option value="new">New</option>
-                <option value="assigned">Assigned</option>
-                <option value="investigating">Investigating</option>
-                <option value="root_cause_identified">Root Cause Identified</option>
-                <option value="known_error">Known Error</option>
-                <option value="resolved">Resolved</option>
-                <option value="closed">Closed</option>
+                <option value="all">{ti('allStatus')}</option>
+                <option value="new">{ti('statusNew')}</option>
+                <option value="assigned">{ti('statusAssigned')}</option>
+                <option value="investigating">{tl('investigating')}</option>
+                <option value="root_cause_identified">{tl('rootCauseIdentified')}</option>
+                <option value="known_error">{tl('knownError')}</option>
+                <option value="resolved">{ti('statusResolved')}</option>
+                <option value="closed">{ti('statusClosed')}</option>
               </select>
             </div>
             <div>
-              <label className="block text-sm font-medium text-secondary mb-1">Priority</label>
+              <label className="block text-sm font-medium text-secondary mb-1">{ti('priority')}</label>
               <select
                 value={priorityFilter}
                 onChange={(e) => {
@@ -206,11 +210,11 @@ export default function ProblemsPage() {
                 }}
                 className="w-full px-3 py-2 border border-border-strong rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
               >
-                <option value="all">All Priorities</option>
-                <option value="critical">Critical</option>
-                <option value="high">High</option>
-                <option value="medium">Medium</option>
-                <option value="low">Low</option>
+                <option value="all">{ti('allPriorities')}</option>
+                <option value="critical">{ti('priorityCritical')}</option>
+                <option value="high">{ti('priorityHigh')}</option>
+                <option value="medium">{ti('priorityMedium')}</option>
+                <option value="low">{ti('priorityLow')}</option>
               </select>
             </div>
             <div>
@@ -223,9 +227,9 @@ export default function ProblemsPage() {
                 }}
                 className="w-full px-3 py-2 border border-border-strong rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
               >
-                <option value="all">All Types</option>
-                <option value="reactive">Reactive</option>
-                <option value="proactive">Proactive</option>
+                <option value="all">{tl('allTypes')}</option>
+                <option value="reactive">{tl('reactive')}</option>
+                <option value="proactive">{tl('proactive')}</option>
               </select>
             </div>
           </div>
@@ -245,25 +249,25 @@ export default function ProblemsPage() {
               <thead className="bg-background">
                 <tr>
                   <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">
-                    Problem
+                    {tl('colProblem')}
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">
-                    Priority / Type
+                    {tl('colPriorityType')}
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">
-                    Status
+                    {ti('status')}
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">
-                    Assigned To
+                    {ti('assignedTo')}
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">
-                    Linked Issues
+                    {tl('colLinkedIssues')}
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">
-                    Updated
+                    {ti('colUpdated')}
                   </th>
                   <th className="px-6 py-3 text-right text-xs font-medium text-muted uppercase tracking-wider">
-                    Actions
+                    {ti('colActions')}
                   </th>
                 </tr>
               </thead>
@@ -385,7 +389,7 @@ export default function ProblemsPage() {
                   disabled={page <= 1}
                   onClick={() => setPage(p => Math.max(1, p - 1))}
                 >
-                  Previous
+                  {ti('previous')}
                 </Button>
                 <Button
                   variant="outline"
@@ -393,7 +397,7 @@ export default function ProblemsPage() {
                   disabled={page >= pagination.totalPages}
                   onClick={() => setPage(p => p + 1)}
                 >
-                  Next
+                  {ti('next')}
                 </Button>
               </div>
             </div>

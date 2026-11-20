@@ -1,5 +1,6 @@
 'use client';
 
+import { useT } from '@/i18n/useT';
 import { useState, useEffect, useCallback } from 'react';
 import {
   Plus,
@@ -40,31 +41,32 @@ interface RoleWithPermissions extends RoleData {
 }
 
 const resourceLabels: Record<string, string> = {
-  users: 'Users',
-  groups: 'Groups',
-  applications: 'Applications',
-  issues: 'Issues',
-  changes: 'Changes',
-  catalog: 'Service Catalog',
-  requests: 'Service Requests',
-  oncall: 'On-Call',
-  reports: 'Reports',
-  audit: 'Audit Logs',
-  settings: 'Settings',
-  approvals: 'Approvals',
+  users: 'resUsers',
+  groups: 'resGroups',
+  applications: 'resApplications',
+  issues: 'resIssues',
+  changes: 'resChanges',
+  catalog: 'resCatalog',
+  requests: 'resRequests',
+  oncall: 'resOncall',
+  reports: 'resReports',
+  audit: 'resAudit',
+  settings: 'resSettings',
+  approvals: 'resApprovals',
 };
 
 const actionLabels: Record<string, string> = {
-  create: 'Create',
-  read: 'View',
-  update: 'Update',
-  delete: 'Delete',
-  assign: 'Assign',
-  resolve: 'Resolve',
-  approve: 'Approve',
+  create: 'actCreate',
+  read: 'actRead',
+  update: 'actUpdate',
+  delete: 'actDelete',
+  assign: 'actAssign',
+  resolve: 'actResolve',
+  approve: 'actApprove',
 };
 
 export default function RolesPage() {
+  const rl = useT('adminRoles');
   const [roles, setRoles] = useState<RoleData[]>([]);
   const [_permissions, setPermissions] = useState<PermissionData[]>([]);
   const [groupedPermissions, setGroupedPermissions] = useState<Record<string, PermissionData[]>>({});
@@ -143,7 +145,7 @@ export default function RolesPage() {
       setFormData({ name: '', displayName: '', description: '', permissionIds: [] });
       loadRoles();
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : 'Failed to create role';
+      const message = err instanceof Error ? err.message : rl('createFailed');
       setFormError(message);
     } finally {
       setIsSubmitting(false);
@@ -166,7 +168,7 @@ export default function RolesPage() {
       loadRoles();
       loadRoleDetails(selectedRole.id);
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : 'Failed to update role';
+      const message = err instanceof Error ? err.message : rl('updateFailed');
       setFormError(message);
     } finally {
       setIsSubmitting(false);
@@ -226,14 +228,14 @@ export default function RolesPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-foreground">Roles & Permissions</h1>
+          <h1 className="text-2xl font-bold text-foreground">{rl('title')}</h1>
           <p className="mt-1 text-sm text-muted">
-            Manage user roles and their associated permissions
+            {rl('subtitle')}
           </p>
         </div>
         <Button onClick={() => setShowCreateModal(true)}>
           <Plus className="h-4 w-4 mr-2" />
-          Add Role
+          {rl('addRole')}
         </Button>
       </div>
 
@@ -245,7 +247,7 @@ export default function RolesPage() {
               <Shield className="h-5 w-5 text-primary" />
             </div>
             <div className="ml-4">
-              <p className="text-sm text-muted">Total Roles</p>
+              <p className="text-sm text-muted">{rl('totalRoles')}</p>
               <p className="text-2xl font-semibold text-foreground">{roles.length}</p>
             </div>
           </div>
@@ -256,7 +258,7 @@ export default function RolesPage() {
               <Lock className="h-5 w-5 text-info" />
             </div>
             <div className="ml-4">
-              <p className="text-sm text-muted">System Roles</p>
+              <p className="text-sm text-muted">{rl('systemRoles')}</p>
               <p className="text-2xl font-semibold text-foreground">{systemRoleCount}</p>
             </div>
           </div>
@@ -267,7 +269,7 @@ export default function RolesPage() {
               <Shield className="h-5 w-5 text-success" />
             </div>
             <div className="ml-4">
-              <p className="text-sm text-muted">Custom Roles</p>
+              <p className="text-sm text-muted">{rl('customRoles')}</p>
               <p className="text-2xl font-semibold text-foreground">{customRoleCount}</p>
             </div>
           </div>
@@ -279,7 +281,7 @@ export default function RolesPage() {
         <div className="lg:col-span-1">
           <div className="bg-surface rounded-lg shadow">
             <div className="px-4 py-3 border-b border-border">
-              <h2 className="text-lg font-medium text-foreground">Roles</h2>
+              <h2 className="text-lg font-medium text-foreground">{rl('roles')}</h2>
             </div>
             <div className="divide-y divide-border">
               {roles.map((role) => (
@@ -313,7 +315,7 @@ export default function RolesPage() {
                       </span>
                       {role.is_system && (
                         <span className="px-2 py-0.5 text-xs font-medium bg-info-subtle text-info rounded-full">
-                          System
+                          {rl('system')}
                         </span>
                       )}
                     </div>
@@ -336,7 +338,7 @@ export default function RolesPage() {
                 <div className="px-6 py-4 border-b border-border flex items-center justify-between">
                   <div>
                     <h2 className="text-lg font-semibold text-foreground">{selectedRole.display_name}</h2>
-                    <p className="text-sm text-muted">{selectedRole.description || 'No description'}</p>
+                    <p className="text-sm text-muted">{selectedRole.description || rl('noDescription')}</p>
                   </div>
                   <div className="relative">
                     <button
@@ -353,7 +355,7 @@ export default function RolesPage() {
                             className="w-full text-left px-4 py-2 text-sm text-secondary hover:bg-surface-hover flex items-center"
                           >
                             <Edit className="h-4 w-4 mr-2" />
-                            Edit Role
+                            {rl('editRole')}
                           </button>
                         </div>
                       </div>
@@ -387,7 +389,7 @@ export default function RolesPage() {
                                 <ChevronRight className="h-4 w-4 text-muted mr-2" />
                               )}
                               <span className="font-medium text-foreground">
-                                {resourceLabels[resource] || resource}
+                                {resourceLabels[resource] ? rl(resourceLabels[resource]) : resource}
                               </span>
                             </div>
                             <div className="flex items-center">
@@ -397,7 +399,7 @@ export default function RolesPage() {
                                 </span>
                               ) : (
                                 <span className="px-2 py-0.5 text-xs font-medium bg-surface-hover text-secondary rounded-full">
-                                  None
+                                  {rl('none')}
                                 </span>
                               )}
                             </div>
@@ -418,7 +420,7 @@ export default function RolesPage() {
                                       }`}
                                     >
                                       {hasPermission && <Check className="h-3 w-3 mr-1" />}
-                                      {actionLabels[perm.action] || perm.action}
+                                      {actionLabels[perm.action] ? rl(actionLabels[perm.action]) : perm.action}
                                     </span>
                                   );
                                 })}
@@ -434,7 +436,7 @@ export default function RolesPage() {
             ) : (
               <div className="flex flex-col items-center justify-center h-64 text-muted">
                 <Shield className="h-12 w-12 mb-4" />
-                <p>Select a role to view its permissions</p>
+                <p>{rl('selectRole')}</p>
               </div>
             )}
           </div>
@@ -446,7 +448,7 @@ export default function RolesPage() {
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-surface rounded-lg shadow-xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-hidden flex flex-col">
             <div className="flex items-center justify-between px-6 py-4 border-b border-border">
-              <h2 className="text-lg font-semibold text-foreground">Create Role</h2>
+              <h2 className="text-lg font-semibold text-foreground">{rl('createRole')}</h2>
               <button onClick={() => setShowCreateModal(false)} className="text-muted hover:text-secondary">
                 <X className="h-5 w-5" />
               </button>
@@ -460,34 +462,34 @@ export default function RolesPage() {
                 )}
 
                 <Input
-                  label="Name (lowercase, underscores only)"
+                  label={rl('nameLabel')}
                   value={formData.name}
                   onChange={(e) => setFormData((p) => ({ ...p, name: e.target.value.toLowerCase().replace(/[^a-z_]/g, '') }))}
-                  placeholder="custom_role"
+                  placeholder={rl('namePh')}
                   required
                 />
 
                 <Input
-                  label="Display Name"
+                  label={rl('displayName')}
                   value={formData.displayName}
                   onChange={(e) => setFormData((p) => ({ ...p, displayName: e.target.value }))}
-                  placeholder="Custom Role"
+                  placeholder={rl('displayPh')}
                   required
                 />
 
                 <div>
-                  <label className="block text-sm font-medium text-secondary mb-1">Description</label>
+                  <label className="block text-sm font-medium text-secondary mb-1">{rl('description')}</label>
                   <textarea
                     value={formData.description}
                     onChange={(e) => setFormData((p) => ({ ...p, description: e.target.value }))}
-                    placeholder="Optional description..."
+                    placeholder={rl('descPh')}
                     rows={2}
                     className="w-full px-3 py-2 border border-border-strong rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-secondary mb-2">Permissions</label>
+                  <label className="block text-sm font-medium text-secondary mb-2">{rl('permissions')}</label>
                   <div className="space-y-2 max-h-64 overflow-auto border border-border rounded-lg p-3">
                     {Object.keys(groupedPermissions).map((resource) => {
                       const resourcePerms = groupedPermissions[resource];
@@ -509,7 +511,7 @@ export default function RolesPage() {
                                 className="h-4 w-4 text-primary rounded mr-2"
                               />
                               <span className="font-medium text-sm text-foreground">
-                                {resourceLabels[resource] || resource}
+                                {resourceLabels[resource] ? rl(resourceLabels[resource]) : resource}
                               </span>
                             </div>
                             <span className="text-xs text-muted">{selectedCount}/{resourcePerms.length}</span>
@@ -531,7 +533,7 @@ export default function RolesPage() {
                                   className="sr-only"
                                 />
                                 {formData.permissionIds.includes(perm.id) && <Check className="h-3 w-3 mr-1" />}
-                                {actionLabels[perm.action] || perm.action}
+                                {actionLabels[perm.action] ? rl(actionLabels[perm.action]) : perm.action}
                               </label>
                             ))}
                           </div>
@@ -544,10 +546,10 @@ export default function RolesPage() {
 
               <div className="px-6 py-4 border-t border-border flex justify-end space-x-3">
                 <Button type="button" variant="outline" onClick={() => setShowCreateModal(false)}>
-                  Cancel
+                  {rl('cancel')}
                 </Button>
                 <Button type="submit" isLoading={isSubmitting}>
-                  Create Role
+                  {rl('createBtn')}
                 </Button>
               </div>
             </form>
@@ -576,23 +578,23 @@ export default function RolesPage() {
                 {selectedRole.is_system && (
                   <div className="p-3 text-sm text-amber-800 bg-warning-subtle rounded-md flex items-center">
                     <Lock className="h-4 w-4 mr-2" />
-                    System role permissions cannot be modified
+                    {rl('systemCannotModify')}
                   </div>
                 )}
 
                 <Input
-                  label="Display Name"
+                  label={rl('displayName')}
                   value={formData.displayName}
                   onChange={(e) => setFormData((p) => ({ ...p, displayName: e.target.value }))}
                   required
                 />
 
                 <div>
-                  <label className="block text-sm font-medium text-secondary mb-1">Description</label>
+                  <label className="block text-sm font-medium text-secondary mb-1">{rl('description')}</label>
                   <textarea
                     value={formData.description}
                     onChange={(e) => setFormData((p) => ({ ...p, description: e.target.value }))}
-                    placeholder="Optional description..."
+                    placeholder={rl('descPh')}
                     rows={2}
                     className="w-full px-3 py-2 border border-border-strong rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary"
                   />
@@ -600,7 +602,7 @@ export default function RolesPage() {
 
                 {!selectedRole.is_system && (
                   <div>
-                    <label className="block text-sm font-medium text-secondary mb-2">Permissions</label>
+                    <label className="block text-sm font-medium text-secondary mb-2">{rl('permissions')}</label>
                     <div className="space-y-2 max-h-64 overflow-auto border border-border rounded-lg p-3">
                       {Object.keys(groupedPermissions).map((resource) => {
                         const resourcePerms = groupedPermissions[resource];
@@ -622,7 +624,7 @@ export default function RolesPage() {
                                   className="h-4 w-4 text-primary rounded mr-2"
                                 />
                                 <span className="font-medium text-sm text-foreground">
-                                  {resourceLabels[resource] || resource}
+                                  {resourceLabels[resource] ? rl(resourceLabels[resource]) : resource}
                                 </span>
                               </div>
                               <span className="text-xs text-muted">{selectedCount}/{resourcePerms.length}</span>
@@ -644,7 +646,7 @@ export default function RolesPage() {
                                     className="sr-only"
                                   />
                                   {formData.permissionIds.includes(perm.id) && <Check className="h-3 w-3 mr-1" />}
-                                  {actionLabels[perm.action] || perm.action}
+                                  {actionLabels[perm.action] ? rl(actionLabels[perm.action]) : perm.action}
                                 </label>
                               ))}
                             </div>
@@ -658,10 +660,10 @@ export default function RolesPage() {
 
               <div className="px-6 py-4 border-t border-border flex justify-end space-x-3">
                 <Button type="button" variant="outline" onClick={() => setShowEditModal(false)}>
-                  Cancel
+                  {rl('cancel')}
                 </Button>
                 <Button type="submit" isLoading={isSubmitting}>
-                  Save Changes
+                  {rl('saveChanges')}
                 </Button>
               </div>
             </form>

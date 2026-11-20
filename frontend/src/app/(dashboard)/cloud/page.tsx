@@ -1,5 +1,6 @@
 'use client';
 
+import { useT } from '@/i18n/useT';
 import { useState } from 'react';
 import Link from 'next/link';
 import {
@@ -56,6 +57,8 @@ const resourceTypeIcons: Record<string, typeof Server> = {
 };
 
 export default function CloudPage() {
+  const tn = useT('listpages3');
+  const tp = useT('pages');
   const [activeTab, setActiveTab] = useState<'accounts' | 'resources' | 'costs'>('accounts');
 
   const { data: accountsData, isLoading: accountsLoading, error: accountsError } = useCloudAccounts();
@@ -115,15 +118,15 @@ export default function CloudPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-foreground">Cloud Management</h1>
+          <h1 className="text-2xl font-bold text-foreground">{tp('cloudManagement')}</h1>
           <p className="mt-1 text-sm text-muted">
-            Monitor cloud resources and costs
+            {tn('cloudSubtitle')}
           </p>
         </div>
         <Link href="/cloud/accounts/new">
           <Button>
             <Plus className="h-4 w-4 mr-2" />
-            Add Account
+            {tp('addAccount')}
           </Button>
         </Link>
       </div>
@@ -136,7 +139,7 @@ export default function CloudPage() {
               <Cloud className="h-5 w-5 text-primary" />
             </div>
             <div className="ml-4">
-              <p className="text-sm text-muted">Cloud Accounts</p>
+              <p className="text-sm text-muted">{tn('cloudAccounts')}</p>
               <p className="text-2xl font-semibold text-foreground">
                 {accountsLoading ? '-' : accounts.length}
               </p>
@@ -195,7 +198,7 @@ export default function CloudPage() {
                 : 'border-transparent text-muted hover:text-secondary hover:border-border-strong'
             }`}
           >
-            Cloud Accounts
+            {tn('cloudAccounts')}
           </button>
           <button
             onClick={() => setActiveTab('resources')}
@@ -215,7 +218,7 @@ export default function CloudPage() {
                 : 'border-transparent text-muted hover:text-secondary hover:border-border-strong'
             }`}
           >
-            Cost Analysis
+            {tn('costAnalysis')}
           </button>
         </nav>
       </div>
@@ -317,7 +320,7 @@ export default function CloudPage() {
             <Link href="/cloud/accounts/new">
               <Button>
                 <Plus className="h-4 w-4 mr-2" />
-                Add Account
+                {tp('addAccount')}
               </Button>
             </Link>
           </div>
@@ -407,7 +410,7 @@ export default function CloudPage() {
             <div className="bg-surface rounded-lg shadow p-6">
               <h3 className="text-lg font-semibold text-foreground mb-4">Cost Trend</h3>
               <p className="text-muted text-center py-8">
-                Cost trend chart will be displayed here showing monthly spending over time.
+                {tn('costTrendPlaceholder')}
               </p>
             </div>
           </div>

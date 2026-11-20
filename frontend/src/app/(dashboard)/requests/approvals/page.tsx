@@ -1,5 +1,6 @@
 'use client';
 
+import { useT } from '@/i18n/useT';
 import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -28,10 +29,10 @@ import {
 } from '@/hooks/useApi';
 
 const priorityColors: Record<string, { bg: string; text: string; label: string }> = {
-  critical: { bg: 'bg-error-subtle', text: 'text-error', label: 'Critical' },
-  high: { bg: 'bg-warning-subtle', text: 'text-warning', label: 'High' },
-  medium: { bg: 'bg-warning-subtle', text: 'text-warning', label: 'Medium' },
-  low: { bg: 'bg-primary-subtle', text: 'text-primary', label: 'Low' },
+  critical: { bg: 'bg-error-subtle', text: 'text-error', label: 'priorityCritical' },
+  high: { bg: 'bg-warning-subtle', text: 'text-warning', label: 'priorityHigh' },
+  medium: { bg: 'bg-warning-subtle', text: 'text-warning', label: 'priorityMedium' },
+  low: { bg: 'bg-primary-subtle', text: 'text-primary', label: 'priorityLow' },
 };
 
 interface ApprovalModalProps {
@@ -43,6 +44,7 @@ interface ApprovalModalProps {
 }
 
 function ApprovalModal({ request, action, onClose, onSubmit, isLoading }: ApprovalModalProps) {
+  const ra = useT('requestApprovals');
   const [comments, setComments] = useState('');
 
   if (!request || !action) return null;
@@ -57,12 +59,12 @@ function ApprovalModal({ request, action, onClose, onSubmit, isLoading }: Approv
       <div className="bg-surface rounded-lg shadow-xl max-w-md w-full mx-4">
         <div className="p-6">
           <h3 className="text-lg font-semibold text-foreground mb-2">
-            {action === 'approve' ? 'Approve Request' : 'Reject Request'}
+            {action === 'approve' ? ra('approveTitle') : ra('rejectTitle')}
           </h3>
           <p className="text-sm text-secondary mb-4">
             {action === 'approve'
-              ? `Are you sure you want to approve ${request.request_number}?`
-              : `Are you sure you want to reject ${request.request_number}?`}
+              ? ra('confirmApprove', { number: request.request_number })
+              : ra('confirmReject', { number: request.request_number })}
           </p>
 
           <div className="bg-surface-hover rounded-lg p-4 mb-4">
@@ -78,7 +80,7 @@ function ApprovalModal({ request, action, onClose, onSubmit, isLoading }: Approv
               <textarea
                 value={comments}
                 onChange={(e) => setComments(e.target.value)}
-                placeholder={action === 'approve' ? 'Optional approval comments...' : 'Please provide a reason for rejection...'}
+                placeholder={action === 'approve' ? ra('approveCommentPh') : ra('rejectCommentPh')}
                 required={action === 'reject'}
                 rows={3}
                 className="w-full px-3 py-2 border border-border-strong rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary"
@@ -87,7 +89,7 @@ function ApprovalModal({ request, action, onClose, onSubmit, isLoading }: Approv
 
             <div className="flex justify-end space-x-3">
               <Button type="button" variant="outline" onClick={onClose} disabled={isLoading}>
-                Cancel
+                {ra('cancel')}
               </Button>
               <Button
                 type="submit"
@@ -97,17 +99,17 @@ function ApprovalModal({ request, action, onClose, onSubmit, isLoading }: Approv
                 {isLoading ? (
                   <>
                     <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    Processing...
+                    {ra('processing')}
                   </>
                 ) : action === 'approve' ? (
                   <>
                     <CheckCircle className="h-4 w-4 mr-2" />
-                    Approve
+                    {ra('approve')}
                   </>
                 ) : (
                   <>
                     <XCircle className="h-4 w-4 mr-2" />
-                    Reject
+                    {ra('reject')}
                   </>
                 )}
               </Button>
@@ -127,6 +129,7 @@ interface DelegationModalProps {
 }
 
 function DelegationModal({ request, onClose, onSubmit, isLoading }: DelegationModalProps) {
+  const ra = useT('requestApprovals');
   const [selectedUserId, setSelectedUserId] = useState('');
   const [comments, setComments] = useState('');
   const [userSearch, setUserSearch] = useState('');
@@ -148,7 +151,7 @@ function DelegationModal({ request, onClose, onSubmit, isLoading }: DelegationMo
       <div className="bg-surface rounded-lg shadow-xl max-w-md w-full mx-4">
         <div className="p-6">
           <h3 className="text-lg font-semibold text-foreground mb-2">
-            Delegate Approval
+            {ra('delegateTitle')}
           </h3>
           <p className="text-sm text-secondary mb-4">
             Delegate the approval of {request.request_number} to another user
@@ -162,11 +165,11 @@ function DelegationModal({ request, onClose, onSubmit, isLoading }: DelegationMo
           <form onSubmit={handleSubmit}>
             <div className="mb-4">
               <label className="block text-sm font-medium text-secondary mb-1">
-                Delegate to <span className="text-error">*</span>
+                {ra('delegateTo')} <span className="text-error">*</span>
               </label>
               <input
                 type="text"
-                placeholder="Search for a user..."
+                placeholder={ra('searchUserPh')}
                 value={userSearch}
                 onChange={(e) => setUserSearch(e.target.value)}
                 className="w-full px-3 py-2 border border-border-strong rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary mb-2"
@@ -200,12 +203,12 @@ function DelegationModal({ request, onClose, onSubmit, isLoading }: DelegationMo
 
             <div className="mb-4">
               <label className="block text-sm font-medium text-secondary mb-1">
-                Comments
+                {ra('comments')}
               </label>
               <textarea
                 value={comments}
                 onChange={(e) => setComments(e.target.value)}
-                placeholder="Optional comments for the delegate..."
+                placeholder={ra('delegateCommentPh')}
                 rows={3}
                 className="w-full px-3 py-2 border border-border-strong rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary"
               />
@@ -213,7 +216,7 @@ function DelegationModal({ request, onClose, onSubmit, isLoading }: DelegationMo
 
             <div className="flex justify-end space-x-3">
               <Button type="button" variant="outline" onClick={onClose} disabled={isLoading}>
-                Cancel
+                {ra('cancel')}
               </Button>
               <Button
                 type="submit"
@@ -222,12 +225,12 @@ function DelegationModal({ request, onClose, onSubmit, isLoading }: DelegationMo
                 {isLoading ? (
                   <>
                     <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    Delegating...
+                    {ra('delegating')}
                   </>
                 ) : (
                   <>
                     <Forward className="h-4 w-4 mr-2" />
-                    Delegate
+                    {ra('delegate')}
                   </>
                 )}
               </Button>
@@ -240,6 +243,8 @@ function DelegationModal({ request, onClose, onSubmit, isLoading }: DelegationMo
 }
 
 export default function PendingApprovalsPage() {
+  const ra = useT('requestApprovals');
+  const ti = useT('issues');
   const router = useRouter();
   const [searchQuery, setSearchQuery] = useState('');
   const [page, setPage] = useState(1);
@@ -321,7 +326,7 @@ export default function PendingApprovalsPage() {
   const handleBulkApprove = async () => {
     if (selectedIds.size === 0) return;
 
-    const confirmMessage = `Are you sure you want to approve ${selectedIds.size} request(s)?`;
+    const confirmMessage = ra('bulkConfirm', { count: selectedIds.size });
     if (!window.confirm(confirmMessage)) return;
 
     for (const id of selectedIds) {
@@ -364,7 +369,7 @@ export default function PendingApprovalsPage() {
     const now = new Date();
     const diffHours = Math.floor((now.getTime() - created.getTime()) / (1000 * 60 * 60));
 
-    if (diffHours < 1) return 'Less than an hour';
+    if (diffHours < 1) return ra('lessThanHour');
     if (diffHours < 24) return `${diffHours}h`;
     const days = Math.floor(diffHours / 24);
     return `${days}d ${diffHours % 24}h`;
@@ -374,8 +379,8 @@ export default function PendingApprovalsPage() {
     return (
       <div className="bg-error-subtle border border-red-200 rounded-lg p-6 text-center">
         <AlertCircle className="h-12 w-12 text-error mx-auto mb-4" />
-        <h3 className="text-lg font-medium text-error mb-2">Error loading pending approvals</h3>
-        <p className="text-error">Please try refreshing the page</p>
+        <h3 className="text-lg font-medium text-error mb-2">{ra('errorLoading')}</h3>
+        <p className="text-error">{ra('tryRefresh')}</p>
       </div>
     );
   }
@@ -388,20 +393,20 @@ export default function PendingApprovalsPage() {
           <Link href="/requests">
             <Button variant="ghost" size="sm">
               <ChevronLeft className="h-4 w-4 mr-1" />
-              Back to Requests
+              {ra('back')}
             </Button>
           </Link>
           <div>
-            <h1 className="text-2xl font-bold text-foreground">Pending Approvals</h1>
+            <h1 className="text-2xl font-bold text-foreground">{ra('title')}</h1>
             <p className="mt-1 text-sm text-muted">
-              Review and approve service requests awaiting your decision
+              {ra('subtitle')}
             </p>
           </div>
         </div>
         {selectedIds.size > 0 && (
           <Button onClick={handleBulkApprove}>
             <CheckCircle className="h-4 w-4 mr-2" />
-            Approve Selected ({selectedIds.size})
+            {ra('approveSelected', { count: selectedIds.size })}
           </Button>
         )}
       </div>
@@ -412,7 +417,7 @@ export default function PendingApprovalsPage() {
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted" />
           <input
             type="text"
-            placeholder="Search pending approvals..."
+            placeholder={ra('searchPh')}
             value={searchQuery}
             onChange={(e) => {
               setSearchQuery(e.target.value);
@@ -431,7 +436,7 @@ export default function PendingApprovalsPage() {
               <Clock className="h-5 w-5 text-warning" />
             </div>
             <div className="ml-3">
-              <p className="text-sm text-muted">Pending</p>
+              <p className="text-sm text-muted">{ra('pending')}</p>
               <p className="text-xl font-semibold text-foreground">{pagination.total}</p>
             </div>
           </div>
@@ -442,7 +447,7 @@ export default function PendingApprovalsPage() {
               <AlertCircle className="h-5 w-5 text-error" />
             </div>
             <div className="ml-3">
-              <p className="text-sm text-muted">Critical/High Priority</p>
+              <p className="text-sm text-muted">{ra('criticalHigh')}</p>
               <p className="text-xl font-semibold text-foreground">
                 {requests.filter((r: ServiceRequest) => r.priority === 'critical' || r.priority === 'high').length}
               </p>
@@ -455,7 +460,7 @@ export default function PendingApprovalsPage() {
               <CheckCircle className="h-5 w-5 text-primary" />
             </div>
             <div className="ml-3">
-              <p className="text-sm text-muted">Selected</p>
+              <p className="text-sm text-muted">{ra('selected')}</p>
               <p className="text-xl font-semibold text-foreground">{selectedIds.size}</p>
             </div>
           </div>
@@ -467,7 +472,7 @@ export default function PendingApprovalsPage() {
         {isLoading ? (
           <div className="flex items-center justify-center h-64">
             <Loader2 className="h-8 w-8 animate-spin text-primary" />
-            <span className="ml-2 text-muted">Loading pending approvals...</span>
+            <span className="ml-2 text-muted">{ra('loading')}</span>
           </div>
         ) : (
           <>
@@ -483,19 +488,19 @@ export default function PendingApprovalsPage() {
                     />
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">
-                    Request
+                    {ra('colRequest')}
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">
-                    Priority
+                    {ti('priority')}
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">
-                    Requester
+                    {ra('colRequester')}
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">
-                    Waiting
+                    {ra('colWaiting')}
                   </th>
                   <th className="px-6 py-3 text-right text-xs font-medium text-muted uppercase tracking-wider">
-                    Actions
+                    {ti('colActions')}
                   </th>
                 </tr>
               </thead>
@@ -539,7 +544,7 @@ export default function PendingApprovalsPage() {
                         <span
                           className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${priorityStyle.bg} ${priorityStyle.text}`}
                         >
-                          {priorityStyle.label}
+                          {ti(priorityStyle.label)}
                         </span>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
@@ -548,7 +553,7 @@ export default function PendingApprovalsPage() {
                             {request.requester_name?.charAt(0) || <User className="h-4 w-4" />}
                           </div>
                           <div className="ml-2">
-                            <p className="text-sm text-foreground">{request.requester_name || 'Unknown'}</p>
+                            <p className="text-sm text-foreground">{request.requester_name || ra('unknown')}</p>
                             {request.requested_for_name && request.requested_for_name !== request.requester_name && (
                               <p className="text-xs text-muted">For: {request.requested_for_name}</p>
                             )}
@@ -567,7 +572,7 @@ export default function PendingApprovalsPage() {
                             size="sm"
                             variant="outline"
                             onClick={() => router.push(`/requests/${request.id}`)}
-                            title="View details"
+                            title={ra('viewDetails')}
                           >
                             <Eye className="h-4 w-4" />
                           </Button>
@@ -575,7 +580,7 @@ export default function PendingApprovalsPage() {
                             size="sm"
                             variant="outline"
                             onClick={() => setDelegationRequest(request)}
-                            title="Delegate approval"
+                            title={ra('delegateApproval')}
                           >
                             <Forward className="h-4 w-4" />
                           </Button>
@@ -583,7 +588,7 @@ export default function PendingApprovalsPage() {
                             size="sm"
                             variant="primary"
                             onClick={() => handleOpenModal(request, 'approve')}
-                            title="Approve"
+                            title={ra('approve')}
                           >
                             <CheckCircle className="h-4 w-4" />
                           </Button>
@@ -591,7 +596,7 @@ export default function PendingApprovalsPage() {
                             size="sm"
                             variant="danger"
                             onClick={() => handleOpenModal(request, 'reject')}
-                            title="Reject"
+                            title={ra('reject')}
                           >
                             <XCircle className="h-4 w-4" />
                           </Button>
@@ -606,8 +611,8 @@ export default function PendingApprovalsPage() {
             {requests.length === 0 && (
               <div className="text-center py-12">
                 <CheckCircle className="h-12 w-12 text-success/60 mx-auto mb-4" />
-                <h3 className="text-lg font-medium text-foreground mb-2">All caught up!</h3>
-                <p className="text-muted">No pending approvals at this time</p>
+                <h3 className="text-lg font-medium text-foreground mb-2">{ra('caughtUp')}</h3>
+                <p className="text-muted">{ra('noPendingBody')}</p>
               </div>
             )}
 
@@ -624,7 +629,7 @@ export default function PendingApprovalsPage() {
                     disabled={page <= 1}
                     onClick={() => setPage(p => Math.max(1, p - 1))}
                   >
-                    Previous
+                    {ti('previous')}
                   </Button>
                   <Button
                     variant="outline"
@@ -632,7 +637,7 @@ export default function PendingApprovalsPage() {
                     disabled={page >= pagination.totalPages}
                     onClick={() => setPage(p => p + 1)}
                   >
-                    Next
+                    {ti('next')}
                   </Button>
                 </div>
               </div>

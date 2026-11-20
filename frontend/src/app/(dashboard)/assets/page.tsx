@@ -1,5 +1,6 @@
 'use client';
 
+import { useT } from '@/i18n/useT';
 import { useState } from 'react';
 import {
   Plus,
@@ -38,39 +39,39 @@ import {
 } from '@/hooks/useApi';
 
 const assetTypeOptions: { value: AssetType; label: string }[] = [
-  { value: 'hardware', label: 'Hardware' },
-  { value: 'software', label: 'Software' },
-  { value: 'network', label: 'Network' },
-  { value: 'cloud', label: 'Cloud' },
-  { value: 'virtual', label: 'Virtual' },
-  { value: 'other', label: 'Other' },
+  { value: 'hardware', label: 'tHardware' },
+  { value: 'software', label: 'tSoftware' },
+  { value: 'network', label: 'tNetwork' },
+  { value: 'cloud', label: 'tCloud' },
+  { value: 'virtual', label: 'tVirtual' },
+  { value: 'other', label: 'tOther' },
 ];
 
 const assetCategoryOptions: { value: AssetCategory; label: string }[] = [
-  { value: 'server', label: 'Server' },
-  { value: 'workstation', label: 'Workstation' },
-  { value: 'laptop', label: 'Laptop' },
-  { value: 'mobile', label: 'Mobile Device' },
-  { value: 'printer', label: 'Printer' },
-  { value: 'network_device', label: 'Network Device' },
-  { value: 'storage', label: 'Storage' },
-  { value: 'software_license', label: 'Software License' },
-  { value: 'saas_subscription', label: 'SaaS Subscription' },
-  { value: 'virtual_machine', label: 'Virtual Machine' },
-  { value: 'container', label: 'Container' },
-  { value: 'database', label: 'Database' },
-  { value: 'application', label: 'Application' },
-  { value: 'other', label: 'Other' },
+  { value: 'server', label: 'cServer' },
+  { value: 'workstation', label: 'cWorkstation' },
+  { value: 'laptop', label: 'cLaptop' },
+  { value: 'mobile', label: 'cMobile' },
+  { value: 'printer', label: 'cPrinter' },
+  { value: 'network_device', label: 'cNetworkDevice' },
+  { value: 'storage', label: 'cStorage' },
+  { value: 'software_license', label: 'cSoftwareLicense' },
+  { value: 'saas_subscription', label: 'cSaas' },
+  { value: 'virtual_machine', label: 'cVm' },
+  { value: 'container', label: 'cContainer' },
+  { value: 'database', label: 'cDatabase' },
+  { value: 'application', label: 'cApplication' },
+  { value: 'other', label: 'tOther' },
 ];
 
 const assetStatusOptions: { value: AssetStatus; label: string; color: string }[] = [
-  { value: 'active', label: 'Active', color: 'bg-success-subtle text-success' },
-  { value: 'inactive', label: 'Inactive', color: 'bg-background text-foreground' },
-  { value: 'maintenance', label: 'Maintenance', color: 'bg-warning-subtle text-warning' },
-  { value: 'retired', label: 'Retired', color: 'bg-error-subtle text-error' },
-  { value: 'disposed', label: 'Disposed', color: 'bg-error-subtle text-error' },
-  { value: 'ordered', label: 'Ordered', color: 'bg-info-subtle text-foreground' },
-  { value: 'in_storage', label: 'In Storage', color: 'bg-info-subtle text-info' },
+  { value: 'active', label: 'sActive', color: 'bg-success-subtle text-success' },
+  { value: 'inactive', label: 'sInactive', color: 'bg-background text-foreground' },
+  { value: 'maintenance', label: 'sMaintenance', color: 'bg-warning-subtle text-warning' },
+  { value: 'retired', label: 'sRetired', color: 'bg-error-subtle text-error' },
+  { value: 'disposed', label: 'sDisposed', color: 'bg-error-subtle text-error' },
+  { value: 'ordered', label: 'sOrdered', color: 'bg-info-subtle text-foreground' },
+  { value: 'in_storage', label: 'sInStorage', color: 'bg-info-subtle text-info' },
 ];
 
 function AssetIcon({ assetType, category, className }: { assetType: AssetType; category: AssetCategory; className?: string }) {
@@ -84,6 +85,8 @@ function AssetIcon({ assetType, category, className }: { assetType: AssetType; c
   if (assetType === 'cloud') return <Cloud className={iconClassName} />;
   return <HardDrive className={iconClassName} />;
 }
+
+const LABEL_KEYS = new Set(['sActive', 'sInactive', 'sMaintenance', 'sRetired', 'sDisposed', 'sOrdered', 'sInStorage']);
 
 function getStatusBadge(status: AssetStatus) {
   const option = assetStatusOptions.find(o => o.value === status);
@@ -101,6 +104,8 @@ function formatDate(dateStr: string | undefined | null) {
 }
 
 export default function AssetsPage() {
+  const aa = useT('assets');
+  const tp = useT('pages');
   const [searchQuery, setSearchQuery] = useState('');
   const [typeFilter, setTypeFilter] = useState<AssetType | ''>('');
   const [categoryFilter, setCategoryFilter] = useState<AssetCategory | ''>('');
@@ -130,7 +135,7 @@ export default function AssetsPage() {
   const users = usersData?.data || [];
 
   const handleDelete = async (id: string) => {
-    if (confirm('Are you sure you want to delete this asset?')) {
+    if (confirm(aa('confirmDelete'))) {
       await deleteAssetMutation.mutateAsync(id);
       setActiveMenu(null);
     }
@@ -141,15 +146,15 @@ export default function AssetsPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-semibold text-foreground">Asset Management</h1>
-          <p className="text-sm text-muted mt-1">Manage hardware, software, and infrastructure assets</p>
+          <h1 className="text-2xl font-semibold text-foreground">{tp('assetManagement')}</h1>
+          <p className="text-sm text-muted mt-1">{aa('subtitle')}</p>
         </div>
         <button
           onClick={() => setShowCreateModal(true)}
           className="inline-flex items-center px-4 py-2 bg-primary text-white rounded-lg hover:hover:bg-primary-hover transition-colors"
         >
           <Plus className="h-5 w-5 mr-2" />
-          Add Asset
+          {tp('addAsset')}
         </button>
       </div>
 
@@ -162,7 +167,7 @@ export default function AssetsPage() {
                 <HardDrive className="h-6 w-6 text-primary" />
               </div>
               <div className="ml-4">
-                <p className="text-sm text-muted">Total Assets</p>
+                <p className="text-sm text-muted">{aa('totalAssets')}</p>
                 <p className="text-2xl font-semibold">{stats.total || 0}</p>
               </div>
             </div>
@@ -173,7 +178,7 @@ export default function AssetsPage() {
                 <Server className="h-6 w-6 text-success" />
               </div>
               <div className="ml-4">
-                <p className="text-sm text-muted">Active</p>
+                <p className="text-sm text-muted">{aa('active')}</p>
                 <p className="text-2xl font-semibold">{stats.by_status?.active || 0}</p>
               </div>
             </div>
@@ -184,7 +189,7 @@ export default function AssetsPage() {
                 <AlertTriangle className="h-6 w-6 text-warning" />
               </div>
               <div className="ml-4">
-                <p className="text-sm text-muted">Warranty Expiring</p>
+                <p className="text-sm text-muted">{aa('warrantyExpiring')}</p>
                 <p className="text-2xl font-semibold">{stats.warranty_expiring_soon || 0}</p>
               </div>
             </div>
@@ -195,7 +200,7 @@ export default function AssetsPage() {
                 <Clock className="h-6 w-6 text-info" />
               </div>
               <div className="ml-4">
-                <p className="text-sm text-muted">License Expiring</p>
+                <p className="text-sm text-muted">{aa('licenseExpiring')}</p>
                 <p className="text-2xl font-semibold">{stats.license_expiring_soon || 0}</p>
               </div>
             </div>
@@ -210,7 +215,7 @@ export default function AssetsPage() {
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted" />
             <input
               type="text"
-              placeholder="Search assets by name, tag, serial number..."
+              placeholder={aa('searchPh')}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="w-full pl-10 pr-4 py-2 border border-border-strong rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary focus:border-transparent"
@@ -223,7 +228,7 @@ export default function AssetsPage() {
             }`}
           >
             <Filter className="h-5 w-5 mr-2" />
-            Filters
+            {tp('filters')}
             <ChevronDown className={`h-4 w-4 ml-2 transition-transform ${showFilters ? 'rotate-180' : ''}`} />
           </button>
         </div>
@@ -231,41 +236,41 @@ export default function AssetsPage() {
         {showFilters && (
           <div className="mt-4 pt-4 border-t grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div>
-              <label className="block text-sm font-medium text-secondary mb-1">Type</label>
+              <label className="block text-sm font-medium text-secondary mb-1">{aa('type')}</label>
               <select
                 value={typeFilter}
                 onChange={(e) => setTypeFilter(e.target.value as AssetType | '')}
                 className="w-full px-3 py-2 border border-border-strong rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary"
               >
-                <option value="">All Types</option>
+                <option value="">{aa('allTypes')}</option>
                 {assetTypeOptions.map(opt => (
-                  <option key={opt.value} value={opt.value}>{opt.label}</option>
+                  <option key={opt.value} value={opt.value}>{aa(opt.label)}</option>
                 ))}
               </select>
             </div>
             <div>
-              <label className="block text-sm font-medium text-secondary mb-1">Category</label>
+              <label className="block text-sm font-medium text-secondary mb-1">{aa('category')}</label>
               <select
                 value={categoryFilter}
                 onChange={(e) => setCategoryFilter(e.target.value as AssetCategory | '')}
                 className="w-full px-3 py-2 border border-border-strong rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary"
               >
-                <option value="">All Categories</option>
+                <option value="">{aa('allCategories')}</option>
                 {assetCategoryOptions.map(opt => (
-                  <option key={opt.value} value={opt.value}>{opt.label}</option>
+                  <option key={opt.value} value={opt.value}>{aa(opt.label)}</option>
                 ))}
               </select>
             </div>
             <div>
-              <label className="block text-sm font-medium text-secondary mb-1">Status</label>
+              <label className="block text-sm font-medium text-secondary mb-1">{aa('status')}</label>
               <select
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value as AssetStatus | '')}
                 className="w-full px-3 py-2 border border-border-strong rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary"
               >
-                <option value="">All Statuses</option>
+                <option value="">{aa('allStatuses')}</option>
                 {assetStatusOptions.map(opt => (
-                  <option key={opt.value} value={opt.value}>{opt.label}</option>
+                  <option key={opt.value} value={opt.value}>{aa(opt.label)}</option>
                 ))}
               </select>
             </div>
@@ -276,24 +281,24 @@ export default function AssetsPage() {
       {/* Assets Table */}
       <div className="bg-surface rounded-lg shadow overflow-hidden">
         {isLoading ? (
-          <div className="p-8 text-center text-muted">Loading assets...</div>
+          <div className="p-8 text-center text-muted">{aa('loading')}</div>
         ) : assets.length === 0 ? (
           <div className="p-8 text-center text-muted">
             <HardDrive className="h-12 w-12 mx-auto mb-4 text-muted" />
-            <p className="text-lg font-medium">No assets found</p>
-            <p className="text-sm mt-1">Create your first asset to start tracking your inventory.</p>
+            <p className="text-lg font-medium">{aa('noAssets')}</p>
+            <p className="text-sm mt-1">{aa('noAssetsHint')}</p>
           </div>
         ) : (
           <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-border">
               <thead className="bg-background">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">Asset</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">Type / Category</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">Status</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">Assigned To</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">Location</th>
-                  <th className="px-6 py-3 text-right text-xs font-medium text-muted uppercase tracking-wider">Actions</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">{aa('colAsset')}</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">{aa('colTypeCategory')}</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">{aa('status')}</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">{aa('assignedTo')}</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">{aa('location')}</th>
+                  <th className="px-6 py-3 text-right text-xs font-medium text-muted uppercase tracking-wider">{aa('actions')}</th>
                 </tr>
               </thead>
               <tbody className="bg-surface divide-y divide-border">
@@ -322,7 +327,7 @@ export default function AssetsPage() {
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${statusBadge.color}`}>
-                          {statusBadge.label}
+                          {LABEL_KEYS.has(statusBadge.label) ? aa(statusBadge.label) : statusBadge.label}
                         </span>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
@@ -353,7 +358,7 @@ export default function AssetsPage() {
                                 className="w-full px-4 py-2 text-left text-sm hover:bg-background flex items-center"
                               >
                                 <Edit2 className="h-4 w-4 mr-2" />
-                                Edit
+                                {aa('edit')}
                               </button>
                               <button
                                 onClick={(e) => {
@@ -364,7 +369,7 @@ export default function AssetsPage() {
                                 className="w-full px-4 py-2 text-left text-sm hover:bg-background flex items-center"
                               >
                                 <Link className="h-4 w-4 mr-2" />
-                                View Details
+                                {aa('viewDetails')}
                               </button>
                               <button
                                 onClick={(e) => {
@@ -374,7 +379,7 @@ export default function AssetsPage() {
                                 className="w-full px-4 py-2 text-left text-sm text-error hover:bg-error-subtle flex items-center"
                               >
                                 <Trash2 className="h-4 w-4 mr-2" />
-                                Delete
+                                {aa('delete')}
                               </button>
                             </div>
                           )}
@@ -436,6 +441,7 @@ interface AssetModalProps {
 }
 
 function AssetModal({ asset, users, onClose, onSave, isLoading }: AssetModalProps) {
+  const aa = useT('assets');
   const [formData, setFormData] = useState({
     name: asset?.name || '',
     description: asset?.description || '',
@@ -499,11 +505,11 @@ function AssetModal({ asset, users, onClose, onSave, isLoading }: AssetModalProp
   };
 
   const tabs = [
-    { id: 'general', label: 'General' },
-    { id: 'hardware', label: 'Hardware' },
-    { id: 'software', label: 'Software' },
-    { id: 'network', label: 'Network' },
-    { id: 'financial', label: 'Financial' },
+    { id: 'general', label: 'tabGeneral' },
+    { id: 'hardware', label: 'tHardware' },
+    { id: 'software', label: 'tSoftware' },
+    { id: 'network', label: 'tNetwork' },
+    { id: 'financial', label: 'tabFinancial' },
   ] as const;
 
   return (
@@ -513,7 +519,7 @@ function AssetModal({ asset, users, onClose, onSave, isLoading }: AssetModalProp
         <div className="relative bg-surface rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-hidden">
           <div className="flex items-center justify-between p-4 border-b">
             <h2 className="text-lg font-semibold">
-              {asset ? 'Edit Asset' : 'Create New Asset'}
+              {asset ? aa('editAsset') : aa('createAsset')}
             </h2>
             <button onClick={onClose} className="p-1 hover:bg-background rounded">
               <X className="h-5 w-5" />
@@ -532,7 +538,7 @@ function AssetModal({ asset, users, onClose, onSave, isLoading }: AssetModalProp
                       : 'border-transparent text-muted hover:text-secondary'
                   }`}
                 >
-                  {tab.label}
+                  {aa(tab.label)}
                 </button>
               ))}
             </nav>
@@ -543,7 +549,7 @@ function AssetModal({ asset, users, onClose, onSave, isLoading }: AssetModalProp
               {activeTab === 'general' && (
                 <div className="space-y-4">
                   <div>
-                    <label className="block text-sm font-medium text-secondary mb-1">Name *</label>
+                    <label className="block text-sm font-medium text-secondary mb-1">{aa('nameStar')}</label>
                     <input
                       type="text"
                       required
@@ -553,7 +559,7 @@ function AssetModal({ asset, users, onClose, onSave, isLoading }: AssetModalProp
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-secondary mb-1">Description</label>
+                    <label className="block text-sm font-medium text-secondary mb-1">{aa('description')}</label>
                     <textarea
                       value={formData.description}
                       onChange={(e) => setFormData({ ...formData, description: e.target.value })}
@@ -563,7 +569,7 @@ function AssetModal({ asset, users, onClose, onSave, isLoading }: AssetModalProp
                   </div>
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-sm font-medium text-secondary mb-1">Type *</label>
+                      <label className="block text-sm font-medium text-secondary mb-1">{aa('typeStar')}</label>
                       <select
                         required
                         value={formData.assetType}
@@ -571,12 +577,12 @@ function AssetModal({ asset, users, onClose, onSave, isLoading }: AssetModalProp
                         className="w-full px-3 py-2 border border-border-strong rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary"
                       >
                         {assetTypeOptions.map(opt => (
-                          <option key={opt.value} value={opt.value}>{opt.label}</option>
+                          <option key={opt.value} value={opt.value}>{aa(opt.label)}</option>
                         ))}
                       </select>
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-secondary mb-1">Category *</label>
+                      <label className="block text-sm font-medium text-secondary mb-1">{aa('categoryStar')}</label>
                       <select
                         required
                         value={formData.category}
@@ -584,26 +590,26 @@ function AssetModal({ asset, users, onClose, onSave, isLoading }: AssetModalProp
                         className="w-full px-3 py-2 border border-border-strong rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary"
                       >
                         {assetCategoryOptions.map(opt => (
-                          <option key={opt.value} value={opt.value}>{opt.label}</option>
+                          <option key={opt.value} value={opt.value}>{aa(opt.label)}</option>
                         ))}
                       </select>
                     </div>
                   </div>
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-sm font-medium text-secondary mb-1">Status</label>
+                      <label className="block text-sm font-medium text-secondary mb-1">{aa('status')}</label>
                       <select
                         value={formData.status}
                         onChange={(e) => setFormData({ ...formData, status: e.target.value as AssetStatus })}
                         className="w-full px-3 py-2 border border-border-strong rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary"
                       >
                         {assetStatusOptions.map(opt => (
-                          <option key={opt.value} value={opt.value}>{opt.label}</option>
+                          <option key={opt.value} value={opt.value}>{aa(opt.label)}</option>
                         ))}
                       </select>
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-secondary mb-1">Department</label>
+                      <label className="block text-sm font-medium text-secondary mb-1">{aa('department')}</label>
                       <input
                         type="text"
                         value={formData.department}
@@ -614,26 +620,26 @@ function AssetModal({ asset, users, onClose, onSave, isLoading }: AssetModalProp
                   </div>
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-sm font-medium text-secondary mb-1">Owner</label>
+                      <label className="block text-sm font-medium text-secondary mb-1">{aa('owner')}</label>
                       <select
                         value={formData.ownerId}
                         onChange={(e) => setFormData({ ...formData, ownerId: e.target.value })}
                         className="w-full px-3 py-2 border border-border-strong rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary"
                       >
-                        <option value="">No owner</option>
+                        <option value="">{aa('noOwner')}</option>
                         {users.map((user) => (
                           <option key={user.id} value={user.id}>{user.name}</option>
                         ))}
                       </select>
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-secondary mb-1">Assigned To</label>
+                      <label className="block text-sm font-medium text-secondary mb-1">{aa('assignedTo')}</label>
                       <select
                         value={formData.assignedToId}
                         onChange={(e) => setFormData({ ...formData, assignedToId: e.target.value })}
                         className="w-full px-3 py-2 border border-border-strong rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary"
                       >
-                        <option value="">Unassigned</option>
+                        <option value="">{aa('unassigned')}</option>
                         {users.map((user) => (
                           <option key={user.id} value={user.id}>{user.name}</option>
                         ))}
@@ -641,12 +647,12 @@ function AssetModal({ asset, users, onClose, onSave, isLoading }: AssetModalProp
                     </div>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-secondary mb-1">Location</label>
+                    <label className="block text-sm font-medium text-secondary mb-1">{aa('location')}</label>
                     <input
                       type="text"
                       value={formData.location}
                       onChange={(e) => setFormData({ ...formData, location: e.target.value })}
-                      placeholder="e.g., Building A, Room 101"
+                      placeholder={aa('locationPh')}
                       className="w-full px-3 py-2 border border-border-strong rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary"
                     />
                   </div>
@@ -657,7 +663,7 @@ function AssetModal({ asset, users, onClose, onSave, isLoading }: AssetModalProp
                 <div className="space-y-4">
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-sm font-medium text-secondary mb-1">Manufacturer</label>
+                      <label className="block text-sm font-medium text-secondary mb-1">{aa('manufacturer')}</label>
                       <input
                         type="text"
                         value={formData.manufacturer}
@@ -666,7 +672,7 @@ function AssetModal({ asset, users, onClose, onSave, isLoading }: AssetModalProp
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-secondary mb-1">Model</label>
+                      <label className="block text-sm font-medium text-secondary mb-1">{aa('model')}</label>
                       <input
                         type="text"
                         value={formData.model}
@@ -676,7 +682,7 @@ function AssetModal({ asset, users, onClose, onSave, isLoading }: AssetModalProp
                     </div>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-secondary mb-1">Serial Number</label>
+                    <label className="block text-sm font-medium text-secondary mb-1">{aa('serial')}</label>
                     <input
                       type="text"
                       value={formData.serialNumber}
@@ -685,7 +691,7 @@ function AssetModal({ asset, users, onClose, onSave, isLoading }: AssetModalProp
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-secondary mb-1">Warranty Expiry</label>
+                    <label className="block text-sm font-medium text-secondary mb-1">{aa('warranty')}</label>
                     <input
                       type="date"
                       value={formData.warrantyExpiry}
@@ -700,7 +706,7 @@ function AssetModal({ asset, users, onClose, onSave, isLoading }: AssetModalProp
                 <div className="space-y-4">
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-sm font-medium text-secondary mb-1">Version</label>
+                      <label className="block text-sm font-medium text-secondary mb-1">{aa('version')}</label>
                       <input
                         type="text"
                         value={formData.version}
@@ -709,19 +715,19 @@ function AssetModal({ asset, users, onClose, onSave, isLoading }: AssetModalProp
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-secondary mb-1">License Type</label>
+                      <label className="block text-sm font-medium text-secondary mb-1">{aa('licenseType')}</label>
                       <input
                         type="text"
                         value={formData.licenseType}
                         onChange={(e) => setFormData({ ...formData, licenseType: e.target.value })}
-                        placeholder="e.g., Perpetual, Subscription"
+                        placeholder={aa('licenseTypePh')}
                         className="w-full px-3 py-2 border border-border-strong rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary"
                       />
                     </div>
                   </div>
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-sm font-medium text-secondary mb-1">License Count</label>
+                      <label className="block text-sm font-medium text-secondary mb-1">{aa('licenseCount')}</label>
                       <input
                         type="number"
                         value={formData.licenseCount}
@@ -731,7 +737,7 @@ function AssetModal({ asset, users, onClose, onSave, isLoading }: AssetModalProp
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-secondary mb-1">License Expiry</label>
+                      <label className="block text-sm font-medium text-secondary mb-1">{aa('licenseExpiry')}</label>
                       <input
                         type="date"
                         value={formData.licenseExpiry}
@@ -746,32 +752,32 @@ function AssetModal({ asset, users, onClose, onSave, isLoading }: AssetModalProp
               {activeTab === 'network' && (
                 <div className="space-y-4">
                   <div>
-                    <label className="block text-sm font-medium text-secondary mb-1">IP Address</label>
+                    <label className="block text-sm font-medium text-secondary mb-1">{aa('ipAddress')}</label>
                     <input
                       type="text"
                       value={formData.ipAddress}
                       onChange={(e) => setFormData({ ...formData, ipAddress: e.target.value })}
-                      placeholder="e.g., 192.168.1.100"
+                      placeholder={aa('ipPh')}
                       className="w-full px-3 py-2 border border-border-strong rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary"
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-secondary mb-1">MAC Address</label>
+                    <label className="block text-sm font-medium text-secondary mb-1">{aa('macAddress')}</label>
                     <input
                       type="text"
                       value={formData.macAddress}
                       onChange={(e) => setFormData({ ...formData, macAddress: e.target.value })}
-                      placeholder="e.g., 00:1A:2B:3C:4D:5E"
+                      placeholder={aa('macPh')}
                       className="w-full px-3 py-2 border border-border-strong rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary"
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-secondary mb-1">Hostname</label>
+                    <label className="block text-sm font-medium text-secondary mb-1">{aa('hostname')}</label>
                     <input
                       type="text"
                       value={formData.hostname}
                       onChange={(e) => setFormData({ ...formData, hostname: e.target.value })}
-                      placeholder="e.g., server-web-01"
+                      placeholder={aa('hostPh')}
                       className="w-full px-3 py-2 border border-border-strong rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary"
                     />
                   </div>
@@ -782,7 +788,7 @@ function AssetModal({ asset, users, onClose, onSave, isLoading }: AssetModalProp
                 <div className="space-y-4">
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-sm font-medium text-secondary mb-1">Vendor</label>
+                      <label className="block text-sm font-medium text-secondary mb-1">{aa('vendor')}</label>
                       <input
                         type="text"
                         value={formData.vendor}
@@ -791,7 +797,7 @@ function AssetModal({ asset, users, onClose, onSave, isLoading }: AssetModalProp
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-secondary mb-1">PO Number</label>
+                      <label className="block text-sm font-medium text-secondary mb-1">{aa('poNumber')}</label>
                       <input
                         type="text"
                         value={formData.poNumber}
@@ -802,7 +808,7 @@ function AssetModal({ asset, users, onClose, onSave, isLoading }: AssetModalProp
                   </div>
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-sm font-medium text-secondary mb-1">Purchase Date</label>
+                      <label className="block text-sm font-medium text-secondary mb-1">{aa('purchaseDate')}</label>
                       <input
                         type="date"
                         value={formData.purchaseDate}
@@ -811,7 +817,7 @@ function AssetModal({ asset, users, onClose, onSave, isLoading }: AssetModalProp
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-secondary mb-1">Purchase Cost</label>
+                      <label className="block text-sm font-medium text-secondary mb-1">{aa('purchaseCost')}</label>
                       <div className="relative">
                         <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted" />
                         <input
@@ -834,14 +840,14 @@ function AssetModal({ asset, users, onClose, onSave, isLoading }: AssetModalProp
                 onClick={onClose}
                 className="px-4 py-2 text-secondary bg-surface border border-border-strong rounded-lg hover:bg-background"
               >
-                Cancel
+                {aa('cancel')}
               </button>
               <button
                 type="submit"
                 disabled={isLoading}
                 className="px-4 py-2 bg-primary text-white rounded-lg hover:hover:bg-primary-hover disabled:opacity-50"
               >
-                {isLoading ? 'Saving...' : asset ? 'Save Changes' : 'Create Asset'}
+                {isLoading ? aa('saving') : asset ? aa('saveChanges') : aa('createBtn')}
               </button>
             </div>
           </form>
@@ -859,6 +865,7 @@ interface AssetDetailDrawerProps {
 }
 
 function AssetDetailDrawer({ asset, onClose, onEdit }: AssetDetailDrawerProps) {
+  const aa = useT('assets');
   const statusBadge = getStatusBadge(asset.status);
 
   return (
@@ -881,7 +888,7 @@ function AssetDetailDrawer({ asset, onClose, onEdit }: AssetDetailDrawerProps) {
               <button
                 onClick={onEdit}
                 className="p-2 hover:bg-background rounded-lg"
-                title="Edit"
+                title={aa('edit')}
               >
                 <Edit2 className="h-5 w-5 text-muted" />
               </button>
@@ -899,7 +906,7 @@ function AssetDetailDrawer({ asset, onClose, onEdit }: AssetDetailDrawerProps) {
             {/* Status & Type */}
             <div className="flex items-center gap-3">
               <span className={`inline-flex px-3 py-1 text-sm font-medium rounded-full ${statusBadge.color}`}>
-                {statusBadge.label}
+                {LABEL_KEYS.has(statusBadge.label) ? aa(statusBadge.label) : statusBadge.label}
               </span>
               <span className="text-sm text-muted capitalize">
                 {asset.asset_type} / {asset.category.replace(/_/g, ' ')}
@@ -909,7 +916,7 @@ function AssetDetailDrawer({ asset, onClose, onEdit }: AssetDetailDrawerProps) {
             {/* Description */}
             {asset.description && (
               <div>
-                <h3 className="text-sm font-medium text-muted mb-1">Description</h3>
+                <h3 className="text-sm font-medium text-muted mb-1">{aa('description')}</h3>
                 <p className="text-foreground">{asset.description}</p>
               </div>
             )}
@@ -917,19 +924,19 @@ function AssetDetailDrawer({ asset, onClose, onEdit }: AssetDetailDrawerProps) {
             {/* Ownership & Location */}
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <h3 className="text-sm font-medium text-muted mb-1">Owner</h3>
+                <h3 className="text-sm font-medium text-muted mb-1">{aa('owner')}</h3>
                 <p className="text-foreground">{asset.owner_name || '-'}</p>
               </div>
               <div>
-                <h3 className="text-sm font-medium text-muted mb-1">Assigned To</h3>
+                <h3 className="text-sm font-medium text-muted mb-1">{aa('assignedTo')}</h3>
                 <p className="text-foreground">{asset.assigned_to_name || '-'}</p>
               </div>
               <div>
-                <h3 className="text-sm font-medium text-muted mb-1">Location</h3>
+                <h3 className="text-sm font-medium text-muted mb-1">{aa('location')}</h3>
                 <p className="text-foreground">{asset.location || '-'}</p>
               </div>
               <div>
-                <h3 className="text-sm font-medium text-muted mb-1">Department</h3>
+                <h3 className="text-sm font-medium text-muted mb-1">{aa('department')}</h3>
                 <p className="text-foreground">{asset.department || '-'}</p>
               </div>
             </div>
@@ -937,18 +944,18 @@ function AssetDetailDrawer({ asset, onClose, onEdit }: AssetDetailDrawerProps) {
             {/* Hardware Details */}
             {(asset.manufacturer || asset.model || asset.serial_number) && (
               <div>
-                <h3 className="text-sm font-semibold text-foreground mb-3">Hardware Details</h3>
+                <h3 className="text-sm font-semibold text-foreground mb-3">{aa('hardwareDetails')}</h3>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <p className="text-sm text-muted">Manufacturer</p>
+                    <p className="text-sm text-muted">{aa('manufacturer')}</p>
                     <p className="text-foreground">{asset.manufacturer || '-'}</p>
                   </div>
                   <div>
-                    <p className="text-sm text-muted">Model</p>
+                    <p className="text-sm text-muted">{aa('model')}</p>
                     <p className="text-foreground">{asset.model || '-'}</p>
                   </div>
                   <div className="col-span-2">
-                    <p className="text-sm text-muted">Serial Number</p>
+                    <p className="text-sm text-muted">{aa('serial')}</p>
                     <p className="text-foreground font-mono">{asset.serial_number || '-'}</p>
                   </div>
                 </div>
@@ -958,18 +965,18 @@ function AssetDetailDrawer({ asset, onClose, onEdit }: AssetDetailDrawerProps) {
             {/* Network Details */}
             {(asset.ip_address || asset.mac_address || asset.hostname) && (
               <div>
-                <h3 className="text-sm font-semibold text-foreground mb-3">Network Details</h3>
+                <h3 className="text-sm font-semibold text-foreground mb-3">{aa('networkDetails')}</h3>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <p className="text-sm text-muted">IP Address</p>
+                    <p className="text-sm text-muted">{aa('ipAddress')}</p>
                     <p className="text-foreground font-mono">{asset.ip_address || '-'}</p>
                   </div>
                   <div>
-                    <p className="text-sm text-muted">Hostname</p>
+                    <p className="text-sm text-muted">{aa('hostname')}</p>
                     <p className="text-foreground font-mono">{asset.hostname || '-'}</p>
                   </div>
                   <div className="col-span-2">
-                    <p className="text-sm text-muted">MAC Address</p>
+                    <p className="text-sm text-muted">{aa('macAddress')}</p>
                     <p className="text-foreground font-mono">{asset.mac_address || '-'}</p>
                   </div>
                 </div>
@@ -979,22 +986,22 @@ function AssetDetailDrawer({ asset, onClose, onEdit }: AssetDetailDrawerProps) {
             {/* Software Details */}
             {(asset.version || asset.license_type) && (
               <div>
-                <h3 className="text-sm font-semibold text-foreground mb-3">Software Details</h3>
+                <h3 className="text-sm font-semibold text-foreground mb-3">{aa('softwareDetails')}</h3>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <p className="text-sm text-muted">Version</p>
+                    <p className="text-sm text-muted">{aa('version')}</p>
                     <p className="text-foreground">{asset.version || '-'}</p>
                   </div>
                   <div>
-                    <p className="text-sm text-muted">License Type</p>
+                    <p className="text-sm text-muted">{aa('licenseType')}</p>
                     <p className="text-foreground">{asset.license_type || '-'}</p>
                   </div>
                   <div>
-                    <p className="text-sm text-muted">License Count</p>
+                    <p className="text-sm text-muted">{aa('licenseCount')}</p>
                     <p className="text-foreground">{asset.license_count || '-'}</p>
                   </div>
                   <div>
-                    <p className="text-sm text-muted">License Expiry</p>
+                    <p className="text-sm text-muted">{aa('licenseExpiry')}</p>
                     <div className="flex items-center gap-1">
                       <Calendar className="h-4 w-4 text-muted" />
                       <p className="text-foreground">{formatDate(asset.license_expiry)}</p>
@@ -1006,26 +1013,26 @@ function AssetDetailDrawer({ asset, onClose, onEdit }: AssetDetailDrawerProps) {
 
             {/* Financial Details */}
             <div>
-              <h3 className="text-sm font-semibold text-foreground mb-3">Financial Details</h3>
+              <h3 className="text-sm font-semibold text-foreground mb-3">{aa('financialDetails')}</h3>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <p className="text-sm text-muted">Vendor</p>
+                  <p className="text-sm text-muted">{aa('vendor')}</p>
                   <p className="text-foreground">{asset.vendor || '-'}</p>
                 </div>
                 <div>
-                  <p className="text-sm text-muted">PO Number</p>
+                  <p className="text-sm text-muted">{aa('poNumber')}</p>
                   <p className="text-foreground">{asset.po_number || '-'}</p>
                 </div>
                 <div>
-                  <p className="text-sm text-muted">Purchase Date</p>
+                  <p className="text-sm text-muted">{aa('purchaseDate')}</p>
                   <p className="text-foreground">{formatDate(asset.purchase_date)}</p>
                 </div>
                 <div>
-                  <p className="text-sm text-muted">Purchase Cost</p>
+                  <p className="text-sm text-muted">{aa('purchaseCost')}</p>
                   <p className="text-foreground font-medium">{formatCurrency(asset.purchase_cost)}</p>
                 </div>
                 <div>
-                  <p className="text-sm text-muted">Warranty Expiry</p>
+                  <p className="text-sm text-muted">{aa('warranty')}</p>
                   <div className="flex items-center gap-1">
                     <Calendar className="h-4 w-4 text-muted" />
                     <p className="text-foreground">{formatDate(asset.warranty_expiry)}</p>

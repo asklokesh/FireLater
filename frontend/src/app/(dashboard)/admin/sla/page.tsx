@@ -1,5 +1,6 @@
 'use client';
 
+import { useT } from '@/i18n/useT';
 import { useState } from 'react';
 import {
   Plus,
@@ -34,21 +35,21 @@ import {
 } from '@/hooks/useApi';
 
 const entityTypeLabels: Record<SlaEntityType, string> = {
-  issue: 'Issues',
-  problem: 'Problems',
-  change: 'Changes',
+  issue: 'eIssue',
+  problem: 'eProblem',
+  change: 'eChange',
 };
 
 const metricTypeLabels: Record<SlaMetricType, string> = {
-  response_time: 'First Response Time',
-  resolution_time: 'Resolution Time',
+  response_time: 'mFirstResponse',
+  resolution_time: 'mResolution',
 };
 
 const priorityLabels: Record<SlaPriority, { label: string; color: string }> = {
-  critical: { label: 'Critical', color: 'bg-error-subtle text-error' },
-  high: { label: 'High', color: 'bg-orange-100 text-orange-800' },
-  medium: { label: 'Medium', color: 'bg-warning-subtle text-warning' },
-  low: { label: 'Low', color: 'bg-success-subtle text-success' },
+  critical: { label: 'priorityCritical', color: 'bg-error-subtle text-error' },
+  high: { label: 'priorityHigh', color: 'bg-orange-100 text-orange-800' },
+  medium: { label: 'priorityMedium', color: 'bg-warning-subtle text-warning' },
+  low: { label: 'priorityLow', color: 'bg-success-subtle text-success' },
 };
 
 function formatMinutes(minutes: number): string {
@@ -63,6 +64,7 @@ function formatMinutes(minutes: number): string {
 }
 
 export default function SLAManagementPage() {
+  const sla = useT('adminSla');
   const [activeTab, setActiveTab] = useState<'policies' | 'stats'>('policies');
   const [entityTypeFilter, setEntityTypeFilter] = useState<SlaEntityType | 'all'>('all');
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -88,20 +90,20 @@ export default function SLAManagementPage() {
   const stats = (statsData as { data?: { total: number; met: number; breached: number; met_percentage: number } })?.data;
 
   const handleDeletePolicy = async (id: string) => {
-    if (!confirm('Are you sure you want to delete this SLA policy?')) return;
+    if (!confirm(sla('confirmDeletePolicy'))) return;
     try {
       await deletePolicy.mutateAsync(id);
     } catch (error) {
-      alert(error instanceof Error ? error.message : 'Failed to delete policy');
+      alert(error instanceof Error ? error.message : sla('deletePolicyFailed'));
     }
   };
 
   const handleDeleteTarget = async (id: string) => {
-    if (!confirm('Are you sure you want to delete this SLA target?')) return;
+    if (!confirm(sla('confirmDeleteTarget'))) return;
     try {
       await deleteTarget.mutateAsync(id);
     } catch (error) {
-      alert(error instanceof Error ? error.message : 'Failed to delete target');
+      alert(error instanceof Error ? error.message : sla('deleteTargetFailed'));
     }
   };
 
@@ -121,14 +123,14 @@ export default function SLAManagementPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-foreground">SLA Management</h1>
+          <h1 className="text-2xl font-bold text-foreground">{sla('title')}</h1>
           <p className="mt-1 text-sm text-muted">
-            Configure Service Level Agreement policies and targets
+            {sla('subtitle')}
           </p>
         </div>
         <Button onClick={() => setShowCreateModal(true)}>
           <Plus className="h-4 w-4 mr-2" />
-          Create Policy
+          {sla('createPolicy')}
         </Button>
       </div>
 
@@ -140,7 +142,7 @@ export default function SLAManagementPage() {
               <FileText className="h-5 w-5 text-primary" />
             </div>
             <div className="ml-4">
-              <p className="text-sm text-muted">Total Policies</p>
+              <p className="text-sm text-muted">{sla('totalPolicies')}</p>
               <p className="text-2xl font-semibold text-foreground">{policies.length}</p>
             </div>
           </div>
@@ -151,7 +153,7 @@ export default function SLAManagementPage() {
               <CheckCircle className="h-5 w-5 text-success" />
             </div>
             <div className="ml-4">
-              <p className="text-sm text-muted">Active Policies</p>
+              <p className="text-sm text-muted">{sla('activePolicies')}</p>
               <p className="text-2xl font-semibold text-foreground">{activeCount}</p>
             </div>
           </div>
@@ -162,7 +164,7 @@ export default function SLAManagementPage() {
               <Target className="h-5 w-5 text-info" />
             </div>
             <div className="ml-4">
-              <p className="text-sm text-muted">Default Policies</p>
+              <p className="text-sm text-muted">{sla('defaultPolicies')}</p>
               <p className="text-2xl font-semibold text-foreground">{defaultCount}</p>
             </div>
           </div>
@@ -173,7 +175,7 @@ export default function SLAManagementPage() {
               <BarChart3 className="h-5 w-5 text-orange-600" />
             </div>
             <div className="ml-4">
-              <p className="text-sm text-muted">SLA Met Rate</p>
+              <p className="text-sm text-muted">{sla('metRate')}</p>
               <p className="text-2xl font-semibold text-foreground">
                 {stats ? `${stats.met_percentage.toFixed(1)}%` : '-'}
               </p>
@@ -193,7 +195,7 @@ export default function SLAManagementPage() {
                 : 'border-transparent text-muted hover:text-secondary hover:border-border-strong'
             }`}
           >
-            Policies
+            {sla('tabPolicies')}
           </button>
           <button
             onClick={() => setActiveTab('stats')}
@@ -203,7 +205,7 @@ export default function SLAManagementPage() {
                 : 'border-transparent text-muted hover:text-secondary hover:border-border-strong'
             }`}
           >
-            Statistics
+            {sla('tabStatistics')}
           </button>
         </nav>
       </div>
@@ -213,16 +215,16 @@ export default function SLAManagementPage() {
           {/* Filters */}
           <div className="bg-surface rounded-lg shadow p-4">
             <div className="flex items-center gap-4">
-              <label className="text-sm font-medium text-secondary">Entity Type:</label>
+              <label className="text-sm font-medium text-secondary">{sla('entityType')}</label>
               <select
                 value={entityTypeFilter}
                 onChange={(e) => setEntityTypeFilter(e.target.value as SlaEntityType | 'all')}
                 className="px-3 py-2 border border-border-strong rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary"
               >
-                <option value="all">All Types</option>
-                <option value="issue">Issues</option>
-                <option value="problem">Problems</option>
-                <option value="change">Changes</option>
+                <option value="all">{sla('allTypes')}</option>
+                <option value="issue">{sla('eIssue')}</option>
+                <option value="problem">{sla('eProblem')}</option>
+                <option value="change">{sla('eChange')}</option>
               </select>
             </div>
           </div>
@@ -232,11 +234,11 @@ export default function SLAManagementPage() {
             {policies.length === 0 ? (
               <div className="bg-surface rounded-lg shadow p-12 text-center">
                 <Clock className="h-12 w-12 text-muted mx-auto mb-4" />
-                <h3 className="text-lg font-medium text-foreground mb-2">No SLA Policies</h3>
-                <p className="text-muted mb-4">Create your first SLA policy to get started</p>
+                <h3 className="text-lg font-medium text-foreground mb-2">{sla('noPolicies')}</h3>
+                <p className="text-muted mb-4">{sla('noPoliciesHint')}</p>
                 <Button onClick={() => setShowCreateModal(true)}>
                   <Plus className="h-4 w-4 mr-2" />
-                  Create Policy
+                  {sla('createPolicy')}
                 </Button>
               </div>
             ) : (
@@ -329,6 +331,7 @@ function PolicyCard({
   onDeleteTarget: (id: string) => void;
   onToggleActive: () => void;
 }) {
+  const sla = useT('adminSla');
   return (
     <div className="bg-surface rounded-lg shadow">
       <div
@@ -347,17 +350,17 @@ function PolicyCard({
                 <h3 className="text-lg font-medium text-foreground">{policy.name}</h3>
                 {policy.is_default && (
                   <span className="px-2 py-0.5 text-xs font-medium bg-primary-subtle text-primary rounded">
-                    Default
+                    {sla('default')}
                   </span>
                 )}
                 {!policy.is_active && (
                   <span className="px-2 py-0.5 text-xs font-medium bg-surface-hover text-secondary rounded">
-                    Inactive
+                    {sla('inactive')}
                   </span>
                 )}
               </div>
               <p className="text-sm text-muted">
-                {entityTypeLabels[policy.entity_type]} - {policy.targets?.length || 0} targets
+                {sla(entityTypeLabels[policy.entity_type])} - {sla('targetsCount', { count: policy.targets?.length || 0 })}
               </p>
             </div>
           </div>
@@ -413,10 +416,10 @@ function PolicyCard({
           )}
 
           <div className="flex items-center justify-between mb-4">
-            <h4 className="text-sm font-medium text-foreground">SLA Targets</h4>
+            <h4 className="text-sm font-medium text-foreground">{sla('slaTargets')}</h4>
             <Button size="sm" variant="outline" onClick={onAddTarget}>
               <Plus className="h-3 w-3 mr-1" />
-              Add Target
+              {sla('addTarget')}
             </Button>
           </div>
 
@@ -426,19 +429,19 @@ function PolicyCard({
                 <thead className="bg-surface-hover">
                   <tr>
                     <th className="px-4 py-2 text-left text-xs font-medium text-muted uppercase">
-                      Priority
+                      {sla('colPriority')}
                     </th>
                     <th className="px-4 py-2 text-left text-xs font-medium text-muted uppercase">
-                      Metric
+                      {sla('colMetric')}
                     </th>
                     <th className="px-4 py-2 text-left text-xs font-medium text-muted uppercase">
-                      Target
+                      {sla('colTarget')}
                     </th>
                     <th className="px-4 py-2 text-left text-xs font-medium text-muted uppercase">
-                      Warning At
+                      {sla('colWarningAt')}
                     </th>
                     <th className="px-4 py-2 text-right text-xs font-medium text-muted uppercase">
-                      Actions
+                      {sla('colActions')}
                     </th>
                   </tr>
                 </thead>
@@ -451,11 +454,11 @@ function PolicyCard({
                             priorityLabels[target.priority].color
                           }`}
                         >
-                          {priorityLabels[target.priority].label}
+                          {sla(priorityLabels[target.priority].label)}
                         </span>
                       </td>
                       <td className="px-4 py-2 text-sm text-foreground">
-                        {metricTypeLabels[target.metric_type]}
+                        {sla(metricTypeLabels[target.metric_type])}
                       </td>
                       <td className="px-4 py-2 text-sm font-medium text-foreground">
                         {formatMinutes(target.target_minutes)}
@@ -482,7 +485,7 @@ function PolicyCard({
           ) : (
             <div className="text-center py-6 text-muted">
               <Target className="h-8 w-8 mx-auto mb-2 text-muted" />
-              <p className="text-sm">No targets configured</p>
+              <p className="text-sm">{sla('noTargets')}</p>
             </div>
           )}
         </div>
@@ -509,6 +512,7 @@ function PolicyModal({
   }) => Promise<void>;
   isLoading: boolean;
 }) {
+  const sla = useT('adminSla');
   const [name, setName] = useState(policy?.name || '');
   const [description, setDescription] = useState(policy?.description || '');
   const [entityType, setEntityType] = useState<SlaEntityType>(policy?.entity_type || 'issue');
@@ -529,7 +533,7 @@ function PolicyModal({
       <div className="bg-surface rounded-lg shadow-xl max-w-md w-full mx-4">
         <div className="px-6 py-4 border-b border-border">
           <h2 className="text-lg font-semibold text-foreground">
-            {policy ? 'Edit SLA Policy' : 'Create SLA Policy'}
+            {policy ? sla('editPolicy') : sla('createPolicyTitle')}
           </h2>
         </div>
 
@@ -537,34 +541,34 @@ function PolicyModal({
           <div className="p-6 space-y-4">
             <div>
               <label className="block text-sm font-medium text-secondary mb-1">
-                Policy Name *
+                {sla('policyName')}
               </label>
               <input
                 type="text"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 className="w-full px-3 py-2 border border-border-strong rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary"
-                placeholder="e.g., Standard Issue SLA"
+                placeholder={sla('policyNamePh')}
                 required
               />
             </div>
 
             <div>
               <label className="block text-sm font-medium text-secondary mb-1">
-                Description
+                {sla('description')}
               </label>
               <textarea
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
                 className="w-full px-3 py-2 border border-border-strong rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary"
-                placeholder="Describe this SLA policy..."
+                placeholder={sla('descPh')}
                 rows={3}
               />
             </div>
 
             <div>
               <label className="block text-sm font-medium text-secondary mb-1">
-                Entity Type *
+                {sla('entityTypeStar')}
               </label>
               <select
                 value={entityType}
@@ -572,9 +576,9 @@ function PolicyModal({
                 className="w-full px-3 py-2 border border-border-strong rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary"
                 disabled={!!policy}
               >
-                <option value="issue">Issues</option>
-                <option value="problem">Problems</option>
-                <option value="change">Changes</option>
+                <option value="issue">{sla('eIssue')}</option>
+                <option value="problem">{sla('eProblem')}</option>
+                <option value="change">{sla('eChange')}</option>
               </select>
             </div>
 
@@ -587,18 +591,18 @@ function PolicyModal({
                 className="h-4 w-4 text-primary border-border-strong rounded focus:ring-primary"
               />
               <label htmlFor="isDefault" className="ml-2 text-sm text-secondary">
-                Set as default policy for this entity type
+                {sla('setDefault')}
               </label>
             </div>
           </div>
 
           <div className="px-6 py-4 border-t border-border flex justify-end gap-3">
             <Button type="button" variant="outline" onClick={onClose}>
-              Cancel
+              {sla('cancel')}
             </Button>
             <Button type="submit" disabled={isLoading || !name}>
               {isLoading && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-              {policy ? 'Update Policy' : 'Create Policy'}
+              {policy ? sla('updatePolicy') : sla('createPolicy')}
             </Button>
           </div>
         </form>
@@ -624,6 +628,7 @@ function TargetModal({
   }) => Promise<void>;
   isLoading: boolean;
 }) {
+  const sla = useT('adminSla');
   const [metricType, setMetricType] = useState<SlaMetricType>('response_time');
   const [priority, setPriority] = useState<SlaPriority>('medium');
   const [targetHours, setTargetHours] = useState(1);
@@ -634,7 +639,7 @@ function TargetModal({
     e.preventDefault();
     const totalMinutes = targetHours * 60 + targetMinutes;
     if (totalMinutes <= 0) {
-      alert('Target time must be greater than 0');
+      alert(sla('targetPositive'));
       return;
     }
     await onSave({
@@ -649,44 +654,44 @@ function TargetModal({
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
       <div className="bg-surface rounded-lg shadow-xl max-w-md w-full mx-4">
         <div className="px-6 py-4 border-b border-border">
-          <h2 className="text-lg font-semibold text-foreground">Add SLA Target</h2>
+          <h2 className="text-lg font-semibold text-foreground">{sla('addTargetTitle')}</h2>
         </div>
 
         <form onSubmit={handleSubmit}>
           <div className="p-6 space-y-4">
             <div>
               <label className="block text-sm font-medium text-secondary mb-1">
-                Metric Type *
+                {sla('metricStar')}
               </label>
               <select
                 value={metricType}
                 onChange={(e) => setMetricType(e.target.value as SlaMetricType)}
                 className="w-full px-3 py-2 border border-border-strong rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary"
               >
-                <option value="response_time">First Response Time</option>
-                <option value="resolution_time">Resolution Time</option>
+                <option value="response_time">{sla('mFirstResponse')}</option>
+                <option value="resolution_time">{sla('mResolution')}</option>
               </select>
             </div>
 
             <div>
               <label className="block text-sm font-medium text-secondary mb-1">
-                Priority *
+                {sla('priorityStar')}
               </label>
               <select
                 value={priority}
                 onChange={(e) => setPriority(e.target.value as SlaPriority)}
                 className="w-full px-3 py-2 border border-border-strong rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary"
               >
-                <option value="critical">Critical</option>
-                <option value="high">High</option>
-                <option value="medium">Medium</option>
-                <option value="low">Low</option>
+                <option value="critical">{sla('priorityCritical')}</option>
+                <option value="high">{sla('priorityHigh')}</option>
+                <option value="medium">{sla('priorityMedium')}</option>
+                <option value="low">{sla('priorityLow')}</option>
               </select>
             </div>
 
             <div>
               <label className="block text-sm font-medium text-secondary mb-1">
-                Target Time *
+                {sla('targetTimeStar')}
               </label>
               <div className="flex gap-2">
                 <div className="flex-1">
@@ -698,7 +703,7 @@ function TargetModal({
                       className="w-full px-3 py-2 border border-border-strong rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary"
                       min={0}
                     />
-                    <span className="ml-2 text-sm text-muted">hours</span>
+                    <span className="ml-2 text-sm text-muted">{sla('hours')}</span>
                   </div>
                 </div>
                 <div className="flex-1">
@@ -711,7 +716,7 @@ function TargetModal({
                       min={0}
                       max={59}
                     />
-                    <span className="ml-2 text-sm text-muted">minutes</span>
+                    <span className="ml-2 text-sm text-muted">{sla('minutes')}</span>
                   </div>
                 </div>
               </div>
@@ -728,23 +733,23 @@ function TargetModal({
                   setWarningPercent(e.target.value ? parseInt(e.target.value) : '')
                 }
                 className="w-full px-3 py-2 border border-border-strong rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary"
-                placeholder="e.g., 80"
+                placeholder={sla('warningPh')}
                 min={1}
                 max={100}
               />
               <p className="mt-1 text-xs text-muted">
-                Alert when this percentage of target time has elapsed
+                {sla('warningHelp')}
               </p>
             </div>
           </div>
 
           <div className="px-6 py-4 border-t border-border flex justify-end gap-3">
             <Button type="button" variant="outline" onClick={onClose}>
-              Cancel
+              {sla('cancel')}
             </Button>
             <Button type="submit" disabled={isLoading}>
               {isLoading && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-              Add Target
+              {sla('addTarget')}
             </Button>
           </div>
         </form>
@@ -761,6 +766,7 @@ function SLAStatisticsPanel({
   stats?: { total: number; met: number; breached: number; met_percentage: number };
   isLoading: boolean;
 }) {
+  const sla = useT('adminSla');
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -773,9 +779,9 @@ function SLAStatisticsPanel({
     return (
       <div className="bg-surface rounded-lg shadow p-12 text-center">
         <BarChart3 className="h-12 w-12 text-muted mx-auto mb-4" />
-        <h3 className="text-lg font-medium text-foreground mb-2">No Statistics Available</h3>
+        <h3 className="text-lg font-medium text-foreground mb-2">{sla('noStats')}</h3>
         <p className="text-muted">
-          SLA statistics will appear once there are resolved issues
+          {sla('noStatsHint')}
         </p>
       </div>
     );
@@ -790,7 +796,7 @@ function SLAStatisticsPanel({
         <div className="bg-surface rounded-lg shadow p-6">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-muted">Total Evaluated</p>
+              <p className="text-sm text-muted">{sla('totalEvaluated')}</p>
               <p className="text-3xl font-bold text-foreground">{stats.total}</p>
             </div>
             <div className="h-12 w-12 rounded-full bg-primary-subtle flex items-center justify-center">
@@ -802,7 +808,7 @@ function SLAStatisticsPanel({
         <div className="bg-surface rounded-lg shadow p-6">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-muted">SLA Met</p>
+              <p className="text-sm text-muted">{sla('slaMet')}</p>
               <p className="text-3xl font-bold text-success">{stats.met}</p>
             </div>
             <div className="h-12 w-12 rounded-full bg-success-subtle flex items-center justify-center">
@@ -814,7 +820,7 @@ function SLAStatisticsPanel({
         <div className="bg-surface rounded-lg shadow p-6">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-muted">SLA Breached</p>
+              <p className="text-sm text-muted">{sla('slaBreached')}</p>
               <p className="text-3xl font-bold text-error">{stats.breached}</p>
             </div>
             <div className="h-12 w-12 rounded-full bg-error-subtle flex items-center justify-center">
@@ -826,7 +832,7 @@ function SLAStatisticsPanel({
         <div className="bg-surface rounded-lg shadow p-6">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-muted">Compliance Rate</p>
+              <p className="text-sm text-muted">{sla('complianceRate')}</p>
               <p className={`text-3xl font-bold ${
                 stats.met_percentage >= 90 ? 'text-success' :
                 stats.met_percentage >= 70 ? 'text-warning' : 'text-error'
@@ -849,7 +855,7 @@ function SLAStatisticsPanel({
 
       {/* Progress Bar */}
       <div className="bg-surface rounded-lg shadow p-6">
-        <h3 className="text-lg font-medium text-foreground mb-4">SLA Compliance Overview</h3>
+        <h3 className="text-lg font-medium text-foreground mb-4">{sla('overview')}</h3>
         <div className="space-y-4">
           <div>
             <div className="flex justify-between text-sm mb-1">
@@ -870,11 +876,9 @@ function SLAStatisticsPanel({
       <div className="bg-primary-subtle rounded-lg p-4 flex items-start space-x-3">
         <AlertCircle className="h-5 w-5 text-primary flex-shrink-0 mt-0.5" />
         <div>
-          <h4 className="text-sm font-medium text-primary">Improve Your SLA Compliance</h4>
+          <h4 className="text-sm font-medium text-primary">{sla('tipTitle')}</h4>
           <p className="text-sm text-primary mt-1">
-            To improve SLA compliance, consider prioritizing high-priority tickets,
-            setting up automated notifications for approaching deadlines, and reviewing
-            frequently breached categories for process improvements.
+            {sla('tipBody')}
           </p>
         </div>
       </div>

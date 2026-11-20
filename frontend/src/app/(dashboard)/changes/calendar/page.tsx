@@ -1,5 +1,6 @@
 'use client';
 
+import { useT, useOptionalIntl } from '@/i18n/useT';
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import Link from 'next/link';
 import {
@@ -48,7 +49,16 @@ const statusColors: Record<string, { bg: string; text: string }> = {
   cancelled: { bg: 'bg-surface-hover', text: 'text-foreground' },
 };
 
+const RISK_KEYS: Record<string, string> = { low: 'priorityLow', medium: 'priorityMedium', high: 'priorityHigh', critical: 'priorityCritical' };
+const STATUS_KEYS: Record<string, string> = { approved: 'approved', scheduled: 'scheduled', implementing: 'implementing', completed: 'completed', draft: 'draft', submitted: 'submitted', failed: 'failed', cancelled: 'cancelled' };
+
 export default function ChangeCalendarPage() {
+  const cc = useT('changeCalendar');
+  const ti = useT('issues');
+  const tl = useT('listpages');
+  const tp = useT('pages');
+  const intl = useOptionalIntl();
+  const loc = intl?.locale ?? 'en-US';
   const [currentDate, setCurrentDate] = useState(new Date());
   const [viewMode, setViewMode] = useState<'month' | 'week'>('month');
   const [changes, setChanges] = useState<ChangeData[]>([]);
@@ -183,7 +193,7 @@ export default function ChangeCalendarPage() {
 
   const formatTime = (dateString: string) => {
     const date = new Date(dateString);
-    return date.toLocaleTimeString('en-US', {
+    return date.toLocaleTimeString(loc, {
       hour: '2-digit',
       minute: '2-digit',
     });
@@ -197,16 +207,16 @@ export default function ChangeCalendarPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-foreground">Change Calendar</h1>
+          <h1 className="text-2xl font-bold text-foreground">{cc('title')}</h1>
           <p className="mt-1 text-sm text-muted">
-            View scheduled changes on a calendar
+            {cc('subtitle')}
           </p>
         </div>
         <div className="flex items-center space-x-2">
           <Link href="/changes/new">
             <Button>
               <Plus className="h-4 w-4 mr-2" />
-              New Change
+              {tp('newChange')}
             </Button>
           </Link>
         </div>
@@ -224,8 +234,8 @@ export default function ChangeCalendarPage() {
             </button>
             <h2 className="text-lg font-medium text-foreground min-w-[200px] text-center">
               {viewMode === 'month'
-                ? currentDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
-                : `Week of ${weekDays[0].toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`
+                ? currentDate.toLocaleDateString(loc, { month: 'long', year: 'numeric' })
+                : cc('weekOf', { date: weekDays[0].toLocaleDateString(loc, { month: 'short', day: 'numeric' }) })
               }
             </h2>
             <button
@@ -238,7 +248,7 @@ export default function ChangeCalendarPage() {
 
           <div className="flex items-center space-x-2">
             <Button variant="outline" size="sm" onClick={() => setCurrentDate(new Date())}>
-              Today
+              {cc('today')}
             </Button>
             <div className="flex border border-border-strong rounded-md overflow-hidden">
               <button
@@ -272,30 +282,30 @@ export default function ChangeCalendarPage() {
         {showFilters && (
           <div className="px-6 py-3 border-b border-border bg-surface-hover flex items-center space-x-4">
             <div className="flex items-center space-x-2">
-              <label className="text-sm text-secondary">Risk:</label>
+              <label className="text-sm text-secondary">{cc('risk')}</label>
               <select
                 value={riskFilter}
                 onChange={(e) => setRiskFilter(e.target.value)}
                 className="px-2 py-1 border border-border-strong rounded text-sm"
               >
-                <option value="all">All</option>
-                <option value="low">Low</option>
-                <option value="medium">Medium</option>
-                <option value="high">High</option>
+                <option value="all">{cc('all')}</option>
+                <option value="low">{ti('priorityLow')}</option>
+                <option value="medium">{ti('priorityMedium')}</option>
+                <option value="high">{ti('priorityHigh')}</option>
               </select>
             </div>
             <div className="flex items-center space-x-2">
-              <label className="text-sm text-secondary">Status:</label>
+              <label className="text-sm text-secondary">{cc('status')}</label>
               <select
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value)}
                 className="px-2 py-1 border border-border-strong rounded text-sm"
               >
-                <option value="all">All</option>
-                <option value="approved">Approved</option>
-                <option value="scheduled">Scheduled</option>
-                <option value="implementing">Implementing</option>
-                <option value="completed">Completed</option>
+                <option value="all">{cc('all')}</option>
+                <option value="approved">{tl('approved')}</option>
+                <option value="scheduled">{tl('scheduled')}</option>
+                <option value="implementing">{tl('implementing')}</option>
+                <option value="completed">{tl('completed')}</option>
               </select>
             </div>
           </div>
@@ -311,7 +321,7 @@ export default function ChangeCalendarPage() {
           <div className="p-4">
             {/* Day Headers */}
             <div className="grid grid-cols-7 gap-px bg-border">
-              {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((day) => (
+              {[0, 1, 2, 3, 4, 5, 6].map((i) => new Date(2023, 0, 1 + i).toLocaleDateString(loc, { weekday: 'short' })).map((day) => (
                 <div key={day} className="bg-background text-xs font-medium text-muted text-center py-2">
                   {day}
                 </div>
@@ -376,7 +386,7 @@ export default function ChangeCalendarPage() {
                       today ? 'bg-primary-subtle text-primary' : 'bg-surface-hover'
                     }`}>
                       <div className="text-xs text-muted">
-                        {date.toLocaleDateString('en-US', { weekday: 'short' })}
+                        {date.toLocaleDateString(loc, { weekday: 'short' })}
                       </div>
                       <div className={`text-lg font-medium ${today ? 'text-primary' : 'text-foreground'}`}>
                         {date.getDate()}
@@ -421,7 +431,7 @@ export default function ChangeCalendarPage() {
 
       {/* Legend */}
       <div className="bg-surface rounded-xl shadow-sm p-4">
-        <h3 className="text-sm font-medium text-secondary mb-3">Risk Levels</h3>
+        <h3 className="text-sm font-medium text-secondary mb-3">{cc('riskLevels')}</h3>
         <div className="flex items-center space-x-6">
           {Object.entries(riskColors).map(([risk, colors]) => (
             <div key={risk} className="flex items-center">
@@ -452,36 +462,36 @@ export default function ChangeCalendarPage() {
             <div className="space-y-3">
               <div className="flex items-center text-sm">
                 <AlertCircle className="h-4 w-4 text-muted mr-2" />
-                <span className="text-secondary">Risk:</span>
+                <span className="text-secondary">{cc('risk')}</span>
                 <span className={`ml-2 px-2 py-0.5 rounded text-xs ${riskColors[selectedChange.risk_level]?.bg || ''} ${riskColors[selectedChange.risk_level]?.text || ''}`}>
-                  {selectedChange.risk_level}
+                  {RISK_KEYS[selectedChange.risk_level] ? ti(RISK_KEYS[selectedChange.risk_level]) : selectedChange.risk_level}
                 </span>
               </div>
               <div className="flex items-center text-sm">
                 <Clock className="h-4 w-4 text-muted mr-2" />
-                <span className="text-secondary">Status:</span>
+                <span className="text-secondary">{cc('status')}</span>
                 <span className={`ml-2 px-2 py-0.5 rounded text-xs ${statusColors[selectedChange.status]?.bg || ''} ${statusColors[selectedChange.status]?.text || ''}`}>
-                  {selectedChange.status}
+                  {STATUS_KEYS[selectedChange.status] ? tl(STATUS_KEYS[selectedChange.status]) : selectedChange.status}
                 </span>
               </div>
               <div className="flex items-center text-sm">
                 <Calendar className="h-4 w-4 text-muted mr-2" />
-                <span className="text-secondary">Scheduled:</span>
+                <span className="text-secondary">{cc('scheduled')}</span>
                 <span className="ml-2 text-foreground">
-                  {new Date(selectedChange.scheduled_start).toLocaleString()}
+                  {new Date(selectedChange.scheduled_start).toLocaleString(loc)}
                 </span>
               </div>
               {selectedChange.assigned_to_name && (
                 <div className="flex items-center text-sm">
                   <User className="h-4 w-4 text-muted mr-2" />
-                  <span className="text-secondary">Assignee:</span>
+                  <span className="text-secondary">{cc('assignee')}</span>
                   <span className="ml-2 text-foreground">{selectedChange.assigned_to_name}</span>
                 </div>
               )}
               {selectedChange.application_name && (
                 <div className="flex items-center text-sm">
                   <Server className="h-4 w-4 text-muted mr-2" />
-                  <span className="text-secondary">Application:</span>
+                  <span className="text-secondary">{cc('application')}</span>
                   <span className="ml-2 text-foreground">{selectedChange.application_name}</span>
                 </div>
               )}
@@ -489,10 +499,10 @@ export default function ChangeCalendarPage() {
 
             <div className="mt-6 flex space-x-3">
               <Link href={`/changes/${selectedChange.id}`} className="flex-1">
-                <Button className="w-full">View Details</Button>
+                <Button className="w-full">{ti('viewDetails')}</Button>
               </Link>
               <Button variant="outline" onClick={() => setSelectedChange(null)}>
-                Close
+                {cc('close')}
               </Button>
             </div>
           </div>

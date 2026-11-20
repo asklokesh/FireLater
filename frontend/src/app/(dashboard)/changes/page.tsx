@@ -1,5 +1,6 @@
 'use client';
 
+import { useT } from '@/i18n/useT';
 import { useState } from 'react';
 import Link from 'next/link';
 import {
@@ -57,6 +58,9 @@ const riskColors: Record<string, { bg: string; text: string; ring: string }> = {
 };
 
 export default function ChangesPage() {
+  const tl = useT('listpages');
+  const ti = useT('issues');
+  const tp = useT('pages');
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [typeFilter, setTypeFilter] = useState<string>('all');
@@ -122,15 +126,15 @@ export default function ChangesPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-foreground">Changes</h1>
+          <h1 className="text-2xl font-bold text-foreground">{tp('changes')}</h1>
           <p className="mt-1 text-sm text-secondary">
-            Manage and track change requests
+            {tl('changesSubtitle')}
           </p>
         </div>
         <Link href="/changes/new">
           <Button>
             <Plus className="h-4 w-4 mr-2" />
-            New Change
+            {tp('newChange')}
           </Button>
         </Link>
       </div>
@@ -142,7 +146,7 @@ export default function ChangesPage() {
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted" />
             <input
               type="text"
-              placeholder="Search by number or title..."
+              placeholder={ti('searchPlaceholder')}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="w-full pl-10 pr-4 py-2 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary"
@@ -154,7 +158,7 @@ export default function ChangesPage() {
             className="flex items-center"
           >
             <Filter className="h-4 w-4 mr-2" />
-            Filters
+            {tp('filters')}
             <ChevronDown className={`h-4 w-4 ml-2 transition-transform ${showFilters ? 'rotate-180' : ''}`} />
           </Button>
         </div>
@@ -162,7 +166,7 @@ export default function ChangesPage() {
         {showFilters && (
           <div className="mt-4 pt-4 border-t border-border grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div>
-              <label className="block text-sm font-medium text-foreground mb-1">Status</label>
+              <label className="block text-sm font-medium text-foreground mb-1">{ti('status')}</label>
               <select
                 value={statusFilter}
                 onChange={(e) => {
@@ -171,16 +175,16 @@ export default function ChangesPage() {
                 }}
                 className="w-full px-3 py-2 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary"
               >
-                <option value="all">All Statuses</option>
-                <option value="draft">Draft</option>
-                <option value="submitted">Submitted</option>
-                <option value="review">In Review</option>
-                <option value="approved">Approved</option>
-                <option value="scheduled">Scheduled</option>
-                <option value="implementing">Implementing</option>
-                <option value="completed">Completed</option>
-                <option value="failed">Failed</option>
-                <option value="cancelled">Cancelled</option>
+                <option value="all">{tl('allStatuses')}</option>
+                <option value="draft">{tl('draft')}</option>
+                <option value="submitted">{tl('submitted')}</option>
+                <option value="review">{tl('inReview')}</option>
+                <option value="approved">{tl('approved')}</option>
+                <option value="scheduled">{tl('scheduled')}</option>
+                <option value="implementing">{tl('implementing')}</option>
+                <option value="completed">{tl('completed')}</option>
+                <option value="failed">{tl('failed')}</option>
+                <option value="cancelled">{tl('cancelled')}</option>
               </select>
             </div>
             <div>
@@ -193,10 +197,10 @@ export default function ChangesPage() {
                 }}
                 className="w-full px-3 py-2 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary"
               >
-                <option value="all">All Types</option>
-                <option value="standard">Standard</option>
-                <option value="normal">Normal</option>
-                <option value="emergency">Emergency</option>
+                <option value="all">{tl('allTypes')}</option>
+                <option value="standard">{tl('standard')}</option>
+                <option value="normal">{tl('normal')}</option>
+                <option value="emergency">{tl('emergency')}</option>
               </select>
             </div>
             <div>
@@ -209,11 +213,11 @@ export default function ChangesPage() {
                 }}
                 className="w-full px-3 py-2 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary"
               >
-                <option value="all">All Risk Levels</option>
-                <option value="low">Low</option>
-                <option value="medium">Medium</option>
-                <option value="high">High</option>
-                <option value="critical">Critical</option>
+                <option value="all">{tl('allRiskLevels')}</option>
+                <option value="low">{ti('priorityLow')}</option>
+                <option value="medium">{ti('priorityMedium')}</option>
+                <option value="high">{ti('priorityHigh')}</option>
+                <option value="critical">{ti('priorityCritical')}</option>
               </select>
             </div>
           </div>
@@ -233,22 +237,22 @@ export default function ChangesPage() {
               <thead className="bg-background">
                 <tr>
                   <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-muted border-b border-border">
-                    Change
+                    {tl('colChange')}
                   </th>
                   <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-muted border-b border-border">
-                    Type / Risk
+                    {tl('colTypeRisk')}
                   </th>
                   <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-muted border-b border-border">
-                    Status
+                    {ti('status')}
                   </th>
                   <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-muted border-b border-border">
-                    Scheduled
+                    {tl('scheduled')}
                   </th>
                   <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-muted border-b border-border">
-                    Implementer
+                    {tl('colImplementer')}
                   </th>
                   <th className="px-4 py-3 text-right text-xs font-medium uppercase tracking-wider text-muted border-b border-border">
-                    Actions
+                    {ti('colActions')}
                   </th>
                 </tr>
               </thead>
@@ -373,7 +377,7 @@ export default function ChangesPage() {
                   disabled={page <= 1}
                   onClick={() => setPage(p => Math.max(1, p - 1))}
                 >
-                  Previous
+                  {ti('previous')}
                 </Button>
                 <Button
                   variant="outline"
@@ -381,7 +385,7 @@ export default function ChangesPage() {
                   disabled={page >= pagination.totalPages}
                   onClick={() => setPage(p => p + 1)}
                 >
-                  Next
+                  {ti('next')}
                 </Button>
               </div>
             </div>

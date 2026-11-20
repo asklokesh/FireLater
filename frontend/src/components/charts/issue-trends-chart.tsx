@@ -1,5 +1,6 @@
 'use client';
 
+import { useT } from '@/i18n/useT';
 import { useMemo } from 'react';
 import { TrendingUp, TrendingDown, Minus } from 'lucide-react';
 import {
@@ -39,6 +40,7 @@ export function IssueTrendsChart({
   className = '',
   chartType = 'area',
 }: IssueTrendsChartProps) {
+  const sh = useT('shared');
   // Calculate statistics
   const stats = useMemo(() => {
     if (data.length < 2) return null;
@@ -94,7 +96,7 @@ export function IssueTrendsChart({
       <div className={`bg-surface border border-border rounded-xl p-5 shadow-sm ${className}`}>
         <h3 className="text-base font-semibold text-foreground mb-4">{title}</h3>
         <div className="flex items-center justify-center h-48 text-muted">
-          No data available
+          {sh('noData')}
         </div>
       </div>
     );
@@ -140,7 +142,7 @@ export function IssueTrendsChart({
                   {stats.netChange >= 0 ? '+' : ''}{stats.netChange}
                 </span>
               </div>
-              <p className="text-sm text-muted">Net Change</p>
+              <p className="text-sm text-muted">{sh('netChange')}</p>
             </div>
           </div>
         )}
@@ -185,7 +187,7 @@ export function IssueTrendsChart({
                 <Area
                   type="monotone"
                   dataKey="opened"
-                  name="Opened"
+                  name={sh('opened')}
                   stroke="#c96442"
                   strokeWidth={2}
                   fillOpacity={1}
@@ -194,7 +196,7 @@ export function IssueTrendsChart({
                 <Area
                   type="monotone"
                   dataKey="resolved"
-                  name="Resolved"
+                  name={sh('resolved')}
                   stroke="#3f7d52"
                   strokeWidth={2}
                   fillOpacity={1}
@@ -225,8 +227,8 @@ export function IssueTrendsChart({
                   }}
                 />
                 {showLegend && <Legend />}
-                <Bar dataKey="opened" name="Opened" fill="#c96442" radius={[4, 4, 0, 0]} />
-                <Bar dataKey="resolved" name="Resolved" fill="#3f7d52" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="opened" name={sh('opened')} fill="#c96442" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="resolved" name={sh('resolved')} fill="#3f7d52" radius={[4, 4, 0, 0]} />
               </BarChart>
             )}
           </ResponsiveContainer>

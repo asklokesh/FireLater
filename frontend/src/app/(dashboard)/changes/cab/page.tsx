@@ -1,5 +1,6 @@
 'use client';
 
+import { useT, useOptionalIntl } from '@/i18n/useT';
 import { useState } from 'react';
 import Link from 'next/link';
 import {
@@ -62,10 +63,10 @@ import {
 } from '@/hooks/useApi';
 
 const statusColors: Record<CabMeetingStatus, { bg: string; text: string; label: string }> = {
-  scheduled: { bg: 'bg-primary-subtle', text: 'text-primary', label: 'Scheduled' },
-  in_progress: { bg: 'bg-warning-subtle', text: 'text-warning', label: 'In Progress' },
-  completed: { bg: 'bg-success-subtle', text: 'text-success', label: 'Completed' },
-  cancelled: { bg: 'bg-surface-hover', text: 'text-foreground', label: 'Cancelled' },
+  scheduled: { bg: 'bg-primary-subtle', text: 'text-primary', label: 'sScheduled' },
+  in_progress: { bg: 'bg-warning-subtle', text: 'text-warning', label: 'sInProgress' },
+  completed: { bg: 'bg-success-subtle', text: 'text-success', label: 'sCompleted' },
+  cancelled: { bg: 'bg-surface-hover', text: 'text-foreground', label: 'sCancelled' },
 };
 
 const riskColors: Record<string, { bg: string; text: string }> = {
@@ -76,20 +77,23 @@ const riskColors: Record<string, { bg: string; text: string }> = {
 };
 
 const roleLabels: Record<CabAttendeeRole, string> = {
-  chair: 'Chair',
-  member: 'Member',
-  guest: 'Guest',
+  chair: 'rChair',
+  member: 'rMember',
+  guest: 'rGuest',
 };
 
 const decisionColors: Record<CabDecision, { bg: string; text: string; label: string }> = {
-  approved: { bg: 'bg-success-subtle', text: 'text-success', label: 'Approved' },
-  rejected: { bg: 'bg-error-subtle', text: 'text-error', label: 'Rejected' },
-  deferred: { bg: 'bg-warning-subtle', text: 'text-warning', label: 'Deferred' },
+  approved: { bg: 'bg-success-subtle', text: 'text-success', label: 'dApproved' },
+  rejected: { bg: 'bg-error-subtle', text: 'text-error', label: 'dRejected' },
+  deferred: { bg: 'bg-warning-subtle', text: 'text-warning', label: 'dDeferred' },
 };
 
 type TabType = 'overview' | 'attendees' | 'agenda' | 'decisions' | 'action-items' | 'minutes';
 
 export default function CabMeetingsPage() {
+  const cb = useT('cab');
+  const intl = useOptionalIntl();
+  const loc = intl?.locale ?? 'en-US';
   // Filters state
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [startDate, setStartDate] = useState('');
@@ -131,7 +135,7 @@ export default function CabMeetingsPage() {
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', {
+    return date.toLocaleDateString(loc, {
       month: 'short',
       day: 'numeric',
       year: 'numeric',
@@ -178,7 +182,7 @@ export default function CabMeetingsPage() {
   };
 
   const handleDeleteMeeting = async (id: string) => {
-    if (!window.confirm('Are you sure you want to delete this meeting?')) return;
+    if (!window.confirm(cb('confirmDelete'))) return;
     try {
       await deleteMeeting.mutateAsync(id);
       setShowDetailModal(false);
@@ -236,18 +240,18 @@ export default function CabMeetingsPage() {
       <div className="flex items-center justify-between">
         <div>
           <div className="flex items-center space-x-2 text-sm text-muted mb-1">
-            <Link href="/changes" className="hover:text-secondary">Changes</Link>
+            <Link href="/changes" className="hover:text-secondary">{cb('changes')}</Link>
             <ChevronRight className="h-4 w-4" />
-            <span>CAB Meetings</span>
+            <span>{cb('title')}</span>
           </div>
-          <h1 className="text-2xl font-bold text-foreground">CAB Meetings</h1>
+          <h1 className="text-2xl font-bold text-foreground">{cb('title')}</h1>
           <p className="mt-1 text-sm text-muted">
-            Manage Change Advisory Board meetings, agendas, and decisions
+            {cb('subtitle')}
           </p>
         </div>
         <Button onClick={() => setShowCreateModal(true)}>
           <Plus className="h-4 w-4 mr-2" />
-          Schedule Meeting
+          {cb('scheduleMeeting')}
         </Button>
       </div>
 
@@ -260,23 +264,23 @@ export default function CabMeetingsPage() {
               onChange={(e) => setStatusFilter(e.target.value)}
               className="px-3 py-2 border border-border-strong rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary"
             >
-              <option value="all">All Statuses</option>
-              <option value="scheduled">Scheduled</option>
-              <option value="in_progress">In Progress</option>
-              <option value="completed">Completed</option>
-              <option value="cancelled">Cancelled</option>
+              <option value="all">{cb('allStatuses')}</option>
+              <option value="scheduled">{cb('sScheduled')}</option>
+              <option value="in_progress">{cb('sInProgress')}</option>
+              <option value="completed">{cb('sCompleted')}</option>
+              <option value="cancelled">{cb('sCancelled')}</option>
             </select>
           </div>
           <Button variant="outline" size="sm" onClick={() => setShowFilters(!showFilters)}>
             <Filter className="h-4 w-4 mr-2" />
-            {showFilters ? 'Hide Filters' : 'More Filters'}
+            {showFilters ? cb('hideFilters') : cb('moreFilters')}
           </Button>
         </div>
 
         {showFilters && (
           <div className="px-6 py-3 border-b border-border bg-surface-hover flex items-center space-x-4">
             <div className="flex items-center space-x-2">
-              <label className="text-sm text-secondary">From:</label>
+              <label className="text-sm text-secondary">{cb('from')}</label>
               <input
                 type="date"
                 value={startDate}
@@ -285,7 +289,7 @@ export default function CabMeetingsPage() {
               />
             </div>
             <div className="flex items-center space-x-2">
-              <label className="text-sm text-secondary">To:</label>
+              <label className="text-sm text-secondary">{cb('to')}</label>
               <input
                 type="date"
                 value={endDate}
@@ -302,7 +306,7 @@ export default function CabMeetingsPage() {
                 setStatusFilter('all');
               }}
             >
-              Clear Filters
+              {cb('clearFilters')}
             </Button>
           </div>
         )}
@@ -315,16 +319,16 @@ export default function CabMeetingsPage() {
         ) : error ? (
           <div className="flex flex-col items-center justify-center h-64">
             <AlertCircle className="h-12 w-12 text-error mb-4" />
-            <p className="text-muted">Failed to load meetings</p>
+            <p className="text-muted">{cb('loadFailed')}</p>
           </div>
         ) : meetings.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-64">
             <Calendar className="h-12 w-12 text-muted mb-4" />
-            <h3 className="text-lg font-medium text-foreground">No meetings found</h3>
-            <p className="text-muted mt-1">Schedule a CAB meeting to get started</p>
+            <h3 className="text-lg font-medium text-foreground">{cb('noMeetings')}</h3>
+            <p className="text-muted mt-1">{cb('noMeetingsHint')}</p>
             <Button className="mt-4" onClick={() => setShowCreateModal(true)}>
               <Plus className="h-4 w-4 mr-2" />
-              Schedule Meeting
+              {cb('scheduleMeeting')}
             </Button>
           </div>
         ) : (
@@ -333,25 +337,25 @@ export default function CabMeetingsPage() {
               <thead className="bg-surface-hover">
                 <tr>
                   <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">
-                    Meeting
+                    {cb('colMeeting')}
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">
-                    Date/Time
+                    {cb('colDateTime')}
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">
-                    Status
+                    {cb('colStatus')}
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">
-                    Organizer
+                    {cb('colOrganizer')}
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">
-                    Attendees
+                    {cb('colAttendees')}
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">
-                    Changes
+                    {cb('changes')}
                   </th>
                   <th className="px-6 py-3 text-right text-xs font-medium text-muted uppercase tracking-wider">
-                    Actions
+                    {cb('colActions')}
                   </th>
                 </tr>
               </thead>
@@ -380,7 +384,7 @@ export default function CabMeetingsPage() {
                                 {meeting.meeting_link && (
                                   <span className="flex items-center">
                                     <Video className="h-3 w-3 mr-1" />
-                                    Virtual
+                                    {cb('virtual')}
                                   </span>
                                 )}
                               </div>
@@ -393,7 +397,7 @@ export default function CabMeetingsPage() {
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${status.bg} ${status.text}`}>
-                          {status.label}
+                          {cb(status.label)}
                         </span>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
@@ -419,7 +423,7 @@ export default function CabMeetingsPage() {
                           }}
                           className="text-primary hover:text-primary"
                         >
-                          View
+                          {cb('view')}
                         </button>
                       </td>
                     </tr>
@@ -436,7 +440,7 @@ export default function CabMeetingsPage() {
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-surface rounded-xl shadow-sm-xl max-w-lg w-full mx-4 p-6">
             <div className="flex items-center justify-between mb-6">
-              <h2 className="text-lg font-semibold text-foreground">Schedule CAB Meeting</h2>
+              <h2 className="text-lg font-semibold text-foreground">{cb('scheduleTitle')}</h2>
               <button
                 onClick={() => {
                   setShowCreateModal(false);
@@ -456,18 +460,18 @@ export default function CabMeetingsPage() {
                 <Input
                   value={formData.title}
                   onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                  placeholder="e.g., Weekly CAB Meeting"
+                  placeholder={cb('titlePh')}
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-secondary mb-1">Description</label>
+                <label className="block text-sm font-medium text-secondary mb-1">{cb('description')}</label>
                 <textarea
                   value={formData.description}
                   onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                   className="w-full px-3 py-2 border border-border-strong rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary"
                   rows={3}
-                  placeholder="Meeting description..."
+                  placeholder={cb('descPh')}
                 />
               </div>
 
@@ -484,7 +488,7 @@ export default function CabMeetingsPage() {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-secondary mb-1">End Date/Time</label>
+                  <label className="block text-sm font-medium text-secondary mb-1">{cb('endDateTime')}</label>
                   <input
                     type="datetime-local"
                     value={formData.endDate}
@@ -495,16 +499,16 @@ export default function CabMeetingsPage() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-secondary mb-1">Location</label>
+                <label className="block text-sm font-medium text-secondary mb-1">{cb('location')}</label>
                 <Input
                   value={formData.location}
                   onChange={(e) => setFormData({ ...formData, location: e.target.value })}
-                  placeholder="e.g., Conference Room A"
+                  placeholder={cb('locationPh')}
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-secondary mb-1">Meeting Link</label>
+                <label className="block text-sm font-medium text-secondary mb-1">{cb('meetingLink')}</label>
                 <Input
                   value={formData.meetingLink}
                   onChange={(e) => setFormData({ ...formData, meetingLink: e.target.value })}
@@ -518,7 +522,7 @@ export default function CabMeetingsPage() {
                 setShowCreateModal(false);
                 resetForm();
               }}>
-                Cancel
+                {cb('cancel')}
               </Button>
               <Button
                 onClick={handleCreateMeeting}
@@ -529,7 +533,7 @@ export default function CabMeetingsPage() {
                 ) : (
                   <Plus className="h-4 w-4 mr-2" />
                 )}
-                Create Meeting
+                {cb('createMeeting')}
               </Button>
             </div>
           </div>
@@ -607,6 +611,7 @@ function MeetingDetailModal({
   onComplete,
   isUpdating,
 }: MeetingDetailModalProps) {
+  const cb = useT('cab');
   const { data: meeting, isLoading } = useCabMeeting(meetingId);
 
   if (isLoading) {
@@ -624,12 +629,12 @@ function MeetingDetailModal({
   const status = statusColors[meeting.status] || statusColors.scheduled;
 
   const tabs = [
-    { id: 'overview' as TabType, label: 'Overview', icon: Calendar },
-    { id: 'attendees' as TabType, label: 'Attendees', icon: Users },
-    { id: 'agenda' as TabType, label: 'Agenda', icon: ClipboardList },
-    { id: 'decisions' as TabType, label: 'Decisions', icon: CheckCircle },
-    { id: 'action-items' as TabType, label: 'Action Items', icon: ListTodo },
-    { id: 'minutes' as TabType, label: 'Minutes', icon: MessageSquare },
+    { id: 'overview' as TabType, label: cb('tabOverview'), icon: Calendar },
+    { id: 'attendees' as TabType, label: cb('tabAttendees'), icon: Users },
+    { id: 'agenda' as TabType, label: cb('tabAgenda'), icon: ClipboardList },
+    { id: 'decisions' as TabType, label: cb('tabDecisions'), icon: CheckCircle },
+    { id: 'action-items' as TabType, label: cb('tabActionItems'), icon: ListTodo },
+    { id: 'minutes' as TabType, label: cb('tabMinutes'), icon: MessageSquare },
   ];
 
   return (
@@ -642,7 +647,7 @@ function MeetingDetailModal({
             <div>
               <h2 className="text-lg font-semibold text-foreground">{meeting.title}</h2>
               <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${status.bg} ${status.text}`}>
-                {status.label}
+                {cb(status.label)}
               </span>
             </div>
           </div>
@@ -650,25 +655,25 @@ function MeetingDetailModal({
             {meeting.status === 'scheduled' && (
               <Button size="sm" onClick={onStart}>
                 <Play className="h-4 w-4 mr-1" />
-                Start
+                {cb('start')}
               </Button>
             )}
             {meeting.status === 'in_progress' && (
               <Button size="sm" onClick={onComplete}>
                 <CheckCircle className="h-4 w-4 mr-1" />
-                Complete
+                {cb('complete')}
               </Button>
             )}
             {!isEditing && meeting.status !== 'completed' && meeting.status !== 'cancelled' && (
               <Button variant="outline" size="sm" onClick={() => setIsEditing(true)}>
                 <Edit className="h-4 w-4 mr-1" />
-                Edit
+                {cb('edit')}
               </Button>
             )}
             {isEditing && (
               <>
                 <Button variant="outline" size="sm" onClick={() => setIsEditing(false)}>
-                  Cancel
+                  {cb('cancel')}
                 </Button>
                 <Button size="sm" onClick={onUpdate} disabled={isUpdating}>
                   {isUpdating ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Save'}
@@ -722,10 +727,10 @@ function MeetingDetailModal({
         <div className="px-6 py-4 border-t border-border flex justify-between flex-shrink-0">
           <Button variant="danger" size="sm" onClick={onDelete}>
             <Trash2 className="h-4 w-4 mr-1" />
-            Delete Meeting
+            {cb('deleteMeeting')}
           </Button>
           <Button variant="outline" onClick={onClose}>
-            Close
+            {cb('close')}
           </Button>
         </div>
       </div>
@@ -752,9 +757,12 @@ function OverviewTab({
   };
   setFormData: (data: typeof formData) => void;
 }) {
+  const cb = useT('cab');
+  const intl = useOptionalIntl();
+  const loc = intl?.locale ?? 'en-US';
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', {
+    return date.toLocaleDateString(loc, {
       weekday: 'long',
       month: 'long',
       day: 'numeric',
@@ -768,14 +776,14 @@ function OverviewTab({
     return (
       <div className="space-y-4">
         <div>
-          <label className="block text-sm font-medium text-secondary mb-1">Title</label>
+          <label className="block text-sm font-medium text-secondary mb-1">{cb('titleLabel')}</label>
           <Input
             value={formData.title}
             onChange={(e) => setFormData({ ...formData, title: e.target.value })}
           />
         </div>
         <div>
-          <label className="block text-sm font-medium text-secondary mb-1">Description</label>
+          <label className="block text-sm font-medium text-secondary mb-1">{cb('description')}</label>
           <textarea
             value={formData.description}
             onChange={(e) => setFormData({ ...formData, description: e.target.value })}
@@ -785,7 +793,7 @@ function OverviewTab({
         </div>
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm font-medium text-secondary mb-1">Start Date/Time</label>
+            <label className="block text-sm font-medium text-secondary mb-1">{cb('startDateTime')}</label>
             <input
               type="datetime-local"
               value={formData.meetingDate}
@@ -794,7 +802,7 @@ function OverviewTab({
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-secondary mb-1">End Date/Time</label>
+            <label className="block text-sm font-medium text-secondary mb-1">{cb('endDateTime')}</label>
             <input
               type="datetime-local"
               value={formData.endDate}
@@ -804,14 +812,14 @@ function OverviewTab({
           </div>
         </div>
         <div>
-          <label className="block text-sm font-medium text-secondary mb-1">Location</label>
+          <label className="block text-sm font-medium text-secondary mb-1">{cb('location')}</label>
           <Input
             value={formData.location}
             onChange={(e) => setFormData({ ...formData, location: e.target.value })}
           />
         </div>
         <div>
-          <label className="block text-sm font-medium text-secondary mb-1">Meeting Link</label>
+          <label className="block text-sm font-medium text-secondary mb-1">{cb('meetingLink')}</label>
           <Input
             value={formData.meetingLink}
             onChange={(e) => setFormData({ ...formData, meetingLink: e.target.value })}
@@ -827,28 +835,28 @@ function OverviewTab({
       <div className="grid grid-cols-4 gap-4">
         <div className="bg-primary-subtle rounded-lg p-4">
           <div className="text-2xl font-bold text-primary">{meeting.changes_count || 0}</div>
-          <div className="text-sm text-primary">Total Changes</div>
+          <div className="text-sm text-primary">{cb('totalChanges')}</div>
         </div>
         <div className="bg-success-subtle rounded-lg p-4">
           <div className="text-2xl font-bold text-success">{meeting.attendee_count || 0}</div>
-          <div className="text-sm text-success">Attendees</div>
+          <div className="text-sm text-success">{cb('colAttendees')}</div>
         </div>
         <div className="bg-warning-subtle rounded-lg p-4">
           <div className="text-2xl font-bold text-warning">-</div>
-          <div className="text-sm text-warning">Pending</div>
+          <div className="text-sm text-warning">{cb('pending')}</div>
         </div>
         <div className="bg-info-subtle rounded-lg p-4">
           <div className="text-2xl font-bold text-info">-</div>
-          <div className="text-sm text-info">Action Items</div>
+          <div className="text-sm text-info">{cb('actionItems')}</div>
         </div>
       </div>
 
       {/* Meeting Details */}
       <div className="bg-surface-hover rounded-lg p-4">
-        <h3 className="text-sm font-medium text-foreground mb-4">Meeting Details</h3>
+        <h3 className="text-sm font-medium text-foreground mb-4">{cb('meetingDetails')}</h3>
         <dl className="grid grid-cols-2 gap-4">
           <div>
-            <dt className="text-sm text-muted">Date & Time</dt>
+            <dt className="text-sm text-muted">{cb('dateTime')}</dt>
             <dd className="mt-1 flex items-center text-sm text-foreground">
               <Calendar className="h-4 w-4 mr-2 text-muted" />
               {formatDate(meeting.meeting_date)}
@@ -856,7 +864,7 @@ function OverviewTab({
           </div>
           {meeting.end_date && (
             <div>
-              <dt className="text-sm text-muted">End Time</dt>
+              <dt className="text-sm text-muted">{cb('endTime')}</dt>
               <dd className="mt-1 flex items-center text-sm text-foreground">
                 <Clock className="h-4 w-4 mr-2 text-muted" />
                 {formatDate(meeting.end_date)}
@@ -865,7 +873,7 @@ function OverviewTab({
           )}
           {meeting.location && (
             <div>
-              <dt className="text-sm text-muted">Location</dt>
+              <dt className="text-sm text-muted">{cb('location')}</dt>
               <dd className="mt-1 flex items-center text-sm text-foreground">
                 <MapPin className="h-4 w-4 mr-2 text-muted" />
                 {meeting.location}
@@ -874,17 +882,17 @@ function OverviewTab({
           )}
           {meeting.meeting_link && (
             <div>
-              <dt className="text-sm text-muted">Meeting Link</dt>
+              <dt className="text-sm text-muted">{cb('meetingLink')}</dt>
               <dd className="mt-1 flex items-center text-sm text-primary">
                 <Video className="h-4 w-4 mr-2 text-muted" />
                 <a href={meeting.meeting_link} target="_blank" rel="noopener noreferrer" className="hover:underline">
-                  Join Meeting
+                  {cb('joinMeeting')}
                 </a>
               </dd>
             </div>
           )}
           <div>
-            <dt className="text-sm text-muted">Organizer</dt>
+            <dt className="text-sm text-muted">{cb('organizer')}</dt>
             <dd className="mt-1 flex items-center text-sm text-foreground">
               <Users className="h-4 w-4 mr-2 text-muted" />
               {meeting.organizer_name || '-'}
@@ -896,7 +904,7 @@ function OverviewTab({
       {/* Description */}
       {meeting.description && (
         <div>
-          <h3 className="text-sm font-medium text-foreground mb-2">Description</h3>
+          <h3 className="text-sm font-medium text-foreground mb-2">{cb('description')}</h3>
           <p className="text-sm text-secondary whitespace-pre-wrap">{meeting.description}</p>
         </div>
       )}
@@ -906,6 +914,7 @@ function OverviewTab({
 
 // Attendees Tab
 function AttendeesTab({ meetingId, meeting }: { meetingId: string; meeting: CabMeeting }) {
+  const cb = useT('cab');
   const [showAddUser, setShowAddUser] = useState(false);
   const [selectedUserId, setSelectedUserId] = useState('');
   const [selectedRole, setSelectedRole] = useState<CabAttendeeRole>('member');
@@ -949,7 +958,7 @@ function AttendeesTab({ meetingId, meeting }: { meetingId: string; meeting: CabM
         <div className="flex justify-end">
           <Button size="sm" onClick={() => setShowAddUser(true)}>
             <Plus className="h-4 w-4 mr-1" />
-            Add Attendee
+            {cb('addAttendee')}
           </Button>
         </div>
       )}
@@ -958,34 +967,34 @@ function AttendeesTab({ meetingId, meeting }: { meetingId: string; meeting: CabM
         <div className="bg-surface-hover rounded-lg p-4">
           <div className="flex items-end space-x-4">
             <div className="flex-1">
-              <label className="block text-sm font-medium text-secondary mb-1">User</label>
+              <label className="block text-sm font-medium text-secondary mb-1">{cb('user')}</label>
               <select
                 value={selectedUserId}
                 onChange={(e) => setSelectedUserId(e.target.value)}
                 className="w-full px-3 py-2 border border-border-strong rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary"
               >
-                <option value="">Select a user...</option>
+                <option value="">{cb('selectUser')}</option>
                 {users.map((user: { id: string; name: string }) => (
                   <option key={user.id} value={user.id}>{user.name}</option>
                 ))}
               </select>
             </div>
             <div>
-              <label className="block text-sm font-medium text-secondary mb-1">Role</label>
+              <label className="block text-sm font-medium text-secondary mb-1">{cb('role')}</label>
               <select
                 value={selectedRole}
                 onChange={(e) => setSelectedRole(e.target.value as CabAttendeeRole)}
                 className="px-3 py-2 border border-border-strong rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary"
               >
-                <option value="chair">Chair</option>
-                <option value="member">Member</option>
-                <option value="guest">Guest</option>
+                <option value="chair">{cb('rChair')}</option>
+                <option value="member">{cb('rMember')}</option>
+                <option value="guest">{cb('rGuest')}</option>
               </select>
             </div>
             <Button onClick={handleAddAttendee} disabled={!selectedUserId || addAttendee.isPending}>
               {addAttendee.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Add'}
             </Button>
-            <Button variant="outline" onClick={() => setShowAddUser(false)}>Cancel</Button>
+            <Button variant="outline" onClick={() => setShowAddUser(false)}>{cb('cancel')}</Button>
           </div>
         </div>
       )}
@@ -996,7 +1005,7 @@ function AttendeesTab({ meetingId, meeting }: { meetingId: string; meeting: CabM
         </div>
       ) : attendees.length === 0 ? (
         <div className="text-center py-8 text-muted">
-          No attendees added yet
+          {cb('noAttendees')}
         </div>
       ) : (
         <div className="space-y-2">
@@ -1007,11 +1016,11 @@ function AttendeesTab({ meetingId, meeting }: { meetingId: string; meeting: CabM
                   {attendee.user_name?.charAt(0) || 'U'}
                 </div>
                 <div>
-                  <div className="text-sm font-medium text-foreground">{attendee.user_name || 'Unknown'}</div>
+                  <div className="text-sm font-medium text-foreground">{attendee.user_name || cb('unknown')}</div>
                   <div className="text-xs text-muted">{attendee.user_email || ''}</div>
                 </div>
                 <span className="px-2 py-1 rounded-full text-xs font-medium bg-surface-hover text-secondary">
-                  {roleLabels[attendee.role]}
+                  {cb(roleLabels[attendee.role])}
                 </span>
               </div>
               {canEdit && (
@@ -1032,6 +1041,7 @@ function AttendeesTab({ meetingId, meeting }: { meetingId: string; meeting: CabM
 
 // Agenda Tab
 function AgendaTab({ meetingId, meeting }: { meetingId: string; meeting: CabMeeting }) {
+  const cb = useT('cab');
   const [showAddChange, setShowAddChange] = useState(false);
   const [selectedChangeId, setSelectedChangeId] = useState('');
   const [editingAgenda, setEditingAgenda] = useState(false);
@@ -1090,11 +1100,11 @@ function AgendaTab({ meetingId, meeting }: { meetingId: string; meeting: CabMeet
       {/* Changes to Review */}
       <div>
         <div className="flex items-center justify-between mb-4">
-          <h3 className="text-sm font-medium text-foreground">Changes to Review</h3>
+          <h3 className="text-sm font-medium text-foreground">{cb('changesToReview')}</h3>
           {canEdit && (
             <Button size="sm" onClick={() => setShowAddChange(true)}>
               <Plus className="h-4 w-4 mr-1" />
-              Add Change
+              {cb('addChange')}
             </Button>
           )}
         </div>
@@ -1103,13 +1113,13 @@ function AgendaTab({ meetingId, meeting }: { meetingId: string; meeting: CabMeet
           <div className="bg-surface-hover rounded-lg p-4 mb-4">
             <div className="flex items-end space-x-4">
               <div className="flex-1">
-                <label className="block text-sm font-medium text-secondary mb-1">Change</label>
+                <label className="block text-sm font-medium text-secondary mb-1">{cb('change')}</label>
                 <select
                   value={selectedChangeId}
                   onChange={(e) => setSelectedChangeId(e.target.value)}
                   className="w-full px-3 py-2 border border-border-strong rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary"
                 >
-                  <option value="">Select a change...</option>
+                  <option value="">{cb('selectChange')}</option>
                   {availableChanges.map((change: { id: string; change_number?: string; title: string }) => (
                     <option key={change.id} value={change.id}>
                       {change.change_number || change.id} - {change.title}
@@ -1120,7 +1130,7 @@ function AgendaTab({ meetingId, meeting }: { meetingId: string; meeting: CabMeet
               <Button onClick={handleAddChange} disabled={!selectedChangeId || addChange.isPending}>
                 {addChange.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Add'}
               </Button>
-              <Button variant="outline" onClick={() => setShowAddChange(false)}>Cancel</Button>
+              <Button variant="outline" onClick={() => setShowAddChange(false)}>{cb('cancel')}</Button>
             </div>
           </div>
         )}
@@ -1131,7 +1141,7 @@ function AgendaTab({ meetingId, meeting }: { meetingId: string; meeting: CabMeet
           </div>
         ) : changes.length === 0 ? (
           <div className="text-center py-8 text-muted">
-            No changes added to this meeting
+            {cb('noChangesAdded')}
           </div>
         ) : (
           <div className="space-y-2">
@@ -1149,12 +1159,12 @@ function AgendaTab({ meetingId, meeting }: { meetingId: string; meeting: CabMeet
                         </span>
                         {change.decision && (
                           <span className={`px-2 py-0.5 rounded text-xs font-medium ${decisionColors[change.decision].bg} ${decisionColors[change.decision].text}`}>
-                            {decisionColors[change.decision].label}
+                            {cb(decisionColors[change.decision].label)}
                           </span>
                         )}
                       </div>
                       <div className="text-sm text-foreground">{change.change_title}</div>
-                      <div className="text-xs text-muted">Requester: {change.requester_name || '-'}</div>
+                      <div className="text-xs text-muted">{cb('requester', { name: change.requester_name || '-' })}</div>
                     </div>
                   </div>
                   {canEdit && !change.decision && (
@@ -1175,23 +1185,23 @@ function AgendaTab({ meetingId, meeting }: { meetingId: string; meeting: CabMeet
       {/* Agenda Text */}
       <div>
         <div className="flex items-center justify-between mb-4">
-          <h3 className="text-sm font-medium text-foreground">Meeting Agenda</h3>
+          <h3 className="text-sm font-medium text-foreground">{cb('meetingAgenda')}</h3>
           <div className="flex space-x-2">
             {canEdit && !editingAgenda && (
               <>
                 <Button variant="outline" size="sm" onClick={handleGenerateAgenda} disabled={generateAgenda.isPending}>
                   {generateAgenda.isPending ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : <FileText className="h-4 w-4 mr-1" />}
-                  Generate
+                  {cb('generate')}
                 </Button>
                 <Button size="sm" onClick={() => setEditingAgenda(true)}>
                   <Edit className="h-4 w-4 mr-1" />
-                  Edit
+                  {cb('edit')}
                 </Button>
               </>
             )}
             {editingAgenda && (
               <>
-                <Button variant="outline" size="sm" onClick={() => setEditingAgenda(false)}>Cancel</Button>
+                <Button variant="outline" size="sm" onClick={() => setEditingAgenda(false)}>{cb('cancel')}</Button>
                 <Button size="sm" onClick={handleSaveAgenda} disabled={updateAgenda.isPending}>
                   {updateAgenda.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Save'}
                 </Button>
@@ -1206,14 +1216,14 @@ function AgendaTab({ meetingId, meeting }: { meetingId: string; meeting: CabMeet
             onChange={(e) => setAgendaText(e.target.value)}
             className="w-full px-3 py-2 border border-border-strong rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary font-mono"
             rows={15}
-            placeholder="Enter meeting agenda..."
+            placeholder={cb('agendaPh')}
           />
         ) : (
           <div className="bg-surface-hover rounded-lg p-4 min-h-[200px]">
             {meeting.agenda ? (
               <pre className="text-sm text-secondary whitespace-pre-wrap font-sans">{meeting.agenda}</pre>
             ) : (
-              <p className="text-sm text-muted italic">No agenda generated yet. Click &quot;Generate&quot; to create one from the changes list.</p>
+              <p className="text-sm text-muted italic">{cb('noAgenda')}</p>
             )}
           </div>
         )}
@@ -1224,6 +1234,7 @@ function AgendaTab({ meetingId, meeting }: { meetingId: string; meeting: CabMeet
 
 // Decisions Tab
 function DecisionsTab({ meetingId, meeting }: { meetingId: string; meeting: CabMeeting }) {
+  const cb = useT('cab');
   const [selectedChange, setSelectedChange] = useState<CabMeetingChange | null>(null);
   const [decision, setDecision] = useState<CabDecision | ''>('');
   const [notes, setNotes] = useState('');
@@ -1256,7 +1267,7 @@ function DecisionsTab({ meetingId, meeting }: { meetingId: string; meeting: CabM
       {!canEdit && meeting.status !== 'completed' && (
         <div className="bg-warning-subtle border border-yellow-200 rounded-lg p-4">
           <p className="text-sm text-warning">
-            Start the meeting to record decisions.
+            {cb('startToRecord')}
           </p>
         </div>
       )}
@@ -1267,7 +1278,7 @@ function DecisionsTab({ meetingId, meeting }: { meetingId: string; meeting: CabM
         </div>
       ) : changes.length === 0 ? (
         <div className="text-center py-8 text-muted">
-          No changes to review. Add changes in the Agenda tab.
+          {cb('noChangesToReview')}
         </div>
       ) : (
         <div className="space-y-4">
@@ -1285,11 +1296,11 @@ function DecisionsTab({ meetingId, meeting }: { meetingId: string; meeting: CabM
                     <div className="flex items-center space-x-2">
                       <span className="text-sm font-medium text-primary">{change.change_number}</span>
                       <span className={`px-2 py-0.5 rounded text-xs font-medium ${risk.bg} ${risk.text}`}>
-                        {change.change_risk_level || 'medium'} risk
+                        {cb('riskSuffix', { risk: change.change_risk_level || 'medium' })}
                       </span>
                     </div>
                     <h4 className="text-sm font-medium text-foreground mt-1">{change.change_title}</h4>
-                    <p className="text-xs text-muted mt-1">Requester: {change.requester_name || '-'}</p>
+                    <p className="text-xs text-muted mt-1">{cb('requester', { name: change.requester_name || '-' })}</p>
                   </div>
 
                   {change.decision ? (
@@ -1298,7 +1309,7 @@ function DecisionsTab({ meetingId, meeting }: { meetingId: string; meeting: CabM
                         {change.decision === 'approved' && <CheckCircle className="h-3 w-3 mr-1" />}
                         {change.decision === 'rejected' && <XCircle className="h-3 w-3 mr-1" />}
                         {change.decision === 'deferred' && <Clock className="h-3 w-3 mr-1" />}
-                        {decisionColors[change.decision].label}
+                        {cb(decisionColors[change.decision].label)}
                       </span>
                       {change.decided_by_name && (
                         <p className="text-xs text-muted mt-1">by {change.decided_by_name}</p>
@@ -1317,10 +1328,10 @@ function DecisionsTab({ meetingId, meeting }: { meetingId: string; meeting: CabM
                         setNotes('');
                       }}
                     >
-                      Record Decision
+                      {cb('recordDecision')}
                     </Button>
                   ) : (
-                    <span className="text-sm text-muted">Pending</span>
+                    <span className="text-sm text-muted">{cb('pending')}</span>
                   )}
                 </div>
 
@@ -1328,7 +1339,7 @@ function DecisionsTab({ meetingId, meeting }: { meetingId: string; meeting: CabM
                   <div className="mt-4 pt-4 border-t border-border">
                     <div className="space-y-3">
                       <div>
-                        <label className="block text-sm font-medium text-secondary mb-2">Decision</label>
+                        <label className="block text-sm font-medium text-secondary mb-2">{cb('decision')}</label>
                         <div className="flex space-x-2">
                           <Button
                             variant={decision === 'approved' ? 'primary' : 'outline'}
@@ -1336,7 +1347,7 @@ function DecisionsTab({ meetingId, meeting }: { meetingId: string; meeting: CabM
                             onClick={() => setDecision('approved')}
                           >
                             <CheckCircle className="h-4 w-4 mr-1" />
-                            Approve
+                            {cb('approve')}
                           </Button>
                           <Button
                             variant={decision === 'rejected' ? 'danger' : 'outline'}
@@ -1344,7 +1355,7 @@ function DecisionsTab({ meetingId, meeting }: { meetingId: string; meeting: CabM
                             onClick={() => setDecision('rejected')}
                           >
                             <XCircle className="h-4 w-4 mr-1" />
-                            Reject
+                            {cb('reject')}
                           </Button>
                           <Button
                             variant={decision === 'deferred' ? 'secondary' : 'outline'}
@@ -1352,23 +1363,23 @@ function DecisionsTab({ meetingId, meeting }: { meetingId: string; meeting: CabM
                             onClick={() => setDecision('deferred')}
                           >
                             <Clock className="h-4 w-4 mr-1" />
-                            Defer
+                            {cb('defer')}
                           </Button>
                         </div>
                       </div>
                       <div>
-                        <label className="block text-sm font-medium text-secondary mb-1">Notes</label>
+                        <label className="block text-sm font-medium text-secondary mb-1">{cb('notes')}</label>
                         <textarea
                           value={notes}
                           onChange={(e) => setNotes(e.target.value)}
                           className="w-full px-3 py-2 border border-border-strong rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary"
                           rows={2}
-                          placeholder="Add notes about the decision..."
+                          placeholder={cb('notesPh')}
                         />
                       </div>
                       <div className="flex justify-end space-x-2">
                         <Button variant="outline" size="sm" onClick={() => setSelectedChange(null)}>
-                          Cancel
+                          {cb('cancel')}
                         </Button>
                         <Button
                           size="sm"
@@ -1378,7 +1389,7 @@ function DecisionsTab({ meetingId, meeting }: { meetingId: string; meeting: CabM
                           {recordDecision.isPending ? (
                             <Loader2 className="h-4 w-4 animate-spin mr-1" />
                           ) : null}
-                          Save Decision
+                          {cb('saveDecision')}
                         </Button>
                       </div>
                     </div>
@@ -1395,6 +1406,9 @@ function DecisionsTab({ meetingId, meeting }: { meetingId: string; meeting: CabM
 
 // Action Items Tab
 function ActionItemsTab({ meetingId }: { meetingId: string }) {
+  const cb = useT('cab');
+  const intl = useOptionalIntl();
+  const loc = intl?.locale ?? 'en-US';
   const [showAddForm, setShowAddForm] = useState(false);
   const [description, setDescription] = useState('');
   const [assigneeId, setAssigneeId] = useState('');
@@ -1452,7 +1466,7 @@ function ActionItemsTab({ meetingId }: { meetingId: string }) {
       <div className="flex justify-end">
         <Button size="sm" onClick={() => setShowAddForm(true)}>
           <Plus className="h-4 w-4 mr-1" />
-          Add Action Item
+          {cb('addActionItem')}
         </Button>
       </div>
 
@@ -1460,29 +1474,29 @@ function ActionItemsTab({ meetingId }: { meetingId: string }) {
         <div className="bg-surface-hover rounded-lg p-4">
           <div className="space-y-3">
             <div>
-              <label className="block text-sm font-medium text-secondary mb-1">Description</label>
+              <label className="block text-sm font-medium text-secondary mb-1">{cb('description')}</label>
               <Input
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
-                placeholder="What needs to be done?"
+                placeholder={cb('actionPh')}
               />
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-secondary mb-1">Assignee</label>
+                <label className="block text-sm font-medium text-secondary mb-1">{cb('assignee')}</label>
                 <select
                   value={assigneeId}
                   onChange={(e) => setAssigneeId(e.target.value)}
                   className="w-full px-3 py-2 border border-border-strong rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary"
                 >
-                  <option value="">Unassigned</option>
+                  <option value="">{cb('unassigned')}</option>
                   {users.map((user: { id: string; name: string }) => (
                     <option key={user.id} value={user.id}>{user.name}</option>
                   ))}
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium text-secondary mb-1">Due Date</label>
+                <label className="block text-sm font-medium text-secondary mb-1">{cb('dueDate')}</label>
                 <input
                   type="date"
                   value={dueDate}
@@ -1492,10 +1506,10 @@ function ActionItemsTab({ meetingId }: { meetingId: string }) {
               </div>
             </div>
             <div className="flex justify-end space-x-2">
-              <Button variant="outline" size="sm" onClick={() => setShowAddForm(false)}>Cancel</Button>
+              <Button variant="outline" size="sm" onClick={() => setShowAddForm(false)}>{cb('cancel')}</Button>
               <Button size="sm" onClick={handleAddItem} disabled={!description || addActionItem.isPending}>
                 {addActionItem.isPending ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : null}
-                Add
+                {cb('add')}
               </Button>
             </div>
           </div>
@@ -1508,7 +1522,7 @@ function ActionItemsTab({ meetingId }: { meetingId: string }) {
         </div>
       ) : actionItems.length === 0 ? (
         <div className="text-center py-8 text-muted">
-          No action items yet
+          {cb('noActionItems')}
         </div>
       ) : (
         <div className="space-y-2">
@@ -1534,7 +1548,7 @@ function ActionItemsTab({ meetingId }: { meetingId: string }) {
                   {item.due_date && (
                     <span className="flex items-center">
                       <Calendar className="h-3 w-3 mr-1" />
-                      {new Date(item.due_date).toLocaleDateString()}
+                      {new Date(item.due_date).toLocaleDateString(loc)}
                     </span>
                   )}
                 </div>
@@ -1555,6 +1569,7 @@ function ActionItemsTab({ meetingId }: { meetingId: string }) {
 
 // Minutes Tab
 function MinutesTab({ meetingId, meeting }: { meetingId: string; meeting: CabMeeting }) {
+  const cb = useT('cab');
   const [isEditing, setIsEditing] = useState(false);
   const [minutesText, setMinutesText] = useState(meeting.minutes || '');
 
@@ -1581,24 +1596,24 @@ function MinutesTab({ meetingId, meeting }: { meetingId: string; meeting: CabMee
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h3 className="text-sm font-medium text-foreground">Meeting Minutes</h3>
+        <h3 className="text-sm font-medium text-foreground">{cb('meetingMinutes')}</h3>
         <div className="flex space-x-2">
           {!isEditing ? (
             <>
               <Button variant="outline" size="sm" onClick={() => setIsEditing(true)}>
                 <Edit className="h-4 w-4 mr-1" />
-                Edit
+                {cb('edit')}
               </Button>
               {meeting.minutes && (
                 <Button size="sm" onClick={handleDistribute} disabled={distributeMinutes.isPending}>
                   {distributeMinutes.isPending ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : <Send className="h-4 w-4 mr-1" />}
-                  Distribute
+                  {cb('distribute')}
                 </Button>
               )}
             </>
           ) : (
             <>
-              <Button variant="outline" size="sm" onClick={() => setIsEditing(false)}>Cancel</Button>
+              <Button variant="outline" size="sm" onClick={() => setIsEditing(false)}>{cb('cancel')}</Button>
               <Button size="sm" onClick={handleSave} disabled={saveMinutes.isPending}>
                 {saveMinutes.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Save'}
               </Button>
@@ -1613,14 +1628,14 @@ function MinutesTab({ meetingId, meeting }: { meetingId: string; meeting: CabMee
           onChange={(e) => setMinutesText(e.target.value)}
           className="w-full px-3 py-2 border border-border-strong rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary font-mono"
           rows={20}
-          placeholder="Enter meeting minutes..."
+          placeholder={cb('minutesPh')}
         />
       ) : (
         <div className="bg-surface-hover rounded-lg p-4 min-h-[300px]">
           {meeting.minutes ? (
             <pre className="text-sm text-secondary whitespace-pre-wrap font-sans">{meeting.minutes}</pre>
           ) : (
-            <p className="text-sm text-muted italic">No minutes recorded yet. Click &quot;Edit&quot; to add minutes.</p>
+            <p className="text-sm text-muted italic">{cb('noMinutes')}</p>
           )}
         </div>
       )}

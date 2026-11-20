@@ -1,5 +1,6 @@
 'use client';
 
+import { useT } from '@/i18n/useT';
 import { useState } from 'react';
 import Link from 'next/link';
 import {
@@ -96,6 +97,9 @@ const typeColors: Record<string, string> = {
 };
 
 export default function ReportsPage() {
+  const tn = useT('listpages3');
+  const ti = useT('issues');
+  const tp = useT('pages');
   const [searchQuery, setSearchQuery] = useState('');
   const [activeTab, setActiveTab] = useState<TabType>('templates');
   const [showDeleteConfirm, setShowDeleteConfirm] = useState<string | null>(null);
@@ -193,13 +197,13 @@ export default function ReportsPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-foreground">Reports</h1>
+          <h1 className="text-2xl font-bold text-foreground">{tp('reports')}</h1>
           <p className="mt-1 text-sm text-muted">Generate and schedule reports</p>
         </div>
         <Link href="/reports/builder">
           <Button>
             <Plus className="h-4 w-4 mr-2" />
-            Create Report
+            {tp('createReport')}
           </Button>
         </Link>
       </div>
@@ -209,7 +213,7 @@ export default function ReportsPage() {
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted" />
         <input
           type="text"
-          placeholder="Search reports..."
+          placeholder={tn('reportSearch')}
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
           className="w-full pl-10 pr-4 py-2 border border-border-strong rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
@@ -227,7 +231,7 @@ export default function ReportsPage() {
                 : 'border-transparent text-muted hover:text-secondary hover:border-border-strong'
             }`}
           >
-            Report Templates
+            {tn('reportTemplates')}
             {templates.length > 0 && (
               <span className="ml-2 bg-background text-secondary px-2 py-0.5 rounded-full text-xs">
                 {templates.length}
@@ -242,7 +246,7 @@ export default function ReportsPage() {
                 : 'border-transparent text-muted hover:text-secondary hover:border-border-strong'
             }`}
           >
-            Report History
+            {tn('reportHistory')}
           </button>
           <button
             onClick={() => setActiveTab('scheduled')}
@@ -252,7 +256,7 @@ export default function ReportsPage() {
                 : 'border-transparent text-muted hover:text-secondary hover:border-border-strong'
             }`}
           >
-            Scheduled Reports
+            {tn('scheduledReports')}
             {schedules.filter((s) => s.is_active).length > 0 && (
               <span className="ml-2 bg-success-subtle text-success px-2 py-0.5 rounded-full text-xs">
                 {schedules.filter((s) => s.is_active).length} active
@@ -274,13 +278,13 @@ export default function ReportsPage() {
               <FileText className="mx-auto h-12 w-12 text-muted" />
               <h3 className="mt-2 text-sm font-medium text-foreground">No report templates</h3>
               <p className="mt-1 text-sm text-muted">
-                Get started by creating a new report template.
+                {tn('noReportsHint')}
               </p>
               <div className="mt-6">
                 <Link href="/reports/builder">
                   <Button>
                     <Plus className="h-4 w-4 mr-2" />
-                    Create Report
+                    {tp('createReport')}
                   </Button>
                 </Link>
               </div>
@@ -338,7 +342,7 @@ export default function ReportsPage() {
                         ) : (
                           <Play className="h-4 w-4 mr-1" />
                         )}
-                        Run Now
+                        {tn('runNow')}
                       </Button>
                       <Link href={`/reports/${template.id}/schedule`}>
                         <Button size="sm" variant="outline">
@@ -375,7 +379,7 @@ export default function ReportsPage() {
                     Report
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">
-                    Status
+                    {ti('status')}
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">
                     Generated
@@ -462,7 +466,7 @@ export default function ReportsPage() {
               <Calendar className="mx-auto h-12 w-12 text-muted" />
               <h3 className="mt-2 text-sm font-medium text-foreground">No scheduled reports</h3>
               <p className="mt-1 text-sm text-muted">
-                Schedule a report from the templates tab.
+                {tn('scheduleHint')}
               </p>
             </div>
           ) : (
@@ -479,10 +483,10 @@ export default function ReportsPage() {
                     Delivery
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">
-                    Next Run
+                    {tn('nextRun')}
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">
-                    Status
+                    {ti('status')}
                   </th>
                   <th className="px-6 py-3 text-right text-xs font-medium text-muted uppercase tracking-wider">
                     Actions
@@ -584,7 +588,7 @@ export default function ReportsPage() {
                   <h3 className="text-lg leading-6 font-medium text-foreground">Delete Confirmation</h3>
                   <div className="mt-2">
                     <p className="text-sm text-muted">
-                      Are you sure you want to delete this item? This action cannot be undone.
+                      {tn('confirmDelete')}
                     </p>
                   </div>
                 </div>

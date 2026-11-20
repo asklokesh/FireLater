@@ -1,5 +1,6 @@
 'use client';
 
+import { useT } from '@/i18n/useT';
 import { useState, useEffect } from 'react';
 import { CheckSquare, Loader2, AlertCircle, CheckCircle, Clock, XCircle } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
@@ -32,6 +33,8 @@ interface MakerCheckerRequest {
   approvals: MakerCheckerApproval[];
 }
 
+const FILTER_KEYS: Record<string, string> = { pending: 'fPending', approved: 'fApproved', rejected: 'fRejected', all: 'fAll' };
+
 type FilterStatus = 'pending' | 'approved' | 'rejected' | 'all';
 
 const statusColors: Record<string, { bg: string; text: string; icon: LucideIcon }> = {
@@ -42,6 +45,7 @@ const statusColors: Record<string, { bg: string; text: string; icon: LucideIcon 
 };
 
 export default function MakerCheckerPage() {
+  const mc = useT('makerChecker');
   const user = useAuthStore((state) => state.user);
 
   const [requests, setRequests] = useState<MakerCheckerRequest[]>([]);
@@ -73,7 +77,7 @@ export default function MakerCheckerPage() {
       const response = await api.get('/v1/maker-checker/requests', { params });
       setRequests(response.data || []);
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed to load requests';
+      const message = err instanceof Error ? err.message : mc('loadFailed');
       setError(message);
     } finally {
       setIsLoading(false);
@@ -93,14 +97,14 @@ export default function MakerCheckerPage() {
         comment: approvingComment,
       });
 
-      setSuccessMessage('Request approved successfully');
+      setSuccessMessage(mc('approvedOk'));
       setTimeout(() => setSuccessMessage(null), 3000);
       setApprovingRequestId(null);
       setApprovingComment('');
 
       await loadRequests();
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed to approve request';
+      const message = err instanceof Error ? err.message : mc('approveFailed');
       setError(message);
     } finally {
       setIsSubmitting(null);
@@ -120,14 +124,14 @@ export default function MakerCheckerPage() {
         reason: rejectingReason,
       });
 
-      setSuccessMessage('Request rejected successfully');
+      setSuccessMessage(mc('rejectedOk'));
       setTimeout(() => setSuccessMessage(null), 3000);
       setRejectingRequestId(null);
       setRejectingReason('');
 
       await loadRequests();
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed to reject request';
+      const message = err instanceof Error ? err.message : mc('rejectFailed');
       setError(message);
     } finally {
       setIsSubmitting(null);
@@ -167,7 +171,7 @@ export default function MakerCheckerPage() {
             onClick={() => setError(null)}
             className="text-error hover:text-error font-medium"
           >
-            Dismiss
+            {mc('dismiss')}
           </button>
         </div>
       )}
@@ -183,9 +187,9 @@ export default function MakerCheckerPage() {
         <div className="flex items-center gap-3">
           <CheckSquare className="h-8 w-8 text-primary" />
           <div>
-            <h1 className="text-2xl font-bold text-foreground">Maker-Checker Approvals</h1>
+            <h1 className="text-2xl font-bold text-foreground">{mc('title')}</h1>
             <p className="mt-1 text-sm text-muted">
-              Dual-approval workflow for high-risk changes (SOX ITGC requirement)
+              {mc('subtitle')}
             </p>
           </div>
         </div>
@@ -202,7 +206,7 @@ export default function MakerCheckerPage() {
                 : 'border-transparent text-secondary hover:text-foreground'
             }`}
           >
-            {status.charAt(0).toUpperCase() + status.slice(1)}
+            {mc(FILTER_KEYS[status])}
           </button>
         ))}
       </div>
@@ -246,23 +250,23 @@ export default function MakerCheckerPage() {
                 {/* Submitter and Dates */}
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4 py-3 border-t border-b border-border">
                   <div>
-                    <p className="text-xs text-muted uppercase">Submitter</p>
+                    <p className="text-xs text-muted uppercase">{mc('submitter')}</p>
                     <p className="text-sm font-medium text-foreground">{request.submitter_email}</p>
                   </div>
                   <div>
-                    <p className="text-xs text-muted uppercase">Created</p>
+                    <p className="text-xs text-muted uppercase">{mc('created')}</p>
                     <p className="text-sm font-medium text-foreground">
                       {formatDate(request.created_at)}
                     </p>
                   </div>
                   <div>
-                    <p className="text-xs text-muted uppercase">Expires</p>
+                    <p className="text-xs text-muted uppercase">{mc('expires')}</p>
                     <p className="text-sm font-medium text-foreground">
                       {request.expires_at ? formatDate(request.expires_at) : 'Never'}
                     </p>
                   </div>
                   <div>
-                    <p className="text-xs text-muted uppercase">Approvals</p>
+                    <p className="text-xs text-muted uppercase">{mc('approvals')}</p>
                     <p className="text-sm font-medium text-foreground">
                       {request.current_approvals} of {request.required_approvals}
                     </p>
@@ -272,7 +276,7 @@ export default function MakerCheckerPage() {
                 {/* Approvals List */}
                 {request.approvals.length > 0 && (
                   <div className="space-y-2">
-                    <p className="text-sm font-medium text-secondary">Approval Details:</p>
+                    <p className="text-sm font-medium text-secondary">{mc('approvalDetails')}</p>
                     <div className="space-y-2">
                       {request.approvals.map((approval, idx) => (
                         <div
@@ -284,7 +288,7 @@ export default function MakerCheckerPage() {
                               {approval.approver_email}
                             </p>
                             <p className="text-xs text-muted mt-1">
-                              {approval.decision === 'approved' ? 'Approved' : 'Rejected'} on{' '}
+                              {approval.decision === 'approved' ? mc('approved') : mc('rejected')} {mc('onDate')}{' '}
                               {formatDate(approval.decided_at)}
                             </p>
                             {approval.comment && (
@@ -300,7 +304,7 @@ export default function MakerCheckerPage() {
                                 : 'bg-error-subtle text-error'
                             }`}
                           >
-                            {approval.decision === 'approved' ? 'Approved' : 'Rejected'}
+                            {approval.decision === 'approved' ? mc('approved') : mc('rejected')}
                           </span>
                         </div>
                       ))}
@@ -315,12 +319,12 @@ export default function MakerCheckerPage() {
                     {approvingRequestId === request.id ? (
                       <div className="space-y-2 p-3 bg-primary-subtle rounded-xl">
                         <label className="block text-sm font-medium text-secondary">
-                          Approval Comment (optional)
+                          {mc('approvalComment')}
                         </label>
                         <textarea
                           value={approvingComment}
                           onChange={(e) => setApprovingComment(e.target.value)}
-                          placeholder="Add a comment..."
+                          placeholder={mc('commentPh')}
                           className="w-full px-3 py-2 border border-border-strong rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
                           rows={3}
                         />
@@ -334,7 +338,7 @@ export default function MakerCheckerPage() {
                             size="sm"
                             disabled={isSubmitting === request.id}
                           >
-                            Cancel
+                            {mc('cancel')}
                           </Button>
                           <Button
                             onClick={() => handleApprove(request.id)}
@@ -344,7 +348,7 @@ export default function MakerCheckerPage() {
                             {isSubmitting === request.id && (
                               <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                             )}
-                            Confirm Approve
+                            {mc('confirmApprove')}
                           </Button>
                         </div>
                       </div>
@@ -354,7 +358,7 @@ export default function MakerCheckerPage() {
                         className="w-full bg-primary hover:bg-success"
                         disabled={isSubmitting !== null}
                       >
-                        Approve
+                        {mc('approve')}
                       </Button>
                     )}
 
@@ -362,12 +366,12 @@ export default function MakerCheckerPage() {
                     {rejectingRequestId === request.id ? (
                       <div className="space-y-2 p-3 bg-error-subtle rounded-xl">
                         <label className="block text-sm font-medium text-secondary">
-                          Rejection Reason
+                          {mc('rejectionReason')}
                         </label>
                         <textarea
                           value={rejectingReason}
                           onChange={(e) => setRejectingReason(e.target.value)}
-                          placeholder="Explain why you're rejecting this request..."
+                          placeholder={mc('rejectPh')}
                           className="w-full px-3 py-2 border border-border-strong rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-error"
                           rows={3}
                         />
@@ -381,7 +385,7 @@ export default function MakerCheckerPage() {
                             size="sm"
                             disabled={isSubmitting === request.id}
                           >
-                            Cancel
+                            {mc('cancel')}
                           </Button>
                           <Button
                             onClick={() => handleReject(request.id)}
@@ -392,7 +396,7 @@ export default function MakerCheckerPage() {
                             {isSubmitting === request.id && (
                               <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                             )}
-                            Confirm Reject
+                            {mc('confirmReject')}
                           </Button>
                         </div>
                       </div>
@@ -403,7 +407,7 @@ export default function MakerCheckerPage() {
                         className="w-full text-error border-red-300 hover:bg-error-subtle"
                         disabled={isSubmitting !== null}
                       >
-                        Reject
+                        {mc('reject')}
                       </Button>
                     )}
                   </div>
@@ -416,12 +420,12 @@ export default function MakerCheckerPage() {
         <div className="text-center py-12 bg-surface rounded-xl shadow-sm">
           <CheckSquare className="h-12 w-12 text-muted mx-auto mb-4" />
           <h3 className="text-lg font-medium text-foreground mb-2">
-            No {filterStatus !== 'all' ? filterStatus : ''} approvals
+            {filterStatus === 'all' ? mc('noApprovals') : filterStatus === 'pending' ? mc('noPendingApprovals') : filterStatus === 'approved' ? mc('noApprovedApprovals') : mc('noRejectedApprovals')}
           </h3>
           <p className="text-muted">
             {filterStatus === 'pending'
-              ? 'No pending requests awaiting approval'
-              : `No ${filterStatus} requests at this time`}
+              ? mc('noPendingBody')
+              : mc('noOtherBody', { status: filterStatus })}
           </p>
         </div>
       )}

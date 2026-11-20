@@ -7,8 +7,10 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { authApi } from '@/lib/api';
 import { AxiosError } from 'axios';
+import { useT } from '@/i18n/useT';
 
 export default function ForgotPasswordPage() {
+  const t = useT('auth.forgotPassword');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
@@ -75,7 +77,7 @@ export default function ForgotPasswordPage() {
           <Link href="/login">
             <Button variant="outline">
               <ArrowLeft className="h-4 w-4 mr-2" />
-              Back to Login
+              {t('back')}
             </Button>
           </Link>
         </div>
@@ -94,7 +96,7 @@ export default function ForgotPasswordPage() {
             </span>
           </div>
           <h2 className="text-2xl font-semibold tracking-tight text-foreground mt-6 mb-1">
-            Reset your password
+            {t('title')}
           </h2>
           <p className="text-sm text-secondary mb-6">
             Enter your email address and we&apos;ll send you a link to reset your password.
@@ -111,7 +113,7 @@ export default function ForgotPasswordPage() {
 
           <div>
             <label htmlFor="tenant" className="text-sm font-medium text-secondary mb-1.5 block">
-              Organization slug
+              {t('organization')}
             </label>
             <Input
               id="tenant"
@@ -125,7 +127,7 @@ export default function ForgotPasswordPage() {
 
           <div>
             <label htmlFor="email" className="text-sm font-medium text-secondary mb-1.5 block">
-              Email address
+              {t('email')}
             </label>
             <Input
               id="email"
@@ -139,7 +141,7 @@ export default function ForgotPasswordPage() {
           </div>
 
           <Button type="submit" isLoading={isLoading}>
-            Send Reset Link
+            {t('submit')}
           </Button>
 
           <div className="text-center">
@@ -148,7 +150,7 @@ export default function ForgotPasswordPage() {
               className="text-sm font-medium text-primary hover:text-primary-hover transition-colors flex items-center justify-center"
             >
               <ArrowLeft className="h-4 w-4 mr-1" />
-              Back to Login
+              {t('back')}
             </Link>
           </div>
         </form>

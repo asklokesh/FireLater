@@ -5,6 +5,7 @@ import csrf from '@fastify/csrf-protection';
 import { ZodError } from 'zod';
 import authRoutes from './routes/auth.js';
 import { config } from './config/index.js';
+import { i18nOnRequest, localeForError, localizeErrorMessage, t } from './lib/i18n.js';
 
 /**
  * Build Fastify app instance for testing
@@ -36,14 +37,18 @@ export async function buildApp(): Promise<FastifyInstance> {
     sessionPlugin: '@fastify/cookie',
   });
 
+  // Resolve request locale (?lang= / Accept-Language)
+  app.addHook('onRequest', i18nOnRequest);
+
   // Global error handler
-  app.setErrorHandler((error: FastifyError | Error, request: FastifyRequest, reply: FastifyReply) => {
+  app.setErrorHandler(async (error: FastifyError | Error, request: FastifyRequest, reply: FastifyReply) => {
+    const locale = await localeForError(request);
     // Handle Zod validation errors
     if (error instanceof ZodError) {
       reply.status(400).send({
         statusCode: 400,
         error: 'Bad Request',
-        message: 'Validation failed',
+        message: t(locale, 'errors.validationFailed'),
         details: error.errors,
       });
       return;
@@ -55,7 +60,7 @@ export async function buildApp(): Promise<FastifyInstance> {
       reply.status(error.statusCode).send({
         statusCode: error.statusCode,
         error: errorLabel,
-        message: error.message,
+        message: localizeErrorMessage(locale, { statusCode: error.statusCode, message: error.message, name: error.name, messageKey: (error as { messageKey?: string }).messageKey }),
       });
       return;
     }
@@ -64,7 +69,7 @@ export async function buildApp(): Promise<FastifyInstance> {
     reply.status(500).send({
       statusCode: 500,
       error: 'Internal Server Error',
-      message: process.env.NODE_ENV === 'production' ? 'An unexpected error occurred' : error.message,
+      message: process.env.NODE_ENV === 'production' ? t(locale, 'errors.internal') : error.message,
     });
   });
 

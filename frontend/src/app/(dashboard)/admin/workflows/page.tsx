@@ -1,5 +1,6 @@
 'use client';
 
+import { useT } from '@/i18n/useT';
 import { useState } from 'react';
 import {
   Plus,
@@ -38,50 +39,51 @@ import {
 } from '@/hooks/useApi';
 
 const entityTypeLabels: Record<WorkflowEntityType, string> = {
-  issue: 'Issues',
-  problem: 'Problems',
-  change: 'Changes',
-  request: 'Requests',
+  issue: 'eIssue',
+  problem: 'eProblem',
+  change: 'eChange',
+  request: 'eRequest',
 };
 
 const triggerTypeLabels: Record<WorkflowTriggerType, { label: string; color: string }> = {
-  on_create: { label: 'On Create', color: 'bg-success-subtle text-success' },
-  on_update: { label: 'On Update', color: 'bg-primary-subtle text-primary' },
-  on_status_change: { label: 'Status Change', color: 'bg-info-subtle text-info' },
-  on_assignment: { label: 'On Assignment', color: 'bg-orange-100 text-orange-800' },
-  scheduled: { label: 'Scheduled', color: 'bg-surface-hover text-foreground' },
+  on_create: { label: 'tOnCreate', color: 'bg-success-subtle text-success' },
+  on_update: { label: 'tOnUpdate', color: 'bg-primary-subtle text-primary' },
+  on_status_change: { label: 'tStatusChange', color: 'bg-info-subtle text-info' },
+  on_assignment: { label: 'tOnAssignment', color: 'bg-orange-100 text-orange-800' },
+  scheduled: { label: 'tScheduled', color: 'bg-surface-hover text-foreground' },
 };
 
 const operatorLabels: Record<WorkflowConditionOperator, string> = {
-  equals: 'equals',
-  not_equals: 'does not equal',
-  contains: 'contains',
-  not_contains: 'does not contain',
-  starts_with: 'starts with',
-  ends_with: 'ends with',
-  greater_than: 'is greater than',
-  less_than: 'is less than',
-  is_empty: 'is empty',
-  is_not_empty: 'is not empty',
-  in_list: 'is in list',
-  not_in_list: 'is not in list',
+  equals: 'oEquals',
+  not_equals: 'oNotEquals',
+  contains: 'oContains',
+  not_contains: 'oNotContains',
+  starts_with: 'oStarts',
+  ends_with: 'oEnds',
+  greater_than: 'oGreater',
+  less_than: 'oLess',
+  is_empty: 'oEmpty',
+  is_not_empty: 'oNotEmpty',
+  in_list: 'oInList',
+  not_in_list: 'oNotInList',
 };
 
 const actionTypeLabels: Record<WorkflowActionType, string> = {
-  set_field: 'Set Field',
-  assign_to_user: 'Assign to User',
-  assign_to_group: 'Assign to Group',
-  change_status: 'Change Status',
-  change_priority: 'Change Priority',
-  add_comment: 'Add Comment',
-  send_notification: 'Send Notification',
-  send_email: 'Send Email',
-  escalate: 'Escalate',
-  link_to_problem: 'Link to Problem',
-  create_task: 'Create Task',
+  set_field: 'aSetField',
+  assign_to_user: 'aAssignUser',
+  assign_to_group: 'aAssignGroup',
+  change_status: 'aChangeStatus',
+  change_priority: 'aChangePriority',
+  add_comment: 'aAddComment',
+  send_notification: 'aSendNotification',
+  send_email: 'aSendEmail',
+  escalate: 'aEscalate',
+  link_to_problem: 'aLinkProblem',
+  create_task: 'aCreateTask',
 };
 
 export default function WorkflowManagementPage() {
+  const wf = useT('adminWorkflows');
   const [activeTab, setActiveTab] = useState<'rules' | 'logs'>('rules');
   const [entityTypeFilter, setEntityTypeFilter] = useState<WorkflowEntityType | 'all'>('all');
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -114,11 +116,11 @@ export default function WorkflowManagementPage() {
   }> })?.data || [];
 
   const handleDeleteRule = async (id: string) => {
-    if (!confirm('Are you sure you want to delete this workflow rule?')) return;
+    if (!confirm(wf('confirmDelete'))) return;
     try {
       await deleteRule.mutateAsync(id);
     } catch (error) {
-      alert(error instanceof Error ? error.message : 'Failed to delete rule');
+      alert(error instanceof Error ? error.message : wf('deleteFailed'));
     }
   };
 
@@ -126,7 +128,7 @@ export default function WorkflowManagementPage() {
     try {
       await toggleRule.mutateAsync(id);
     } catch (error) {
-      alert(error instanceof Error ? error.message : 'Failed to toggle rule');
+      alert(error instanceof Error ? error.message : wf('toggleFailed'));
     }
   };
 
@@ -145,14 +147,14 @@ export default function WorkflowManagementPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-foreground">Workflow Automation</h1>
+          <h1 className="text-2xl font-bold text-foreground">{wf('title')}</h1>
           <p className="mt-1 text-sm text-muted">
-            Create and manage automation rules for issues, problems, changes, and requests
+            {wf('subtitle')}
           </p>
         </div>
         <Button onClick={() => setShowCreateModal(true)}>
           <Plus className="h-4 w-4 mr-2" />
-          Create Rule
+          {wf('createRule')}
         </Button>
       </div>
 
@@ -164,7 +166,7 @@ export default function WorkflowManagementPage() {
               <WorkflowIcon className="h-5 w-5 text-primary" />
             </div>
             <div className="ml-4">
-              <p className="text-sm text-muted">Total Rules</p>
+              <p className="text-sm text-muted">{wf('totalRules')}</p>
               <p className="text-2xl font-semibold text-foreground">{rules.length}</p>
             </div>
           </div>
@@ -175,7 +177,7 @@ export default function WorkflowManagementPage() {
               <Play className="h-5 w-5 text-success" />
             </div>
             <div className="ml-4">
-              <p className="text-sm text-muted">Active Rules</p>
+              <p className="text-sm text-muted">{wf('activeRules')}</p>
               <p className="text-2xl font-semibold text-foreground">{activeCount}</p>
             </div>
           </div>
@@ -186,7 +188,7 @@ export default function WorkflowManagementPage() {
               <Zap className="h-5 w-5 text-info" />
             </div>
             <div className="ml-4">
-              <p className="text-sm text-muted">Executions Today</p>
+              <p className="text-sm text-muted">{wf('executionsToday')}</p>
               <p className="text-2xl font-semibold text-foreground">
                 {logs.filter((l) => {
                   const today = new Date().toDateString();
@@ -202,7 +204,7 @@ export default function WorkflowManagementPage() {
               <AlertCircle className="h-5 w-5 text-orange-600" />
             </div>
             <div className="ml-4">
-              <p className="text-sm text-muted">Failed Today</p>
+              <p className="text-sm text-muted">{wf('failedToday')}</p>
               <p className="text-2xl font-semibold text-foreground">
                 {logs.filter((l) => {
                   const today = new Date().toDateString();
@@ -225,7 +227,7 @@ export default function WorkflowManagementPage() {
                 : 'border-transparent text-muted hover:text-secondary hover:border-border-strong'
             }`}
           >
-            Workflow Rules
+            {wf('tabRules')}
           </button>
           <button
             onClick={() => setActiveTab('logs')}
@@ -235,7 +237,7 @@ export default function WorkflowManagementPage() {
                 : 'border-transparent text-muted hover:text-secondary hover:border-border-strong'
             }`}
           >
-            Execution Logs
+            {wf('tabLogs')}
           </button>
         </nav>
       </div>
@@ -246,17 +248,17 @@ export default function WorkflowManagementPage() {
           <div className="bg-surface rounded-lg shadow p-4">
             <div className="flex items-center gap-4">
               <Filter className="h-4 w-4 text-muted" />
-              <label className="text-sm font-medium text-secondary">Entity Type:</label>
+              <label className="text-sm font-medium text-secondary">{wf('entityType')}</label>
               <select
                 value={entityTypeFilter}
                 onChange={(e) => setEntityTypeFilter(e.target.value as WorkflowEntityType | 'all')}
                 className="px-3 py-2 border border-border-strong rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary"
               >
-                <option value="all">All Types</option>
-                <option value="issue">Issues</option>
-                <option value="problem">Problems</option>
-                <option value="change">Changes</option>
-                <option value="request">Requests</option>
+                <option value="all">{wf('allTypes')}</option>
+                <option value="issue">{wf('eIssue')}</option>
+                <option value="problem">{wf('eProblem')}</option>
+                <option value="change">{wf('eChange')}</option>
+                <option value="request">{wf('eRequest')}</option>
               </select>
             </div>
           </div>
@@ -266,13 +268,13 @@ export default function WorkflowManagementPage() {
             {rules.length === 0 ? (
               <div className="bg-surface rounded-lg shadow p-12 text-center">
                 <WorkflowIcon className="h-12 w-12 text-muted mx-auto mb-4" />
-                <h3 className="text-lg font-medium text-foreground mb-2">No Workflow Rules</h3>
+                <h3 className="text-lg font-medium text-foreground mb-2">{wf('noRules')}</h3>
                 <p className="text-muted mb-4">
-                  Create your first automation rule to streamline your processes
+                  {wf('noRulesHint')}
                 </p>
                 <Button onClick={() => setShowCreateModal(true)}>
                   <Plus className="h-4 w-4 mr-2" />
-                  Create Rule
+                  {wf('createRule')}
                 </Button>
               </div>
             ) : (
@@ -336,6 +338,7 @@ function RuleCard({
   onDelete: () => void;
   onToggleActive: () => void;
 }) {
+  const wf = useT('adminWorkflows');
   return (
     <div className="bg-surface rounded-lg shadow">
       <div className="p-4 cursor-pointer hover:bg-surface-hover" onClick={onToggleExpand}>
@@ -358,17 +361,16 @@ function RuleCard({
                     triggerTypeLabels[rule.trigger_type].color
                   }`}
                 >
-                  {triggerTypeLabels[rule.trigger_type].label}
+                  {wf(triggerTypeLabels[rule.trigger_type].label)}
                 </span>
                 {!rule.is_active && (
                   <span className="px-2 py-0.5 text-xs font-medium bg-surface-hover text-secondary rounded">
-                    Inactive
+                    {wf('inactive')}
                   </span>
                 )}
               </div>
               <p className="text-sm text-muted">
-                {entityTypeLabels[rule.entity_type]} - {rule.conditions?.length || 0} conditions,{' '}
-                {rule.actions?.length || 0} actions
+                {wf(entityTypeLabels[rule.entity_type])} - {wf('counts', { conditions: rule.conditions?.length || 0, actions: rule.actions?.length || 0 })}
               </p>
             </div>
           </div>
@@ -380,7 +382,7 @@ function RuleCard({
                 e.stopPropagation();
                 onToggleActive();
               }}
-              title={rule.is_active ? 'Deactivate' : 'Activate'}
+              title={rule.is_active ? wf('deactivate') : wf('activate')}
             >
               {rule.is_active ? (
                 <Pause className="h-4 w-4 text-orange-500" />
@@ -426,7 +428,7 @@ function RuleCard({
             <div>
               <h4 className="text-sm font-medium text-foreground mb-3 flex items-center">
                 <Filter className="h-4 w-4 mr-2 text-primary" />
-                Conditions (IF)
+                {wf('conditionsIf')}
               </h4>
               {rule.conditions && rule.conditions.length > 0 ? (
                 <div className="space-y-2">
@@ -441,7 +443,7 @@ function RuleCard({
                         </span>
                       )}
                       <span className="font-medium text-secondary">{condition.field}</span>
-                      <span className="text-muted">{operatorLabels[condition.operator]}</span>
+                      <span className="text-muted">{wf(operatorLabels[condition.operator])}</span>
                       <span className="font-medium text-primary">
                         {Array.isArray(condition.value)
                           ? condition.value.join(', ')
@@ -451,7 +453,7 @@ function RuleCard({
                   ))}
                 </div>
               ) : (
-                <p className="text-sm text-muted">No conditions (always matches)</p>
+                <p className="text-sm text-muted">{wf('noConditionsAlways')}</p>
               )}
             </div>
 
@@ -459,7 +461,7 @@ function RuleCard({
             <div>
               <h4 className="text-sm font-medium text-foreground mb-3 flex items-center">
                 <Zap className="h-4 w-4 mr-2 text-purple-500" />
-                Actions (THEN)
+                {wf('actionsThen')}
               </h4>
               {rule.actions && rule.actions.length > 0 ? (
                 <div className="space-y-2">
@@ -472,7 +474,7 @@ function RuleCard({
                             {idx + 1}
                           </span>
                           <span className="font-medium text-secondary">
-                            {actionTypeLabels[action.action_type as WorkflowActionType]}
+                            {wf(actionTypeLabels[action.action_type as WorkflowActionType])}
                           </span>
                         </div>
                         {Object.keys(action.parameters).length > 0 && (
@@ -488,7 +490,7 @@ function RuleCard({
                     ))}
                 </div>
               ) : (
-                <p className="text-sm text-muted">No actions configured</p>
+                <p className="text-sm text-muted">{wf('noActions')}</p>
               )}
             </div>
           </div>
@@ -496,7 +498,7 @@ function RuleCard({
           {rule.stop_on_match && (
             <div className="mt-4 flex items-center text-sm text-orange-600">
               <AlertCircle className="h-4 w-4 mr-2" />
-              Stops processing subsequent rules when this rule matches
+              {wf('stopsProcessing')}
             </div>
           )}
         </div>
@@ -527,6 +529,7 @@ function RuleModal({
   }) => Promise<void>;
   isLoading: boolean;
 }) {
+  const wf = useT('adminWorkflows');
   const [name, setName] = useState(rule?.name || '');
   const [description, setDescription] = useState(rule?.description || '');
   const [entityType, setEntityType] = useState<WorkflowEntityType>(rule?.entity_type || 'issue');
@@ -546,7 +549,7 @@ function RuleModal({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (actions.length === 0) {
-      alert('Please add at least one action');
+      alert(wf('needAction'));
       return;
     }
     await onSave({
@@ -596,7 +599,7 @@ function RuleModal({
       <div className="bg-surface rounded-lg shadow-xl max-w-3xl w-full mx-4 my-8">
         <div className="px-6 py-4 border-b border-border">
           <h2 className="text-lg font-semibold text-foreground">
-            {rule ? 'Edit Workflow Rule' : 'Create Workflow Rule'}
+            {rule ? wf('editRule') : wf('createRuleTitle')}
           </h2>
         </div>
 
@@ -605,55 +608,55 @@ function RuleModal({
             {/* Basic Info */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-secondary mb-1">Rule Name *</label>
+                <label className="block text-sm font-medium text-secondary mb-1">{wf('ruleName')}</label>
                 <input
                   type="text"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   className="w-full px-3 py-2 border border-border-strong rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary"
-                  placeholder="e.g., Auto-assign critical issues"
+                  placeholder={wf('ruleNamePh')}
                   required
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-secondary mb-1">Description</label>
+                <label className="block text-sm font-medium text-secondary mb-1">{wf('description')}</label>
                 <input
                   type="text"
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
                   className="w-full px-3 py-2 border border-border-strong rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary"
-                  placeholder="Brief description..."
+                  placeholder={wf('descPh')}
                 />
               </div>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-secondary mb-1">Entity Type *</label>
+                <label className="block text-sm font-medium text-secondary mb-1">{wf('entityTypeStar')}</label>
                 <select
                   value={entityType}
                   onChange={(e) => setEntityType(e.target.value as WorkflowEntityType)}
                   className="w-full px-3 py-2 border border-border-strong rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary"
                   disabled={!!rule}
                 >
-                  <option value="issue">Issues</option>
-                  <option value="problem">Problems</option>
-                  <option value="change">Changes</option>
-                  <option value="request">Requests</option>
+                  <option value="issue">{wf('eIssue')}</option>
+                  <option value="problem">{wf('eProblem')}</option>
+                  <option value="change">{wf('eChange')}</option>
+                  <option value="request">{wf('eRequest')}</option>
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium text-secondary mb-1">Trigger *</label>
+                <label className="block text-sm font-medium text-secondary mb-1">{wf('triggerStar')}</label>
                 <select
                   value={triggerType}
                   onChange={(e) => setTriggerType(e.target.value as WorkflowTriggerType)}
                   className="w-full px-3 py-2 border border-border-strong rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary"
                   disabled={!!rule}
                 >
-                  <option value="on_create">On Create</option>
-                  <option value="on_update">On Update</option>
-                  <option value="on_status_change">On Status Change</option>
-                  <option value="on_assignment">On Assignment</option>
+                  <option value="on_create">{wf('tOnCreate')}</option>
+                  <option value="on_update">{wf('tOnUpdate')}</option>
+                  <option value="on_status_change">{wf('triggerOnStatusChange')}</option>
+                  <option value="on_assignment">{wf('tOnAssignment')}</option>
                 </select>
               </div>
             </div>
@@ -662,16 +665,16 @@ function RuleModal({
             <div>
               <div className="flex items-center justify-between mb-2">
                 <label className="block text-sm font-medium text-secondary">
-                  Conditions (IF)
+                  {wf('conditionsIf')}
                 </label>
                 <Button type="button" size="sm" variant="outline" onClick={addCondition}>
                   <Plus className="h-3 w-3 mr-1" />
-                  Add Condition
+                  {wf('addCondition')}
                 </Button>
               </div>
               {conditions.length === 0 ? (
                 <p className="text-sm text-muted bg-surface-hover p-3 rounded-lg">
-                  No conditions - rule will match all {entityTypeLabels[entityType].toLowerCase()}
+                  {wf('noConditionsMatchAll', { entity: wf(entityTypeLabels[entityType]).toLowerCase() })}
                 </p>
               ) : (
                 <div className="space-y-2">
@@ -711,11 +714,11 @@ function RuleModal({
                         }
                         className="px-2 py-1 border border-border-strong rounded text-sm"
                       >
-                        <option value="equals">equals</option>
-                        <option value="not_equals">not equals</option>
-                        <option value="contains">contains</option>
-                        <option value="is_empty">is empty</option>
-                        <option value="is_not_empty">is not empty</option>
+                        <option value="equals">{wf('oEquals')}</option>
+                        <option value="not_equals">{wf('oNotEquals')}</option>
+                        <option value="contains">{wf('oContains')}</option>
+                        <option value="is_empty">{wf('oEmpty')}</option>
+                        <option value="is_not_empty">{wf('oNotEmpty')}</option>
                       </select>
                       {!['is_empty', 'is_not_empty'].includes(condition.operator) && (
                         <input
@@ -723,7 +726,7 @@ function RuleModal({
                           value={String(condition.value || '')}
                           onChange={(e) => updateCondition(idx, { value: e.target.value })}
                           className="px-2 py-1 border border-border-strong rounded text-sm flex-1"
-                          placeholder="Value"
+                          placeholder={wf('valuePh')}
                         />
                       )}
                       <Button
@@ -743,15 +746,15 @@ function RuleModal({
             {/* Actions */}
             <div>
               <div className="flex items-center justify-between mb-2">
-                <label className="block text-sm font-medium text-secondary">Actions (THEN) *</label>
+                <label className="block text-sm font-medium text-secondary">{wf('actionsThenStar')}</label>
                 <Button type="button" size="sm" variant="outline" onClick={addAction}>
                   <Plus className="h-3 w-3 mr-1" />
-                  Add Action
+                  {wf('addAction')}
                 </Button>
               </div>
               {actions.length === 0 ? (
                 <p className="text-sm text-muted bg-surface-hover p-3 rounded-lg">
-                  No actions configured. Add at least one action.
+                  {wf('noActionsAdd')}
                 </p>
               ) : (
                 <div className="space-y-2">
@@ -770,13 +773,13 @@ function RuleModal({
                         }
                         className="px-2 py-1 border border-border-strong rounded text-sm"
                       >
-                        <option value="change_status">Change Status</option>
-                        <option value="change_priority">Change Priority</option>
-                        <option value="assign_to_user">Assign to User</option>
-                        <option value="assign_to_group">Assign to Group</option>
-                        <option value="add_comment">Add Comment</option>
-                        <option value="send_notification">Send Notification</option>
-                        <option value="set_field">Set Field</option>
+                        <option value="change_status">{wf('aChangeStatus')}</option>
+                        <option value="change_priority">{wf('aChangePriority')}</option>
+                        <option value="assign_to_user">{wf('aAssignUser')}</option>
+                        <option value="assign_to_group">{wf('aAssignGroup')}</option>
+                        <option value="add_comment">{wf('aAddComment')}</option>
+                        <option value="send_notification">{wf('aSendNotification')}</option>
+                        <option value="set_field">{wf('aSetField')}</option>
                       </select>
                       <ArrowRight className="h-4 w-4 text-muted" />
                       <input
@@ -799,12 +802,12 @@ function RuleModal({
                         className="px-2 py-1 border border-border-strong rounded text-sm flex-1"
                         placeholder={
                           action.action_type === 'change_status'
-                            ? 'Status value'
+                            ? wf('statusValue')
                             : action.action_type === 'change_priority'
-                            ? 'Priority value'
+                            ? wf('priorityValue')
                             : action.action_type === 'add_comment'
-                            ? 'Comment text'
-                            : 'Value'
+                            ? wf('commentText')
+                            : wf('value')
                         }
                       />
                       <Button
@@ -831,18 +834,18 @@ function RuleModal({
                 className="h-4 w-4 text-primary border-border-strong rounded focus:ring-primary"
               />
               <label htmlFor="stopOnMatch" className="ml-2 text-sm text-secondary">
-                Stop processing subsequent rules when this rule matches
+                {wf('stopLabel')}
               </label>
             </div>
           </div>
 
           <div className="px-6 py-4 border-t border-border flex justify-end gap-3">
             <Button type="button" variant="outline" onClick={onClose}>
-              Cancel
+              {wf('cancel')}
             </Button>
             <Button type="submit" disabled={isLoading || !name || actions.length === 0}>
               {isLoading && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-              {rule ? 'Update Rule' : 'Create Rule'}
+              {rule ? wf('updateRule') : wf('createRule')}
             </Button>
           </div>
         </form>
@@ -869,6 +872,7 @@ function ExecutionLogsPanel({
   }>;
   isLoading: boolean;
 }) {
+  const wf = useT('adminWorkflows');
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -881,9 +885,9 @@ function ExecutionLogsPanel({
     return (
       <div className="bg-surface rounded-lg shadow p-12 text-center">
         <History className="h-12 w-12 text-muted mx-auto mb-4" />
-        <h3 className="text-lg font-medium text-foreground mb-2">No Execution Logs</h3>
+        <h3 className="text-lg font-medium text-foreground mb-2">{wf('noLogs')}</h3>
         <p className="text-muted">
-          Workflow execution logs will appear here once rules start running
+          {wf('noLogsHint')}
         </p>
       </div>
     );
@@ -895,19 +899,19 @@ function ExecutionLogsPanel({
         <thead className="bg-surface-hover">
           <tr>
             <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase">
-              Executed At
+              {wf('colExecutedAt')}
             </th>
             <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase">
-              Rule
+              {wf('colRule')}
             </th>
             <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase">
-              Entity
+              {wf('colEntity')}
             </th>
             <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase">
-              Status
+              {wf('colStatus')}
             </th>
             <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase">
-              Duration
+              {wf('colDuration')}
             </th>
           </tr>
         </thead>
@@ -921,22 +925,22 @@ function ExecutionLogsPanel({
                 <span className="text-sm font-medium text-foreground">{log.rule_name}</span>
               </td>
               <td className="px-6 py-4 whitespace-nowrap text-sm text-muted">
-                {entityTypeLabels[log.entity_type]} #{log.entity_id.slice(0, 8)}
+                {wf(entityTypeLabels[log.entity_type])} #{log.entity_id.slice(0, 8)}
               </td>
               <td className="px-6 py-4 whitespace-nowrap">
                 {log.error ? (
                   <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-error-subtle text-error">
                     <XCircle className="h-3 w-3 mr-1" />
-                    Failed
+                    {wf('failed')}
                   </span>
                 ) : log.conditions_matched ? (
                   <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-success-subtle text-success">
                     <CheckCircle className="h-3 w-3 mr-1" />
-                    Executed
+                    {wf('executed')}
                   </span>
                 ) : (
                   <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-surface-hover text-foreground">
-                    Skipped
+                    {wf('skipped')}
                   </span>
                 )}
               </td>

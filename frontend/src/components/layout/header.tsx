@@ -1,5 +1,7 @@
 'use client';
 
+import { useT } from '@/i18n/useT';
+import { LanguageSwitcher } from '@/components/i18n/LanguageSwitcher';
 import { useState, useEffect, useRef } from 'react';
 import { Bell, Search, Plus, ChevronDown } from 'lucide-react';
 import { useAuthStore } from '@/stores/auth';
@@ -7,6 +9,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 
 export function Header() {
+  const t = useT('header');
   const { user } = useAuthStore();
   const router = useRouter();
   const [searchText, setSearchText] = useState('');
@@ -49,8 +52,8 @@ export function Header() {
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted pointer-events-none" />
           <input
             type="search"
-            aria-label="Search everything"
-            placeholder="Search..."
+            aria-label={t('searchLabel')}
+            placeholder={t('search')}
             value={searchText}
             onChange={(e) => setSearchText(e.target.value)}
             onKeyDown={(e) => {
@@ -66,7 +69,8 @@ export function Header() {
       </div>
 
       {/* Actions */}
-      <div className="flex items-center gap-2 ml-4">
+      <div className="flex items-center gap-2 ms-4">
+        <LanguageSwitcher />
         {/* Create button */}
         <div ref={createRef} className="relative">
           <button
@@ -75,7 +79,7 @@ export function Header() {
               hover:bg-primary-hover transition-all duration-150 shadow-sm active:scale-[0.98]"
           >
             <Plus className="h-4 w-4" />
-            Create
+            {t('create')}
             <ChevronDown className="h-3.5 w-3.5 opacity-70" />
           </button>
           {showCreateMenu && (
@@ -85,21 +89,21 @@ export function Header() {
                 className="flex items-center px-3 py-2 text-sm text-secondary hover:bg-surface-hover hover:text-foreground transition-colors duration-150"
                 onClick={() => setShowCreateMenu(false)}
               >
-                New Issue
+                {t('newIssue')}
               </Link>
               <Link
                 href="/changes/new"
                 className="flex items-center px-3 py-2 text-sm text-secondary hover:bg-surface-hover hover:text-foreground transition-colors duration-150"
                 onClick={() => setShowCreateMenu(false)}
               >
-                New Change
+                {t('newChange')}
               </Link>
               <Link
                 href="/requests/new"
                 className="flex items-center px-3 py-2 text-sm text-secondary hover:bg-surface-hover hover:text-foreground transition-colors duration-150"
                 onClick={() => setShowCreateMenu(false)}
               >
-                New Request
+                {t('newRequest')}
               </Link>
             </div>
           )}
@@ -121,7 +125,7 @@ export function Header() {
               </div>
               <div className="max-h-80 overflow-y-auto">
                 <div className="px-4 py-6 text-sm text-muted text-center">
-                  No new notifications
+                  {t('noNotifications')}
                 </div>
               </div>
               <div className="border-t border-border">
@@ -130,7 +134,7 @@ export function Header() {
                   className="block px-4 py-2.5 text-sm text-center text-primary hover:bg-primary-subtle transition-colors duration-150"
                   onClick={() => setShowNotifications(false)}
                 >
-                  View all notifications
+                  {t('viewAllNotifications')}
                 </Link>
               </div>
             </div>

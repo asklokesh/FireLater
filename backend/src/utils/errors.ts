@@ -2,13 +2,16 @@ export class AppError extends Error {
   statusCode: number;
   error: string;
   details?: any;
+  /** Optional i18n key (see src/locales); when set, the error handler returns the localized text. */
+  messageKey?: string;
 
-  constructor(statusCode: number, error: string, message: string, details?: any) {
+  constructor(statusCode: number, error: string, message: string, details?: any, messageKey?: string) {
     super(message);
     this.name = 'AppError';
     this.statusCode = statusCode;
     this.error = error;
     this.details = details;
+    this.messageKey = messageKey;
   }
 
   toJSON() {
@@ -27,10 +30,14 @@ export class AppError extends Error {
 export class NotFoundError extends Error {
   statusCode = 404;
   error = 'Not Found';
+  resource: string;
+  identifier?: string;
 
   constructor(resource: string, identifier?: string) {
     super(identifier ? `${resource} with id '${identifier}' not found` : `${resource} not found`);
     this.name = 'NotFoundError';
+    this.resource = resource;
+    this.identifier = identifier;
   }
 }
 
@@ -38,8 +45,11 @@ export class BadRequestError extends Error {
   statusCode = 400;
   error = 'Bad Request';
 
-  constructor(message: string) {
+  messageKey?: string;
+
+  constructor(message: string, messageKey?: string) {
     super(message);
+    this.messageKey = messageKey;
     this.name = 'BadRequestError';
   }
 }
@@ -60,8 +70,11 @@ export class UnauthorizedError extends Error {
   statusCode = 401;
   error = 'Unauthorized';
 
-  constructor(message: string = 'Unauthorized') {
+  messageKey?: string;
+
+  constructor(message: string = 'Unauthorized', messageKey?: string) {
     super(message);
+    this.messageKey = messageKey;
     this.name = 'UnauthorizedError';
   }
 }
@@ -70,8 +83,11 @@ export class ForbiddenError extends Error {
   statusCode = 403;
   error = 'Forbidden';
 
-  constructor(message: string = 'Forbidden') {
+  messageKey?: string;
+
+  constructor(message: string = 'Forbidden', messageKey?: string) {
     super(message);
+    this.messageKey = messageKey;
     this.name = 'ForbiddenError';
   }
 }
@@ -80,8 +96,11 @@ export class ConflictError extends Error {
   statusCode = 409;
   error = 'Conflict';
 
-  constructor(message: string) {
+  messageKey?: string;
+
+  constructor(message: string, messageKey?: string) {
     super(message);
+    this.messageKey = messageKey;
     this.name = 'ConflictError';
   }
 }

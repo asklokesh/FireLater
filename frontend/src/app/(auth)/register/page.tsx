@@ -1,5 +1,6 @@
 'use client';
 
+import { useT } from '@/i18n/useT';
 import { useState, FormEvent } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
@@ -9,6 +10,7 @@ import { Input } from '@/components/ui/input';
 import { authApi } from '@/lib/api';
 
 export default function RegisterPage() {
+  const t = useT('auth.register');
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -107,9 +109,9 @@ export default function RegisterPage() {
           <div className="flex justify-center mb-4">
             <CheckCircle className="h-16 w-16 text-success" />
           </div>
-          <h2 className="text-2xl font-semibold tracking-tight text-foreground mb-2">Registration Successful!</h2>
+          <h2 className="text-2xl font-semibold tracking-tight text-foreground mb-2">{t('successTitle')}</h2>
           <p className="text-secondary">
-            Your account has been created. Redirecting to login...
+            {t('successBody')}
           </p>
         </div>
       </div>
@@ -127,10 +129,10 @@ export default function RegisterPage() {
             </span>
           </div>
           <h2 className="text-2xl font-semibold tracking-tight text-foreground mt-6 mb-1">
-            Create your account
+            {t('title')}
           </h2>
           <p className="text-sm text-secondary mb-6">
-            Start managing your IT services today
+            {t('subtitle')}
           </p>
         </div>
 
@@ -145,7 +147,7 @@ export default function RegisterPage() {
           <div className="space-y-4">
             <div>
               <label htmlFor="tenantName" className="text-sm font-medium text-secondary mb-1.5 block">
-                Organization Name
+                {t('organizationName')}
               </label>
               <Input
                 id="tenantName"
@@ -160,7 +162,7 @@ export default function RegisterPage() {
 
             <div>
               <label htmlFor="tenantSlug" className="text-sm font-medium text-secondary mb-1.5 block">
-                Organization Slug
+                {t('organizationSlug')}
               </label>
               <Input
                 id="tenantSlug"
@@ -178,7 +180,7 @@ export default function RegisterPage() {
 
             <div>
               <label htmlFor="adminName" className="text-sm font-medium text-secondary mb-1.5 block">
-                Your Full Name
+                {t('fullName')}
               </label>
               <Input
                 id="adminName"
@@ -193,7 +195,7 @@ export default function RegisterPage() {
 
             <div>
               <label htmlFor="adminEmail" className="text-sm font-medium text-secondary mb-1.5 block">
-                Email address
+                {t('email')}
               </label>
               <Input
                 id="adminEmail"
@@ -209,7 +211,7 @@ export default function RegisterPage() {
 
             <div>
               <label htmlFor="adminPassword" className="text-sm font-medium text-secondary mb-1.5 block">
-                Password
+                {t('password')}
               </label>
               <Input
                 id="adminPassword"
@@ -225,7 +227,7 @@ export default function RegisterPage() {
 
             <div>
               <label htmlFor="confirmPassword" className="text-sm font-medium text-secondary mb-1.5 block">
-                Confirm Password
+                {t('confirmPassword')}
               </label>
               <Input
                 id="confirmPassword"
@@ -248,26 +250,26 @@ export default function RegisterPage() {
               required
               className="h-4 w-4 rounded border-border-strong accent-primary cursor-pointer mt-1"
             />
-            <label htmlFor="terms" className="ml-2 block text-sm text-foreground">
-              I agree to the{' '}
+            <label htmlFor="terms" className="ms-2 block text-sm text-foreground">
+              {t('agreePrefix')}{' '}
               <a href="#" className="text-primary hover:text-primary-hover transition-colors">
-                Terms of Service
+                {t('terms')}
               </a>{' '}
-              and{' '}
+              {t('and')}{' '}
               <a href="#" className="text-primary hover:text-primary-hover transition-colors">
-                Privacy Policy
+                {t('privacy')}
               </a>
             </label>
           </div>
 
           <Button type="submit" isLoading={isLoading}>
-            Create Account
+            {t('submit')}
           </Button>
 
           <p className="text-center text-sm text-secondary">
-            Already have an account?{' '}
+            {t('hasAccount')}{' '}
             <Link href="/login" className="font-medium text-primary hover:text-primary-hover transition-colors">
-              Sign in
+              {t('signIn')}
             </Link>
           </p>
         </form>

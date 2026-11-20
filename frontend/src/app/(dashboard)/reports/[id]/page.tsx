@@ -1,5 +1,6 @@
 'use client';
 
+import { useT } from '@/i18n/useT';
 import { useState, useEffect, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
@@ -61,7 +62,10 @@ interface GroupData {
   name: string;
 }
 
+const RUN_KEYS: Record<string, string> = { completed: 'sCompleted', failed: 'sFailed', running: 'sRunning', pending: 'sPending' };
+
 export default function ReportExecutionPage() {
+  const rr = useT('reportRun');
   const params = useParams();
   const _router = useRouter();
   const templateId = params.id as string;
@@ -105,11 +109,11 @@ export default function ReportExecutionPage() {
       }
     } catch (err) {
       console.error('Failed to load template:', err);
-      setError('Failed to load report template');
+      setError(rr('loadFailed'));
     } finally {
       setIsLoading(false);
     }
-  }, [templateId]);
+  }, [templateId, rr]);
 
   const loadExecutions = useCallback(async () => {
     try {
@@ -232,9 +236,9 @@ export default function ReportExecutionPage() {
     return (
       <div className="bg-error-subtle border border-red-200 rounded-lg p-6 text-center">
         <AlertCircle className="h-12 w-12 text-error mx-auto mb-4" />
-        <h3 className="text-lg font-medium text-error mb-2">{error || 'Report not found'}</h3>
+        <h3 className="text-lg font-medium text-error mb-2">{error || rr('notFound')}</h3>
         <Link href="/reports">
-          <Button variant="outline">Back to Reports</Button>
+          <Button variant="outline">{rr('backToReports')}</Button>
         </Link>
       </div>
     );
@@ -262,7 +266,7 @@ export default function ReportExecutionPage() {
             ) : (
               <Table className="h-4 w-4 mr-2" />
             )}
-            Preview
+            {rr('preview')}
           </Button>
           <Button onClick={handleExecute} disabled={isExecuting}>
             {isExecuting ? (
@@ -270,7 +274,7 @@ export default function ReportExecutionPage() {
             ) : (
               <Play className="h-4 w-4 mr-2" />
             )}
-            Run Report
+            {rr('runReport')}
           </Button>
         </div>
       </div>
@@ -283,7 +287,7 @@ export default function ReportExecutionPage() {
             <div className="px-6 py-4 border-b border-border">
               <h2 className="text-lg font-medium text-foreground flex items-center">
                 <Filter className="h-5 w-5 mr-2 text-muted" />
-                Report Filters
+                {rr('filters')}
               </h2>
             </div>
             <div className="p-6 space-y-4">
@@ -308,7 +312,7 @@ export default function ReportExecutionPage() {
                         onChange={(e) => setFilterValues((p) => ({ ...p, [param.name]: e.target.value }))}
                         className="w-full px-3 py-2 border border-border-strong rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary"
                       >
-                        <option value="">Select...</option>
+                        <option value="">{rr('select')}</option>
                         {getParameterOptions(param).map((opt) => (
                           <option key={opt.value} value={opt.value}>{opt.label}</option>
                         ))}
@@ -333,12 +337,12 @@ export default function ReportExecutionPage() {
                   </div>
                 ))
               ) : (
-                <p className="text-sm text-muted">No filters available</p>
+                <p className="text-sm text-muted">{rr('noFilters')}</p>
               )}
 
               {/* Output Format */}
               <div className="pt-4 border-t border-border">
-                <label className="block text-sm font-medium text-secondary mb-1">Output Format</label>
+                <label className="block text-sm font-medium text-secondary mb-1">{rr('outputFormat')}</label>
                 <div className="flex space-x-2">
                   {(template.output_format || ['pdf', 'csv', 'xlsx']).map((format) => (
                     <button
@@ -362,7 +366,7 @@ export default function ReportExecutionPage() {
           {currentExecution && (
             <div className="bg-surface rounded-lg shadow">
               <div className="px-6 py-4 border-b border-border">
-                <h2 className="text-lg font-medium text-foreground">Current Execution</h2>
+                <h2 className="text-lg font-medium text-foreground">{rr('currentExecution')}</h2>
               </div>
               <div className="p-6">
                 <div className="flex items-center justify-between mb-4">
@@ -378,7 +382,7 @@ export default function ReportExecutionPage() {
                     {currentExecution.status === 'completed' && (
                       <CheckCircle className="h-3 w-3 mr-1" />
                     )}
-                    {currentExecution.status.charAt(0).toUpperCase() + currentExecution.status.slice(1)}
+                    {rr(RUN_KEYS[currentExecution.status] ?? 'sPending')}
                   </span>
                   {currentExecution.output_format && (
                     <span className="text-xs text-muted">{currentExecution.output_format.toUpperCase()}</span>
@@ -388,7 +392,7 @@ export default function ReportExecutionPage() {
                 {currentExecution.status === 'completed' && currentExecution.result_url && (
                   <Button onClick={() => handleDownload(currentExecution)} className="w-full">
                     <Download className="h-4 w-4 mr-2" />
-                    Download Report
+                    {rr('download')}
                   </Button>
                 )}
 
@@ -408,9 +412,9 @@ export default function ReportExecutionPage() {
           {previewData && (
             <div className="bg-surface rounded-lg shadow">
               <div className="px-6 py-4 border-b border-border flex items-center justify-between">
-                <h2 className="text-lg font-medium text-foreground">Preview (First 20 rows)</h2>
+                <h2 className="text-lg font-medium text-foreground">{rr('previewTitle')}</h2>
                 <Button variant="ghost" size="sm" onClick={() => setPreviewData(null)}>
-                  Close
+                  {rr('close')}
                 </Button>
               </div>
               <div className="overflow-x-auto">
@@ -441,7 +445,7 @@ export default function ReportExecutionPage() {
                     </tbody>
                   </table>
                 ) : (
-                  <div className="p-8 text-center text-muted">No data matches the current filters</div>
+                  <div className="p-8 text-center text-muted">{rr('noMatch')}</div>
                 )}
               </div>
             </div>
@@ -450,7 +454,7 @@ export default function ReportExecutionPage() {
           {/* Execution History */}
           <div className="bg-surface rounded-lg shadow">
             <div className="px-6 py-4 border-b border-border flex items-center justify-between">
-              <h2 className="text-lg font-medium text-foreground">Execution History</h2>
+              <h2 className="text-lg font-medium text-foreground">{rr('history')}</h2>
               <Button variant="ghost" size="sm" onClick={loadExecutions}>
                 <RefreshCw className="h-4 w-4" />
               </Button>
@@ -501,8 +505,8 @@ export default function ReportExecutionPage() {
             ) : (
               <div className="p-8 text-center text-muted">
                 <FileText className="h-12 w-12 text-muted mx-auto mb-4" />
-                <p>No execution history yet</p>
-                <p className="text-sm">Run the report to see results here</p>
+                <p>{rr('noHistory')}</p>
+                <p className="text-sm">{rr('noHistoryHint')}</p>
               </div>
             )}
           </div>

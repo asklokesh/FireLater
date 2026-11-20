@@ -1,5 +1,6 @@
 'use client';
 
+import { useT } from '@/i18n/useT';
 import { useState } from 'react';
 import Link from 'next/link';
 import {
@@ -62,6 +63,10 @@ const getHealthScoreIcon = (score: number | undefined) => {
 };
 
 export default function ApplicationsPage() {
+  const tm = useT('listpages2');
+  const ti = useT('issues');
+  const tl = useT('listpages');
+  const tp = useT('pages');
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [tierFilter, setTierFilter] = useState<string>('all');
@@ -101,15 +106,15 @@ export default function ApplicationsPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-foreground">Applications</h1>
+          <h1 className="text-2xl font-bold text-foreground">{tp('applications')}</h1>
           <p className="mt-1 text-sm text-muted">
-            Manage and monitor your IT applications
+            {tm('appsSubtitle')}
           </p>
         </div>
         <Link href="/applications/new">
           <Button>
             <Plus className="h-4 w-4 mr-2" />
-            New Application
+            {tp('newApplication')}
           </Button>
         </Link>
       </div>
@@ -121,7 +126,7 @@ export default function ApplicationsPage() {
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted" />
             <input
               type="text"
-              placeholder="Search by name, ID or description..."
+              placeholder={tm('appsSearch')}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="w-full pl-10 pr-4 py-2 border border-border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary"
@@ -133,7 +138,7 @@ export default function ApplicationsPage() {
             className="flex items-center"
           >
             <Filter className="h-4 w-4 mr-2" />
-            Filters
+            {tp('filters')}
             <ChevronDown className={`h-4 w-4 ml-2 transition-transform ${showFilters ? 'rotate-180' : ''}`} />
           </Button>
         </div>
@@ -141,16 +146,16 @@ export default function ApplicationsPage() {
         {showFilters && (
           <div className="mt-4 pt-4 border-t border-border grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div>
-              <label className="block text-sm font-medium text-secondary mb-1">Status</label>
+              <label className="block text-sm font-medium text-secondary mb-1">{ti('status')}</label>
               <select
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value)}
                 className="w-full px-3 py-2 border border-border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary"
               >
-                <option value="all">All Statuses</option>
-                <option value="active">Active</option>
-                <option value="inactive">Inactive</option>
-                <option value="deprecated">Deprecated</option>
+                <option value="all">{tl('allStatuses')}</option>
+                <option value="active">{tm('active')}</option>
+                <option value="inactive">{tm('inactive')}</option>
+                <option value="deprecated">{tm('deprecated')}</option>
               </select>
             </div>
             <div>
@@ -160,11 +165,11 @@ export default function ApplicationsPage() {
                 onChange={(e) => setTierFilter(e.target.value)}
                 className="w-full px-3 py-2 border border-border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary"
               >
-                <option value="all">All Tiers</option>
-                <option value="P1">P1 - Critical</option>
-                <option value="P2">P2 - High</option>
-                <option value="P3">P3 - Medium</option>
-                <option value="P4">P4 - Low</option>
+                <option value="all">{tm('allTiers')}</option>
+                <option value="P1">{tm('tierP1')}</option>
+                <option value="P2">{tm('tierP2')}</option>
+                <option value="P3">{tm('tierP3')}</option>
+                <option value="P4">{tm('tierP4')}</option>
               </select>
             </div>
             <div>
@@ -174,11 +179,11 @@ export default function ApplicationsPage() {
                 onChange={(e) => setLifecycleFilter(e.target.value)}
                 className="w-full px-3 py-2 border border-border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary"
               >
-                <option value="all">All Stages</option>
-                <option value="development">Development</option>
-                <option value="staging">Staging</option>
-                <option value="production">Production</option>
-                <option value="sunset">Sunset</option>
+                <option value="all">{tm('allStages')}</option>
+                <option value="development">{tm('development')}</option>
+                <option value="staging">{tm('staging')}</option>
+                <option value="production">{tm('production')}</option>
+                <option value="sunset">{tm('sunset')}</option>
               </select>
             </div>
           </div>
@@ -310,7 +315,7 @@ export default function ApplicationsPage() {
                   disabled={page <= 1}
                   onClick={() => setPage(p => Math.max(1, p - 1))}
                 >
-                  Previous
+                  {ti('previous')}
                 </Button>
                 <Button
                   variant="outline"
@@ -318,7 +323,7 @@ export default function ApplicationsPage() {
                   disabled={page >= pagination.totalPages}
                   onClick={() => setPage(p => p + 1)}
                 >
-                  Next
+                  {ti('next')}
                 </Button>
               </div>
             </div>

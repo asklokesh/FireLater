@@ -1,5 +1,6 @@
 'use client';
 
+import { useT } from '@/i18n/useT';
 import { useState, useEffect } from 'react';
 import { KeyRound, Plus, Check, X, Clock, AlertCircle, RefreshCw, Edit2, Trash2 } from 'lucide-react';
 import { api } from '@/lib/api';
@@ -40,6 +41,7 @@ interface SummaryStats {
 type TabType = 'pending' | 'active' | 'all' | 'configs';
 
 export default function PAMPage() {
+  const tpm = useT('pam');
   const [activeTab, setActiveTab] = useState<TabType>('pending');
   const [grants, setGrants] = useState<PrivilegedGrant[]>([]);
   const [configs, setConfigs] = useState<PrivilegeConfig[]>([]);
@@ -76,7 +78,7 @@ export default function PAMPage() {
         setSummary(summaryRes.data);
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load data');
+      setError(err instanceof Error ? err.message : tpm('loadFailed'));
     } finally {
       setLoading(false);
     }
@@ -91,12 +93,12 @@ export default function PAMPage() {
       });
       await loadData();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to approve grant');
+      setError(err instanceof Error ? err.message : tpm('approveFailed'));
     }
   };
 
   const handleRevoke = async (grantId: string) => {
-    const reason = prompt('Enter reason for revocation:');
+    const reason = prompt(tpm('revokePrompt'));
     if (!reason) return;
     if (!user) return;
 
@@ -107,7 +109,7 @@ export default function PAMPage() {
       });
       await loadData();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to revoke grant');
+      setError(err instanceof Error ? err.message : tpm('revokeFailed'));
     }
   };
 
@@ -122,15 +124,15 @@ export default function PAMPage() {
       setShowConfigModal(false);
       await loadData();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to update config');
+      setError(err instanceof Error ? err.message : tpm('configFailed'));
     }
   };
 
   const tabs = [
-    { id: 'pending' as TabType, label: 'Pending', count: summary.pending },
-    { id: 'active' as TabType, label: 'Active', count: summary.active },
-    { id: 'all' as TabType, label: 'All Grants', count: summary.total },
-    { id: 'configs' as TabType, label: 'Configurations' },
+    { id: 'pending' as TabType, label: tpm('statPending'), count: summary.pending },
+    { id: 'active' as TabType, label: tpm('statActive'), count: summary.active },
+    { id: 'all' as TabType, label: tpm('tabAll'), count: summary.total },
+    { id: 'configs' as TabType, label: tpm('tabConfigs') },
   ];
 
   return (
@@ -140,18 +142,18 @@ export default function PAMPage() {
           <div className="flex items-center space-x-3">
             <KeyRound className="h-8 w-8 text-foreground" />
             <div>
-              <h1 className="text-2xl font-semibold text-foreground">Privileged Access Management</h1>
-              <p className="mt-1 text-sm text-muted">Just-in-time privileged access grants (NY-DFS, SOX ITGC)</p>
+              <h1 className="text-2xl font-semibold text-foreground">{tpm('title')}</h1>
+              <p className="mt-1 text-sm text-muted">{tpm('subtitle')}</p>
             </div>
           </div>
         </div>
       </div>
 
       <div className="grid grid-cols-4 gap-4">
-        <StatCard label="Total Grants" value={summary.total} />
-        <StatCard label="Pending" value={summary.pending} highlight="yellow" />
-        <StatCard label="Active" value={summary.active} highlight="green" />
-        <StatCard label="Revoked" value={summary.revoked} highlight="red" />
+        <StatCard label={tpm('statTotal')} value={summary.total} />
+        <StatCard label={tpm('statPending')} value={summary.pending} highlight="yellow" />
+        <StatCard label={tpm('statActive')} value={summary.active} highlight="green" />
+        <StatCard label={tpm('statRevoked')} value={summary.revoked} highlight="red" />
       </div>
 
       {error && (
@@ -160,7 +162,7 @@ export default function PAMPage() {
           <div className="flex-1">
             <p className="text-sm font-medium text-error">{error}</p>
             <button onClick={() => setError(null)} className="text-xs text-error mt-1">
-              Dismiss
+              {tpm('dismiss')}
             </button>
           </div>
         </div>
@@ -259,12 +261,13 @@ function GrantsTable({
   onRevoke: (id: string) => void;
   status: string;
 }) {
+  const tpm = useT('pam');
   if (grants.length === 0) {
     return (
       <div className="text-center py-12 bg-surface border rounded-xl">
         <Clock className="mx-auto h-12 w-12 text-muted" />
-        <h3 className="mt-2 text-sm font-medium text-foreground">No grants found</h3>
-        <p className="mt-1 text-sm text-muted">No privileged access grants with this status.</p>
+        <h3 className="mt-2 text-sm font-medium text-foreground">{tpm('noGrants')}</h3>
+        <p className="mt-1 text-sm text-muted">{tpm('noGrantsBody')}</p>
       </div>
     );
   }
@@ -274,16 +277,16 @@ function GrantsTable({
       <table className="min-w-full divide-y divide-border">
         <thead className="bg-background">
           <tr>
-            <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">Requester</th>
-            <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">Privilege Type</th>
-            <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">Reason</th>
-            <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">Duration</th>
-            <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">Status</th>
-            <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">Requested</th>
+            <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">{tpm('colRequester')}</th>
+            <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">{tpm('colPrivilege')}</th>
+            <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">{tpm('colReason')}</th>
+            <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">{tpm('colDuration')}</th>
+            <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">{tpm('colStatus')}</th>
+            <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">{tpm('colRequested')}</th>
             {status !== 'pending' && (
-              <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">Expires</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">{tpm('colExpires')}</th>
             )}
-            <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">Actions</th>
+            <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">{tpm('colActions')}</th>
           </tr>
         </thead>
         <tbody className="bg-surface divide-y divide-border">
@@ -324,14 +327,14 @@ function GrantsTable({
                       className="text-success hover:text-success inline-flex items-center space-x-1"
                     >
                       <Check className="h-4 w-4" />
-                      <span>Approve</span>
+                      <span>{tpm('approve')}</span>
                     </button>
                     <button
                       onClick={() => onRevoke(grant.id)}
                       className="text-error hover:text-error inline-flex items-center space-x-1"
                     >
                       <X className="h-4 w-4" />
-                      <span>Reject</span>
+                      <span>{tpm('reject')}</span>
                     </button>
                   </>
                 )}
@@ -341,7 +344,7 @@ function GrantsTable({
                     className="text-error hover:text-error inline-flex items-center space-x-1"
                   >
                     <X className="h-4 w-4" />
-                    <span>Revoke</span>
+                    <span>{tpm('revoke')}</span>
                   </button>
                 )}
               </td>
@@ -354,12 +357,13 @@ function GrantsTable({
 }
 
 function ConfigsTab({ configs, onEdit }: { configs: PrivilegeConfig[]; onEdit: (config: PrivilegeConfig) => void }) {
+  const tpm = useT('pam');
   if (configs.length === 0) {
     return (
       <div className="text-center py-12 bg-surface border rounded-xl">
         <AlertCircle className="mx-auto h-12 w-12 text-muted" />
-        <h3 className="mt-2 text-sm font-medium text-foreground">No configurations</h3>
-        <p className="mt-1 text-sm text-muted">Configure privilege types to enable PAM.</p>
+        <h3 className="mt-2 text-sm font-medium text-foreground">{tpm('noConfigs')}</h3>
+        <p className="mt-1 text-sm text-muted">{tpm('noConfigsBody')}</p>
       </div>
     );
   }
@@ -369,12 +373,12 @@ function ConfigsTab({ configs, onEdit }: { configs: PrivilegeConfig[]; onEdit: (
       <table className="min-w-full divide-y divide-border">
         <thead className="bg-background">
           <tr>
-            <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">Privilege Type</th>
-            <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">Max Duration</th>
-            <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">Requires Approver</th>
-            <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">Auto Approve</th>
-            <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">Allowed Roles</th>
-            <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">Actions</th>
+            <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">{tpm('colPrivilege')}</th>
+            <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">{tpm('colMaxDuration')}</th>
+            <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">{tpm('colRequiresApprover')}</th>
+            <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">{tpm('colAutoApprove')}</th>
+            <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">{tpm('colAllowedRoles')}</th>
+            <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">{tpm('colActions')}</th>
           </tr>
         </thead>
         <tbody className="bg-surface divide-y divide-border">
@@ -411,7 +415,7 @@ function ConfigsTab({ configs, onEdit }: { configs: PrivilegeConfig[]; onEdit: (
                   className="text-primary hover:text-primary inline-flex items-center space-x-1"
                 >
                   <Edit2 className="h-4 w-4" />
-                  <span>Edit</span>
+                  <span>{tpm('edit')}</span>
                 </button>
               </td>
             </tr>
@@ -431,6 +435,7 @@ function ConfigModal({
   onSave: (config: PrivilegeConfig) => void;
   onClose: () => void;
 }) {
+  const tpm = useT('pam');
   const [formData, setFormData] = useState({
     max_duration_hours: config.max_duration_hours,
     requires_approver: config.requires_approver,
@@ -470,7 +475,7 @@ function ConfigModal({
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-secondary">Max Duration (hours)</label>
+              <label className="block text-sm font-medium text-secondary">{tpm('maxDurationHours')}</label>
               <input
                 type="number"
                 min="1"
@@ -494,7 +499,7 @@ function ConfigModal({
                   className="h-4 w-4 text-primary focus:ring-primary/20 focus:border-primary border-border-strong rounded"
                 />
                 <label htmlFor="requires_approver" className="ml-2 block text-sm text-foreground">
-                  Requires Approval
+                  {tpm('requiresApproval')}
                 </label>
               </div>
 
@@ -507,7 +512,7 @@ function ConfigModal({
                   className="h-4 w-4 text-primary focus:ring-primary/20 focus:border-primary border-border-strong rounded"
                 />
                 <label htmlFor="auto_approve" className="ml-2 block text-sm text-foreground">
-                  Auto Approve
+                  {tpm('autoApprove')}
                 </label>
               </div>
             </div>
@@ -518,14 +523,14 @@ function ConfigModal({
                 onClick={onClose}
                 className="px-4 py-2 border border-border-strong rounded-xl shadow-sm-sm text-sm font-medium text-secondary bg-surface hover:bg-background"
               >
-                Cancel
+                {tpm('cancel')}
               </button>
               <button
                 type="submit"
                 disabled={loading}
                 className="px-4 py-2 border border-transparent rounded-xl shadow-sm-sm text-sm font-medium text-white bg-primary hover:hover:bg-primary-hover disabled:opacity-50"
               >
-                {loading ? 'Saving...' : 'Save Changes'}
+                {loading ? tpm('saving') : tpm('saveChanges')}
               </button>
             </div>
           </form>

@@ -1,5 +1,6 @@
 'use client';
 
+import { useT } from '@/i18n/useT';
 import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -48,6 +49,8 @@ const statusLabels: Record<string, string> = {
 };
 
 export default function IssuesPage() {
+  const tp = useT('pages');
+  const ti = useT('issues');
   const router = useRouter();
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
@@ -116,7 +119,7 @@ export default function IssuesPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-foreground">Issues</h1>
+          <h1 className="text-2xl font-bold text-foreground">{tp('issues')}</h1>
           <p className="mt-1 text-sm text-secondary">
             Manage and track IT incidents and problems
           </p>
@@ -124,7 +127,7 @@ export default function IssuesPage() {
         <Link href="/issues/new">
           <Button>
             <Plus className="h-4 w-4 mr-2" />
-            New Issue
+            {tp('newIssue')}
           </Button>
         </Link>
       </div>
@@ -136,7 +139,7 @@ export default function IssuesPage() {
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted" />
             <input
               type="text"
-              placeholder="Search by number or title..."
+              placeholder={ti('searchPlaceholder')}
               value={searchQuery}
               onChange={(e) => {
                 setSearchQuery(e.target.value);
@@ -151,7 +154,7 @@ export default function IssuesPage() {
             className="flex items-center"
           >
             <Filter className="h-4 w-4 mr-2" />
-            Filters
+            {tp('filters')}
             <ChevronDown className={`h-4 w-4 ml-2 transition-transform ${showFilters ? 'rotate-180' : ''}`} />
           </Button>
         </div>
@@ -159,7 +162,7 @@ export default function IssuesPage() {
         {showFilters && (
           <div className="mt-4 pt-4 border-t border-border grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div>
-              <label className="block text-sm font-medium text-foreground mb-1">Status</label>
+              <label className="block text-sm font-medium text-foreground mb-1">{ti('status')}</label>
               <select
                 value={statusFilter}
                 onChange={(e) => {
@@ -168,17 +171,17 @@ export default function IssuesPage() {
                 }}
                 className="w-full px-3 py-2 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary"
               >
-                <option value="all">All Status</option>
-                <option value="new">New</option>
-                <option value="assigned">Assigned</option>
-                <option value="in_progress">In Progress</option>
-                <option value="pending">Pending</option>
-                <option value="resolved">Resolved</option>
-                <option value="closed">Closed</option>
+                <option value="all">{ti('allStatus')}</option>
+                <option value="new">{ti('statusNew')}</option>
+                <option value="assigned">{ti('statusAssigned')}</option>
+                <option value="in_progress">{ti('statusInProgress')}</option>
+                <option value="pending">{ti('statusPending')}</option>
+                <option value="resolved">{ti('statusResolved')}</option>
+                <option value="closed">{ti('statusClosed')}</option>
               </select>
             </div>
             <div>
-              <label className="block text-sm font-medium text-foreground mb-1">Priority</label>
+              <label className="block text-sm font-medium text-foreground mb-1">{ti('priority')}</label>
               <select
                 value={priorityFilter}
                 onChange={(e) => {
@@ -187,15 +190,15 @@ export default function IssuesPage() {
                 }}
                 className="w-full px-3 py-2 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary"
               >
-                <option value="all">All Priorities</option>
-                <option value="critical">Critical</option>
-                <option value="high">High</option>
-                <option value="medium">Medium</option>
-                <option value="low">Low</option>
+                <option value="all">{ti('allPriorities')}</option>
+                <option value="critical">{ti('priorityCritical')}</option>
+                <option value="high">{ti('priorityHigh')}</option>
+                <option value="medium">{ti('priorityMedium')}</option>
+                <option value="low">{ti('priorityLow')}</option>
               </select>
             </div>
             <div>
-              <label className="block text-sm font-medium text-foreground mb-1">Assigned To</label>
+              <label className="block text-sm font-medium text-foreground mb-1">{ti('assignedTo')}</label>
               <select
                 value={assignedFilter}
                 onChange={(e) => {
@@ -204,9 +207,9 @@ export default function IssuesPage() {
                 }}
                 className="w-full px-3 py-2 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary"
               >
-                <option value="all">All Users</option>
-                <option value="me">Assigned to Me</option>
-                <option value="unassigned">Unassigned</option>
+                <option value="all">{ti('allUsers')}</option>
+                <option value="me">{ti('assignedToMe')}</option>
+                <option value="unassigned">{ti('unassigned')}</option>
               </select>
             </div>
           </div>
@@ -218,7 +221,7 @@ export default function IssuesPage() {
         {isLoading ? (
           <div className="flex items-center justify-center h-64">
             <Loader2 className="h-8 w-8 animate-spin text-primary" />
-            <span className="ml-2 text-secondary">Loading issues...</span>
+            <span className="ml-2 text-secondary">{ti('loading')}</span>
           </div>
         ) : (
           <>
@@ -226,22 +229,22 @@ export default function IssuesPage() {
               <thead className="bg-background">
                 <tr>
                   <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-muted bg-background border-b border-border">
-                    Issue
+                    {ti('colIssue')}
                   </th>
                   <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-muted bg-background border-b border-border">
-                    Priority
+                    {ti('priority')}
                   </th>
                   <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-muted bg-background border-b border-border">
-                    Status
+                    {ti('status')}
                   </th>
                   <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-muted bg-background border-b border-border">
-                    Assigned To
+                    {ti('assignedTo')}
                   </th>
                   <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-muted bg-background border-b border-border">
-                    Updated
+                    {ti('colUpdated')}
                   </th>
                   <th className="px-4 py-3 text-right text-xs font-medium uppercase tracking-wider text-muted bg-background border-b border-border">
-                    Actions
+                    {ti('colActions')}
                   </th>
                 </tr>
               </thead>
@@ -300,7 +303,7 @@ export default function IssuesPage() {
                             </span>
                           </div>
                         ) : (
-                          <span className="text-sm text-secondary italic">Unassigned</span>
+                          <span className="text-sm text-secondary italic">{ti('unassigned')}</span>
                         )}
                       </td>
                       <td className="px-4 py-3 whitespace-nowrap">
@@ -319,29 +322,29 @@ export default function IssuesPage() {
                         >
                           <DropdownMenuItem onClick={() => router.push(`/issues/${issue.id}`)}>
                             <Eye className="h-4 w-4 mr-2" />
-                            View Details
+                            {ti('viewDetails')}
                           </DropdownMenuItem>
                           <DropdownMenuItem onClick={() => router.push(`/issues/${issue.id}/edit`)}>
                             <Edit className="h-4 w-4 mr-2" />
-                            Edit
+                            {ti('edit')}
                           </DropdownMenuItem>
                           <DropdownMenuDivider />
                           {issue.status !== 'in_progress' && (
                             <DropdownMenuItem onClick={() => handleStatusChange(issue.id, 'in_progress')}>
                               <CheckCircle className="h-4 w-4 mr-2" />
-                              Mark In Progress
+                              {ti('markInProgress')}
                             </DropdownMenuItem>
                           )}
                           {issue.status !== 'resolved' && (
                             <DropdownMenuItem onClick={() => handleStatusChange(issue.id, 'resolved')}>
                               <CheckCircle className="h-4 w-4 mr-2" />
-                              Mark Resolved
+                              {ti('markResolved')}
                             </DropdownMenuItem>
                           )}
                           {issue.status !== 'closed' && (
                             <DropdownMenuItem onClick={() => handleStatusChange(issue.id, 'closed')}>
                               <XCircle className="h-4 w-4 mr-2" />
-                              Close Issue
+                              {ti('closeIssue')}
                             </DropdownMenuItem>
                           )}
                           <DropdownMenuDivider />
@@ -350,7 +353,7 @@ export default function IssuesPage() {
                             onClick={() => handleDelete(issue.id, issue.issue_number)}
                           >
                             <Trash2 className="h-4 w-4 mr-2" />
-                            Delete
+                            {ti('delete')}
                           </DropdownMenuItem>
                         </DropdownMenu>
                       </td>
@@ -363,8 +366,8 @@ export default function IssuesPage() {
             {issues.length === 0 && (
               <div className="text-center py-12">
                 <AlertCircle className="h-12 w-12 text-muted mx-auto mb-4" />
-                <h3 className="text-lg font-medium text-foreground mb-2">No issues found</h3>
-                <p className="text-secondary">Try adjusting your search or filters</p>
+                <h3 className="text-lg font-medium text-foreground mb-2">{ti('noIssues')}</h3>
+                <p className="text-secondary">{ti('adjustFilters')}</p>
               </div>
             )}
 
@@ -380,7 +383,7 @@ export default function IssuesPage() {
                   disabled={page <= 1}
                   onClick={() => setPage(p => Math.max(1, p - 1))}
                 >
-                  Previous
+                  {ti('previous')}
                 </Button>
                 <Button
                   variant="outline"
@@ -388,7 +391,7 @@ export default function IssuesPage() {
                   disabled={page >= pagination.totalPages}
                   onClick={() => setPage(p => p + 1)}
                 >
-                  Next
+                  {ti('next')}
                 </Button>
               </div>
             </div>

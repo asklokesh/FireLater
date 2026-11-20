@@ -1,5 +1,6 @@
 'use client';
 
+import { useT } from '@/i18n/useT';
 import { useState, useEffect, useCallback } from 'react';
 import {
   BarChart2,
@@ -51,19 +52,19 @@ interface ReportRun {
 }
 
 const reportTypeLabels: Record<ReportType, string> = {
-  change_success_rate: 'Change Success Rate (SOX ITGC)',
-  unauthorized_changes: 'Unauthorized Changes (SOX)',
-  emergency_change_usage: 'Emergency Change Usage (FFIEC)',
-  sod_violation_attempts: 'SoD Violation Attempts (SOX)',
-  access_recertification_status: 'Access Recertification Status (GLBA)',
-  sla_breach_evidence: 'SLA Breach Evidence (DORA/FFIEC)',
+  change_success_rate: 'typeChange',
+  unauthorized_changes: 'typeUnauthorized',
+  emergency_change_usage: 'typeEmergency',
+  sod_violation_attempts: 'typeSod',
+  access_recertification_status: 'typeRecert',
+  sla_breach_evidence: 'typeSla',
 };
 
 const cadenceLabels: Record<string, string> = {
-  daily: 'Daily',
-  weekly: 'Weekly',
-  monthly: 'Monthly',
-  quarterly: 'Quarterly',
+  daily: 'cadDaily',
+  weekly: 'cadWeekly',
+  monthly: 'cadMonthly',
+  quarterly: 'cadQuarterly',
 };
 
 const statusColors: Record<string, { bg: string; text: string; icon: typeof CheckCircle }> = {
@@ -72,7 +73,10 @@ const statusColors: Record<string, { bg: string; text: string; icon: typeof Chec
   failed: { bg: 'bg-error-subtle', text: 'text-error', icon: AlertCircle },
 };
 
+const RUN_STATUS_KEYS: Record<string, string> = { completed: 'statusCompleted', failed: 'statusFailed', running: 'statusRunning', pending: 'statusPending' };
+
 export default function ComplianceReportsPage() {
+  const cp = useT('complianceReports');
   const [activeTab, setActiveTab] = useState<'generate' | 'schedules' | 'history'>('generate');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -109,12 +113,12 @@ export default function ComplianceReportsPage() {
       const response = await api.get('/v1/compliance-reports/schedules');
       setSchedules(response.data.data || []);
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed to load schedules';
+      const message = err instanceof Error ? err.message : cp('loadSchedulesFailed');
       setError(message);
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [cp]);
 
   const loadRuns = useCallback(async () => {
     try {
@@ -122,12 +126,12 @@ export default function ComplianceReportsPage() {
       const response = await api.get('/v1/compliance-reports/runs');
       setRuns(response.data.data || []);
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed to load run history';
+      const message = err instanceof Error ? err.message : cp('loadRunsFailed');
       setError(message);
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [cp]);
 
   useEffect(() => {
     if (activeTab === 'schedules') {
@@ -150,7 +154,7 @@ export default function ComplianceReportsPage() {
       });
       setReportResult(response.data);
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed to generate report';
+      const message = err instanceof Error ? err.message : cp('generateFailed');
       setError(message);
     } finally {
       setIsGenerating(false);
@@ -177,7 +181,7 @@ export default function ComplianceReportsPage() {
       });
       loadSchedules();
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed to create schedule';
+      const message = err instanceof Error ? err.message : cp('createFailed');
       setError(message);
     } finally {
       setIsSubmittingSchedule(false);
@@ -189,7 +193,7 @@ export default function ComplianceReportsPage() {
       await api.patch(`/v1/compliance-reports/schedules/${id}`, { is_active: !isActive });
       loadSchedules();
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed to update schedule';
+      const message = err instanceof Error ? err.message : cp('updateFailed');
       setError(message);
     }
   };
@@ -207,7 +211,7 @@ export default function ComplianceReportsPage() {
       a.download = `${reportResult.reportType}-${new Date().toISOString().split('T')[0]}.csv`;
       a.click();
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed to export CSV';
+      const message = err instanceof Error ? err.message : cp('exportFailed');
       setError(message);
     }
   };
@@ -237,7 +241,7 @@ export default function ComplianceReportsPage() {
           <XCircle className="h-4 w-4" />
           {error}
           <button onClick={() => setError(null)} className="ml-auto text-error hover:text-error">
-            Dismiss
+            {cp('dismiss')}
           </button>
         </div>
       )}
@@ -245,9 +249,9 @@ export default function ComplianceReportsPage() {
       <div>
         <div className="flex items-center gap-2 mb-2">
           <BarChart2 className="h-6 w-6 text-secondary" />
-          <h1 className="text-2xl font-bold text-foreground">Compliance Reports</h1>
+          <h1 className="text-2xl font-bold text-foreground">{cp('title')}</h1>
         </div>
-        <p className="text-sm text-muted">SOX ITGC, PCI-DSS, FFIEC, and DORA compliance reporting</p>
+        <p className="text-sm text-muted">{cp('subtitle')}</p>
       </div>
 
       <div className="bg-surface rounded-xl shadow-sm">
@@ -260,7 +264,7 @@ export default function ComplianceReportsPage() {
                 : 'border-transparent text-secondary hover:text-foreground'
             }`}
           >
-            Generate Report
+            {cp('tabGenerate')}
           </button>
           <button
             onClick={() => setActiveTab('schedules')}
@@ -270,7 +274,7 @@ export default function ComplianceReportsPage() {
                 : 'border-transparent text-secondary hover:text-foreground'
             }`}
           >
-            Schedules
+            {cp('tabSchedules')}
           </button>
           <button
             onClick={() => setActiveTab('history')}
@@ -280,7 +284,7 @@ export default function ComplianceReportsPage() {
                 : 'border-transparent text-secondary hover:text-foreground'
             }`}
           >
-            Run History
+            {cp('tabRuns')}
           </button>
         </div>
 
@@ -289,7 +293,7 @@ export default function ComplianceReportsPage() {
             <div className="space-y-6">
               <form onSubmit={handleGenerateReport} className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-secondary mb-1">Report Type</label>
+                  <label className="block text-sm font-medium text-secondary mb-1">{cp('reportType')}</label>
                   <select
                     value={reportType}
                     onChange={(e) => setReportType(e.target.value as ReportType)}
@@ -297,7 +301,7 @@ export default function ComplianceReportsPage() {
                   >
                     {Object.entries(reportTypeLabels).map(([key, label]) => (
                       <option key={key} value={key}>
-                        {label}
+                        {cp(label)}
                       </option>
                     ))}
                   </select>
@@ -305,7 +309,7 @@ export default function ComplianceReportsPage() {
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-secondary mb-1">From Date</label>
+                    <label className="block text-sm font-medium text-secondary mb-1">{cp('fromDate')}</label>
                     <input
                       type="date"
                       value={fromDate}
@@ -314,7 +318,7 @@ export default function ComplianceReportsPage() {
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-secondary mb-1">To Date</label>
+                    <label className="block text-sm font-medium text-secondary mb-1">{cp('toDate')}</label>
                     <input
                       type="date"
                       value={toDate}
@@ -326,7 +330,7 @@ export default function ComplianceReportsPage() {
 
                 <Button disabled={isGenerating} className="w-full">
                   {isGenerating && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-                  Generate Report
+                  {cp('generateBtn')}
                 </Button>
               </form>
 
@@ -334,17 +338,17 @@ export default function ComplianceReportsPage() {
                 <div className="space-y-4 border-t border-border pt-6">
                   <div className="flex items-center justify-between">
                     <div>
-                      <h3 className="font-medium text-foreground">Report Generated</h3>
+                      <h3 className="font-medium text-foreground">{cp('generated')}</h3>
                       <p className="text-sm text-muted">{formatDate(reportResult.generatedAt)}</p>
                     </div>
                     <Button variant="outline" onClick={handleExportCSV}>
                       <Download className="h-4 w-4 mr-2" />
-                      Export CSV
+                      {cp('exportCsv')}
                     </Button>
                   </div>
 
                   <div className="bg-background rounded-xl p-4 space-y-3">
-                    <h4 className="font-medium text-foreground">Summary</h4>
+                    <h4 className="font-medium text-foreground">{cp('summary')}</h4>
                     {Object.entries(reportResult.summary).map(([key, value]) => (
                       <div key={key} className="flex justify-between text-sm">
                         <span className="text-secondary">{key}:</span>
@@ -392,14 +396,14 @@ export default function ComplianceReportsPage() {
               <div className="flex justify-end">
                 <Button onClick={() => setShowScheduleModal(true)}>
                   <Plus className="h-4 w-4 mr-2" />
-                  Add Schedule
+                  {cp('addSchedule')}
                 </Button>
               </div>
 
               {schedules.length === 0 ? (
                 <div className="text-center py-12">
                   <Calendar className="h-12 w-12 text-muted mx-auto mb-4" />
-                  <p className="text-muted">No schedules created yet</p>
+                  <p className="text-muted">{cp('noSchedules')}</p>
                 </div>
               ) : (
                 <div className="overflow-x-auto">
@@ -407,22 +411,22 @@ export default function ComplianceReportsPage() {
                     <thead className="bg-background">
                       <tr>
                         <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">
-                          Name
+                          {cp('colName')}
                         </th>
                         <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">
-                          Report Type
+                          {cp('reportType')}
                         </th>
                         <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">
-                          Cadence
+                          {cp('colCadence')}
                         </th>
                         <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">
-                          Recipients
+                          {cp('colRecipients')}
                         </th>
                         <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">
-                          Last Run
+                          {cp('colLastRun')}
                         </th>
                         <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">
-                          Status
+                          {cp('colStatus')}
                         </th>
                       </tr>
                     </thead>
@@ -431,10 +435,10 @@ export default function ComplianceReportsPage() {
                         <tr key={schedule.id} className="hover:bg-surface-hover">
                           <td className="px-6 py-4 text-sm font-medium text-foreground">{schedule.name}</td>
                           <td className="px-6 py-4 text-sm text-secondary">
-                            {reportTypeLabels[schedule.report_type]}
+                            {cp(reportTypeLabels[schedule.report_type])}
                           </td>
                           <td className="px-6 py-4 text-sm text-secondary">
-                            {cadenceLabels[schedule.cadence]}
+                            {cp(cadenceLabels[schedule.cadence])}
                           </td>
                           <td className="px-6 py-4 text-sm text-secondary">{schedule.recipients.join(', ')}</td>
                           <td className="px-6 py-4 text-sm text-secondary">
@@ -449,7 +453,7 @@ export default function ComplianceReportsPage() {
                                   : 'bg-background text-foreground'
                               }`}
                             >
-                              {schedule.is_active ? 'Active' : 'Inactive'}
+                              {schedule.is_active ? cp('active') : cp('inactive')}
                             </button>
                           </td>
                         </tr>
@@ -466,7 +470,7 @@ export default function ComplianceReportsPage() {
               {runs.length === 0 ? (
                 <div className="text-center py-12">
                   <Clock className="h-12 w-12 text-muted mx-auto mb-4" />
-                  <p className="text-muted">No report runs yet</p>
+                  <p className="text-muted">{cp('noRuns')}</p>
                 </div>
               ) : (
                 <div className="overflow-x-auto">
@@ -474,16 +478,16 @@ export default function ComplianceReportsPage() {
                     <thead className="bg-background">
                       <tr>
                         <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">
-                          Report Type
+                          {cp('reportType')}
                         </th>
                         <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">
-                          Generated At
+                          {cp('colGeneratedAt')}
                         </th>
                         <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">
-                          Duration
+                          {cp('colDuration')}
                         </th>
                         <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">
-                          Status
+                          {cp('colStatus')}
                         </th>
                       </tr>
                     </thead>
@@ -494,7 +498,7 @@ export default function ComplianceReportsPage() {
                         return (
                           <tr key={run.id} className="hover:bg-surface-hover">
                             <td className="px-6 py-4 text-sm text-foreground">
-                              {reportTypeLabels[run.report_type]}
+                              {cp(reportTypeLabels[run.report_type])}
                             </td>
                             <td className="px-6 py-4 text-sm text-secondary">
                               {formatDate(run.generated_at)}
@@ -507,7 +511,7 @@ export default function ComplianceReportsPage() {
                                 className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${statusConfig.bg} ${statusConfig.text}`}
                               >
                                 <StatusIcon className="h-3 w-3 mr-1" />
-                                {run.status.charAt(0).toUpperCase() + run.status.slice(1)}
+                                {cp(RUN_STATUS_KEYS[run.status] ?? 'statusPending')}
                               </span>
                             </td>
                           </tr>
@@ -526,11 +530,11 @@ export default function ComplianceReportsPage() {
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-surface rounded-xl shadow-sm-lg max-w-md w-full mx-4">
             <div className="px-6 py-4 border-b border-border">
-              <h2 className="text-lg font-semibold text-foreground">Create Schedule</h2>
+              <h2 className="text-lg font-semibold text-foreground">{cp('createSchedule')}</h2>
             </div>
             <form onSubmit={handleCreateSchedule} className="p-6 space-y-4">
               <div>
-                <label className="block text-sm font-medium text-secondary mb-1">Name</label>
+                <label className="block text-sm font-medium text-secondary mb-1">{cp('name')}</label>
                 <input
                   type="text"
                   required
@@ -540,7 +544,7 @@ export default function ComplianceReportsPage() {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-secondary mb-1">Report Type</label>
+                <label className="block text-sm font-medium text-secondary mb-1">{cp('reportType')}</label>
                 <select
                   value={scheduleForm.reportType}
                   onChange={(e) =>
@@ -553,13 +557,13 @@ export default function ComplianceReportsPage() {
                 >
                   {Object.entries(reportTypeLabels).map(([key, label]) => (
                     <option key={key} value={key}>
-                      {label}
+                      {cp(label)}
                     </option>
                   ))}
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium text-secondary mb-1">Cadence</label>
+                <label className="block text-sm font-medium text-secondary mb-1">{cp('cadence')}</label>
                 <select
                   value={scheduleForm.cadence}
                   onChange={(e) =>
@@ -572,19 +576,19 @@ export default function ComplianceReportsPage() {
                 >
                   {Object.entries(cadenceLabels).map(([key, label]) => (
                     <option key={key} value={key}>
-                      {label}
+                      {cp(label)}
                     </option>
                   ))}
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium text-secondary mb-1">Recipients (comma-separated emails)</label>
+                <label className="block text-sm font-medium text-secondary mb-1">{cp('recipients')}</label>
                 <input
                   type="text"
                   required
                   value={scheduleForm.recipients}
                   onChange={(e) => setScheduleForm({ ...scheduleForm, recipients: e.target.value })}
-                  placeholder="user1@example.com, user2@example.com"
+                  placeholder={cp('recipientsPh')}
                   className="w-full px-3 py-2 border border-border-strong rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
                 />
               </div>
@@ -595,11 +599,11 @@ export default function ComplianceReportsPage() {
                   onClick={() => setShowScheduleModal(false)}
                   className="flex-1"
                 >
-                  Cancel
+                  {cp('cancel')}
                 </Button>
                 <Button type="submit" disabled={isSubmittingSchedule} className="flex-1">
                   {isSubmittingSchedule && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-                  Create
+                  {cp('create')}
                 </Button>
               </div>
             </form>

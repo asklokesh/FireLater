@@ -53,6 +53,8 @@ import searchRoutes from './routes/search.js';
 import wsRoutes from './routes/ws.js';
 import { realtimeBridge } from './lib/websocket/realtime-bridge.js';
 import { hub as realtimeHub } from './routes/ws.js';
+import { i18nOnRequest, localeForError, localizeErrorMessage, t } from './lib/i18n.js';
+import { userService } from './services/users.js';
 import { initializeJobs, shutdownJobs } from './jobs/index.js';
 import { startBulkWorker, stopBulkWorker } from './jobs/processors/bulkOperations.js';
 import { closeBulkQueue } from './jobs/bulkQueue.js';
@@ -109,6 +111,9 @@ async function registerPlugins() {
   app.addHook('onRequest', async (request) => {
     request.startTime = Date.now();
   });
+
+  // Resolve the request locale (?lang= / Accept-Language) and advertise it via Content-Language
+  app.addHook('onRequest', i18nOnRequest);
 
   app.addHook('onResponse', async (request, reply) => {
     const startTime = request.startTime;
@@ -472,11 +477,12 @@ async function registerRoutes() {
 }
 
 function registerErrorHandler() {
-  app.setErrorHandler((error, request, reply) => {
+  app.setErrorHandler(async (error, request, reply) => {
     logger.error({ err: error }, 'Request error');
+    const locale = await localeForError(request, userService.getLocale.bind(userService));
 
     if (error instanceof AppError) {
-      return reply.status(error.statusCode).send(error.toJSON());
+      return reply.status(error.statusCode).send({ ...error.toJSON(), message: localizeErrorMessage(locale, error) });
     }
 
     // Handle Fastify validation errors
@@ -484,7 +490,7 @@ function registerErrorHandler() {
       return reply.status(400).send({
         statusCode: 400,
         error: 'Validation Error',
-        message: 'Request validation failed',
+        message: t(locale, 'errors.validationFailed'),
         details: (error as { validation: unknown }).validation,
       });
     }
@@ -495,7 +501,7 @@ function registerErrorHandler() {
       return reply.status(400).send({
         statusCode: 400,
         error: 'Validation Error',
-        message: 'Request validation failed',
+        message: t(locale, 'errors.validationFailed'),
         details: zodError.issues,
       });
     }
@@ -506,7 +512,7 @@ function registerErrorHandler() {
       return reply.status(customError.statusCode).send({
         statusCode: customError.statusCode,
         error: customError.error || 'Error',
-        message: customError.message || 'An error occurred',
+        message: localizeErrorMessage(locale, { statusCode: customError.statusCode, message: customError.message, name: (error as { name?: string }).name, resource: (error as { resource?: string }).resource, messageKey: (error as { messageKey?: string }).messageKey, identifier: (error as { identifier?: string }).identifier }) || 'An error occurred',
       });
     }
 
@@ -514,7 +520,7 @@ function registerErrorHandler() {
     return reply.status(500).send({
       statusCode: 500,
       error: 'Internal Server Error',
-      message: config.isDev ? errorMessage : 'An unexpected error occurred',
+      message: config.isDev ? errorMessage : t(locale, 'errors.internal'),
     });
   });
 }

@@ -1,5 +1,6 @@
 'use client';
 
+import { useT } from '@/i18n/useT';
 import { useState, useEffect, useCallback } from 'react';
 import {
   Settings,
@@ -16,6 +17,8 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { settingsApi } from '@/lib/api';
+
+const TAB_KEYS: Record<string, string> = {'general':'tabGeneral','notifications':'tabNotifications','security':'tabSecurity','integrations':'tabIntegrations','email':'tabEmail','appearance':'tabAppearance'};
 
 const settingsSections = [
   { id: 'general', name: 'General', icon: Settings },
@@ -50,6 +53,7 @@ interface TenantSettings {
 }
 
 export default function SettingsPage() {
+  const ts = useT('adminSettings');
   const [activeSection, setActiveSection] = useState('general');
   const [isSaving, setIsSaving] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
@@ -121,12 +125,12 @@ export default function SettingsPage() {
         <div>
           <h1 className="text-2xl font-bold text-foreground">Settings</h1>
           <p className="mt-1 text-sm text-secondary">
-            Configure your tenant settings
+            {ts('subtitle')}
           </p>
         </div>
         <Button onClick={handleSave} isLoading={isSaving}>
           <Save className="h-4 w-4 mr-2" />
-          Save Changes
+          {ts('saveChanges')}
         </Button>
       </div>
 
@@ -147,7 +151,7 @@ export default function SettingsPage() {
                     }`}
                   >
                     <Icon className="h-5 w-5 mr-3" />
-                    {section.name}
+                    {ts(TAB_KEYS[section.id])}
                   </button>
                 </li>
               );
@@ -160,12 +164,12 @@ export default function SettingsPage() {
           {activeSection === 'general' && (
             <div className="p-6 space-y-6">
               <div>
-                <h2 className="text-lg font-semibold text-foreground mb-4">General Settings</h2>
+                <h2 className="text-lg font-semibold text-foreground mb-4">{ts('generalSettings')}</h2>
                 <div className="space-y-4">
                   <Input
                     id="tenantName"
                     type="text"
-                    label="Organization Name"
+                    label={ts('orgName')}
                     placeholder="My Company"
                     value={tenantName}
                     onChange={(e) => setTenantName(e.target.value)}
@@ -173,14 +177,14 @@ export default function SettingsPage() {
                   <Input
                     id="tenantSlug"
                     type="text"
-                    label="Organization Slug"
+                    label={ts('orgSlug')}
                     placeholder="my-company"
                     value={tenantSlug}
                     disabled
                   />
                   <div>
                     <label className="block text-sm font-medium text-secondary mb-1">
-                      Timezone
+                      {ts('timezone')}
                     </label>
                     <select
                       className="w-full px-3 py-2 border border-border-strong rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
@@ -188,18 +192,18 @@ export default function SettingsPage() {
                       onChange={(e) => updateSetting('timezone', e.target.value)}
                     >
                       <option value="UTC">UTC</option>
-                      <option value="America/New_York">Eastern Time (US)</option>
-                      <option value="America/Chicago">Central Time (US)</option>
-                      <option value="America/Denver">Mountain Time (US)</option>
-                      <option value="America/Los_Angeles">Pacific Time (US)</option>
-                      <option value="Europe/London">London</option>
-                      <option value="Europe/Paris">Paris</option>
-                      <option value="Asia/Tokyo">Tokyo</option>
+                      <option value="America/New_York">{ts('tzEastern')}</option>
+                      <option value="America/Chicago">{ts('tzCentral')}</option>
+                      <option value="America/Denver">{ts('tzMountain')}</option>
+                      <option value="America/Los_Angeles">{ts('tzPacific')}</option>
+                      <option value="Europe/London">{ts('tzLondon')}</option>
+                      <option value="Europe/Paris">{ts('tzParis')}</option>
+                      <option value="Asia/Tokyo">{ts('tzTokyo')}</option>
                     </select>
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-secondary mb-1">
-                      Date Format
+                      {ts('dateFormat')}
                     </label>
                     <select
                       className="w-full px-3 py-2 border border-border-strong rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
@@ -218,12 +222,12 @@ export default function SettingsPage() {
 
           {activeSection === 'notifications' && (
             <div className="p-6 space-y-6">
-              <h2 className="text-lg font-semibold text-foreground mb-4">Notification Settings</h2>
+              <h2 className="text-lg font-semibold text-foreground mb-4">{ts('notificationSettings')}</h2>
               <div className="space-y-4">
                 <div className="flex items-center justify-between py-3 border-b border-border">
                   <div>
-                    <p className="font-medium text-foreground">Email Notifications</p>
-                    <p className="text-sm text-secondary">Receive email updates for important events</p>
+                    <p className="font-medium text-foreground">{ts('emailNotifications')}</p>
+                    <p className="text-sm text-secondary">{ts('emailNotificationsDesc')}</p>
                   </div>
                   <label className="relative inline-flex items-center cursor-pointer">
                     <input
@@ -237,8 +241,8 @@ export default function SettingsPage() {
                 </div>
                 <div className="flex items-center justify-between py-3 border-b border-border">
                   <div>
-                    <p className="font-medium text-foreground">Slack Notifications</p>
-                    <p className="text-sm text-secondary">Send notifications to Slack channels</p>
+                    <p className="font-medium text-foreground">{ts('slackNotifications')}</p>
+                    <p className="text-sm text-secondary">{ts('slackNotificationsDesc')}</p>
                   </div>
                   <label className="relative inline-flex items-center cursor-pointer">
                     <input
@@ -252,8 +256,8 @@ export default function SettingsPage() {
                 </div>
                 <div className="flex items-center justify-between py-3 border-b border-border">
                   <div>
-                    <p className="font-medium text-foreground">SLA Breach Alerts</p>
-                    <p className="text-sm text-secondary">Get notified before SLA breaches</p>
+                    <p className="font-medium text-foreground">{ts('slaAlerts')}</p>
+                    <p className="text-sm text-secondary">{ts('slaAlertsDesc')}</p>
                   </div>
                   <label className="relative inline-flex items-center cursor-pointer">
                     <input
@@ -271,12 +275,12 @@ export default function SettingsPage() {
 
           {activeSection === 'security' && (
             <div className="p-6 space-y-6">
-              <h2 className="text-lg font-semibold text-foreground mb-4">Security Settings</h2>
+              <h2 className="text-lg font-semibold text-foreground mb-4">{ts('securitySettings')}</h2>
               <div className="space-y-4">
                 <div className="flex items-center justify-between py-3 border-b border-border">
                   <div>
-                    <p className="font-medium text-foreground">Two-Factor Authentication</p>
-                    <p className="text-sm text-secondary">Require 2FA for all users</p>
+                    <p className="font-medium text-foreground">{ts('twoFactor')}</p>
+                    <p className="text-sm text-secondary">{ts('twoFactorDesc')}</p>
                   </div>
                   <label className="relative inline-flex items-center cursor-pointer">
                     <input type="checkbox" className="sr-only peer" />
@@ -285,24 +289,24 @@ export default function SettingsPage() {
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-secondary mb-1">
-                    Session Timeout (minutes)
+                    {ts('sessionTimeout')}
                   </label>
                   <select className="w-full px-3 py-2 border border-border-strong rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/20">
-                    <option value="30">30 minutes</option>
-                    <option value="60">1 hour</option>
-                    <option value="120">2 hours</option>
-                    <option value="480">8 hours</option>
-                    <option value="1440">24 hours</option>
+                    <option value="30">{ts('min30')}</option>
+                    <option value="60">{ts('hour1')}</option>
+                    <option value="120">{ts('hours2')}</option>
+                    <option value="480">{ts('hours8')}</option>
+                    <option value="1440">{ts('hours24')}</option>
                   </select>
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-secondary mb-1">
-                    Password Policy
+                    {ts('passwordPolicy')}
                   </label>
                   <select className="w-full px-3 py-2 border border-border-strong rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/20">
-                    <option value="standard">Standard (8+ characters)</option>
-                    <option value="strong">Strong (12+ chars, mixed case, numbers)</option>
-                    <option value="strict">Strict (16+ chars, special characters)</option>
+                    <option value="standard">{ts('pwStandard')}</option>
+                    <option value="strong">{ts('pwStrong')}</option>
+                    <option value="strict">{ts('pwStrict')}</option>
                   </select>
                 </div>
               </div>
@@ -311,7 +315,7 @@ export default function SettingsPage() {
 
           {activeSection === 'integrations' && (
             <div className="p-6 space-y-6">
-              <h2 className="text-lg font-semibold text-foreground mb-4">Integrations</h2>
+              <h2 className="text-lg font-semibold text-foreground mb-4">{ts('integrations')}</h2>
               <div className="space-y-4">
                 <div className="p-4 border border-border rounded-xl">
                   <div className="flex items-center justify-between">
@@ -321,10 +325,10 @@ export default function SettingsPage() {
                       </div>
                       <div>
                         <p className="font-medium text-foreground">AWS</p>
-                        <p className="text-sm text-secondary">Amazon Web Services integration</p>
+                        <p className="text-sm text-secondary">{ts('awsDesc')}</p>
                       </div>
                     </div>
-                    <Button variant="outline" size="sm">Configure</Button>
+                    <Button variant="outline" size="sm">{ts('configure')}</Button>
                   </div>
                 </div>
                 <div className="p-4 border border-border rounded-xl">
@@ -335,10 +339,10 @@ export default function SettingsPage() {
                       </div>
                       <div>
                         <p className="font-medium text-foreground">Slack</p>
-                        <p className="text-sm text-secondary">Slack workspace integration</p>
+                        <p className="text-sm text-secondary">{ts('slackDesc')}</p>
                       </div>
                     </div>
-                    <Button variant="outline" size="sm">Connect</Button>
+                    <Button variant="outline" size="sm">{ts('connect')}</Button>
                   </div>
                 </div>
                 <div className="p-4 border border-border rounded-xl">
@@ -349,10 +353,10 @@ export default function SettingsPage() {
                       </div>
                       <div>
                         <p className="font-medium text-foreground">PagerDuty</p>
-                        <p className="text-sm text-secondary">PagerDuty incident management</p>
+                        <p className="text-sm text-secondary">{ts('pagerdutyDesc')}</p>
                       </div>
                     </div>
-                    <Button variant="outline" size="sm">Connect</Button>
+                    <Button variant="outline" size="sm">{ts('connect')}</Button>
                   </div>
                 </div>
               </div>
@@ -361,31 +365,31 @@ export default function SettingsPage() {
 
           {activeSection === 'email' && (
             <div className="p-6 space-y-6">
-              <h2 className="text-lg font-semibold text-foreground mb-4">Email Settings</h2>
+              <h2 className="text-lg font-semibold text-foreground mb-4">{ts('emailSettings')}</h2>
               <div className="space-y-4">
                 <Input
                   id="senderEmail"
                   type="email"
-                  label="Sender Email"
+                  label={ts('senderEmail')}
                   placeholder="noreply@company.com"
                   defaultValue="noreply@acme-corp.com"
                 />
                 <Input
                   id="senderName"
                   type="text"
-                  label="Sender Name"
+                  label={ts('senderName')}
                   placeholder="IT Support"
                   defaultValue="FireLater IT Support"
                 />
                 <div>
                   <label className="block text-sm font-medium text-secondary mb-1">
-                    Email Provider
+                    {ts('emailProvider')}
                   </label>
                   <select className="w-full px-3 py-2 border border-border-strong rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/20">
                     <option value="sendgrid">SendGrid</option>
                     <option value="ses">Amazon SES</option>
                     <option value="mailgun">Mailgun</option>
-                    <option value="smtp">Custom SMTP</option>
+                    <option value="smtp">{ts('customSmtp')}</option>
                   </select>
                 </div>
               </div>
@@ -394,21 +398,21 @@ export default function SettingsPage() {
 
           {activeSection === 'appearance' && (
             <div className="p-6 space-y-6">
-              <h2 className="text-lg font-semibold text-foreground mb-4">Appearance</h2>
+              <h2 className="text-lg font-semibold text-foreground mb-4">{ts('appearance')}</h2>
               <div className="space-y-4">
                 <div>
                   <label className="block text-sm font-medium text-secondary mb-1">
-                    Theme
+                    {ts('theme')}
                   </label>
                   <select className="w-full px-3 py-2 border border-border-strong rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/20">
-                    <option value="light">Light</option>
-                    <option value="dark">Dark</option>
-                    <option value="system">System</option>
+                    <option value="light">{ts('light')}</option>
+                    <option value="dark">{ts('dark')}</option>
+                    <option value="system">{ts('system')}</option>
                   </select>
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-secondary mb-1">
-                    Primary Color
+                    {ts('primaryColor')}
                   </label>
                   <div className="flex space-x-2">
                     {['blue', 'green', 'purple', 'orange', 'red'].map((color) => (
@@ -436,7 +440,7 @@ export default function SettingsPage() {
                 <Input
                   id="logoUrl"
                   type="url"
-                  label="Custom Logo URL"
+                  label={ts('logoUrl')}
                   placeholder="https://example.com/logo.png"
                 />
               </div>

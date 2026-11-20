@@ -1,5 +1,6 @@
 'use client';
 
+import { useT } from '@/i18n/useT';
 import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
@@ -77,12 +78,12 @@ interface RcaData {
 }
 
 const FISHBONE_CATEGORIES = [
-  { key: 'people', label: 'People', color: 'bg-primary-subtle text-primary border-blue-300' },
-  { key: 'process', label: 'Process', color: 'bg-success-subtle text-success border-green-300' },
-  { key: 'equipment', label: 'Equipment', color: 'bg-warning-subtle text-warning border-yellow-300' },
-  { key: 'materials', label: 'Materials', color: 'bg-warning-subtle text-warning border-orange-300' },
-  { key: 'environment', label: 'Environment', color: 'bg-primary-subtle text-primary border-purple-300' },
-  { key: 'management', label: 'Management', color: 'bg-error-subtle text-error border-red-300' },
+  { key: 'people', label: 'fPeople', color: 'bg-primary-subtle text-primary border-blue-300' },
+  { key: 'process', label: 'fProcess', color: 'bg-success-subtle text-success border-green-300' },
+  { key: 'equipment', label: 'fEquipment', color: 'bg-warning-subtle text-warning border-yellow-300' },
+  { key: 'materials', label: 'fMaterials', color: 'bg-warning-subtle text-warning border-orange-300' },
+  { key: 'environment', label: 'fEnvironment', color: 'bg-primary-subtle text-primary border-purple-300' },
+  { key: 'management', label: 'fManagement', color: 'bg-error-subtle text-error border-red-300' },
 ] as const;
 
 const statusColors: Record<string, { bg: string; text: string }> = {
@@ -96,23 +97,24 @@ const statusColors: Record<string, { bg: string; text: string }> = {
 };
 
 const priorityColors: Record<string, { bg: string; text: string; label: string }> = {
-  critical: { bg: 'bg-error-subtle', text: 'text-error', label: 'Critical' },
-  high: { bg: 'bg-warning-subtle', text: 'text-warning', label: 'High' },
-  medium: { bg: 'bg-warning-subtle', text: 'text-warning', label: 'Medium' },
-  low: { bg: 'bg-primary-subtle', text: 'text-primary', label: 'Low' },
+  critical: { bg: 'bg-error-subtle', text: 'text-error', label: 'pCritical' },
+  high: { bg: 'bg-warning-subtle', text: 'text-warning', label: 'pHigh' },
+  medium: { bg: 'bg-warning-subtle', text: 'text-warning', label: 'pMedium' },
+  low: { bg: 'bg-primary-subtle', text: 'text-primary', label: 'pLow' },
 };
 
 const statusLabels: Record<string, string> = {
-  new: 'New',
-  assigned: 'Assigned',
-  investigating: 'Investigating',
-  root_cause_identified: 'Root Cause Identified',
-  known_error: 'Known Error',
-  resolved: 'Resolved',
-  closed: 'Closed',
+  new: 'sNew',
+  assigned: 'sAssigned',
+  investigating: 'sInvestigating',
+  root_cause_identified: 'sRootCauseIdentified',
+  known_error: 'sKnownError',
+  resolved: 'sResolved',
+  closed: 'sClosed',
 };
 
 export default function ProblemDetailPage() {
+  const pd = useT('problemDetail');
   const params = useParams();
   const router = useRouter();
   const [newComment, setNewComment] = useState('');
@@ -261,7 +263,7 @@ export default function ProblemDetailPage() {
       });
       setIsEditing(false);
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed to update problem';
+      const message = err instanceof Error ? err.message : pd('updateFailed');
       setError(message);
     }
   };
@@ -316,7 +318,7 @@ export default function ProblemDetailPage() {
       await addComment.mutateAsync({ id: problemId, content: newComment });
       setNewComment('');
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed to add comment';
+      const message = err instanceof Error ? err.message : pd('commentFailed');
       setError(message);
     }
   };
@@ -326,7 +328,7 @@ export default function ProblemDetailPage() {
     try {
       await changeStatus.mutateAsync({ id: problemId, status: newStatus });
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed to update status';
+      const message = err instanceof Error ? err.message : pd('statusFailed');
       setError(message);
     }
   };
@@ -337,7 +339,7 @@ export default function ProblemDetailPage() {
       await assignProblem.mutateAsync({ id: problemId, assigneeId: userId });
       setShowAssignModal(false);
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed to assign problem';
+      const message = err instanceof Error ? err.message : pd('assignFailed');
       setError(message);
     }
   };
@@ -348,7 +350,7 @@ export default function ProblemDetailPage() {
       await linkIssue.mutateAsync({ issueId, problemId, relationshipType: 'caused_by' });
       setShowLinkIssueModal(false);
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed to link issue';
+      const message = err instanceof Error ? err.message : pd('linkIssueFailed');
       setError(message);
     }
   };
@@ -358,7 +360,7 @@ export default function ProblemDetailPage() {
     try {
       await unlinkIssue.mutateAsync(issueId);
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed to unlink issue';
+      const message = err instanceof Error ? err.message : pd('unlinkFailed');
       setError(message);
     }
   };
@@ -368,7 +370,7 @@ export default function ProblemDetailPage() {
     try {
       await convertToKnownError.mutateAsync(problemId);
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed to convert to known error';
+      const message = err instanceof Error ? err.message : pd('knownErrorFailed');
       setError(message);
     }
   };
@@ -382,7 +384,7 @@ export default function ProblemDetailPage() {
         await handleStatusChange('root_cause_identified');
       }
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed to save root cause';
+      const message = err instanceof Error ? err.message : pd('rootCauseFailed');
       setError(message);
     }
   };
@@ -393,7 +395,7 @@ export default function ProblemDetailPage() {
       await updateProblem.mutateAsync({ id: problemId, data: { workaround } });
       setShowWorkaroundModal(false);
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed to save workaround';
+      const message = err instanceof Error ? err.message : pd('workaroundFailed');
       setError(message);
     }
   };
@@ -409,7 +411,7 @@ export default function ProblemDetailPage() {
       setShowLinkKBModal(false);
       setSelectedKBArticleId('');
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed to link KB article';
+      const message = err instanceof Error ? err.message : pd('linkKbFailed');
       setError(message);
     }
   };
@@ -456,13 +458,13 @@ export default function ProblemDetailPage() {
         data: { rcaData },
       });
 
-      setRcaSaveSuccess(section === 'all' ? 'All RCA data saved successfully' :
-        section === 'fiveWhys' ? '5 Whys analysis saved' : 'Fishbone diagram saved');
+      setRcaSaveSuccess(section === 'all' ? pd('rcaSavedAll') :
+        section === 'fiveWhys' ? pd('rcaSaved5') : pd('rcaSavedFish'));
 
       // Clear success message after 3 seconds
       setTimeout(() => setRcaSaveSuccess(null), 3000);
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed to save RCA data';
+      const message = err instanceof Error ? err.message : pd('rcaFailed');
       setError(message);
     } finally {
       setRcaSaving(false);
@@ -481,9 +483,9 @@ export default function ProblemDetailPage() {
     return (
       <div className="flex flex-col items-center justify-center h-64">
         <AlertTriangle className="h-12 w-12 text-error mb-4" />
-        <h2 className="text-xl font-semibold text-foreground mb-2">Problem not found</h2>
-        <p className="text-muted mb-4">The problem you&apos;re looking for doesn&apos;t exist or you don&apos;t have access to it.</p>
-        <Button onClick={() => router.push('/problems')}>Back to Problems</Button>
+        <h2 className="text-xl font-semibold text-foreground mb-2">{pd('notFound')}</h2>
+        <p className="text-muted mb-4">{pd('notFoundBody')}</p>
+        <Button onClick={() => router.push('/problems')}>{pd('backToProblems')}</Button>
       </div>
     );
   }
@@ -510,12 +512,12 @@ export default function ProblemDetailPage() {
               <span
                 className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${priorityColor.bg} ${priorityColor.text}`}
               >
-                {priorityColor.label}
+                {pd(priorityColor.label)}
               </span>
               <span
                 className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${statusColor.bg} ${statusColor.text}`}
               >
-                {statusLabels[currentStatus] || currentStatus}
+                {statusLabels[currentStatus] ? pd(statusLabels[currentStatus]) : currentStatus}
               </span>
               {problem.is_known_error && (
                 <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-primary-subtle text-primary">
@@ -529,7 +531,7 @@ export default function ProblemDetailPage() {
                 value={editForm.title}
                 onChange={(e) => setEditForm({ ...editForm, title: e.target.value })}
                 className="mt-1 text-lg"
-                placeholder="Problem title"
+                placeholder={pd('titlePh')}
               />
             ) : (
               <p className="mt-1 text-lg text-secondary">{problem.title}</p>
@@ -541,7 +543,7 @@ export default function ProblemDetailPage() {
             <>
               <Button variant="outline" onClick={handleCancelEdit} disabled={updateProblem.isPending}>
                 <X className="h-4 w-4 mr-2" />
-                Cancel
+                {pd('cancel')}
               </Button>
               <Button onClick={handleSaveEdit} disabled={updateProblem.isPending}>
                 {updateProblem.isPending ? (
@@ -549,14 +551,14 @@ export default function ProblemDetailPage() {
                 ) : (
                   <Save className="h-4 w-4 mr-2" />
                 )}
-                Save
+                {pd('save')}
               </Button>
             </>
           ) : (
             <>
               <Button variant="outline" onClick={handleStartEditing}>
                 <Edit className="h-4 w-4 mr-2" />
-                Edit
+                {pd('edit')}
               </Button>
               <Button variant="outline">
                 <MoreHorizontal className="h-4 w-4" />
@@ -578,28 +580,28 @@ export default function ProblemDetailPage() {
         <div className="lg:col-span-2 space-y-6">
           {/* Description */}
           <div className="bg-surface rounded-xl shadow-sm p-6">
-            <h2 className="text-lg font-semibold text-foreground mb-4">Description</h2>
+            <h2 className="text-lg font-semibold text-foreground mb-4">{pd('description')}</h2>
             {isEditing ? (
               <textarea
                 value={editForm.description}
                 onChange={(e) => setEditForm({ ...editForm, description: e.target.value })}
                 className="w-full px-3 py-2 border border-border-strong rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
                 rows={4}
-                placeholder="Describe the problem..."
+                placeholder={pd('descPh')}
               />
             ) : (
-              <p className="text-secondary whitespace-pre-wrap">{problem.description || 'No description provided'}</p>
+              <p className="text-secondary whitespace-pre-wrap">{problem.description || pd('noDescription')}</p>
             )}
           </div>
 
           {/* Root Cause & Workaround */}
           {!isEditing && (
             <div className="bg-surface rounded-xl shadow-sm p-6">
-              <h2 className="text-lg font-semibold text-foreground mb-4">Root Cause Analysis</h2>
+              <h2 className="text-lg font-semibold text-foreground mb-4">{pd('rootCauseAnalysis')}</h2>
               <div className="space-y-4">
                 <div>
                   <div className="flex items-center justify-between mb-2">
-                    <label className="text-sm font-medium text-secondary">Root Cause</label>
+                    <label className="text-sm font-medium text-secondary">{pd('rootCause')}</label>
                     <Button size="sm" variant="outline" onClick={() => { setRootCause(problem.root_cause || ''); setShowRootCauseModal(true); }}>
                       <Edit className="h-3 w-3 mr-1" />
                       {problem.root_cause ? 'Edit' : 'Add'}
@@ -608,12 +610,12 @@ export default function ProblemDetailPage() {
                   {problem.root_cause ? (
                     <p className="text-sm text-secondary bg-surface-hover p-3 rounded whitespace-pre-wrap">{problem.root_cause}</p>
                   ) : (
-                    <p className="text-sm text-muted italic">Root cause not yet identified</p>
+                    <p className="text-sm text-muted italic">{pd('noRootCause')}</p>
                   )}
                 </div>
                 <div>
                   <div className="flex items-center justify-between mb-2">
-                    <label className="text-sm font-medium text-secondary">Workaround</label>
+                    <label className="text-sm font-medium text-secondary">{pd('workaround')}</label>
                     <Button size="sm" variant="outline" onClick={() => { setWorkaround(problem.workaround || ''); setShowWorkaroundModal(true); }}>
                       <Edit className="h-3 w-3 mr-1" />
                       {problem.workaround ? 'Edit' : 'Add'}
@@ -622,12 +624,12 @@ export default function ProblemDetailPage() {
                   {problem.workaround ? (
                     <p className="text-sm text-secondary bg-warning-subtle p-3 rounded border border-yellow-200 whitespace-pre-wrap">{problem.workaround}</p>
                   ) : (
-                    <p className="text-sm text-muted italic">No workaround available</p>
+                    <p className="text-sm text-muted italic">{pd('noWorkaround')}</p>
                   )}
                 </div>
                 {problem.resolution && (
                   <div>
-                    <label className="text-sm font-medium text-secondary mb-2 block">Resolution</label>
+                    <label className="text-sm font-medium text-secondary mb-2 block">{pd('resolution')}</label>
                     <p className="text-sm text-secondary bg-success-subtle p-3 rounded border border-green-200 whitespace-pre-wrap">{problem.resolution}</p>
                   </div>
                 )}
@@ -638,31 +640,31 @@ export default function ProblemDetailPage() {
           {/* Quick Actions */}
           {!isEditing && (
             <div className="bg-surface rounded-xl shadow-sm p-6">
-              <h2 className="text-lg font-semibold text-foreground mb-4">Actions</h2>
+              <h2 className="text-lg font-semibold text-foreground mb-4">{pd('actions')}</h2>
               <div className="flex flex-wrap gap-2">
                 {currentStatus === 'new' && (
                   <>
                     <Button size="sm" onClick={() => setShowAssignModal(true)} disabled={assignProblem.isPending}>
                       <User className="h-4 w-4 mr-2" />
-                      Assign
+                      {pd('assign')}
                     </Button>
                     <Button size="sm" onClick={() => handleStatusChange('investigating')} disabled={changeStatus.isPending}>
                       <FileSearch className="h-4 w-4 mr-2" />
-                      Start Investigation
+                      {pd('startInvestigation')}
                     </Button>
                   </>
                 )}
                 {currentStatus === 'assigned' && (
                   <Button size="sm" onClick={() => handleStatusChange('investigating')} disabled={changeStatus.isPending}>
                     <FileSearch className="h-4 w-4 mr-2" />
-                    Start Investigation
+                    {pd('startInvestigation')}
                   </Button>
                 )}
                 {currentStatus === 'investigating' && (
                   <>
                     <Button size="sm" onClick={() => { setRootCause(problem.root_cause || ''); setShowRootCauseModal(true); }}>
                       <CheckCircle className="h-4 w-4 mr-2" />
-                      Document Root Cause
+                      {pd('documentRootCause')}
                     </Button>
                   </>
                 )}
@@ -670,35 +672,35 @@ export default function ProblemDetailPage() {
                   <>
                     <Button size="sm" onClick={handleConvertToKnownError} disabled={convertToKnownError.isPending}>
                       <Lightbulb className="h-4 w-4 mr-2" />
-                      Convert to Known Error
+                      {pd('convertKnownError')}
                     </Button>
                     <Button size="sm" onClick={() => handleStatusChange('resolved')} disabled={changeStatus.isPending}>
                       <CheckCircle className="h-4 w-4 mr-2" />
-                      Mark Resolved
+                      {pd('markResolved')}
                     </Button>
                   </>
                 )}
                 {currentStatus === 'known_error' && (
                   <Button size="sm" onClick={() => handleStatusChange('resolved')} disabled={changeStatus.isPending}>
                     <CheckCircle className="h-4 w-4 mr-2" />
-                    Mark Resolved
+                    {pd('markResolved')}
                   </Button>
                 )}
                 {currentStatus === 'resolved' && (
                   <>
                     <Button size="sm" onClick={() => handleStatusChange('closed')} disabled={changeStatus.isPending}>
                       <CheckCircle className="h-4 w-4 mr-2" />
-                      Close
+                      {pd('close')}
                     </Button>
                     <Button size="sm" variant="outline" onClick={() => handleStatusChange('investigating')} disabled={changeStatus.isPending}>
                       <XCircle className="h-4 w-4 mr-2" />
-                      Reopen
+                      {pd('reopen')}
                     </Button>
                   </>
                 )}
                 <Button size="sm" variant="outline" onClick={() => setShowLinkIssueModal(true)}>
                   <Link2 className="h-4 w-4 mr-2" />
-                  Link Issue
+                  {pd('linkIssue')}
                 </Button>
               </div>
             </div>
@@ -718,7 +720,7 @@ export default function ProblemDetailPage() {
                     }`}
                   >
                     <MessageSquare className="h-4 w-4 inline mr-2" />
-                    Comments
+                    {pd('tabComments')}
                   </button>
                   <button
                     onClick={() => setActiveTab('issues')}
@@ -740,7 +742,7 @@ export default function ProblemDetailPage() {
                     }`}
                   >
                     <Timer className="h-4 w-4 inline mr-2" />
-                    History
+                    {pd('tabHistory')}
                   </button>
                   <button
                     onClick={() => setActiveTab('kb')}
@@ -762,7 +764,7 @@ export default function ProblemDetailPage() {
                     }`}
                   >
                     <Search className="h-4 w-4 inline mr-2" />
-                    RCA Tools
+                    {pd('tabRca')}
                   </button>
                 </nav>
               </div>
@@ -782,14 +784,14 @@ export default function ProblemDetailPage() {
                           <textarea
                             value={newComment}
                             onChange={(e) => setNewComment(e.target.value)}
-                            placeholder="Add a comment..."
+                            placeholder={pd('commentPh')}
                             rows={3}
                             className="w-full px-3 py-2 border border-border-strong rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 resize-none"
                           />
                           <div className="mt-2 flex justify-end">
                             <Button type="submit" size="sm" disabled={!newComment.trim() || addComment.isPending}>
                               <Send className="h-4 w-4 mr-2" />
-                              {addComment.isPending ? 'Sending...' : 'Send'}
+                              {addComment.isPending ? pd('sending') : pd('send')}
                             </Button>
                           </div>
                         </div>
@@ -801,7 +803,7 @@ export default function ProblemDetailPage() {
                       {commentsLoading ? (
                         <div className="flex items-center justify-center py-4">
                           <Loader2 className="h-5 w-5 animate-spin text-muted" />
-                          <span className="ml-2 text-sm text-muted">Loading comments...</span>
+                          <span className="ml-2 text-sm text-muted">{pd('loadingComments')}</span>
                         </div>
                       ) : comments.length > 0 ? (
                         comments.map((comment: ProblemComment) => (
@@ -812,7 +814,7 @@ export default function ProblemDetailPage() {
                             <div className="flex-1 min-w-0">
                               <div className="flex items-center justify-between">
                                 <p className="text-sm font-medium text-foreground">
-                                  {comment.user_name || 'Unknown User'}
+                                  {comment.user_name || pd('unknownUser')}
                                 </p>
                                 <p className="text-xs text-muted">
                                   {formatRelativeTime(comment.created_at)}
@@ -821,14 +823,14 @@ export default function ProblemDetailPage() {
                               <p className="text-sm text-secondary mt-1 whitespace-pre-wrap">{comment.content}</p>
                               {comment.is_internal && (
                                 <span className="inline-flex items-center px-2 py-0.5 mt-1 rounded text-xs font-medium bg-warning-subtle text-warning">
-                                  Internal Note
+                                  {pd('internalNote')}
                                 </span>
                               )}
                             </div>
                           </div>
                         ))
                       ) : (
-                        <p className="text-sm text-muted">No comments yet</p>
+                        <p className="text-sm text-muted">{pd('noComments')}</p>
                       )}
                     </div>
                   </>
@@ -837,10 +839,10 @@ export default function ProblemDetailPage() {
                 {activeTab === 'issues' && (
                   <div className="space-y-4">
                     <div className="flex justify-between items-center">
-                      <h3 className="text-sm font-medium text-secondary">Linked Issues</h3>
+                      <h3 className="text-sm font-medium text-secondary">{pd('linkedIssues')}</h3>
                       <Button size="sm" variant="outline" onClick={() => setShowLinkIssueModal(true)}>
                         <Plus className="h-4 w-4 mr-1" />
-                        Link Issue
+                        {pd('linkIssue')}
                       </Button>
                     </div>
                     {issuesLoading ? (
@@ -874,7 +876,7 @@ export default function ProblemDetailPage() {
                         ))}
                       </div>
                     ) : (
-                      <p className="text-sm text-muted">No linked issues</p>
+                      <p className="text-sm text-muted">{pd('noLinkedIssues')}</p>
                     )}
                   </div>
                 )}
@@ -898,13 +900,13 @@ export default function ProblemDetailPage() {
                               <p className="text-xs text-secondary mt-1">Reason: {entry.reason}</p>
                             )}
                             <p className="text-xs text-muted mt-1">
-                              by {entry.changed_by_name || 'System'} - {formatRelativeTime(entry.changed_at)}
+                              {pd('byWhen', { name: entry.changed_by_name || pd('system'), when: formatRelativeTime(entry.changed_at) })}
                             </p>
                           </div>
                         </div>
                       ))
                     ) : (
-                      <p className="text-sm text-muted">No history available</p>
+                      <p className="text-sm text-muted">{pd('noHistory')}</p>
                     )}
                   </div>
                 )}
@@ -912,10 +914,10 @@ export default function ProblemDetailPage() {
                 {activeTab === 'kb' && (
                   <div className="space-y-4">
                     <div className="flex justify-between items-center">
-                      <h3 className="text-sm font-medium text-secondary">Knowledge Base Articles</h3>
+                      <h3 className="text-sm font-medium text-secondary">{pd('kbArticles')}</h3>
                       <Button size="sm" variant="outline" onClick={() => setShowLinkKBModal(true)}>
                         <Plus className="h-4 w-4 mr-1" />
-                        Link Article
+                        {pd('linkArticle')}
                       </Button>
                     </div>
                     {linkedKBArticles.length > 0 ? (
@@ -951,7 +953,7 @@ export default function ProblemDetailPage() {
                         ))}
                       </div>
                     ) : (
-                      <p className="text-sm text-muted">No linked KB articles. Link articles to document solutions for this problem.</p>
+                      <p className="text-sm text-muted">{pd('noKb')}</p>
                     )}
                   </div>
                 )}
@@ -983,11 +985,11 @@ export default function ProblemDetailPage() {
                           ) : (
                             <Save className="h-4 w-4 mr-2" />
                           )}
-                          Save 5 Whys
+                          {pd('save5Whys')}
                         </Button>
                       </div>
                       <p className="text-sm text-muted">
-                        Ask &quot;Why?&quot; repeatedly to drill down to the root cause of the problem.
+                        {pd('whyIntro')}
                       </p>
                       <div className="space-y-4">
                         {fiveWhys.map((entry, index) => (
@@ -999,23 +1001,23 @@ export default function ProblemDetailPage() {
                               <div className="flex-1 space-y-3">
                                 <div>
                                   <label className="block text-sm font-medium text-secondary mb-1">
-                                    Why? (Question {index + 1})
+                                    {pd('whyQuestion', { n: index + 1 })}
                                   </label>
                                   <Input
                                     value={entry.why}
                                     onChange={(e) => handleFiveWhyChange(index, 'why', e.target.value)}
-                                    placeholder={index === 0 ? "Why did this problem occur?" : "Why is that?"}
+                                    placeholder={index === 0 ? pd('whyPh1') : pd('whyPh2')}
                                     className="w-full"
                                   />
                                 </div>
                                 <div>
                                   <label className="block text-sm font-medium text-secondary mb-1">
-                                    Answer
+                                    {pd('answer')}
                                   </label>
                                   <textarea
                                     value={entry.answer}
                                     onChange={(e) => handleFiveWhyChange(index, 'answer', e.target.value)}
-                                    placeholder="Enter the answer to this Why question..."
+                                    placeholder={pd('answerPh')}
                                     rows={2}
                                     className="w-full px-3 py-2 border border-border-strong rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 resize-none"
                                   />
@@ -1032,7 +1034,7 @@ export default function ProblemDetailPage() {
                       <div className="flex items-center justify-between">
                         <div className="flex items-center space-x-2">
                           <GitBranch className="h-5 w-5 text-info" />
-                          <h3 className="text-lg font-semibold text-foreground">Fishbone Diagram (Ishikawa)</h3>
+                          <h3 className="text-lg font-semibold text-foreground">{pd('fishboneTitle')}</h3>
                         </div>
                         <Button
                           size="sm"
@@ -1044,11 +1046,11 @@ export default function ProblemDetailPage() {
                           ) : (
                             <Save className="h-4 w-4 mr-2" />
                           )}
-                          Save Fishbone
+                          {pd('saveFishbone')}
                         </Button>
                       </div>
                       <p className="text-sm text-muted">
-                        Categorize potential causes of the problem across different dimensions.
+                        {pd('fishboneIntro')}
                       </p>
 
                       {/* Fishbone Visual Representation */}
@@ -1057,7 +1059,7 @@ export default function ProblemDetailPage() {
                         <div className="flex items-center justify-center mb-6">
                           <div className="flex-1 h-1 bg-border-strong"></div>
                           <div className="px-4 py-2 bg-error-subtle border-2 border-red-400 rounded-xl">
-                            <span className="font-semibold text-error">Problem: {problem?.title || 'Effect'}</span>
+                            <span className="font-semibold text-error">{pd('problemEffect', { title: problem?.title || pd('effect') })}</span>
                           </div>
                         </div>
 
@@ -1068,7 +1070,7 @@ export default function ProblemDetailPage() {
                               key={category.key}
                               className={`p-4 rounded-xl border ${category.color}`}
                             >
-                              <h4 className="font-semibold mb-3">{category.label}</h4>
+                              <h4 className="font-semibold mb-3">{pd(category.label)}</h4>
 
                               {/* Existing causes */}
                               <div className="space-y-2 mb-3">
@@ -1102,7 +1104,7 @@ export default function ProblemDetailPage() {
                                       handleAddCause(category.key as keyof FishboneDiagram);
                                     }
                                   }}
-                                  placeholder="Add cause..."
+                                  placeholder={pd('addCausePh')}
                                   className="flex-1 h-8 text-sm bg-surface"
                                 />
                                 <Button
@@ -1125,7 +1127,7 @@ export default function ProblemDetailPage() {
                       <div className="flex items-center justify-between">
                         <div className="flex items-center space-x-2">
                           <FileSearch className="h-5 w-5 text-success" />
-                          <h3 className="text-lg font-semibold text-foreground">Analysis Summary</h3>
+                          <h3 className="text-lg font-semibold text-foreground">{pd('summaryTitle')}</h3>
                         </div>
                         <Button
                           size="sm"
@@ -1137,13 +1139,13 @@ export default function ProblemDetailPage() {
                           ) : (
                             <Save className="h-4 w-4 mr-2" />
                           )}
-                          Save All RCA Data
+                          {pd('saveAllRca')}
                         </Button>
                       </div>
                       <textarea
                         value={rcaSummary}
                         onChange={(e) => setRcaSummary(e.target.value)}
-                        placeholder="Summarize the root cause analysis findings and recommended actions..."
+                        placeholder={pd('summaryPh')}
                         rows={4}
                         className="w-full px-3 py-2 border border-border-strong rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 resize-none"
                       />
@@ -1164,85 +1166,85 @@ export default function ProblemDetailPage() {
         <div className="space-y-6">
           {/* Details Card */}
           <div className="bg-surface rounded-xl shadow-sm p-6">
-            <h2 className="text-lg font-semibold text-foreground mb-4">Details</h2>
+            <h2 className="text-lg font-semibold text-foreground mb-4">{pd('details')}</h2>
             <dl className="space-y-4">
               {isEditing ? (
                 <>
                   <div>
-                    <dt className="text-sm font-medium text-muted">Priority</dt>
+                    <dt className="text-sm font-medium text-muted">{pd('priority')}</dt>
                     <select
                       value={editForm.priority}
                       onChange={(e) => setEditForm({ ...editForm, priority: e.target.value as 'critical' | 'high' | 'medium' | 'low' })}
                       className="mt-1 w-full px-3 py-2 border border-border-strong rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
                     >
-                      <option value="critical">Critical</option>
-                      <option value="high">High</option>
-                      <option value="medium">Medium</option>
-                      <option value="low">Low</option>
+                      <option value="critical">{pd('critical')}</option>
+                      <option value="high">{pd('high')}</option>
+                      <option value="medium">{pd('medium')}</option>
+                      <option value="low">{pd('low')}</option>
                     </select>
                   </div>
                   <div>
-                    <dt className="text-sm font-medium text-muted">Impact</dt>
+                    <dt className="text-sm font-medium text-muted">{pd('impact')}</dt>
                     <select
                       value={editForm.impact}
                       onChange={(e) => setEditForm({ ...editForm, impact: e.target.value as '' | 'widespread' | 'significant' | 'moderate' | 'minor' })}
                       className="mt-1 w-full px-3 py-2 border border-border-strong rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
                     >
-                      <option value="">Select impact...</option>
-                      <option value="widespread">Widespread</option>
-                      <option value="significant">Significant</option>
-                      <option value="moderate">Moderate</option>
-                      <option value="minor">Minor</option>
+                      <option value="">{pd('selectImpact')}</option>
+                      <option value="widespread">{pd('widespread')}</option>
+                      <option value="significant">{pd('significant')}</option>
+                      <option value="moderate">{pd('moderate')}</option>
+                      <option value="minor">{pd('minor')}</option>
                     </select>
                   </div>
                   <div>
-                    <dt className="text-sm font-medium text-muted">Urgency</dt>
+                    <dt className="text-sm font-medium text-muted">{pd('urgency')}</dt>
                     <select
                       value={editForm.urgency}
                       onChange={(e) => setEditForm({ ...editForm, urgency: e.target.value as '' | 'immediate' | 'high' | 'medium' | 'low' })}
                       className="mt-1 w-full px-3 py-2 border border-border-strong rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
                     >
-                      <option value="">Select urgency...</option>
-                      <option value="immediate">Immediate</option>
-                      <option value="high">High</option>
-                      <option value="medium">Medium</option>
-                      <option value="low">Low</option>
+                      <option value="">{pd('selectUrgency')}</option>
+                      <option value="immediate">{pd('immediate')}</option>
+                      <option value="high">{pd('high')}</option>
+                      <option value="medium">{pd('medium')}</option>
+                      <option value="low">{pd('low')}</option>
                     </select>
                   </div>
                   <div>
-                    <dt className="text-sm font-medium text-muted">Assigned To</dt>
+                    <dt className="text-sm font-medium text-muted">{pd('assignedTo')}</dt>
                     <select
                       value={editForm.assignedTo}
                       onChange={(e) => setEditForm({ ...editForm, assignedTo: e.target.value })}
                       className="mt-1 w-full px-3 py-2 border border-border-strong rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
                     >
-                      <option value="">Unassigned</option>
+                      <option value="">{pd('unassigned')}</option>
                       {users.map((user: { id: string; name: string }) => (
                         <option key={user.id} value={user.id}>{user.name}</option>
                       ))}
                     </select>
                   </div>
                   <div>
-                    <dt className="text-sm font-medium text-muted">Assignment Group</dt>
+                    <dt className="text-sm font-medium text-muted">{pd('assignmentGroup')}</dt>
                     <select
                       value={editForm.assignedGroup}
                       onChange={(e) => setEditForm({ ...editForm, assignedGroup: e.target.value })}
                       className="mt-1 w-full px-3 py-2 border border-border-strong rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
                     >
-                      <option value="">Select group...</option>
+                      <option value="">{pd('selectGroup')}</option>
                       {groups.map((group: { id: string; name: string }) => (
                         <option key={group.id} value={group.id}>{group.name}</option>
                       ))}
                     </select>
                   </div>
                   <div>
-                    <dt className="text-sm font-medium text-muted">Application</dt>
+                    <dt className="text-sm font-medium text-muted">{pd('application')}</dt>
                     <select
                       value={editForm.applicationId}
                       onChange={(e) => setEditForm({ ...editForm, applicationId: e.target.value })}
                       className="mt-1 w-full px-3 py-2 border border-border-strong rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
                     >
-                      <option value="">Select application...</option>
+                      <option value="">{pd('selectApplication')}</option>
                       {applications.map((app: { id: string; name: string }) => (
                         <option key={app.id} value={app.id}>{app.name}</option>
                       ))}
@@ -1252,7 +1254,7 @@ export default function ProblemDetailPage() {
               ) : (
                 <>
                   <div>
-                    <dt className="text-sm font-medium text-muted">Assigned To</dt>
+                    <dt className="text-sm font-medium text-muted">{pd('assignedTo')}</dt>
                     <dd className="mt-1">
                       {problem.assignee_name ? (
                         <div className="flex items-center">
@@ -1269,24 +1271,24 @@ export default function ProblemDetailPage() {
                           </div>
                         </div>
                       ) : (
-                        <span className="text-sm text-muted italic">Unassigned</span>
+                        <span className="text-sm text-muted italic">{pd('unassigned')}</span>
                       )}
                     </dd>
                   </div>
 
                   <div>
-                    <dt className="text-sm font-medium text-muted">Problem Type</dt>
+                    <dt className="text-sm font-medium text-muted">{pd('problemType')}</dt>
                     <dd className="mt-1">
                       <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
                         problem.problem_type === 'proactive' ? 'bg-success-subtle text-success' : 'bg-error-subtle text-error'
                       }`}>
-                        {problem.problem_type === 'proactive' ? 'Proactive' : 'Reactive'}
+                        {problem.problem_type === 'proactive' ? pd('proactive') : pd('reactive')}
                       </span>
                     </dd>
                   </div>
 
                   <div>
-                    <dt className="text-sm font-medium text-muted">Application</dt>
+                    <dt className="text-sm font-medium text-muted">{pd('application')}</dt>
                     <dd className="mt-1 text-sm text-foreground">
                       {problem.application_id && problem.application_name ? (
                         <Link
@@ -1302,32 +1304,32 @@ export default function ProblemDetailPage() {
                   </div>
 
                   <div className="border-t border-border pt-4">
-                    <dt className="text-sm font-medium text-muted">Priority</dt>
+                    <dt className="text-sm font-medium text-muted">{pd('priority')}</dt>
                     <dd className="mt-1">
                       <span
                         className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${priorityColor.bg} ${priorityColor.text}`}
                       >
-                        {priorityColor.label}
+                        {pd(priorityColor.label)}
                       </span>
                     </dd>
                   </div>
 
                   {problem.impact && (
                     <div>
-                      <dt className="text-sm font-medium text-muted">Impact</dt>
+                      <dt className="text-sm font-medium text-muted">{pd('impact')}</dt>
                       <dd className="mt-1 text-sm text-foreground capitalize">{problem.impact}</dd>
                     </div>
                   )}
 
                   {problem.urgency && (
                     <div>
-                      <dt className="text-sm font-medium text-muted">Urgency</dt>
+                      <dt className="text-sm font-medium text-muted">{pd('urgency')}</dt>
                       <dd className="mt-1 text-sm text-foreground capitalize">{problem.urgency}</dd>
                     </div>
                   )}
 
                   <div>
-                    <dt className="text-sm font-medium text-muted">Linked Issues</dt>
+                    <dt className="text-sm font-medium text-muted">{pd('linkedIssues')}</dt>
                     <dd className="mt-1 text-sm text-foreground">{linkedIssues.length} issues</dd>
                   </div>
                 </>
@@ -1338,25 +1340,25 @@ export default function ProblemDetailPage() {
           {/* Timeline Card */}
           {!isEditing && (
             <div className="bg-surface rounded-xl shadow-sm p-6">
-              <h2 className="text-lg font-semibold text-foreground mb-4">Timeline</h2>
+              <h2 className="text-lg font-semibold text-foreground mb-4">{pd('timeline')}</h2>
               <dl className="space-y-4">
                 <div>
-                  <dt className="text-sm font-medium text-muted">Created</dt>
+                  <dt className="text-sm font-medium text-muted">{pd('created')}</dt>
                   <dd className="mt-1 text-sm text-foreground">{formatDate(problem.created_at)}</dd>
                 </div>
                 <div>
-                  <dt className="text-sm font-medium text-muted">Last Updated</dt>
+                  <dt className="text-sm font-medium text-muted">{pd('lastUpdated')}</dt>
                   <dd className="mt-1 text-sm text-foreground">{formatDate(problem.updated_at)}</dd>
                 </div>
                 {problem.resolved_at && (
                   <div>
-                    <dt className="text-sm font-medium text-muted">Resolved</dt>
+                    <dt className="text-sm font-medium text-muted">{pd('resolved')}</dt>
                     <dd className="mt-1 text-sm text-foreground">{formatDate(problem.resolved_at)}</dd>
                   </div>
                 )}
                 {problem.closed_at && (
                   <div>
-                    <dt className="text-sm font-medium text-muted">Closed</dt>
+                    <dt className="text-sm font-medium text-muted">{pd('closed')}</dt>
                     <dd className="mt-1 text-sm text-foreground">{formatDate(problem.closed_at)}</dd>
                   </div>
                 )}
@@ -1373,7 +1375,7 @@ export default function ProblemDetailPage() {
             <div className="fixed inset-0 bg-black bg-opacity-30" onClick={() => setShowAssignModal(false)} />
             <div className="relative bg-surface rounded-xl shadow-sm-sm max-w-md w-full p-6">
               <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-semibold text-foreground">Assign Problem</h3>
+                <h3 className="text-lg font-semibold text-foreground">{pd('assignTitle')}</h3>
                 <button onClick={() => setShowAssignModal(false)} className="text-muted hover:text-muted">
                   <X className="h-5 w-5" />
                 </button>
@@ -1408,12 +1410,12 @@ export default function ProblemDetailPage() {
             <div className="fixed inset-0 bg-black bg-opacity-30" onClick={() => setShowLinkIssueModal(false)} />
             <div className="relative bg-surface rounded-xl shadow-sm-sm max-w-md w-full p-6">
               <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-semibold text-foreground">Link Issue</h3>
+                <h3 className="text-lg font-semibold text-foreground">{pd('linkIssueTitle')}</h3>
                 <button onClick={() => setShowLinkIssueModal(false)} className="text-muted hover:text-muted">
                   <X className="h-5 w-5" />
                 </button>
               </div>
-              <p className="text-sm text-muted mb-4">Select an issue to link to this problem:</p>
+              <p className="text-sm text-muted mb-4">{pd('linkIssueBody')}</p>
               <div className="max-h-64 overflow-y-auto space-y-2">
                 {allIssues.filter((issue: { id: string }) => !linkedIssues.some((li: LinkedIssue) => li.issue_id === issue.id)).map((issue: { id: string; issue_number: string; title: string; status: string }) => (
                   <button
@@ -1442,7 +1444,7 @@ export default function ProblemDetailPage() {
             <div className="fixed inset-0 bg-black bg-opacity-30" onClick={() => setShowRootCauseModal(false)} />
             <div className="relative bg-surface rounded-xl shadow-sm-sm max-w-lg w-full p-6">
               <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-semibold text-foreground">Document Root Cause</h3>
+                <h3 className="text-lg font-semibold text-foreground">{pd('rootCauseTitle')}</h3>
                 <button onClick={() => setShowRootCauseModal(false)} className="text-muted hover:text-muted">
                   <X className="h-5 w-5" />
                 </button>
@@ -1450,14 +1452,14 @@ export default function ProblemDetailPage() {
               <textarea
                 value={rootCause}
                 onChange={(e) => setRootCause(e.target.value)}
-                placeholder="Describe the root cause of this problem..."
+                placeholder={pd('rootCausePh')}
                 rows={6}
                 className="w-full px-3 py-2 border border-border-strong rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 resize-none"
               />
               <div className="mt-4 flex justify-end space-x-2">
-                <Button variant="outline" onClick={() => setShowRootCauseModal(false)}>Cancel</Button>
+                <Button variant="outline" onClick={() => setShowRootCauseModal(false)}>{pd('cancel')}</Button>
                 <Button onClick={handleSaveRootCause} disabled={!rootCause.trim() || updateProblem.isPending}>
-                  {updateProblem.isPending ? 'Saving...' : 'Save Root Cause'}
+                  {updateProblem.isPending ? pd('saving') : pd('saveRootCause')}
                 </Button>
               </div>
             </div>
@@ -1472,7 +1474,7 @@ export default function ProblemDetailPage() {
             <div className="fixed inset-0 bg-black bg-opacity-30" onClick={() => setShowWorkaroundModal(false)} />
             <div className="relative bg-surface rounded-xl shadow-sm-sm max-w-lg w-full p-6">
               <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-semibold text-foreground">Document Workaround</h3>
+                <h3 className="text-lg font-semibold text-foreground">{pd('workaroundTitle')}</h3>
                 <button onClick={() => setShowWorkaroundModal(false)} className="text-muted hover:text-muted">
                   <X className="h-5 w-5" />
                 </button>
@@ -1480,14 +1482,14 @@ export default function ProblemDetailPage() {
               <textarea
                 value={workaround}
                 onChange={(e) => setWorkaround(e.target.value)}
-                placeholder="Describe the temporary workaround..."
+                placeholder={pd('workaroundPh')}
                 rows={6}
                 className="w-full px-3 py-2 border border-border-strong rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 resize-none"
               />
               <div className="mt-4 flex justify-end space-x-2">
-                <Button variant="outline" onClick={() => setShowWorkaroundModal(false)}>Cancel</Button>
+                <Button variant="outline" onClick={() => setShowWorkaroundModal(false)}>{pd('cancel')}</Button>
                 <Button onClick={handleSaveWorkaround} disabled={!workaround.trim() || updateProblem.isPending}>
-                  {updateProblem.isPending ? 'Saving...' : 'Save Workaround'}
+                  {updateProblem.isPending ? pd('saving') : pd('saveWorkaround')}
                 </Button>
               </div>
             </div>
@@ -1502,7 +1504,7 @@ export default function ProblemDetailPage() {
             <div className="fixed inset-0 bg-black bg-opacity-30" onClick={() => setShowLinkKBModal(false)} />
             <div className="relative bg-surface rounded-xl shadow-sm-sm max-w-lg w-full p-6">
               <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-semibold text-foreground">Link Knowledge Base Article</h3>
+                <h3 className="text-lg font-semibold text-foreground">{pd('linkKbTitle')}</h3>
                 <button
                   onClick={() => setShowLinkKBModal(false)}
                   className="text-muted hover:text-muted"
@@ -1511,20 +1513,20 @@ export default function ProblemDetailPage() {
                 </button>
               </div>
               <p className="text-sm text-muted mb-4">
-                Link a published KB article to document solutions for this problem.
+                {pd('linkKbBody')}
               </p>
 
               <div className="space-y-4">
                 <div>
                   <label className="block text-sm font-medium text-secondary mb-1">
-                    Select Article
+                    {pd('selectArticle')}
                   </label>
                   <select
                     value={selectedKBArticleId}
                     onChange={(e) => setSelectedKBArticleId(e.target.value)}
                     className="w-full px-3 py-2 border border-border-strong rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
                   >
-                    <option value="">Choose an article...</option>
+                    <option value="">{pd('chooseArticle')}</option>
                     {allKBArticles
                       .filter((article: KBArticle) => !linkedKBArticles.some((linked: KBArticle) => linked.id === article.id))
                       .map((article: KBArticle) => (
@@ -1535,7 +1537,7 @@ export default function ProblemDetailPage() {
                   </select>
                   {allKBArticles.length === 0 && (
                     <p className="mt-1 text-xs text-muted">
-                      No published articles found. <Link href="/knowledge-base/new" className="text-primary hover:text-primary">Create a new article</Link>
+                      {pd('noArticles')} <Link href="/knowledge-base/new" className="text-primary hover:text-primary">{pd('createArticle')}</Link>
                     </p>
                   )}
                 </div>
@@ -1543,7 +1545,7 @@ export default function ProblemDetailPage() {
 
               <div className="mt-6 flex justify-end space-x-3">
                 <Button variant="outline" onClick={() => setShowLinkKBModal(false)}>
-                  Cancel
+                  {pd('cancel')}
                 </Button>
                 <Button
                   onClick={handleLinkKBArticle}
@@ -1552,12 +1554,12 @@ export default function ProblemDetailPage() {
                   {linkKBArticle.isPending ? (
                     <>
                       <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                      Linking...
+                      {pd('linking')}
                     </>
                   ) : (
                     <>
                       <BookOpen className="h-4 w-4 mr-2" />
-                      Link Article
+                      {pd('linkArticle')}
                     </>
                   )}
                 </Button>

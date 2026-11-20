@@ -62,7 +62,7 @@ export class AuthService {
 
     const user = userResult.rows[0] as User & { roles: string[]; failed_login_attempts?: number; locked_until?: Date };
     if (!user) {
-      throw new UnauthorizedError('Invalid email or password');
+      throw new UnauthorizedError('Invalid email or password', 'errors.invalidCredentials');
     }
 
     if (user.status !== 'active') {
@@ -334,7 +334,7 @@ export class AuthService {
 
     // Check if user exists
     const userResult = await pool.query(
-      `SELECT id, email, name FROM ${schema}.users WHERE email = $1 AND status = 'active'`,
+      `SELECT id, email, name, locale FROM ${schema}.users WHERE email = $1 AND status = 'active'`,
       [email]
     );
 
@@ -364,7 +364,10 @@ export class AuthService {
     }
 
     // Send password reset email
-    await emailService.sendPasswordResetEmail(user.email, user.name, resetToken, tenantSlug);
+    await emailService.sendPasswordResetEmail(
+      user.email, user.name, resetToken, tenantSlug,
+      ...(user.locale ? [user.locale as string] : [])
+    );
 
     logger.info({
       userId: user.id,
@@ -501,7 +504,7 @@ export class AuthService {
 
     // Check if user exists and is not yet verified
     const userResult = await pool.query(
-      `SELECT id, email, name, email_verified FROM ${schema}.users WHERE email = $1`,
+      `SELECT id, email, name, email_verified, locale FROM ${schema}.users WHERE email = $1`,
       [email]
     );
 
@@ -521,7 +524,10 @@ export class AuthService {
     const verificationToken = await this.createEmailVerificationToken(user.id, schema);
 
     // Send verification email
-    await emailService.sendVerificationEmail(user.email, user.name, verificationToken, tenantSlug);
+    await emailService.sendVerificationEmail(
+      user.email, user.name, verificationToken, tenantSlug,
+      ...(user.locale ? [user.locale as string] : [])
+    );
 
     logger.info({
       userId: user.id,

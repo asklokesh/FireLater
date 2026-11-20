@@ -1,5 +1,6 @@
 'use client';
 
+import { useT } from '@/i18n/useT';
 import { useState, useEffect, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
@@ -44,6 +45,11 @@ interface ApplicationData {
 }
 
 export default function EditApplicationPage() {
+  const ae = useT('appEdit');
+  const af = useT('appForm');
+  const tf = useT('forms');
+  const tm = useT('listpages2');
+  const ti = useT('issues');
   const params = useParams();
   const router = useRouter();
   const appId = params.id as string;
@@ -92,11 +98,11 @@ export default function EditApplicationPage() {
       });
     } catch (err) {
       console.error('Failed to load application:', err);
-      setError('Failed to load application');
+      setError(ae('loadFailed'));
     } finally {
       setIsLoading(false);
     }
-  }, [appId]);
+  }, [appId, ae]);
 
   const loadReferenceData = useCallback(async () => {
     try {
@@ -122,11 +128,11 @@ export default function EditApplicationPage() {
 
     // Validation
     if (!formData.name.trim()) {
-      setError('Application name is required');
+      setError(ae('nameRequired'));
       return;
     }
     if (!formData.shortName.trim()) {
-      setError('Short name is required');
+      setError(ae('shortRequired'));
       return;
     }
 
@@ -142,7 +148,7 @@ export default function EditApplicationPage() {
       });
       router.push(`/applications/${appId}`);
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : 'Failed to update application';
+      const message = err instanceof Error ? err.message : ae('updateFailed');
       setError(message);
     } finally {
       setIsSubmitting(false);
@@ -155,7 +161,7 @@ export default function EditApplicationPage() {
       await applicationsApi.delete(appId);
       router.push('/applications');
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : 'Failed to delete application';
+      const message = err instanceof Error ? err.message : ae('deleteFailed');
       setError(message);
       setShowDeleteConfirm(false);
     } finally {
@@ -175,10 +181,10 @@ export default function EditApplicationPage() {
     return (
       <div className="flex flex-col items-center justify-center h-64">
         <AlertCircle className="h-12 w-12 text-error mb-4" />
-        <h2 className="text-xl font-semibold text-foreground mb-2">Application not found</h2>
-        <p className="text-muted mb-4">The application you are looking for does not exist.</p>
+        <h2 className="text-xl font-semibold text-foreground mb-2">{ae('notFound')}</h2>
+        <p className="text-muted mb-4">{ae('notFoundBody')}</p>
         <Link href="/applications">
-          <Button>Back to Applications</Button>
+          <Button>{ae('backToApps')}</Button>
         </Link>
       </div>
     );
@@ -195,7 +201,7 @@ export default function EditApplicationPage() {
             </Button>
           </Link>
           <div>
-            <h1 className="text-2xl font-bold text-foreground">Edit Application</h1>
+            <h1 className="text-2xl font-bold text-foreground">{ae('title')}</h1>
             <p className="mt-1 text-sm text-muted">
               Update {application.name} settings
             </p>
@@ -206,7 +212,7 @@ export default function EditApplicationPage() {
           onClick={() => setShowDeleteConfirm(true)}
         >
           <Trash2 className="h-4 w-4 mr-2" />
-          Delete
+          {ae('delete')}
         </Button>
       </div>
 
@@ -223,12 +229,12 @@ export default function EditApplicationPage() {
         {/* Basic Information */}
         <div className="bg-surface rounded-xl shadow-sm">
           <div className="px-6 py-4 border-b border-border">
-            <h2 className="text-lg font-medium text-foreground">Basic Information</h2>
+            <h2 className="text-lg font-medium text-foreground">{af('basicInfo')}</h2>
           </div>
           <div className="p-6 space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <Input
-                label="Application Name"
+                label={af('appName')}
                 value={formData.name}
                 onChange={(e) => setFormData((p) => ({ ...p, name: e.target.value }))}
                 placeholder="Customer Portal"
@@ -236,7 +242,7 @@ export default function EditApplicationPage() {
               />
               <div>
                 <label className="block text-sm font-medium text-secondary mb-1">
-                  Short Name
+                  {af('shortName')}
                   <span className="text-error ml-1">*</span>
                 </label>
                 <input
@@ -248,23 +254,23 @@ export default function EditApplicationPage() {
                   className="w-full px-3 py-2 border border-border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary"
                   required
                 />
-                <p className="mt-1 text-xs text-muted">Uppercase letters, numbers, hyphens only</p>
+                <p className="mt-1 text-xs text-muted">{af('shortHint')}</p>
               </div>
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-secondary mb-1">Description</label>
+              <label className="block text-sm font-medium text-secondary mb-1">{tf('description')}</label>
               <textarea
                 value={formData.description}
                 onChange={(e) => setFormData((p) => ({ ...p, description: e.target.value }))}
                 rows={3}
-                placeholder="Describe the application's purpose and functionality..."
+                placeholder={af('descPh')}
                 className="w-full px-3 py-2 border border-border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary"
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-secondary mb-1">Version</label>
+              <label className="block text-sm font-medium text-secondary mb-1">{af('version')}</label>
               <input
                 type="text"
                 value={formData.version}
@@ -279,51 +285,51 @@ export default function EditApplicationPage() {
         {/* Classification */}
         <div className="bg-surface rounded-xl shadow-sm">
           <div className="px-6 py-4 border-b border-border">
-            <h2 className="text-lg font-medium text-foreground">Classification</h2>
+            <h2 className="text-lg font-medium text-foreground">{af('classification')}</h2>
           </div>
           <div className="p-6 space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-secondary mb-1">Environment</label>
+                <label className="block text-sm font-medium text-secondary mb-1">{af('environment')}</label>
                 <select
                   value={formData.environment}
                   onChange={(e) => setFormData((p) => ({ ...p, environment: e.target.value }))}
                   className="w-full px-3 py-2 border border-border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary"
                 >
-                  <option value="production">Production</option>
-                  <option value="staging">Staging</option>
-                  <option value="development">Development</option>
-                  <option value="testing">Testing</option>
+                  <option value="production">{tm('production')}</option>
+                  <option value="staging">{tm('staging')}</option>
+                  <option value="development">{tm('development')}</option>
+                  <option value="testing">{af('testing')}</option>
                 </select>
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-secondary mb-1">Criticality</label>
+                <label className="block text-sm font-medium text-secondary mb-1">{af('criticality')}</label>
                 <select
                   value={formData.criticality}
                   onChange={(e) => setFormData((p) => ({ ...p, criticality: e.target.value }))}
                   className="w-full px-3 py-2 border border-border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary"
                 >
-                  <option value="critical">Critical - Business critical, no downtime allowed</option>
-                  <option value="high">High - Important for daily operations</option>
-                  <option value="medium">Medium - Standard business application</option>
-                  <option value="low">Low - Non-essential, limited impact if unavailable</option>
+                  <option value="critical">{af('critical')}</option>
+                  <option value="high">{af('high')}</option>
+                  <option value="medium">{af('medium')}</option>
+                  <option value="low">{af('low')}</option>
                 </select>
               </div>
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-secondary mb-1">Status</label>
+              <label className="block text-sm font-medium text-secondary mb-1">{ti('status')}</label>
               <select
                 value={formData.status}
                 onChange={(e) => setFormData((p) => ({ ...p, status: e.target.value }))}
                 className="w-full px-3 py-2 border border-border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary"
               >
-                <option value="operational">Operational</option>
-                <option value="degraded">Degraded</option>
-                <option value="partial_outage">Partial Outage</option>
-                <option value="major_outage">Major Outage</option>
-                <option value="maintenance">Maintenance</option>
+                <option value="operational">{af('operational')}</option>
+                <option value="degraded">{af('degraded')}</option>
+                <option value="partial_outage">{af('partialOutage')}</option>
+                <option value="major_outage">{af('majorOutage')}</option>
+                <option value="maintenance">{af('maintenance')}</option>
               </select>
             </div>
           </div>
@@ -332,18 +338,18 @@ export default function EditApplicationPage() {
         {/* Ownership */}
         <div className="bg-surface rounded-xl shadow-sm">
           <div className="px-6 py-4 border-b border-border">
-            <h2 className="text-lg font-medium text-foreground">Ownership</h2>
+            <h2 className="text-lg font-medium text-foreground">{af('ownership')}</h2>
           </div>
           <div className="p-6 space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-secondary mb-1">Application Owner</label>
+                <label className="block text-sm font-medium text-secondary mb-1">{af('owner')}</label>
                 <select
                   value={formData.ownerId}
                   onChange={(e) => setFormData((p) => ({ ...p, ownerId: e.target.value }))}
                   className="w-full px-3 py-2 border border-border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary"
                 >
-                  <option value="">Select owner...</option>
+                  <option value="">{af('selectOwner')}</option>
                   {users.map((user) => (
                     <option key={user.id} value={user.id}>
                       {user.name} ({user.email})
@@ -353,13 +359,13 @@ export default function EditApplicationPage() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-secondary mb-1">Support Group</label>
+                <label className="block text-sm font-medium text-secondary mb-1">{af('supportGroup')}</label>
                 <select
                   value={formData.supportGroupId}
                   onChange={(e) => setFormData((p) => ({ ...p, supportGroupId: e.target.value }))}
                   className="w-full px-3 py-2 border border-border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary"
                 >
-                  <option value="">Select support group...</option>
+                  <option value="">{af('selectSupport')}</option>
                   {groups.map((group) => (
                     <option key={group.id} value={group.id}>
                       {group.name}
@@ -372,8 +378,7 @@ export default function EditApplicationPage() {
             <div className="flex items-start p-3 bg-primary-subtle rounded-lg">
               <Info className="h-5 w-5 text-primary mr-2 flex-shrink-0 mt-0.5" />
               <p className="text-sm text-primary">
-                The application owner is responsible for approving changes and managing the application lifecycle.
-                The support group handles incidents and support requests.
+                {af('ownershipHelp')}
               </p>
             </div>
           </div>
@@ -382,11 +387,11 @@ export default function EditApplicationPage() {
         {/* URLs */}
         <div className="bg-surface rounded-xl shadow-sm">
           <div className="px-6 py-4 border-b border-border">
-            <h2 className="text-lg font-medium text-foreground">URLs & Links</h2>
+            <h2 className="text-lg font-medium text-foreground">{af('urls')}</h2>
           </div>
           <div className="p-6 space-y-4">
             <Input
-              label="Application URL"
+              label={af('appUrl')}
               type="url"
               value={formData.url}
               onChange={(e) => setFormData((p) => ({ ...p, url: e.target.value }))}
@@ -394,7 +399,7 @@ export default function EditApplicationPage() {
             />
 
             <Input
-              label="Documentation URL"
+              label={af('docUrl')}
               type="url"
               value={formData.documentationUrl}
               onChange={(e) => setFormData((p) => ({ ...p, documentationUrl: e.target.value }))}
@@ -407,7 +412,7 @@ export default function EditApplicationPage() {
         <div className="flex items-center justify-end space-x-4">
           <Link href={`/applications/${appId}`}>
             <Button type="button" variant="outline">
-              Cancel
+              {tf('cancel')}
             </Button>
           </Link>
           <Button type="submit" disabled={isSubmitting}>
@@ -416,7 +421,7 @@ export default function EditApplicationPage() {
             ) : (
               <Save className="h-4 w-4 mr-2" />
             )}
-            Save Changes
+            {ae('save')}
           </Button>
         </div>
       </form>
@@ -430,10 +435,18 @@ export default function EditApplicationPage() {
                 <AlertCircle className="h-5 w-5 text-error" />
               </div>
               <div className="ml-4">
-                <h3 className="text-lg font-medium text-foreground">Delete Application</h3>
+                <h3 className="text-lg font-medium text-foreground">{ae('deleteTitle')}</h3>
                 <p className="mt-2 text-sm text-muted">
-                  Are you sure you want to delete <strong>{application.name}</strong>?
-                  This action cannot be undone and will remove all associated data.
+                  {(() => {
+                    const [pre, post] = ae('deleteBody', { name: '\u0001' }).split('\u0001');
+                    return (
+                      <>
+                        {pre}
+                        <strong>{application.name}</strong>
+                        {post}
+                      </>
+                    );
+                  })()}
                 </p>
               </div>
             </div>
@@ -443,7 +456,7 @@ export default function EditApplicationPage() {
                 onClick={() => setShowDeleteConfirm(false)}
                 disabled={isDeleting}
               >
-                Cancel
+                {tf('cancel')}
               </Button>
               <Button
                 variant="danger"
@@ -455,7 +468,7 @@ export default function EditApplicationPage() {
                 ) : (
                   <Trash2 className="h-4 w-4 mr-2" />
                 )}
-                Delete Application
+                {ae('deleteBtn')}
               </Button>
             </div>
           </div>
