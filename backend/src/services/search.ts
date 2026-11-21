@@ -36,6 +36,12 @@ const ANALYTICS_CACHE_TTL_SECONDS = 300;
  */
 export const POPULAR_MIN_DISTINCT_USERS = 3;
 
+/**
+ * ts_rank_cd weights for labels {D, C, B, A}. A title (A) match is weighted so
+ * that repeating a word in lower weighted body text cannot outrank it.
+ */
+export const RANK_WEIGHTS = "'{0.02, 0.05, 0.15, 1.0}'::float4[]";
+
 /** Private-use code points wrapping highlighted terms in snippets. */
 export const HIGHLIGHT_START = '';
 export const HIGHLIGHT_END = '';
@@ -197,7 +203,7 @@ function buildBranch(
   if (textParam) {
     const tsq = tsQueryExpr(textParam);
     textCond = `(${vector}) @@ ${tsq}`;
-    rank = `ts_rank_cd(${vector}, ${tsq}, 32)`;
+    rank = `ts_rank_cd(${RANK_WEIGHTS}, ${vector}, ${tsq}, 32)`;
     if (numbersParam) {
       textCond = `(${textCond} OR ${numberCol} = ANY(${numbersParam}::text[]))`;
       rank = `(${rank} + CASE WHEN ${numberCol} = ANY(${numbersParam}::text[]) THEN 1 ELSE 0 END)`;
@@ -553,7 +559,7 @@ export class SearchService {
         const vector = entity.vector('t');
         const query = `to_tsquery('${SEARCH_LANGUAGE}', ${qParam})`;
         return `(SELECT '${type}'::text AS entity_type, t.id, t.${entity.numberColumn}::text AS number, t.${entity.titleColumn}::text AS title,
-                  ts_rank_cd(${vector}, ${query}) AS rank, t.updated_at
+                  ts_rank_cd(${RANK_WEIGHTS}, ${vector}, ${query}) AS rank, t.updated_at
                 FROM ${schema}.${entity.table} t
                 WHERE (${vector}) @@ ${query}
                 ORDER BY rank DESC, t.updated_at DESC NULLS LAST
