@@ -18,7 +18,7 @@ Free text is parsed by PostgreSQL `websearch_to_tsquery`, so stray punctuation n
 
 ### Ranking
 
-Results are ranked with `ts_rank_cd`, normalized by document length. Each field has its own weight:
+Results are ranked with `ts_rank_cd`, normalized by document length. Each field has its own weight (A counts about six times a B match, so a word in a title outranks the same word repeated several times in the description):
 
 | Weight | Issue | Problem | Change | Knowledge article |
 | --- | --- | --- | --- | --- |

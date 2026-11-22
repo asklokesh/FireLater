@@ -32,6 +32,7 @@ import {
   HIGHLIGHT_START,
   HIGHLIGHT_END,
   POPULAR_MIN_DISTINCT_USERS,
+  RANK_WEIGHTS,
 } from '../../../src/services/search.js';
 import { cacheService } from '../../../src/utils/cache.js';
 import { logger } from '../../../src/utils/logger.js';
@@ -140,6 +141,16 @@ describe('SearchService.search', () => {
     expect(facetCall[0]).toContain("websearch_to_tsquery('english', $1)");
     expect(facetCall[0]).not.toContain('DROP TABLE');
     expect(facetCall[1][0]).toBe("vpn'; DROP TABLE issues; --");
+  });
+
+  it('ranks with weights that keep a title match above repeated body matches', async () => {
+    primeSearch();
+    await searchService.search(tenant, allCaller, { q: 'database' });
+    const pageCall = sqlCalls().find((c) => c.includes('ORDER BY rank DESC'))!;
+    expect(pageCall).toContain("ts_rank_cd('{0.02, 0.05, 0.15, 1.0}'::float4[], ");
+    const [d, c, b, a] = RANK_WEIGHTS.match(/[\d.]+(?=[,}])/g)!.map(Number);
+    expect(a).toBeGreaterThan(5 * b);
+    expect(d).toBeLessThan(c);
   });
 
   it('only queries the entity tables the caller may read', async () => {
