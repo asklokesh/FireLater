@@ -3,33 +3,13 @@ import { z } from 'zod';
 import { healthScoreConfigService, healthScoreService } from '../services/health.js';
 import { requirePermission } from '../middleware/auth.js';
 import { parsePagination, createPaginatedResponse } from '../utils/pagination.js';
+import { tierParamSchema, applicationIdParamSchema, _listScoresQuerySchema, historyQuerySchema, updateConfigSchema } from '../schemas/health.js';
 
 // Parameter validation schemas
-const tierParamSchema = z.object({
-  tier: z.enum(['P1', 'P2', 'P3', 'P4']),
-});
-
-const applicationIdParamSchema = z.object({
-  applicationId: z.string().uuid(),
-});
 
 // Query validation schemas (for future use with stricter validation)
-const _listScoresQuerySchema = z.object({
-  page: z.coerce.number().int().positive().optional(),
-  per_page: z.coerce.number().int().min(1).max(100).optional(),
-});
-
-const historyQuerySchema = z.object({
-  days: z.coerce.number().int().min(1).max(365).optional(),
-});
 
 // Update config schema
-const updateConfigSchema = z.object({
-  slaWeight: z.number().min(0).max(100).optional(),
-  issueWeight: z.number().min(0).max(100).optional(),
-  changeWeight: z.number().min(0).max(100).optional(),
-  incidentWeight: z.number().min(0).max(100).optional(),
-});
 
 export default async function healthRoutes(app: FastifyInstance) {
   // ============================================
@@ -50,7 +30,7 @@ export default async function healthRoutes(app: FastifyInstance) {
     preHandler: [requirePermission('health_scores:read')],
   }, async (request, reply) => {
     const { tenantSlug } = request.user;
-    const { tier } = tierParamSchema.parse(request.params);
+    const { tier } = request.params as z.infer<typeof tierParamSchema>;
 
     const config = await healthScoreConfigService.findByTier(tenantSlug, tier);
 
@@ -70,8 +50,8 @@ export default async function healthRoutes(app: FastifyInstance) {
     preHandler: [requirePermission('health_scores:manage')],
   }, async (request, reply) => {
     const { tenantSlug } = request.user;
-    const { tier } = tierParamSchema.parse(request.params);
-    const data = updateConfigSchema.parse(request.body);
+    const { tier } = request.params as z.infer<typeof tierParamSchema>;
+    const data = request.body as z.infer<typeof updateConfigSchema>;
 
     const config = await healthScoreConfigService.update(tenantSlug, tier, data);
     reply.send({ config });
@@ -107,7 +87,7 @@ export default async function healthRoutes(app: FastifyInstance) {
     preHandler: [requirePermission('health_scores:read')],
   }, async (request, reply) => {
     const { tenantSlug } = request.user;
-    const { applicationId } = applicationIdParamSchema.parse(request.params);
+    const { applicationId } = request.params as z.infer<typeof applicationIdParamSchema>;
 
     const score = await healthScoreService.getLatestForApplication(
       tenantSlug,
@@ -121,7 +101,7 @@ export default async function healthRoutes(app: FastifyInstance) {
     preHandler: [requirePermission('health_scores:read')],
   }, async (request, reply) => {
     const { tenantSlug } = request.user;
-    const { applicationId } = applicationIdParamSchema.parse(request.params);
+    const { applicationId } = request.params as z.infer<typeof applicationIdParamSchema>;
     const { days } = historyQuerySchema.parse(request.query);
 
     const history = await healthScoreService.getHistoryForApplication(
@@ -137,7 +117,7 @@ export default async function healthRoutes(app: FastifyInstance) {
     preHandler: [requirePermission('health_scores:manage')],
   }, async (request, reply) => {
     const { tenantSlug, userId } = request.user;
-    const { applicationId } = applicationIdParamSchema.parse(request.params);
+    const { applicationId } = request.params as z.infer<typeof applicationIdParamSchema>;
 
     const score = await healthScoreService.calculateForApplication(
       tenantSlug,

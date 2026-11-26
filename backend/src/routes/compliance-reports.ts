@@ -6,45 +6,11 @@ import {
   type ReportType,
 } from '../services/compliance-reports.js';
 import { requirePermission } from '../middleware/auth.js';
+import { reportTypeSchema, generateReportSchema, createScheduleSchema, updateScheduleSchema, idParamSchema } from '../schemas/compliance-reports.js';
 
 // ============================================
 // SCHEMAS
 // ============================================
-
-const reportTypeSchema = z.enum([
-  'change_success_rate',
-  'unauthorized_changes',
-  'sla_breach_evidence',
-  'emergency_change_usage',
-  'access_recertification_status',
-  'sod_violation_attempts',
-]);
-
-const generateReportSchema = z.object({
-  reportType: reportTypeSchema,
-  from: z.string().datetime(),
-  to: z.string().datetime(),
-  format: z.enum(['json', 'csv']).optional().default('json'),
-});
-
-const createScheduleSchema = z.object({
-  reportType: reportTypeSchema,
-  name: z.string().min(2).max(255),
-  description: z.string().max(2000).optional(),
-  cadence: z.enum(['daily', 'weekly', 'monthly', 'quarterly']).default('monthly'),
-  recipients: z.array(z.string().email()).default([]),
-});
-
-const updateScheduleSchema = z.object({
-  cadence: z.enum(['daily', 'weekly', 'monthly', 'quarterly']).optional(),
-  recipients: z.array(z.string().email()).optional(),
-  isActive: z.boolean().optional(),
-  description: z.string().max(2000).optional(),
-});
-
-const idParamSchema = z.object({
-  id: z.string().uuid(),
-});
 
 // ============================================
 // ROUTES
@@ -77,7 +43,7 @@ export default async function complianceReportRoutes(app: FastifyInstance) {
     { preHandler: [requirePermission('admin:read')] },
     async (request, reply) => {
       const { tenantSlug } = request.user;
-      const body = generateReportSchema.parse(request.body);
+      const body = request.body as z.infer<typeof generateReportSchema>;
 
       const params = {
         from: new Date(body.from),
@@ -135,7 +101,7 @@ export default async function complianceReportRoutes(app: FastifyInstance) {
     { preHandler: [requirePermission('admin:write')] },
     async (request, reply) => {
       const { tenantSlug } = request.user;
-      const body = createScheduleSchema.parse(request.body);
+      const body = request.body as z.infer<typeof createScheduleSchema>;
 
       const schedule = await complianceReportsService.createSchedule(tenantSlug, {
         reportType: body.reportType as ReportType,
@@ -158,8 +124,8 @@ export default async function complianceReportRoutes(app: FastifyInstance) {
     { preHandler: [requirePermission('admin:write')] },
     async (request, reply) => {
       const { tenantSlug } = request.user;
-      const { id } = idParamSchema.parse(request.params);
-      const body = updateScheduleSchema.parse(request.body);
+      const { id } = request.params as z.infer<typeof idParamSchema>;
+      const body = request.body as z.infer<typeof updateScheduleSchema>;
 
       const schedule = await complianceReportsService.updateSchedule(tenantSlug, id, body);
 

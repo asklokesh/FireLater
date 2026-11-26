@@ -10,63 +10,13 @@ import {
 import { dashboardService } from '../services/dashboard.js';
 import { requirePermission } from '../middleware/auth.js';
 import { parsePagination, createPaginatedResponse } from '../utils/pagination.js';
+import { createTemplateSchema, createScheduleSchema, createWidgetSchema, idParamSchema } from '../schemas/reporting.js';
 
 // ============================================
 // SCHEMAS
 // ============================================
 
-const createTemplateSchema = z.object({
-  name: z.string().min(1).max(255),
-  description: z.string().max(1000).optional(),
-  reportType: z.string().min(1),
-  queryConfig: z.record(z.unknown()).optional(),
-  filters: z.record(z.unknown()).optional(),
-  groupings: z.array(z.string()).optional(),
-  metrics: z.array(z.string()).optional(),
-  chartConfig: z.record(z.unknown()).optional(),
-  outputFormat: z.enum(['json', 'csv', 'pdf', 'excel']).optional(),
-  includeCharts: z.boolean().optional(),
-  isPublic: z.boolean().optional(),
-});
-
-const createScheduleSchema = z.object({
-  templateId: z.string().uuid(),
-  name: z.string().min(1).max(255),
-  description: z.string().max(1000).optional(),
-  scheduleType: z.enum(['daily', 'weekly', 'monthly', 'custom']),
-  cronExpression: z.string().optional(),
-  timezone: z.string().optional(),
-  deliveryMethod: z.enum(['email', 'webhook', 'slack']),
-  recipients: z.array(z.string()),
-  emailSubject: z.string().optional(),
-  emailBody: z.string().optional(),
-  webhookUrl: z.string().url().optional(),
-  slackChannel: z.string().optional(),
-  outputFormat: z.enum(['json', 'csv', 'pdf', 'excel']).optional(),
-  customFilters: z.record(z.unknown()).optional(),
-  dateRangeType: z.string().optional(),
-});
-
-const createWidgetSchema = z.object({
-  widgetType: z.enum(['chart', 'stat', 'table', 'list']),
-  title: z.string().max(255).optional(),
-  positionX: z.number().int().min(0).optional(),
-  positionY: z.number().int().min(0).optional(),
-  width: z.number().int().min(1).max(12).optional(),
-  height: z.number().int().min(1).max(12).optional(),
-  dataSource: z.string().min(1),
-  filters: z.record(z.unknown()).optional(),
-  refreshInterval: z.number().int().min(60).optional(),
-  chartType: z.enum(['line', 'bar', 'pie', 'donut', 'area']).optional(),
-  chartConfig: z.record(z.unknown()).optional(),
-  colorScheme: z.string().optional(),
-  showLegend: z.boolean().optional(),
-});
-
 // Parameter validation schemas
-const idParamSchema = z.object({
-  id: z.string().uuid(),
-});
 
 // Export schemas for testing
 export { createTemplateSchema, createScheduleSchema, createWidgetSchema };
@@ -96,7 +46,7 @@ export default async function reportingRoutes(app: FastifyInstance) {
     preHandler: [requirePermission('reports:read')],
   }, async (request, reply) => {
     const { tenantSlug } = request.user;
-    const { id } = idParamSchema.parse(request.params);
+    const { id } = request.params as z.infer<typeof idParamSchema>;
     const template = await reportTemplateService.findById(tenantSlug, id);
 
     if (!template) {
@@ -125,7 +75,7 @@ export default async function reportingRoutes(app: FastifyInstance) {
     preHandler: [requirePermission('reports:manage')],
   }, async (request, reply) => {
     const { tenantSlug } = request.user;
-    const { id } = idParamSchema.parse(request.params);
+    const { id } = request.params as z.infer<typeof idParamSchema>;
     const data = request.body as Partial<z.infer<typeof createTemplateSchema>>;
     const template = await reportTemplateService.update(tenantSlug, id, data);
     reply.send({ template });
@@ -136,7 +86,7 @@ export default async function reportingRoutes(app: FastifyInstance) {
     preHandler: [requirePermission('reports:manage')],
   }, async (request, reply) => {
     const { tenantSlug } = request.user;
-    const { id } = idParamSchema.parse(request.params);
+    const { id } = request.params as z.infer<typeof idParamSchema>;
     await reportTemplateService.delete(tenantSlug, id);
     reply.status(204).send();
   });
@@ -162,7 +112,7 @@ export default async function reportingRoutes(app: FastifyInstance) {
     preHandler: [requirePermission('reports:read')],
   }, async (request, reply) => {
     const { tenantSlug } = request.user;
-    const { id } = idParamSchema.parse(request.params);
+    const { id } = request.params as z.infer<typeof idParamSchema>;
     const schedule = await scheduledReportService.findById(tenantSlug, id);
 
     if (!schedule) {
@@ -191,7 +141,7 @@ export default async function reportingRoutes(app: FastifyInstance) {
     preHandler: [requirePermission('reports:manage')],
   }, async (request, reply) => {
     const { tenantSlug } = request.user;
-    const { id } = idParamSchema.parse(request.params);
+    const { id } = request.params as z.infer<typeof idParamSchema>;
     const data = request.body as Partial<z.infer<typeof createScheduleSchema>>;
     const schedule = await scheduledReportService.update(tenantSlug, id, data);
     reply.send({ schedule });
@@ -202,7 +152,7 @@ export default async function reportingRoutes(app: FastifyInstance) {
     preHandler: [requirePermission('reports:manage')],
   }, async (request, reply) => {
     const { tenantSlug } = request.user;
-    const { id } = idParamSchema.parse(request.params);
+    const { id } = request.params as z.infer<typeof idParamSchema>;
     await scheduledReportService.delete(tenantSlug, id);
     reply.status(204).send();
   });
@@ -231,7 +181,7 @@ export default async function reportingRoutes(app: FastifyInstance) {
     preHandler: [requirePermission('reports:read')],
   }, async (request, reply) => {
     const { tenantSlug } = request.user;
-    const { id } = idParamSchema.parse(request.params);
+    const { id } = request.params as z.infer<typeof idParamSchema>;
     const execution = await reportExecutionService.findById(tenantSlug, id);
 
     if (!execution) {
@@ -307,7 +257,7 @@ export default async function reportingRoutes(app: FastifyInstance) {
     preHandler: [requirePermission('reports:read')],
   }, async (request, reply) => {
     const { tenantSlug, userId } = request.user;
-    const { id } = idParamSchema.parse(request.params);
+    const { id } = request.params as z.infer<typeof idParamSchema>;
     await savedReportService.delete(tenantSlug, userId, id);
     reply.status(204).send();
   });
@@ -340,7 +290,7 @@ export default async function reportingRoutes(app: FastifyInstance) {
     preHandler: [requirePermission('dashboards:manage')],
   }, async (request, reply) => {
     const { tenantSlug, userId } = request.user;
-    const { id } = idParamSchema.parse(request.params);
+    const { id } = request.params as z.infer<typeof idParamSchema>;
     const data = request.body as Partial<z.infer<typeof createWidgetSchema>>;
     const widget = await dashboardWidgetService.update(tenantSlug, userId, id, data);
     reply.send({ widget });
@@ -351,7 +301,7 @@ export default async function reportingRoutes(app: FastifyInstance) {
     preHandler: [requirePermission('dashboards:manage')],
   }, async (request, reply) => {
     const { tenantSlug, userId } = request.user;
-    const { id } = idParamSchema.parse(request.params);
+    const { id } = request.params as z.infer<typeof idParamSchema>;
     await dashboardWidgetService.delete(tenantSlug, userId, id);
     reply.status(204).send();
   });

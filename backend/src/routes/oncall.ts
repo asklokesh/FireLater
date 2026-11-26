@@ -6,153 +6,21 @@ import { requirePermission, optionalAuth } from '../middleware/auth.js';
 import { parsePagination, createPaginatedResponse } from '../utils/pagination.js';
 import { tenantService as _tenantService } from '../services/tenant.js';
 import { validateDate, validateDateRange } from '../utils/validation.js';
+import { createScheduleSchema, updateScheduleSchema, addToRotationSchema, createShiftSchema, createOverrideSchema, createPolicySchema, updatePolicySchema, addStepSchema, createShiftSwapSchema, updateShiftSwapSchema, swapResponseSchema, adminApproveSchema, idParamSchema, idRotationParamSchema, idShiftParamSchema, idAppParamSchema, idStepParamSchema, scheduleIdParamSchema, scheduleIdTokenParamSchema } from '../schemas/oncall.js';
 
 // ============================================
 // SCHEDULE SCHEMAS
 // ============================================
 
-const createScheduleSchema = z.object({
-  name: z.string().min(2).max(255),
-  description: z.string().max(1000).optional(),
-  timezone: z.string().max(100).optional(),
-  groupId: z.string().uuid().optional(),
-  rotationType: z.enum(['daily', 'weekly', 'bi_weekly', 'custom']).optional(),
-  rotationLength: z.number().int().min(1).max(52).optional(),
-  handoffTime: z.string().regex(/^\d{2}:\d{2}$/).optional(),
-  handoffDay: z.number().int().min(0).max(6).optional(),
-  color: z.string().max(20).optional(),
-  metadata: z.record(z.unknown()).optional(),
-});
-
-const updateScheduleSchema = z.object({
-  name: z.string().min(2).max(255).optional(),
-  description: z.string().max(1000).optional(),
-  timezone: z.string().max(100).optional(),
-  groupId: z.string().uuid().optional().nullable(),
-  rotationType: z.enum(['daily', 'weekly', 'bi_weekly', 'custom']).optional(),
-  rotationLength: z.number().int().min(1).max(52).optional(),
-  handoffTime: z.string().regex(/^\d{2}:\d{2}$/).optional(),
-  handoffDay: z.number().int().min(0).max(6).optional(),
-  isActive: z.boolean().optional(),
-  color: z.string().max(20).optional(),
-  metadata: z.record(z.unknown()).optional(),
-});
-
-const addToRotationSchema = z.object({
-  userId: z.string().uuid(),
-  position: z.number().int().min(1).optional(),
-});
-
-const createShiftSchema = z.object({
-  userId: z.string().uuid(),
-  startTime: z.string().datetime(),
-  endTime: z.string().datetime(),
-  shiftType: z.enum(['primary', 'secondary']).optional(),
-  layer: z.number().int().min(1).max(10).optional(),
-});
-
-const createOverrideSchema = z.object({
-  userId: z.string().uuid(),
-  startTime: z.string().datetime(),
-  endTime: z.string().datetime(),
-  reason: z.string().max(500).optional(),
-  originalUserId: z.string().uuid().optional(),
-});
-
 // ============================================
 // ESCALATION POLICY SCHEMAS
 // ============================================
-
-const createPolicySchema = z.object({
-  name: z.string().min(2).max(255),
-  description: z.string().max(1000).optional(),
-  repeatCount: z.number().int().min(1).max(10).optional(),
-  repeatDelayMinutes: z.number().int().min(1).max(60).optional(),
-  isDefault: z.boolean().optional(),
-  metadata: z.record(z.unknown()).optional(),
-});
-
-const updatePolicySchema = z.object({
-  name: z.string().min(2).max(255).optional(),
-  description: z.string().max(1000).optional(),
-  repeatCount: z.number().int().min(1).max(10).optional(),
-  repeatDelayMinutes: z.number().int().min(1).max(60).optional(),
-  isDefault: z.boolean().optional(),
-  isActive: z.boolean().optional(),
-  metadata: z.record(z.unknown()).optional(),
-});
-
-const addStepSchema = z.object({
-  stepNumber: z.number().int().min(1).optional(),
-  delayMinutes: z.number().int().min(0).max(120).optional(),
-  notifyType: z.enum(['schedule', 'user', 'group']),
-  scheduleId: z.string().uuid().optional(),
-  userId: z.string().uuid().optional(),
-  groupId: z.string().uuid().optional(),
-  notificationChannels: z.array(z.enum(['email', 'sms', 'slack', 'phone'])).optional(),
-});
 
 // ============================================
 // SHIFT SWAP SCHEMAS
 // ============================================
 
-const createShiftSwapSchema = z.object({
-  scheduleId: z.string().uuid(),
-  originalStart: z.string().datetime(),
-  originalEnd: z.string().datetime(),
-  offeredToUserId: z.string().uuid().optional(),
-  originalShiftId: z.string().uuid().optional(),
-  reason: z.string().max(500).optional(),
-  expiresAt: z.string().datetime().optional(),
-});
-
-const updateShiftSwapSchema = z.object({
-  reason: z.string().max(500).optional(),
-  offeredToUserId: z.string().uuid().nullable().optional(),
-  expiresAt: z.string().datetime().nullable().optional(),
-});
-
-const swapResponseSchema = z.object({
-  message: z.string().max(500).optional(),
-});
-
-const adminApproveSchema = z.object({
-  accepterUserId: z.string().uuid().optional(),
-});
-
 // Parameter validation schemas
-const idParamSchema = z.object({
-  id: z.string().uuid(),
-});
-
-const idRotationParamSchema = z.object({
-  id: z.string().uuid(),
-  rotationId: z.string().uuid(),
-});
-
-const idShiftParamSchema = z.object({
-  id: z.string().uuid(),
-  shiftId: z.string().uuid(),
-});
-
-const idAppParamSchema = z.object({
-  id: z.string().uuid(),
-  applicationId: z.string().uuid(),
-});
-
-const idStepParamSchema = z.object({
-  id: z.string().uuid(),
-  stepId: z.string().uuid(),
-});
-
-const scheduleIdParamSchema = z.object({
-  scheduleId: z.string().uuid(),
-});
-
-const scheduleIdTokenParamSchema = z.object({
-  scheduleId: z.string().uuid(),
-  token: z.string().min(1),
-});
 
 export default async function oncallRoutes(app: FastifyInstance) {
   // ========================================
@@ -181,7 +49,7 @@ export default async function oncallRoutes(app: FastifyInstance) {
     preHandler: [requirePermission('oncall:read')],
   }, async (request, reply) => {
     const { tenantSlug } = request.user;
-    const { id } = idParamSchema.parse(request.params);
+    const { id } = request.params as z.infer<typeof idParamSchema>;
 
     const schedule = await oncallScheduleService.findById(tenantSlug, id);
 
@@ -201,7 +69,7 @@ export default async function oncallRoutes(app: FastifyInstance) {
     preHandler: [requirePermission('oncall:manage')],
   }, async (request, reply) => {
     const { tenantSlug, userId } = request.user;
-    const body = createScheduleSchema.parse(request.body);
+    const body = request.body as z.infer<typeof createScheduleSchema>;
 
     const schedule = await oncallScheduleService.create(tenantSlug, body, userId);
     reply.status(201).send(schedule);
@@ -212,8 +80,8 @@ export default async function oncallRoutes(app: FastifyInstance) {
     preHandler: [requirePermission('oncall:manage')],
   }, async (request, reply) => {
     const { tenantSlug, userId } = request.user;
-    const { id } = idParamSchema.parse(request.params);
-    const body = updateScheduleSchema.parse(request.body);
+    const { id } = request.params as z.infer<typeof idParamSchema>;
+    const body = request.body as z.infer<typeof updateScheduleSchema>;
 
     const schedule = await oncallScheduleService.update(tenantSlug, id, body, userId);
     reply.send(schedule);
@@ -224,7 +92,7 @@ export default async function oncallRoutes(app: FastifyInstance) {
     preHandler: [requirePermission('oncall:manage')],
   }, async (request, reply) => {
     const { tenantSlug, userId } = request.user;
-    const { id } = idParamSchema.parse(request.params);
+    const { id } = request.params as z.infer<typeof idParamSchema>;
 
     await oncallScheduleService.delete(tenantSlug, id, userId);
     reply.status(204).send();
@@ -235,7 +103,7 @@ export default async function oncallRoutes(app: FastifyInstance) {
     preHandler: [requirePermission('oncall:read')],
   }, async (request, reply) => {
     const { tenantSlug } = request.user;
-    const { id } = idParamSchema.parse(request.params);
+    const { id } = request.params as z.infer<typeof idParamSchema>;
 
     const rotations = await oncallScheduleService.getRotations(tenantSlug, id);
     reply.send({ data: rotations });
@@ -246,8 +114,8 @@ export default async function oncallRoutes(app: FastifyInstance) {
     preHandler: [requirePermission('oncall:manage')],
   }, async (request, reply) => {
     const { tenantSlug } = request.user;
-    const { id } = idParamSchema.parse(request.params);
-    const body = addToRotationSchema.parse(request.body);
+    const { id } = request.params as z.infer<typeof idParamSchema>;
+    const body = request.body as z.infer<typeof addToRotationSchema>;
 
     const rotation = await oncallScheduleService.addToRotation(
       tenantSlug,
@@ -263,7 +131,7 @@ export default async function oncallRoutes(app: FastifyInstance) {
     preHandler: [requirePermission('oncall:manage')],
   }, async (request, reply) => {
     const { tenantSlug } = request.user;
-    const { id, rotationId } = idRotationParamSchema.parse(request.params);
+    const { id, rotationId } = request.params as z.infer<typeof idRotationParamSchema>;
     const body = z.object({ position: z.number().int().min(1) }).parse(request.body);
 
     const rotation = await oncallScheduleService.updateRotationPosition(
@@ -280,7 +148,7 @@ export default async function oncallRoutes(app: FastifyInstance) {
     preHandler: [requirePermission('oncall:manage')],
   }, async (request, reply) => {
     const { tenantSlug } = request.user;
-    const { id, rotationId } = idRotationParamSchema.parse(request.params);
+    const { id, rotationId } = request.params as z.infer<typeof idRotationParamSchema>;
 
     await oncallScheduleService.removeFromRotation(tenantSlug, id, rotationId);
     reply.status(204).send();
@@ -291,7 +159,7 @@ export default async function oncallRoutes(app: FastifyInstance) {
     preHandler: [requirePermission('oncall:read')],
   }, async (request, reply) => {
     const { tenantSlug } = request.user;
-    const { id } = idParamSchema.parse(request.params);
+    const { id } = request.params as z.infer<typeof idParamSchema>;
     const query = request.query as Record<string, string>;
 
     // Validate and parse date parameters with defaults
@@ -314,8 +182,8 @@ export default async function oncallRoutes(app: FastifyInstance) {
     preHandler: [requirePermission('oncall:manage')],
   }, async (request, reply) => {
     const { tenantSlug, userId } = request.user;
-    const { id } = idParamSchema.parse(request.params);
-    const body = createShiftSchema.parse(request.body);
+    const { id } = request.params as z.infer<typeof idParamSchema>;
+    const body = request.body as z.infer<typeof createShiftSchema>;
 
     const shift = await oncallScheduleService.createShift(
       tenantSlug,
@@ -337,8 +205,8 @@ export default async function oncallRoutes(app: FastifyInstance) {
     preHandler: [requirePermission('oncall:update')],
   }, async (request, reply) => {
     const { tenantSlug, userId } = request.user;
-    const { id } = idParamSchema.parse(request.params);
-    const body = createOverrideSchema.parse(request.body);
+    const { id } = request.params as z.infer<typeof idParamSchema>;
+    const body = request.body as z.infer<typeof createOverrideSchema>;
 
     const override = await oncallScheduleService.createOverride(
       tenantSlug,
@@ -360,7 +228,7 @@ export default async function oncallRoutes(app: FastifyInstance) {
     preHandler: [requirePermission('oncall:manage')],
   }, async (request, reply) => {
     const { tenantSlug } = request.user;
-    const { id, shiftId } = idShiftParamSchema.parse(request.params);
+    const { id, shiftId } = request.params as z.infer<typeof idShiftParamSchema>;
 
     await oncallScheduleService.deleteShift(tenantSlug, id, shiftId);
     reply.status(204).send();
@@ -371,7 +239,7 @@ export default async function oncallRoutes(app: FastifyInstance) {
     preHandler: [requirePermission('oncall:read')],
   }, async (request, reply) => {
     const { tenantSlug } = request.user;
-    const { id } = idParamSchema.parse(request.params);
+    const { id } = request.params as z.infer<typeof idParamSchema>;
 
     const applications = await oncallScheduleService.getLinkedApplications(tenantSlug, id);
     reply.send({ data: applications });
@@ -382,7 +250,7 @@ export default async function oncallRoutes(app: FastifyInstance) {
     preHandler: [requirePermission('oncall:manage')],
   }, async (request, reply) => {
     const { tenantSlug } = request.user;
-    const { id } = idParamSchema.parse(request.params);
+    const { id } = request.params as z.infer<typeof idParamSchema>;
     const body = z.object({ applicationId: z.string().uuid() }).parse(request.body);
 
     await oncallScheduleService.linkToApplication(tenantSlug, id, body.applicationId);
@@ -394,7 +262,7 @@ export default async function oncallRoutes(app: FastifyInstance) {
     preHandler: [requirePermission('oncall:manage')],
   }, async (request, reply) => {
     const { tenantSlug } = request.user;
-    const { id, applicationId } = idAppParamSchema.parse(request.params);
+    const { id, applicationId } = request.params as z.infer<typeof idAppParamSchema>;
 
     await oncallScheduleService.unlinkFromApplication(tenantSlug, id, applicationId);
     reply.status(204).send();
@@ -440,7 +308,7 @@ export default async function oncallRoutes(app: FastifyInstance) {
     preHandler: [requirePermission('oncall:read')],
   }, async (request, reply) => {
     const { tenantSlug } = request.user;
-    const { id } = idParamSchema.parse(request.params);
+    const { id } = request.params as z.infer<typeof idParamSchema>;
 
     const policy = await escalationPolicyService.findById(tenantSlug, id);
 
@@ -462,7 +330,7 @@ export default async function oncallRoutes(app: FastifyInstance) {
     preHandler: [requirePermission('oncall:manage')],
   }, async (request, reply) => {
     const { tenantSlug, userId } = request.user;
-    const body = createPolicySchema.parse(request.body);
+    const body = request.body as z.infer<typeof createPolicySchema>;
 
     const policy = await escalationPolicyService.create(tenantSlug, body, userId);
     reply.status(201).send(policy);
@@ -473,8 +341,8 @@ export default async function oncallRoutes(app: FastifyInstance) {
     preHandler: [requirePermission('oncall:manage')],
   }, async (request, reply) => {
     const { tenantSlug, userId } = request.user;
-    const { id } = idParamSchema.parse(request.params);
-    const body = updatePolicySchema.parse(request.body);
+    const { id } = request.params as z.infer<typeof idParamSchema>;
+    const body = request.body as z.infer<typeof updatePolicySchema>;
 
     const policy = await escalationPolicyService.update(tenantSlug, id, body, userId);
     reply.send(policy);
@@ -485,7 +353,7 @@ export default async function oncallRoutes(app: FastifyInstance) {
     preHandler: [requirePermission('oncall:manage')],
   }, async (request, reply) => {
     const { tenantSlug, userId } = request.user;
-    const { id } = idParamSchema.parse(request.params);
+    const { id } = request.params as z.infer<typeof idParamSchema>;
 
     await escalationPolicyService.delete(tenantSlug, id, userId);
     reply.status(204).send();
@@ -496,7 +364,7 @@ export default async function oncallRoutes(app: FastifyInstance) {
     preHandler: [requirePermission('oncall:read')],
   }, async (request, reply) => {
     const { tenantSlug } = request.user;
-    const { id } = idParamSchema.parse(request.params);
+    const { id } = request.params as z.infer<typeof idParamSchema>;
 
     const steps = await escalationPolicyService.getSteps(tenantSlug, id);
     reply.send({ data: steps });
@@ -507,8 +375,8 @@ export default async function oncallRoutes(app: FastifyInstance) {
     preHandler: [requirePermission('oncall:manage')],
   }, async (request, reply) => {
     const { tenantSlug } = request.user;
-    const { id } = idParamSchema.parse(request.params);
-    const body = addStepSchema.parse(request.body);
+    const { id } = request.params as z.infer<typeof idParamSchema>;
+    const body = request.body as z.infer<typeof addStepSchema>;
 
     const step = await escalationPolicyService.addStep(tenantSlug, id, body);
     reply.status(201).send(step);
@@ -519,7 +387,7 @@ export default async function oncallRoutes(app: FastifyInstance) {
     preHandler: [requirePermission('oncall:manage')],
   }, async (request, reply) => {
     const { tenantSlug } = request.user;
-    const { id, stepId } = idStepParamSchema.parse(request.params);
+    const { id, stepId } = request.params as z.infer<typeof idStepParamSchema>;
     const body = addStepSchema.partial().parse(request.body);
 
     const step = await escalationPolicyService.updateStep(
@@ -536,7 +404,7 @@ export default async function oncallRoutes(app: FastifyInstance) {
     preHandler: [requirePermission('oncall:manage')],
   }, async (request, reply) => {
     const { tenantSlug } = request.user;
-    const { id, stepId } = idStepParamSchema.parse(request.params);
+    const { id, stepId } = request.params as z.infer<typeof idStepParamSchema>;
 
     await escalationPolicyService.deleteStep(tenantSlug, id, stepId);
     reply.status(204).send();
@@ -592,7 +460,7 @@ export default async function oncallRoutes(app: FastifyInstance) {
     preHandler: [requirePermission('oncall:read')],
   }, async (request, reply) => {
     const { tenantSlug } = request.user;
-    const { id } = idParamSchema.parse(request.params);
+    const { id } = request.params as z.infer<typeof idParamSchema>;
 
     const swap = await shiftSwapService.getById(tenantSlug, id);
     reply.send(swap);
@@ -603,7 +471,7 @@ export default async function oncallRoutes(app: FastifyInstance) {
     preHandler: [requirePermission('oncall:update')],
   }, async (request, reply) => {
     const { tenantSlug, userId } = request.user;
-    const body = createShiftSwapSchema.parse(request.body);
+    const body = request.body as z.infer<typeof createShiftSwapSchema>;
 
     const swap = await shiftSwapService.create(tenantSlug, userId, body);
     reply.status(201).send(swap);
@@ -614,8 +482,8 @@ export default async function oncallRoutes(app: FastifyInstance) {
     preHandler: [requirePermission('oncall:update')],
   }, async (request, reply) => {
     const { tenantSlug, userId } = request.user;
-    const { id } = idParamSchema.parse(request.params);
-    const body = updateShiftSwapSchema.parse(request.body);
+    const { id } = request.params as z.infer<typeof idParamSchema>;
+    const body = request.body as z.infer<typeof updateShiftSwapSchema>;
 
     const swap = await shiftSwapService.update(tenantSlug, id, userId, body);
     reply.send(swap);
@@ -626,7 +494,7 @@ export default async function oncallRoutes(app: FastifyInstance) {
     preHandler: [requirePermission('oncall:update')],
   }, async (request, reply) => {
     const { tenantSlug, userId } = request.user;
-    const { id } = idParamSchema.parse(request.params);
+    const { id } = request.params as z.infer<typeof idParamSchema>;
 
     const swap = await shiftSwapService.cancel(tenantSlug, id, userId);
     reply.send(swap);
@@ -637,7 +505,7 @@ export default async function oncallRoutes(app: FastifyInstance) {
     preHandler: [requirePermission('oncall:update')],
   }, async (request, reply) => {
     const { tenantSlug, userId } = request.user;
-    const { id } = idParamSchema.parse(request.params);
+    const { id } = request.params as z.infer<typeof idParamSchema>;
     const body = swapResponseSchema.parse(request.body || {});
 
     const swap = await shiftSwapService.accept(tenantSlug, id, userId, body.message);
@@ -649,7 +517,7 @@ export default async function oncallRoutes(app: FastifyInstance) {
     preHandler: [requirePermission('oncall:update')],
   }, async (request, reply) => {
     const { tenantSlug, userId } = request.user;
-    const { id } = idParamSchema.parse(request.params);
+    const { id } = request.params as z.infer<typeof idParamSchema>;
     const body = swapResponseSchema.parse(request.body || {});
 
     const swap = await shiftSwapService.reject(tenantSlug, id, userId, body.message);
@@ -661,7 +529,7 @@ export default async function oncallRoutes(app: FastifyInstance) {
     preHandler: [requirePermission('oncall:manage')],
   }, async (request, reply) => {
     const { tenantSlug, userId } = request.user;
-    const { id } = idParamSchema.parse(request.params);
+    const { id } = request.params as z.infer<typeof idParamSchema>;
     const body = adminApproveSchema.parse(request.body || {});
 
     const swap = await shiftSwapService.adminApprove(
@@ -678,7 +546,7 @@ export default async function oncallRoutes(app: FastifyInstance) {
     preHandler: [requirePermission('oncall:read')],
   }, async (request, reply) => {
     const { tenantSlug } = request.user;
-    const { scheduleId } = scheduleIdParamSchema.parse(request.params);
+    const { scheduleId } = request.params as z.infer<typeof scheduleIdParamSchema>;
     const query = request.query as Record<string, string>;
 
     const stats = await shiftSwapService.getScheduleStats(
@@ -699,7 +567,7 @@ export default async function oncallRoutes(app: FastifyInstance) {
     preHandler: [requirePermission('oncall:read')],
   }, async (request, reply) => {
     const { tenantSlug, userId } = request.user;
-    const { scheduleId } = scheduleIdParamSchema.parse(request.params);
+    const { scheduleId } = request.params as z.infer<typeof scheduleIdParamSchema>;
     const query = request.query as Record<string, string>;
 
     const from = validateDate(query.from, 'from');
@@ -726,7 +594,7 @@ export default async function oncallRoutes(app: FastifyInstance) {
     preHandler: [requirePermission('oncall:read')],
   }, async (request, reply) => {
     const { tenantSlug, userId } = request.user;
-    const { scheduleId } = scheduleIdParamSchema.parse(request.params);
+    const { scheduleId } = request.params as z.infer<typeof scheduleIdParamSchema>;
 
     const { token, url } = await icalExportService.createSubscriptionToken(
       tenantSlug,
@@ -741,7 +609,7 @@ export default async function oncallRoutes(app: FastifyInstance) {
   app.get<{ Params: { scheduleId: string; token: string } }>('/schedules/:scheduleId/ical/subscribe/:token', {
     preHandler: [optionalAuth],
   }, async (request, reply) => {
-    const { scheduleId, token } = scheduleIdTokenParamSchema.parse(request.params);
+    const { scheduleId, token } = request.params as z.infer<typeof scheduleIdTokenParamSchema>;
     const query = request.query as Record<string, string>;
 
     // Look up tenant from schedule and validate token (searches all tenant schemas)
@@ -779,7 +647,7 @@ export default async function oncallRoutes(app: FastifyInstance) {
     preHandler: [requirePermission('oncall:read')],
   }, async (request, reply) => {
     const { tenantSlug, userId } = request.user;
-    const { scheduleId } = scheduleIdParamSchema.parse(request.params);
+    const { scheduleId } = request.params as z.infer<typeof scheduleIdParamSchema>;
 
     await icalExportService.revokeSubscriptionToken(
       tenantSlug,

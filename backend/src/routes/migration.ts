@@ -14,11 +14,10 @@ import type {
   SourceSystem,
   EntityType,
 } from '../services/migration/types.js';
+import { jobIdParamSchema } from '../schemas/migration.js';
 
 // Parameter validation schemas
-const jobIdParamSchema = z.object({
-  jobId: z.string().uuid(),
-});
+
 
 const migrationRoutes: FastifyPluginAsync = async (fastify) => {
   // Upload and create migration job
@@ -187,7 +186,7 @@ const migrationRoutes: FastifyPluginAsync = async (fastify) => {
       },
     },
     async (request, reply) => {
-      const { jobId } = jobIdParamSchema.parse(request.params);
+      const { jobId } = request.params as z.infer<typeof jobIdParamSchema>;
       const executeRequest: MigrationExecuteRequest = {
         jobId,
         mappingConfig: request.body.mappingConfig,
@@ -237,7 +236,7 @@ const migrationRoutes: FastifyPluginAsync = async (fastify) => {
       },
     },
     async (request, reply) => {
-      const { jobId } = jobIdParamSchema.parse(request.params);
+      const { jobId } = request.params as z.infer<typeof jobIdParamSchema>;
       const job = await migrationService.getJobById(jobId);
       reply.send(job);
     }

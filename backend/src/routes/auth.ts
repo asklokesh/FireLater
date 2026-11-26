@@ -5,6 +5,7 @@ import { tenantService } from '../services/tenant.js';
 import { authenticate } from '../middleware/auth.js';
 import { BadRequestError, ConflictError } from '../utils/errors.js';
 import { logger } from '../utils/logger.js';
+import { loginSchema, refreshSchema, changePasswordSchema, forgotPasswordSchema, resetPasswordSchema, verifyEmailSchema, resendVerificationSchema, registerTenantSchema, registerUserSchema } from '../schemas/auth.js';
 
 // Security warning: log if secure cookies are disabled in production
 const isSecureCookiesDisabled = process.env.NODE_ENV === 'production' && process.env.DISABLE_SECURE_COOKIES === 'true';
@@ -24,57 +25,6 @@ const getRefreshTokenCookieOptions = () => ({
   maxAge: 7 * 24 * 60 * 60, // 7 days
 });
 
-const loginSchema = z.object({
-  email: z.string().email(),
-  password: z.string().min(1),
-  tenant: z.string().min(1).optional(), // Optional - can come from header
-});
-
-const refreshSchema = z.object({
-  refreshToken: z.string().min(1).optional(), // Optional - can come from cookie
-  tenant: z.string().min(1).optional(), // Optional - can come from header
-});
-
-const changePasswordSchema = z.object({
-  oldPassword: z.string().min(1),
-  newPassword: z.string().min(8),
-});
-
-const forgotPasswordSchema = z.object({
-  tenant: z.string().min(1),
-  email: z.string().email(),
-});
-
-const resetPasswordSchema = z.object({
-  tenant: z.string().min(1),
-  token: z.string().min(1),
-  newPassword: z.string().min(8),
-});
-
-const verifyEmailSchema = z.object({
-  tenant: z.string().min(1),
-  token: z.string().min(1),
-});
-
-const resendVerificationSchema = z.object({
-  tenant: z.string().min(1),
-  email: z.string().email(),
-});
-
-const registerTenantSchema = z.object({
-  tenantName: z.string().min(2).max(255),
-  tenantSlug: z.string().min(2).max(100).regex(/^[a-z0-9-]+$/),
-  adminEmail: z.string().email(),
-  adminName: z.string().min(2).max(255),
-  adminPassword: z.string().min(8),
-});
-
-const registerUserSchema = z.object({
-  email: z.string().email(),
-  password: z.string().min(8),
-  name: z.string().min(2).max(255),
-});
-
 export default async function authRoutes(app: FastifyInstance) {
   // Register endpoint - handles both tenant creation and user registration
   app.post('/register', async (request: FastifyRequest, reply: FastifyReply) => {
@@ -82,7 +32,7 @@ export default async function authRoutes(app: FastifyInstance) {
 
     // If tenant slug in header, this is user registration in existing tenant
     if (tenantSlug) {
-      const body = registerUserSchema.parse(request.body);
+      const body = request.body as z.infer<typeof registerUserSchema>;
       const schema = tenantService.getSchemaName(tenantSlug);
 
       // Register user in tenant
@@ -130,7 +80,7 @@ export default async function authRoutes(app: FastifyInstance) {
       });
     } else {
       // No tenant slug - this is tenant registration
-      const body = registerTenantSchema.parse(request.body);
+      const body = request.body as z.infer<typeof registerTenantSchema>;
 
       const tenant = await tenantService.create({
         name: body.tenantName,
@@ -163,7 +113,7 @@ export default async function authRoutes(app: FastifyInstance) {
 
   // Login
   app.post('/login', async (request: FastifyRequest, reply: FastifyReply) => {
-    const body = loginSchema.parse(request.body);
+    const body = request.body as z.infer<typeof loginSchema>;
     const tenantSlug = (request.headers['x-tenant-slug'] as string) || body.tenant;
 
     if (!tenantSlug) {
@@ -204,7 +154,7 @@ export default async function authRoutes(app: FastifyInstance) {
 
   // Refresh token
   app.post('/refresh', async (request: FastifyRequest, reply: FastifyReply) => {
-    const body = refreshSchema.parse(request.body);
+    const body = request.body as z.infer<typeof refreshSchema>;
     const refreshToken = body.refreshToken || request.cookies.refreshToken;
     const tenantSlug = (request.headers['x-tenant-slug'] as string) || body.tenant;
 
@@ -270,7 +220,7 @@ export default async function authRoutes(app: FastifyInstance) {
   app.put('/password', {
     preHandler: [authenticate],
   }, async (request: FastifyRequest, reply: FastifyReply) => {
-    const body = changePasswordSchema.parse(request.body);
+    const body = request.body as z.infer<typeof changePasswordSchema>;
     const { userId, tenantSlug } = request.user;
     const schema = tenantService.getSchemaName(tenantSlug);
 
@@ -286,7 +236,7 @@ export default async function authRoutes(app: FastifyInstance) {
 
   // Forgot password - request reset token
   app.post('/forgot-password', async (request: FastifyRequest, reply: FastifyReply) => {
-    const body = forgotPasswordSchema.parse(request.body);
+    const body = request.body as z.infer<typeof forgotPasswordSchema>;
 
     await authService.requestPasswordReset(body.tenant, body.email);
 
@@ -298,7 +248,7 @@ export default async function authRoutes(app: FastifyInstance) {
 
   // Reset password with token
   app.post('/reset-password', async (request: FastifyRequest, reply: FastifyReply) => {
-    const body = resetPasswordSchema.parse(request.body);
+    const body = request.body as z.infer<typeof resetPasswordSchema>;
 
     await authService.resetPassword(body.tenant, body.token, body.newPassword);
 
@@ -307,7 +257,7 @@ export default async function authRoutes(app: FastifyInstance) {
 
   // Verify email
   app.post('/verify-email', async (request: FastifyRequest, reply: FastifyReply) => {
-    const body = verifyEmailSchema.parse(request.body);
+    const body = request.body as z.infer<typeof verifyEmailSchema>;
 
     const result = await authService.verifyEmail(body.tenant, body.token);
 
@@ -319,7 +269,7 @@ export default async function authRoutes(app: FastifyInstance) {
 
   // Resend verification email
   app.post('/resend-verification', async (request: FastifyRequest, reply: FastifyReply) => {
-    const body = resendVerificationSchema.parse(request.body);
+    const body = request.body as z.infer<typeof resendVerificationSchema>;
 
     await authService.resendVerificationEmail(body.tenant, body.email);
 

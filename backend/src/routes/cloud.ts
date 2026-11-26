@@ -8,106 +8,15 @@ import {
 } from '../services/cloud.js';
 import { requirePermission } from '../middleware/auth.js';
 import { parsePagination, createPaginatedResponse } from '../utils/pagination.js';
+import { createAccountSchema, updateAccountSchema, mapResourceSchema, createMappingRuleSchema, accountIdParamSchema, resourceIdParamSchema, applicationIdParamSchema, mappingRuleIdParamSchema, listAccountsQuerySchema, listResourcesQuerySchema, listCostsQuerySchema, applicationCostsQuerySchema } from '../schemas/cloud.js';
 
 // ============================================
 // SCHEMAS
 // ============================================
 
-const createAccountSchema = z.object({
-  provider: z.enum(['aws', 'azure', 'gcp']),
-  accountId: z.string().min(1),
-  name: z.string().min(1).max(255),
-  description: z.string().max(1000).optional(),
-  credentialType: z.enum(['access_key', 'role_arn', 'service_account']),
-  credentials: z.record(z.unknown()).optional(),
-  roleArn: z.string().optional(),
-  externalId: z.string().optional(),
-  syncEnabled: z.boolean().optional(),
-  syncInterval: z.number().min(300).optional(),
-  syncResources: z.boolean().optional(),
-  syncCosts: z.boolean().optional(),
-  syncMetrics: z.boolean().optional(),
-  regions: z.array(z.string()).optional(),
-});
-
-const updateAccountSchema = z.object({
-  name: z.string().min(1).max(255).optional(),
-  description: z.string().max(1000).optional(),
-  credentialType: z.enum(['access_key', 'role_arn', 'service_account']).optional(),
-  credentials: z.record(z.unknown()).optional(),
-  roleArn: z.string().optional(),
-  externalId: z.string().optional(),
-  syncEnabled: z.boolean().optional(),
-  syncInterval: z.number().min(300).optional(),
-  syncResources: z.boolean().optional(),
-  syncCosts: z.boolean().optional(),
-  syncMetrics: z.boolean().optional(),
-  regions: z.array(z.string()).optional(),
-});
-
-const mapResourceSchema = z.object({
-  applicationId: z.string().uuid(),
-  environmentId: z.string().uuid().optional(),
-});
-
-const createMappingRuleSchema = z.object({
-  name: z.string().min(1).max(255),
-  description: z.string().max(1000).optional(),
-  priority: z.number().min(1).optional(),
-  provider: z.enum(['aws', 'azure', 'gcp']).optional(),
-  resourceType: z.string().optional(),
-  tagKey: z.string().min(1),
-  tagValuePattern: z.string().optional(),
-  applicationId: z.string().uuid(),
-  environmentType: z.string().optional(),
-});
-
 // Parameter validation schemas
-const accountIdParamSchema = z.object({
-  id: z.string().uuid(),
-});
-
-const resourceIdParamSchema = z.object({
-  id: z.string().uuid(),
-});
-
-const applicationIdParamSchema = z.object({
-  applicationId: z.string().uuid(),
-});
-
-const mappingRuleIdParamSchema = z.object({
-  id: z.string().uuid(),
-});
 
 // Query validation schemas
-const listAccountsQuerySchema = z.object({
-  page: z.coerce.number().int().positive().optional(),
-  per_page: z.coerce.number().int().min(1).max(100).optional(),
-  provider: z.enum(['aws', 'azure', 'gcp']).optional(),
-  status: z.enum(['active', 'inactive', 'error']).optional(),
-});
-
-const listResourcesQuerySchema = z.object({
-  page: z.coerce.number().int().positive().optional(),
-  per_page: z.coerce.number().int().min(1).max(100).optional(),
-  cloud_account_id: z.string().uuid().optional(),
-  resource_type: z.string().max(100).optional(),
-  application_id: z.string().uuid().optional(),
-  environment_id: z.string().uuid().optional(),
-  region: z.string().max(50).optional(),
-  is_deleted: z.enum(['true', 'false']).optional(),
-});
-
-const listCostsQuerySchema = z.object({
-  page: z.coerce.number().int().positive().optional(),
-  per_page: z.coerce.number().int().min(1).max(100).optional(),
-  cloud_account_id: z.string().uuid().optional(),
-  period_type: z.enum(['daily', 'weekly', 'monthly']).optional(),
-});
-
-const applicationCostsQuerySchema = z.object({
-  period_type: z.enum(['daily', 'weekly', 'monthly']).optional(),
-});
 
 export default async function cloudRoutes(app: FastifyInstance) {
   // ============================================
@@ -137,7 +46,7 @@ export default async function cloudRoutes(app: FastifyInstance) {
     preHandler: [requirePermission('cloud_accounts:read')],
   }, async (request, reply) => {
     const { tenantSlug } = request.user;
-    const { id } = accountIdParamSchema.parse(request.params);
+    const { id } = request.params as z.infer<typeof accountIdParamSchema>;
 
     const account = await cloudAccountService.findById(tenantSlug, id);
 
@@ -157,7 +66,7 @@ export default async function cloudRoutes(app: FastifyInstance) {
     preHandler: [requirePermission('cloud_accounts:manage')],
   }, async (request, reply) => {
     const { tenantSlug } = request.user;
-    const data = createAccountSchema.parse(request.body);
+    const data = request.body as z.infer<typeof createAccountSchema>;
     const account = await cloudAccountService.create(tenantSlug, data);
     reply.status(201).send({ account });
   });
@@ -167,8 +76,8 @@ export default async function cloudRoutes(app: FastifyInstance) {
     preHandler: [requirePermission('cloud_accounts:manage')],
   }, async (request, reply) => {
     const { tenantSlug } = request.user;
-    const { id } = accountIdParamSchema.parse(request.params);
-    const data = updateAccountSchema.parse(request.body);
+    const { id } = request.params as z.infer<typeof accountIdParamSchema>;
+    const data = request.body as z.infer<typeof updateAccountSchema>;
 
     const account = await cloudAccountService.update(tenantSlug, id, data);
     reply.send({ account });
@@ -179,7 +88,7 @@ export default async function cloudRoutes(app: FastifyInstance) {
     preHandler: [requirePermission('cloud_accounts:manage')],
   }, async (request, reply) => {
     const { tenantSlug } = request.user;
-    const { id } = accountIdParamSchema.parse(request.params);
+    const { id } = request.params as z.infer<typeof accountIdParamSchema>;
 
     await cloudAccountService.delete(tenantSlug, id);
     reply.status(204).send();
@@ -190,7 +99,7 @@ export default async function cloudRoutes(app: FastifyInstance) {
     preHandler: [requirePermission('cloud_accounts:manage')],
   }, async (request, reply) => {
     const { tenantSlug } = request.user;
-    const { id } = accountIdParamSchema.parse(request.params);
+    const { id } = request.params as z.infer<typeof accountIdParamSchema>;
 
     const result = await cloudAccountService.testConnection(tenantSlug, id);
     reply.send(result);
@@ -236,7 +145,7 @@ export default async function cloudRoutes(app: FastifyInstance) {
     preHandler: [requirePermission('cloud_resources:read')],
   }, async (request, reply) => {
     const { tenantSlug } = request.user;
-    const { id } = resourceIdParamSchema.parse(request.params);
+    const { id } = request.params as z.infer<typeof resourceIdParamSchema>;
 
     const resource = await cloudResourceService.findById(tenantSlug, id);
 
@@ -256,8 +165,8 @@ export default async function cloudRoutes(app: FastifyInstance) {
     preHandler: [requirePermission('cloud_resources:manage')],
   }, async (request, reply) => {
     const { tenantSlug } = request.user;
-    const { id } = resourceIdParamSchema.parse(request.params);
-    const { applicationId, environmentId } = mapResourceSchema.parse(request.body);
+    const { id } = request.params as z.infer<typeof resourceIdParamSchema>;
+    const { applicationId, environmentId } = request.body as z.infer<typeof mapResourceSchema>;
 
     const resource = await cloudResourceService.mapToApplication(
       tenantSlug,
@@ -273,7 +182,7 @@ export default async function cloudRoutes(app: FastifyInstance) {
     preHandler: [requirePermission('cloud_resources:manage')],
   }, async (request, reply) => {
     const { tenantSlug } = request.user;
-    const { id } = resourceIdParamSchema.parse(request.params);
+    const { id } = request.params as z.infer<typeof resourceIdParamSchema>;
 
     const resource = await cloudResourceService.unmapFromApplication(tenantSlug, id);
     reply.send({ resource });
@@ -284,7 +193,7 @@ export default async function cloudRoutes(app: FastifyInstance) {
     preHandler: [requirePermission('cloud_resources:read')],
   }, async (request, reply) => {
     const { tenantSlug } = request.user;
-    const { applicationId } = applicationIdParamSchema.parse(request.params);
+    const { applicationId } = request.params as z.infer<typeof applicationIdParamSchema>;
 
     const resources = await cloudResourceService.getResourcesByApplication(
       tenantSlug,
@@ -320,7 +229,7 @@ export default async function cloudRoutes(app: FastifyInstance) {
     preHandler: [requirePermission('cloud_costs:read')],
   }, async (request, reply) => {
     const { tenantSlug } = request.user;
-    const { applicationId } = applicationIdParamSchema.parse(request.params);
+    const { applicationId } = request.params as z.infer<typeof applicationIdParamSchema>;
     const queryParams = applicationCostsQuerySchema.parse(request.query);
     const periodType = queryParams.period_type || 'monthly';
 
@@ -350,7 +259,7 @@ export default async function cloudRoutes(app: FastifyInstance) {
     preHandler: [requirePermission('cloud_resources:manage')],
   }, async (request, reply) => {
     const { tenantSlug } = request.user;
-    const data = createMappingRuleSchema.parse(request.body);
+    const data = request.body as z.infer<typeof createMappingRuleSchema>;
     const rule = await cloudMappingRuleService.create(tenantSlug, data);
     reply.status(201).send({ rule });
   });
@@ -360,7 +269,7 @@ export default async function cloudRoutes(app: FastifyInstance) {
     preHandler: [requirePermission('cloud_resources:manage')],
   }, async (request, reply) => {
     const { tenantSlug } = request.user;
-    const { id } = mappingRuleIdParamSchema.parse(request.params);
+    const { id } = request.params as z.infer<typeof mappingRuleIdParamSchema>;
 
     await cloudMappingRuleService.delete(tenantSlug, id);
     reply.status(204).send();

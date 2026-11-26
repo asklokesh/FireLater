@@ -3,42 +3,11 @@ import { z } from 'zod';
 import { slaService } from '../services/sla.js';
 import { validateDate, validateDateRange } from '../utils/validation.js';
 import { authenticate } from '../middleware/auth.js';
+import { slaPolicySchema, updateSlaPolicySchema, slaTargetSchema, updateSlaTargetSchema } from '../schemas/sla.js';
 
 // ============================================
 // SCHEMAS
 // ============================================
-
-const slaPolicySchema = z.object({
-  name: z.string().min(1).max(100),
-  description: z.string().max(500).optional(),
-  entityType: z.enum(['issue', 'problem', 'change']),
-  isDefault: z.boolean().optional(),
-  targets: z.array(z.object({
-    metricType: z.enum(['response_time', 'resolution_time']),
-    priority: z.enum(['critical', 'high', 'medium', 'low']),
-    targetMinutes: z.number().int().positive(),
-    warningThresholdPercent: z.number().int().min(1).max(100).optional(),
-  })).optional(),
-});
-
-const updateSlaPolicySchema = z.object({
-  name: z.string().min(1).max(100).optional(),
-  description: z.string().max(500).optional(),
-  isDefault: z.boolean().optional(),
-  isActive: z.boolean().optional(),
-});
-
-const slaTargetSchema = z.object({
-  metricType: z.enum(['response_time', 'resolution_time']),
-  priority: z.enum(['critical', 'high', 'medium', 'low']),
-  targetMinutes: z.number().int().positive(),
-  warningThresholdPercent: z.number().int().min(1).max(100).optional(),
-});
-
-const updateSlaTargetSchema = z.object({
-  targetMinutes: z.number().int().positive().optional(),
-  warningThresholdPercent: z.number().int().min(1).max(100).optional(),
-});
 
 // ============================================
 // ROUTES
@@ -87,7 +56,7 @@ export default async function slaRoutes(fastify: FastifyInstance) {
     preHandler: [authenticate],
   }, async (request, reply) => {
     const { tenantSlug } = request.user;
-    const body = slaPolicySchema.parse(request.body);
+    const body = request.body as z.infer<typeof slaPolicySchema>;
 
     try {
       const policy = await slaService.createSlaPolicy(tenantSlug, body);
@@ -106,7 +75,7 @@ export default async function slaRoutes(fastify: FastifyInstance) {
   }, async (request, reply) => {
     const { tenantSlug } = request.user;
     const { id } = request.params as { id: string };
-    const body = updateSlaPolicySchema.parse(request.body);
+    const body = request.body as z.infer<typeof updateSlaPolicySchema>;
 
     try {
       const policy = await slaService.updateSlaPolicy(tenantSlug, id, body);
@@ -153,7 +122,7 @@ export default async function slaRoutes(fastify: FastifyInstance) {
   }, async (request, reply) => {
     const { tenantSlug } = request.user;
     const { policyId } = request.params as { policyId: string };
-    const body = slaTargetSchema.parse(request.body);
+    const body = request.body as z.infer<typeof slaTargetSchema>;
 
     try {
       const target = await slaService.createSlaTarget(tenantSlug, policyId, body);
@@ -172,7 +141,7 @@ export default async function slaRoutes(fastify: FastifyInstance) {
   }, async (request, reply) => {
     const { tenantSlug } = request.user;
     const { id } = request.params as { id: string };
-    const body = updateSlaTargetSchema.parse(request.body);
+    const body = request.body as z.infer<typeof updateSlaTargetSchema>;
 
     const target = await slaService.updateSlaTarget(tenantSlug, id, body);
 

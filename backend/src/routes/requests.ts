@@ -3,67 +3,7 @@ import { z } from 'zod';
 import { requestService } from '../services/requests.js';
 import { requirePermission } from '../middleware/auth.js';
 import { parsePagination, createPaginatedResponse } from '../utils/pagination.js';
-
-const createRequestSchema = z.object({
-  catalogItemId: z.string().uuid(),
-  requestedForId: z.string().uuid().optional(),
-  priority: z.enum(['low', 'medium', 'high', 'critical']).optional(),
-  formData: z.record(z.unknown()),
-  notes: z.string().max(2000).optional(),
-  costCenter: z.string().max(100).optional(),
-});
-
-const updateRequestSchema = z.object({
-  priority: z.enum(['low', 'medium', 'high', 'critical']).optional(),
-  formData: z.record(z.unknown()).optional(),
-  notes: z.string().max(2000).optional(),
-  costCenter: z.string().max(100).optional(),
-});
-
-const assignRequestSchema = z.object({
-  assignedTo: z.string().uuid(),
-});
-
-const approvalActionSchema = z.object({
-  comments: z.string().max(2000).optional(),
-});
-
-const cancelRequestSchema = z.object({
-  reason: z.string().min(1).max(2000),
-});
-
-const completeRequestSchema = z.object({
-  notes: z.string().max(2000).optional(),
-});
-
-const addCommentSchema = z.object({
-  content: z.string().min(1).max(5000),
-  isInternal: z.boolean().optional(),
-});
-
-// Parameter validation schemas
-const requestIdParamSchema = z.object({
-  id: z.string().uuid(),
-});
-
-const requestApprovalParamSchema = z.object({
-  id: z.string().uuid(),
-  approvalId: z.string().uuid(),
-});
-
-// Query parameter validation schema
-const listRequestsQuerySchema = z.object({
-  page: z.coerce.number().int().positive().optional(),
-  per_page: z.coerce.number().int().min(1).max(100).optional(),
-  status: z.enum(['submitted', 'pending_approval', 'approved', 'rejected', 'in_progress', 'completed', 'cancelled']).optional(),
-  priority: z.enum(['low', 'medium', 'high', 'critical']).optional(),
-  requester_id: z.string().uuid().optional(),
-  requested_for_id: z.string().uuid().optional(),
-  assigned_to: z.string().uuid().optional(),
-  catalog_item_id: z.string().uuid().optional(),
-  search: z.string().max(200).optional(),
-  q: z.string().max(200).optional(),
-});
+import { createRequestSchema, updateRequestSchema, assignRequestSchema, approvalActionSchema, cancelRequestSchema, completeRequestSchema, addCommentSchema, requestIdParamSchema, requestApprovalParamSchema, listRequestsQuerySchema } from '../schemas/requests.js';
 
 export default async function requestRoutes(app: FastifyInstance) {
   // List requests
@@ -130,7 +70,7 @@ export default async function requestRoutes(app: FastifyInstance) {
     preHandler: [requirePermission('requests:read')],
   }, async (request, reply) => {
     const { tenantSlug } = request.user;
-    const { id } = requestIdParamSchema.parse(request.params);
+    const { id } = request.params as z.infer<typeof requestIdParamSchema>;
 
     const serviceRequest = await requestService.findById(tenantSlug, id);
 
@@ -150,7 +90,7 @@ export default async function requestRoutes(app: FastifyInstance) {
     preHandler: [requirePermission('requests:create')],
   }, async (request, reply) => {
     const { tenantSlug, userId } = request.user;
-    const body = createRequestSchema.parse(request.body);
+    const body = request.body as z.infer<typeof createRequestSchema>;
 
     const serviceRequest = await requestService.create(tenantSlug, body, userId);
     reply.status(201).send(serviceRequest);
@@ -161,8 +101,8 @@ export default async function requestRoutes(app: FastifyInstance) {
     preHandler: [requirePermission('requests:update')],
   }, async (request, reply) => {
     const { tenantSlug, userId } = request.user;
-    const { id } = requestIdParamSchema.parse(request.params);
-    const body = updateRequestSchema.parse(request.body);
+    const { id } = request.params as z.infer<typeof requestIdParamSchema>;
+    const body = request.body as z.infer<typeof updateRequestSchema>;
 
     const serviceRequest = await requestService.update(tenantSlug, id, body, userId);
     reply.send(serviceRequest);
@@ -173,8 +113,8 @@ export default async function requestRoutes(app: FastifyInstance) {
     preHandler: [requirePermission('requests:assign')],
   }, async (request, reply) => {
     const { tenantSlug, userId } = request.user;
-    const { id } = requestIdParamSchema.parse(request.params);
-    const body = assignRequestSchema.parse(request.body);
+    const { id } = request.params as z.infer<typeof requestIdParamSchema>;
+    const body = request.body as z.infer<typeof assignRequestSchema>;
 
     const serviceRequest = await requestService.assign(tenantSlug, id, body.assignedTo, userId);
     reply.send(serviceRequest);
@@ -185,7 +125,7 @@ export default async function requestRoutes(app: FastifyInstance) {
     preHandler: [requirePermission('requests:update')],
   }, async (request, reply) => {
     const { tenantSlug, userId } = request.user;
-    const { id } = requestIdParamSchema.parse(request.params);
+    const { id } = request.params as z.infer<typeof requestIdParamSchema>;
 
     const serviceRequest = await requestService.startWork(tenantSlug, id, userId);
     reply.send(serviceRequest);
@@ -196,8 +136,8 @@ export default async function requestRoutes(app: FastifyInstance) {
     preHandler: [requirePermission('requests:update')],
   }, async (request, reply) => {
     const { tenantSlug, userId } = request.user;
-    const { id } = requestIdParamSchema.parse(request.params);
-    const body = completeRequestSchema.parse(request.body);
+    const { id } = request.params as z.infer<typeof requestIdParamSchema>;
+    const body = request.body as z.infer<typeof completeRequestSchema>;
 
     const serviceRequest = await requestService.complete(tenantSlug, id, userId, body.notes);
     reply.send(serviceRequest);
@@ -208,8 +148,8 @@ export default async function requestRoutes(app: FastifyInstance) {
     preHandler: [requirePermission('requests:update')],
   }, async (request, reply) => {
     const { tenantSlug, userId } = request.user;
-    const { id } = requestIdParamSchema.parse(request.params);
-    const body = cancelRequestSchema.parse(request.body);
+    const { id } = request.params as z.infer<typeof requestIdParamSchema>;
+    const body = request.body as z.infer<typeof cancelRequestSchema>;
 
     const serviceRequest = await requestService.cancel(tenantSlug, id, body.reason, userId);
     reply.send(serviceRequest);
@@ -220,7 +160,7 @@ export default async function requestRoutes(app: FastifyInstance) {
     preHandler: [requirePermission('approvals:read')],
   }, async (request, reply) => {
     const { tenantSlug } = request.user;
-    const { id } = requestIdParamSchema.parse(request.params);
+    const { id } = request.params as z.infer<typeof requestIdParamSchema>;
 
     const approvals = await requestService.getApprovals(tenantSlug, id);
     reply.send({ data: approvals });
@@ -231,8 +171,8 @@ export default async function requestRoutes(app: FastifyInstance) {
     preHandler: [requirePermission('approvals:approve')],
   }, async (request, reply) => {
     const { tenantSlug, userId } = request.user;
-    const { id, approvalId } = requestApprovalParamSchema.parse(request.params);
-    const body = approvalActionSchema.parse(request.body);
+    const { id, approvalId } = request.params as z.infer<typeof requestApprovalParamSchema>;
+    const body = request.body as z.infer<typeof approvalActionSchema>;
 
     const serviceRequest = await requestService.approve(
       tenantSlug,
@@ -249,8 +189,8 @@ export default async function requestRoutes(app: FastifyInstance) {
     preHandler: [requirePermission('approvals:approve')],
   }, async (request, reply) => {
     const { tenantSlug, userId } = request.user;
-    const { id, approvalId } = requestApprovalParamSchema.parse(request.params);
-    const body = approvalActionSchema.parse(request.body);
+    const { id, approvalId } = request.params as z.infer<typeof requestApprovalParamSchema>;
+    const body = request.body as z.infer<typeof approvalActionSchema>;
 
     const serviceRequest = await requestService.reject(
       tenantSlug,
@@ -267,7 +207,7 @@ export default async function requestRoutes(app: FastifyInstance) {
     preHandler: [requirePermission('requests:read')],
   }, async (request, reply) => {
     const { tenantSlug } = request.user;
-    const { id } = requestIdParamSchema.parse(request.params);
+    const { id } = request.params as z.infer<typeof requestIdParamSchema>;
 
     const comments = await requestService.getComments(tenantSlug, id);
     reply.send({ data: comments });
@@ -278,8 +218,8 @@ export default async function requestRoutes(app: FastifyInstance) {
     preHandler: [requirePermission('requests:update')],
   }, async (request, reply) => {
     const { tenantSlug, userId } = request.user;
-    const { id } = requestIdParamSchema.parse(request.params);
-    const body = addCommentSchema.parse(request.body);
+    const { id } = request.params as z.infer<typeof requestIdParamSchema>;
+    const body = request.body as z.infer<typeof addCommentSchema>;
 
     const comment = await requestService.addComment(
       tenantSlug,
@@ -296,7 +236,7 @@ export default async function requestRoutes(app: FastifyInstance) {
     preHandler: [requirePermission('requests:read')],
   }, async (request, reply) => {
     const { tenantSlug } = request.user;
-    const { id } = requestIdParamSchema.parse(request.params);
+    const { id } = request.params as z.infer<typeof requestIdParamSchema>;
 
     const history = await requestService.getStatusHistory(tenantSlug, id);
     reply.send({ data: history });

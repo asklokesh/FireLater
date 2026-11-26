@@ -2,39 +2,11 @@ import { FastifyInstance } from 'fastify';
 import { z } from 'zod';
 import { regulatorySlaService } from '../services/regulatory-sla.js';
 import { requirePermission } from '../middleware/auth.js';
+import { classifyIncidentSchema, recordNotificationSchema, summaryQuerySchema, createFrameworkSchema, createDeadlineSchema } from '../schemas/regulatory-sla.js';
 
 // ============================================
 // VALIDATION SCHEMAS
 // ============================================
-
-const classifyIncidentSchema = z.object({
-  classification: z.string().min(1).max(50),
-  detectedAt: z.string().datetime().optional(),
-});
-
-const recordNotificationSchema = z.object({
-  actorId: z.string().min(1).max(255),
-  recipient: z.string().min(1).max(255),
-  evidence: z.string().min(1).max(5000),
-});
-
-const summaryQuerySchema = z.object({
-  from: z.string().datetime(),
-  to: z.string().datetime(),
-});
-
-const createFrameworkSchema = z.object({
-  code: z.string().min(1).max(50),
-  name: z.string().min(1).max(255),
-  description: z.string().max(2000).optional(),
-});
-
-const createDeadlineSchema = z.object({
-  deadlineType: z.string().min(1).max(50),
-  incidentClassification: z.string().max(50).optional(),
-  hoursFromDetection: z.number().int().positive(),
-  description: z.string().max(2000).optional(),
-});
 
 // ============================================
 // ROUTES
@@ -51,7 +23,7 @@ export default async function regulatorySlaRoutes(app: FastifyInstance) {
     async (request, reply) => {
       const { tenantSlug } = request.user;
       const { incidentId } = request.params;
-      const body = classifyIncidentSchema.parse(request.body);
+      const body = request.body as z.infer<typeof classifyIncidentSchema>;
 
       const detectedAt = body.detectedAt ? new Date(body.detectedAt) : new Date();
 
@@ -93,7 +65,7 @@ export default async function regulatorySlaRoutes(app: FastifyInstance) {
     async (request, reply) => {
       const { tenantSlug, userId } = request.user;
       const { clockId } = request.params;
-      const body = recordNotificationSchema.parse(request.body);
+      const body = request.body as z.infer<typeof recordNotificationSchema>;
 
       await regulatorySlaService.recordNotification(
         tenantSlug,
@@ -151,7 +123,7 @@ export default async function regulatorySlaRoutes(app: FastifyInstance) {
     { preHandler: [requirePermission('admin:write')] },
     async (request, reply) => {
       const { tenantSlug } = request.user;
-      const body = createFrameworkSchema.parse(request.body);
+      const body = request.body as z.infer<typeof createFrameworkSchema>;
 
       const framework = await regulatorySlaService.createFramework(tenantSlug, body);
       reply.status(201).send(framework);
@@ -184,7 +156,7 @@ export default async function regulatorySlaRoutes(app: FastifyInstance) {
     async (request, reply) => {
       const { tenantSlug } = request.user;
       const { id: frameworkId } = request.params;
-      const body = createDeadlineSchema.parse(request.body);
+      const body = request.body as z.infer<typeof createDeadlineSchema>;
 
       const deadline = await regulatorySlaService.createDeadline(tenantSlug, {
         frameworkId,

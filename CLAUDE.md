@@ -18,6 +18,7 @@ FireLater is a multi-tenant IT Service Management (ITSM) SaaS platform with sche
 backend/
   src/
     routes/       # Fastify route handlers (HTTP layer)
+    schemas/      # Zod schema registry for request validation (see backend/docs/VALIDATION_GUIDE.md)
     services/     # Business logic (database operations, caching)
     db/           # Drizzle schema and migrations
     jobs/         # BullMQ background job processors

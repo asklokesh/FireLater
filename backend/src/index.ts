@@ -58,6 +58,7 @@ import { startBulkWorker, stopBulkWorker } from './jobs/processors/bulkOperation
 import { closeBulkQueue } from './jobs/bulkQueue.js';
 import bulkRoutes from './routes/bulk.js';
 import { setupSwagger } from './docs/swagger.js';
+import { setupValidation, getValidationCoverage } from './middleware/validation.js';
 
 const app = Fastify({
   logger: {
@@ -190,6 +191,9 @@ async function registerPlugins() {
 }
 
 async function registerRoutes() {
+  // Unified validation + sanitization: must be installed before any route is registered
+  setupValidation(app);
+
   // CSRF token endpoint - must be called before any state-changing operations
   app.get('/csrf-token', async (request, reply) => {
     const token = await reply.generateCsrf();
@@ -524,6 +528,15 @@ async function start() {
     await registerPlugins();
     registerErrorHandler();
     await registerRoutes();
+    const coverage = getValidationCoverage();
+    logger.info(
+      { routes: coverage.length, registry: coverage.filter((c) => c.source === 'registry').length, baseline: coverage.filter((c) => c.source === 'baseline').length },
+      `Request validation active on ${coverage.length}/${coverage.length} routes`,
+    );
+    const uncovered = coverage.filter((c) => c.source === 'baseline').map((c) => c.key);
+    if (uncovered.length > 0) {
+      logger.warn({ uncovered }, 'Routes without a schema registry entry (baseline validation only)');
+    }
 
     logger.info('Testing database connection...');
     const dbOk = await testConnection();

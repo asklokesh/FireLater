@@ -2,32 +2,11 @@ import { FastifyInstance } from 'fastify';
 import { z } from 'zod';
 import { emergencyChangeService } from '../services/emergency-change.js';
 import { requirePermission } from '../middleware/auth.js';
+import { createEmergencyChangeSchema, postHocReviewSchema, listQuerySchema, idParamSchema } from '../schemas/emergency-change.js';
 
 // ============================================
 // SCHEMAS
 // ============================================
-
-const createEmergencyChangeSchema = z.object({
-  title: z.string().min(5).max(500),
-  description: z.string().min(1).max(10000),
-  emergencyJustification: z.string().min(10).max(5000),
-  linkedIncidentId: z.string().min(1).max(255),
-  implementerId: z.string().uuid().optional(),
-  applicationId: z.string().uuid().optional(),
-});
-
-const postHocReviewSchema = z.object({
-  decision: z.enum(['approved', 'rejected']),
-  comment: z.string().max(5000).optional(),
-});
-
-const listQuerySchema = z.object({
-  post_review_status: z.enum(['pending', 'approved', 'rejected']).optional(),
-});
-
-const idParamSchema = z.object({
-  id: z.string().uuid(),
-});
 
 // ============================================
 // ROUTES
@@ -54,7 +33,7 @@ export default async function emergencyChangeRoutes(app: FastifyInstance) {
     preHandler: [requirePermission('changes:create')],
   }, async (request, reply) => {
     const { tenantSlug, userId } = request.user;
-    const body = createEmergencyChangeSchema.parse(request.body);
+    const body = request.body as z.infer<typeof createEmergencyChangeSchema>;
 
     const result = await emergencyChangeService.createEmergencyChange(tenantSlug, userId, {
       title: body.title,
@@ -92,7 +71,7 @@ export default async function emergencyChangeRoutes(app: FastifyInstance) {
     preHandler: [requirePermission('changes:read')],
   }, async (request, reply) => {
     const { tenantSlug } = request.user;
-    const { id } = idParamSchema.parse(request.params);
+    const { id } = request.params as z.infer<typeof idParamSchema>;
 
     const change = await emergencyChangeService.getEmergencyChangeById(tenantSlug, id);
 
@@ -114,8 +93,8 @@ export default async function emergencyChangeRoutes(app: FastifyInstance) {
     preHandler: [requirePermission('changes:approve')],
   }, async (request, reply) => {
     const { tenantSlug, userId, email } = request.user;
-    const { id } = idParamSchema.parse(request.params);
-    const body = postHocReviewSchema.parse(request.body);
+    const { id } = request.params as z.infer<typeof idParamSchema>;
+    const body = request.body as z.infer<typeof postHocReviewSchema>;
 
     await emergencyChangeService.submitPostHocReview(
       tenantSlug,

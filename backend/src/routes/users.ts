@@ -3,34 +3,7 @@ import { z } from 'zod';
 import { userService } from '../services/users.js';
 import { requirePermission } from '../middleware/auth.js';
 import { parsePagination, createPaginatedResponse } from '../utils/pagination.js';
-
-const createUserSchema = z.object({
-  email: z.string().email(),
-  name: z.string().min(2).max(255),
-  password: z.string().min(8).optional(),
-  phone: z.string().max(50).optional(),
-  timezone: z.string().max(100).optional(),
-  status: z.enum(['active', 'inactive', 'pending']).optional(),
-  roleIds: z.array(z.string().uuid()).optional(),
-});
-
-const updateUserSchema = z.object({
-  name: z.string().min(2).max(255).optional(),
-  phone: z.string().max(50).optional(),
-  timezone: z.string().max(100).optional(),
-  status: z.enum(['active', 'inactive', 'pending']).optional(),
-  avatarUrl: z.string().url().optional(),
-  settings: z.record(z.unknown()).optional(),
-});
-
-const assignRolesSchema = z.object({
-  roleIds: z.array(z.string().uuid()),
-});
-
-// Parameter validation schema
-const userIdParamSchema = z.object({
-  id: z.string().uuid(),
-});
+import { createUserSchema, updateUserSchema, assignRolesSchema, userIdParamSchema } from '../schemas/users.js';
 
 export default async function userRoutes(app: FastifyInstance) {
   // List users
@@ -56,7 +29,7 @@ export default async function userRoutes(app: FastifyInstance) {
     preHandler: [requirePermission('users:read')],
   }, async (request, reply) => {
     const { tenantSlug } = request.user;
-    const { id } = userIdParamSchema.parse(request.params);
+    const { id } = request.params as z.infer<typeof userIdParamSchema>;
     const user = await userService.findById(tenantSlug, id);
 
     if (!user) {
@@ -75,7 +48,7 @@ export default async function userRoutes(app: FastifyInstance) {
     preHandler: [requirePermission('users:create')],
   }, async (request, reply) => {
     const { tenantSlug, userId } = request.user;
-    const body = createUserSchema.parse(request.body);
+    const body = request.body as z.infer<typeof createUserSchema>;
 
     const user = await userService.create(tenantSlug, body, userId);
     reply.status(201).send(user);
@@ -86,8 +59,8 @@ export default async function userRoutes(app: FastifyInstance) {
     preHandler: [requirePermission('users:update')],
   }, async (request, reply) => {
     const { tenantSlug, userId } = request.user;
-    const { id } = userIdParamSchema.parse(request.params);
-    const body = updateUserSchema.parse(request.body);
+    const { id } = request.params as z.infer<typeof userIdParamSchema>;
+    const body = request.body as z.infer<typeof updateUserSchema>;
 
     const user = await userService.update(tenantSlug, id, body, userId);
     reply.send(user);
@@ -98,7 +71,7 @@ export default async function userRoutes(app: FastifyInstance) {
     preHandler: [requirePermission('users:delete')],
   }, async (request, reply) => {
     const { tenantSlug, userId } = request.user;
-    const { id } = userIdParamSchema.parse(request.params);
+    const { id } = request.params as z.infer<typeof userIdParamSchema>;
 
     await userService.delete(tenantSlug, id, userId);
     reply.status(204).send();
@@ -109,7 +82,7 @@ export default async function userRoutes(app: FastifyInstance) {
     preHandler: [requirePermission('users:read')],
   }, async (request, reply) => {
     const { tenantSlug } = request.user;
-    const { id } = userIdParamSchema.parse(request.params);
+    const { id } = request.params as z.infer<typeof userIdParamSchema>;
 
     const groups = await userService.getUserGroups(tenantSlug, id);
     reply.send({ data: groups });
@@ -120,8 +93,8 @@ export default async function userRoutes(app: FastifyInstance) {
     preHandler: [requirePermission('users:update')],
   }, async (request, reply) => {
     const { tenantSlug, userId } = request.user;
-    const { id } = userIdParamSchema.parse(request.params);
-    const body = assignRolesSchema.parse(request.body);
+    const { id } = request.params as z.infer<typeof userIdParamSchema>;
+    const body = request.body as z.infer<typeof assignRolesSchema>;
 
     await userService.assignRoles(tenantSlug, id, body.roleIds, userId);
     reply.send({ message: 'Roles assigned successfully' });

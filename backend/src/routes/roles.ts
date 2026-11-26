@@ -4,24 +4,9 @@ import { pool } from '../config/database.js';
 import { tenantService } from '../services/tenant.js';
 import { requirePermission, requireRole } from '../middleware/auth.js';
 import { NotFoundError, BadRequestError } from '../utils/errors.js';
-
-const createRoleSchema = z.object({
-  name: z.string().min(2).max(100).regex(/^[a-z_]+$/),
-  displayName: z.string().min(2).max(255),
-  description: z.string().max(1000).optional(),
-  permissionIds: z.array(z.string().uuid()).optional(),
-});
-
-const updateRoleSchema = z.object({
-  displayName: z.string().min(2).max(255).optional(),
-  description: z.string().max(1000).optional(),
-  permissionIds: z.array(z.string().uuid()).optional(),
-});
+import { createRoleSchema, updateRoleSchema, roleIdParamSchema } from '../schemas/roles.js';
 
 // Parameter validation schema
-const roleIdParamSchema = z.object({
-  id: z.string().uuid(),
-});
 
 export default async function roleRoutes(app: FastifyInstance) {
   // List roles
@@ -47,7 +32,7 @@ export default async function roleRoutes(app: FastifyInstance) {
     preHandler: [requirePermission('users:read')],
   }, async (request, reply) => {
     const { tenantSlug } = request.user;
-    const { id } = roleIdParamSchema.parse(request.params);
+    const { id } = request.params as z.infer<typeof roleIdParamSchema>;
     const schema = tenantService.getSchemaName(tenantSlug);
 
     const roleResult = await pool.query(
@@ -79,7 +64,7 @@ export default async function roleRoutes(app: FastifyInstance) {
   }, async (request, reply) => {
     const { tenantSlug, userId } = request.user;
     const schema = tenantService.getSchemaName(tenantSlug);
-    const body = createRoleSchema.parse(request.body);
+    const body = request.body as z.infer<typeof createRoleSchema>;
     const client = await pool.connect();
 
     try {
@@ -133,9 +118,9 @@ export default async function roleRoutes(app: FastifyInstance) {
     preHandler: [requireRole('admin')],
   }, async (request, reply) => {
     const { tenantSlug } = request.user;
-    const { id } = roleIdParamSchema.parse(request.params);
+    const { id } = request.params as z.infer<typeof roleIdParamSchema>;
     const schema = tenantService.getSchemaName(tenantSlug);
-    const body = updateRoleSchema.parse(request.body);
+    const body = request.body as z.infer<typeof updateRoleSchema>;
     const client = await pool.connect();
 
     try {
@@ -225,7 +210,7 @@ export default async function roleRoutes(app: FastifyInstance) {
     preHandler: [requireRole('admin')],
   }, async (request, reply) => {
     const { tenantSlug } = request.user;
-    const { id } = roleIdParamSchema.parse(request.params);
+    const { id } = request.params as z.infer<typeof roleIdParamSchema>;
     const schema = tenantService.getSchemaName(tenantSlug);
 
     // Check if role exists and is not a system role
