@@ -1,35 +1,8 @@
 import { FastifyInstance } from 'fastify';
-import { z } from 'zod';
 import { healthScoreConfigService, healthScoreService } from '../services/health.js';
 import { requirePermission } from '../middleware/auth.js';
 import { parsePagination, createPaginatedResponse } from '../utils/pagination.js';
-
-// Parameter validation schemas
-const tierParamSchema = z.object({
-  tier: z.enum(['P1', 'P2', 'P3', 'P4']),
-});
-
-const applicationIdParamSchema = z.object({
-  applicationId: z.string().uuid(),
-});
-
-// Query validation schemas (for future use with stricter validation)
-const _listScoresQuerySchema = z.object({
-  page: z.coerce.number().int().positive().optional(),
-  per_page: z.coerce.number().int().min(1).max(100).optional(),
-});
-
-const historyQuerySchema = z.object({
-  days: z.coerce.number().int().min(1).max(365).optional(),
-});
-
-// Update config schema
-const updateConfigSchema = z.object({
-  slaWeight: z.number().min(0).max(100).optional(),
-  issueWeight: z.number().min(0).max(100).optional(),
-  changeWeight: z.number().min(0).max(100).optional(),
-  incidentWeight: z.number().min(0).max(100).optional(),
-});
+import { tierParamSchema, applicationIdParamSchema, historyQuerySchema, updateConfigSchema } from '../schemas/health.js';
 
 export default async function healthRoutes(app: FastifyInstance) {
   // ============================================

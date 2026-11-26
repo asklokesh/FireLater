@@ -1,27 +1,9 @@
 import { FastifyInstance } from 'fastify';
-import { z } from 'zod';
 import { pool } from '../config/database.js';
 import { tenantService } from '../services/tenant.js';
 import { requirePermission, requireRole } from '../middleware/auth.js';
 import { NotFoundError, BadRequestError } from '../utils/errors.js';
-
-const createRoleSchema = z.object({
-  name: z.string().min(2).max(100).regex(/^[a-z_]+$/),
-  displayName: z.string().min(2).max(255),
-  description: z.string().max(1000).optional(),
-  permissionIds: z.array(z.string().uuid()).optional(),
-});
-
-const updateRoleSchema = z.object({
-  displayName: z.string().min(2).max(255).optional(),
-  description: z.string().max(1000).optional(),
-  permissionIds: z.array(z.string().uuid()).optional(),
-});
-
-// Parameter validation schema
-const roleIdParamSchema = z.object({
-  id: z.string().uuid(),
-});
+import { createRoleSchema, updateRoleSchema, roleIdParamSchema } from '../schemas/roles.js';
 
 export default async function roleRoutes(app: FastifyInstance) {
   // List roles

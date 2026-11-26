@@ -1,33 +1,10 @@
 import { FastifyInstance } from 'fastify';
-import { z } from 'zod';
 import { requirePermission } from '../middleware/auth.js';
 import { dataSecurityService } from '../services/data-security.js';
 import { maskingService } from '../lib/masking.js';
 import { NotFoundError } from '../utils/errors.js';
 import { logger } from '../utils/logger.js';
-
-const updateSettingsSchema = z.object({
-  data_residency_region: z.string().max(50).optional(),
-  encryption_key_id: z.string().max(255).nullable().optional(),
-  pii_masking_enabled: z.boolean().optional(),
-  pci_tokenization_enabled: z.boolean().optional(),
-});
-
-const addClassificationSchema = z.object({
-  table_name: z.string().max(100),
-  field_name: z.string().max(100),
-  classification: z.enum(['PII', 'PCI', 'NPI', 'SENSITIVE']),
-  masking_strategy: z.enum(['full', 'partial', 'tokenize', 'hash']),
-  unmask_permission: z.string().max(100).optional(),
-});
-
-const unmaskSchema = z.object({
-  table_name: z.string().max(100),
-  field_name: z.string().max(100),
-  entity_id: z.string().max(255),
-  raw_value: z.string(),
-  reason: z.string().max(1000).optional(),
-});
+import { updateSettingsSchema, addClassificationSchema, unmaskSchema } from '../schemas/data-security.js';
 
 export default async function dataSecurityRoutes(app: FastifyInstance) {
   /**

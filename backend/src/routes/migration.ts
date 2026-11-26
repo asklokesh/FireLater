@@ -4,7 +4,6 @@
  */
 
 import { FastifyPluginAsync } from 'fastify';
-import { z } from 'zod';
 import { migrationService } from '../services/migration/index.js';
 import { authenticate } from '../middleware/auth.js';
 import { BadRequestError } from '../utils/errors.js';
@@ -14,11 +13,7 @@ import type {
   SourceSystem,
   EntityType,
 } from '../services/migration/types.js';
-
-// Parameter validation schemas
-const jobIdParamSchema = z.object({
-  jobId: z.string().uuid(),
-});
+import { jobIdParamSchema } from '../schemas/migration.js';
 
 const migrationRoutes: FastifyPluginAsync = async (fastify) => {
   // Upload and create migration job

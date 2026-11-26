@@ -1,52 +1,15 @@
 import { FastifyInstance } from 'fastify';
-import { z } from 'zod';
 import { groupService } from '../services/groups.js';
 import { requirePermission } from '../middleware/auth.js';
 import { parsePagination, createPaginatedResponse } from '../utils/pagination.js';
-
-const createGroupSchema = z.object({
-  name: z.string().min(2).max(255),
-  description: z.string().max(1000).optional(),
-  type: z.enum(['team', 'department', 'distribution']).optional(),
-  parentId: z.string().uuid().optional(),
-  managerId: z.string().uuid().optional(),
-  email: z.string().email().optional(),
-  settings: z.record(z.unknown()).optional(),
-});
-
-const updateGroupSchema = z.object({
-  name: z.string().min(2).max(255).optional(),
-  description: z.string().max(1000).optional(),
-  type: z.enum(['team', 'department', 'distribution']).optional(),
-  parentId: z.string().uuid().optional(),
-  managerId: z.string().uuid().optional(),
-  email: z.string().email().optional(),
-  settings: z.record(z.unknown()).optional(),
-});
-
-const addMemberSchema = z.object({
-  userId: z.string().uuid(),
-  role: z.enum(['member', 'lead']).optional(),
-});
-
-// Parameter validation schemas
-const groupIdParamSchema = z.object({
-  id: z.string().uuid(),
-});
-
-const groupMemberParamSchema = z.object({
-  id: z.string().uuid(),
-  userId: z.string().uuid(),
-});
-
-// Query parameter validation schema
-const listGroupsQuerySchema = z.object({
-  page: z.coerce.number().int().positive().optional(),
-  per_page: z.coerce.number().int().min(1).max(100).optional(),
-  type: z.enum(['team', 'department', 'distribution']).optional(),
-  search: z.string().max(200).optional(),
-  q: z.string().max(200).optional(),
-});
+import {
+  createGroupSchema,
+  updateGroupSchema,
+  addMemberSchema,
+  groupIdParamSchema,
+  groupMemberParamSchema,
+  listGroupsQuerySchema,
+} from '../schemas/groups.js';
 
 export default async function groupRoutes(app: FastifyInstance) {
   // List groups

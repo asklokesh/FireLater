@@ -1,57 +1,17 @@
 import { FastifyInstance } from 'fastify';
-import { z } from 'zod';
 import { notificationService } from '../services/notifications.js';
 import { requirePermission } from '../middleware/auth.js';
 import { parsePagination, createPaginatedResponse } from '../utils/pagination.js';
-
-const updatePreferenceSchema = z.object({
-  eventType: z.string(),
-  channelId: z.string().uuid(),
-  enabled: z.boolean(),
-});
-
-const createChannelSchema = z.object({
-  name: z.string().min(1).max(255),
-  type: z.enum(['email', 'in_app', 'slack', 'webhook']),
-  integrationId: z.string().uuid().optional(),
-  config: z.record(z.unknown()).optional(),
-  isDefault: z.boolean().optional(),
-});
-
-const updateChannelSchema = z.object({
-  name: z.string().min(1).max(255).optional(),
-  config: z.record(z.unknown()).optional(),
-  isDefault: z.boolean().optional(),
-  isActive: z.boolean().optional(),
-});
-
-const updateTemplateSchema = z.object({
-  subject: z.string().max(500).optional(),
-  bodyTemplate: z.string().optional(),
-  isActive: z.boolean().optional(),
-});
-
-// Parameter validation schemas
-const notificationIdParamSchema = z.object({
-  id: z.string().uuid(),
-});
-
-const channelIdParamSchema = z.object({
-  id: z.string().uuid(),
-});
-
-const templateParamSchema = z.object({
-  eventType: z.string().min(1).max(100),
-  channelType: z.enum(['email', 'in_app', 'slack', 'webhook']),
-});
-
-// Query parameter validation schema
-const listNotificationsQuerySchema = z.object({
-  page: z.coerce.number().int().positive().optional(),
-  per_page: z.coerce.number().int().min(1).max(100).optional(),
-  unread: z.enum(['true', 'false']).optional(),
-  event_type: z.string().max(100).optional(),
-});
+import {
+  updatePreferenceSchema,
+  createChannelSchema,
+  updateChannelSchema,
+  updateTemplateSchema,
+  notificationIdParamSchema,
+  channelIdParamSchema,
+  templateParamSchema,
+  listNotificationsQuerySchema,
+} from '../schemas/notifications.js';
 
 export default async function notificationRoutes(app: FastifyInstance) {
   // Get current user's notifications

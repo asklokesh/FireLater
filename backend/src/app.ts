@@ -5,6 +5,7 @@ import csrf from '@fastify/csrf-protection';
 import { ZodError } from 'zod';
 import authRoutes from './routes/auth.js';
 import { config } from './config/index.js';
+import { registerValidation } from './middleware/validation.js';
 
 /**
  * Build Fastify app instance for testing
@@ -67,6 +68,9 @@ export async function buildApp(): Promise<FastifyInstance> {
       message: process.env.NODE_ENV === 'production' ? 'An unexpected error occurred' : error.message,
     });
   });
+
+  // Unified validation + sanitization for every route registered below
+  registerValidation(app);
 
   // Register auth routes with /auth prefix
   await app.register(authRoutes, { prefix: '/auth' });

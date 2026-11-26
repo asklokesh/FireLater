@@ -1,36 +1,8 @@
 import { FastifyInstance } from 'fastify';
-import { z } from 'zod';
 import { userService } from '../services/users.js';
 import { requirePermission } from '../middleware/auth.js';
 import { parsePagination, createPaginatedResponse } from '../utils/pagination.js';
-
-const createUserSchema = z.object({
-  email: z.string().email(),
-  name: z.string().min(2).max(255),
-  password: z.string().min(8).optional(),
-  phone: z.string().max(50).optional(),
-  timezone: z.string().max(100).optional(),
-  status: z.enum(['active', 'inactive', 'pending']).optional(),
-  roleIds: z.array(z.string().uuid()).optional(),
-});
-
-const updateUserSchema = z.object({
-  name: z.string().min(2).max(255).optional(),
-  phone: z.string().max(50).optional(),
-  timezone: z.string().max(100).optional(),
-  status: z.enum(['active', 'inactive', 'pending']).optional(),
-  avatarUrl: z.string().url().optional(),
-  settings: z.record(z.unknown()).optional(),
-});
-
-const assignRolesSchema = z.object({
-  roleIds: z.array(z.string().uuid()),
-});
-
-// Parameter validation schema
-const userIdParamSchema = z.object({
-  id: z.string().uuid(),
-});
+import { createUserSchema, updateUserSchema, assignRolesSchema, userIdParamSchema } from '../schemas/users.js';
 
 export default async function userRoutes(app: FastifyInstance) {
   // List users

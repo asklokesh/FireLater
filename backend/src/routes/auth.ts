@@ -1,10 +1,20 @@
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
-import { z } from 'zod';
 import { authService } from '../services/auth.js';
 import { tenantService } from '../services/tenant.js';
 import { authenticate } from '../middleware/auth.js';
 import { BadRequestError, ConflictError } from '../utils/errors.js';
 import { logger } from '../utils/logger.js';
+import {
+  loginSchema,
+  refreshSchema,
+  changePasswordSchema,
+  forgotPasswordSchema,
+  resetPasswordSchema,
+  verifyEmailSchema,
+  resendVerificationSchema,
+  registerTenantSchema,
+  registerUserSchema,
+} from '../schemas/auth.js';
 
 // Security warning: log if secure cookies are disabled in production
 const isSecureCookiesDisabled = process.env.NODE_ENV === 'production' && process.env.DISABLE_SECURE_COOKIES === 'true';
@@ -22,57 +32,6 @@ const getRefreshTokenCookieOptions = () => ({
   sameSite: 'strict' as const,
   path: '/',
   maxAge: 7 * 24 * 60 * 60, // 7 days
-});
-
-const loginSchema = z.object({
-  email: z.string().email(),
-  password: z.string().min(1),
-  tenant: z.string().min(1).optional(), // Optional - can come from header
-});
-
-const refreshSchema = z.object({
-  refreshToken: z.string().min(1).optional(), // Optional - can come from cookie
-  tenant: z.string().min(1).optional(), // Optional - can come from header
-});
-
-const changePasswordSchema = z.object({
-  oldPassword: z.string().min(1),
-  newPassword: z.string().min(8),
-});
-
-const forgotPasswordSchema = z.object({
-  tenant: z.string().min(1),
-  email: z.string().email(),
-});
-
-const resetPasswordSchema = z.object({
-  tenant: z.string().min(1),
-  token: z.string().min(1),
-  newPassword: z.string().min(8),
-});
-
-const verifyEmailSchema = z.object({
-  tenant: z.string().min(1),
-  token: z.string().min(1),
-});
-
-const resendVerificationSchema = z.object({
-  tenant: z.string().min(1),
-  email: z.string().email(),
-});
-
-const registerTenantSchema = z.object({
-  tenantName: z.string().min(2).max(255),
-  tenantSlug: z.string().min(2).max(100).regex(/^[a-z0-9-]+$/),
-  adminEmail: z.string().email(),
-  adminName: z.string().min(2).max(255),
-  adminPassword: z.string().min(8),
-});
-
-const registerUserSchema = z.object({
-  email: z.string().email(),
-  password: z.string().min(8),
-  name: z.string().min(2).max(255),
 });
 
 export default async function authRoutes(app: FastifyInstance) {

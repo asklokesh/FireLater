@@ -58,6 +58,7 @@ import { startBulkWorker, stopBulkWorker } from './jobs/processors/bulkOperation
 import { closeBulkQueue } from './jobs/bulkQueue.js';
 import bulkRoutes from './routes/bulk.js';
 import { setupSwagger } from './docs/swagger.js';
+import { registerValidation } from './middleware/validation.js';
 
 const app = Fastify({
   logger: {
@@ -183,6 +184,9 @@ async function registerPlugins() {
     timeWindow: '1 minute',
     redis,
   });
+
+  // Unified validation + sanitization for every route registered after this point
+  registerValidation(app);
 
   // Register multipart only for file upload routes
   // Note: We don't register this globally to avoid interfering with JSON body parsing
@@ -524,6 +528,12 @@ async function start() {
     await registerPlugins();
     registerErrorHandler();
     await registerRoutes();
+
+    const coverage = app.validationCoverage();
+    logger.info({
+      routes: coverage.length,
+      withDedicatedSchema: coverage.filter((r) => r.dedicatedSchema).length,
+    }, 'Request validation active on all registered routes');
 
     logger.info('Testing database connection...');
     const dbOk = await testConnection();

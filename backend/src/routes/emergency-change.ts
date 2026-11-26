@@ -1,33 +1,11 @@
 import { FastifyInstance } from 'fastify';
-import { z } from 'zod';
 import { emergencyChangeService } from '../services/emergency-change.js';
 import { requirePermission } from '../middleware/auth.js';
+import { createEmergencyChangeSchema, postHocReviewSchema, listQuerySchema, idParamSchema } from '../schemas/emergency-change.js';
 
 // ============================================
 // SCHEMAS
 // ============================================
-
-const createEmergencyChangeSchema = z.object({
-  title: z.string().min(5).max(500),
-  description: z.string().min(1).max(10000),
-  emergencyJustification: z.string().min(10).max(5000),
-  linkedIncidentId: z.string().min(1).max(255),
-  implementerId: z.string().uuid().optional(),
-  applicationId: z.string().uuid().optional(),
-});
-
-const postHocReviewSchema = z.object({
-  decision: z.enum(['approved', 'rejected']),
-  comment: z.string().max(5000).optional(),
-});
-
-const listQuerySchema = z.object({
-  post_review_status: z.enum(['pending', 'approved', 'rejected']).optional(),
-});
-
-const idParamSchema = z.object({
-  id: z.string().uuid(),
-});
 
 // ============================================
 // ROUTES

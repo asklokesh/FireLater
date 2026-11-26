@@ -1,40 +1,17 @@
 import { FastifyInstance } from 'fastify';
-import { z } from 'zod';
 import { regulatorySlaService } from '../services/regulatory-sla.js';
 import { requirePermission } from '../middleware/auth.js';
+import {
+  classifyIncidentSchema,
+  recordNotificationSchema,
+  summaryQuerySchema,
+  createFrameworkSchema,
+  createDeadlineSchema,
+} from '../schemas/regulatory-sla.js';
 
 // ============================================
 // VALIDATION SCHEMAS
 // ============================================
-
-const classifyIncidentSchema = z.object({
-  classification: z.string().min(1).max(50),
-  detectedAt: z.string().datetime().optional(),
-});
-
-const recordNotificationSchema = z.object({
-  actorId: z.string().min(1).max(255),
-  recipient: z.string().min(1).max(255),
-  evidence: z.string().min(1).max(5000),
-});
-
-const summaryQuerySchema = z.object({
-  from: z.string().datetime(),
-  to: z.string().datetime(),
-});
-
-const createFrameworkSchema = z.object({
-  code: z.string().min(1).max(50),
-  name: z.string().min(1).max(255),
-  description: z.string().max(2000).optional(),
-});
-
-const createDeadlineSchema = z.object({
-  deadlineType: z.string().min(1).max(50),
-  incidentClassification: z.string().max(50).optional(),
-  hoursFromDetection: z.number().int().positive(),
-  description: z.string().max(2000).optional(),
-});
 
 // ============================================
 // ROUTES
