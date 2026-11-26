@@ -68,6 +68,28 @@ const COLUMNS = [
   ...AUDIT_CONTENT_FIELDS,
 ].join(', ');
 
+/**
+ * First position in [start, end] that no range covers, or null when the
+ * ranges cover all of it. `ranges` must be sorted by start and merged.
+ */
+function firstUncovered(ranges: Array<[number, number]>, start: number, end: number): number | null {
+  let lo = 0;
+  let hi = ranges.length - 1;
+  let found = -1;
+  // Last range starting at or before `start`.
+  while (lo <= hi) {
+    const mid = (lo + hi) >> 1;
+    if (ranges[mid][0] <= start) {
+      found = mid;
+      lo = mid + 1;
+    } else {
+      hi = mid - 1;
+    }
+  }
+  if (found < 0 || ranges[found][1] < start) return start;
+  return ranges[found][1] >= end ? null : ranges[found][1] + 1;
+}
+
 export class AuditChainService {
   /**
    * Compute a SHA-256 hash over a canonical JSON representation of the payload
@@ -246,11 +268,8 @@ export class AuditChainService {
       // Gaps are only legitimate where a retention run recorded purging them.
       const purged = await this.getPurgedRanges(schema);
       for (const gap of gaps) {
-        for (let pos = gap.start; pos <= gap.end; pos++) {
-          if (!purged.some(([a, b]) => pos >= a && pos <= b)) {
-            return broken(gap.index, `chain position ${pos} is missing`);
-          }
-        }
+        const missing = firstUncovered(purged, gap.start, gap.end);
+        if (missing !== null) return broken(gap.index, `chain position ${missing} is missing`);
       }
     }
 
@@ -272,7 +291,15 @@ export class AuditChainService {
     for (const row of result.rows as Array<{ ranges: Array<[number, number]> | null }>) {
       for (const range of row.ranges ?? []) ranges.push([Number(range[0]), Number(range[1])]);
     }
-    return ranges;
+    // Sorted and merged, for firstUncovered.
+    ranges.sort((x, y) => x[0] - y[0]);
+    const merged: Array<[number, number]> = [];
+    for (const [a, b] of ranges) {
+      const last = merged[merged.length - 1];
+      if (last && a <= last[1] + 1) last[1] = Math.max(last[1], b);
+      else merged.push([a, b]);
+    }
+    return merged;
   }
 
   /**
@@ -291,6 +318,8 @@ export class AuditChainService {
         WHERE retention_until IS NOT NULL
           AND retention_until < NOW()
           AND (legal_hold IS NULL OR legal_hold = false)
+          -- retention_run records document the gaps; they are never purged
+          AND action <> 'retention_run'
           -- keep the newest record: it anchors prev_hash for the next write
           AND sequence < (SELECT MAX(sequence) FROM ${schema}.audit_logs)
         RETURNING chain_position`
@@ -300,24 +329,16 @@ export class AuditChainService {
 
     if (purgedCount > 0) {
       logger.info({ tenantSlug, purgedCount }, 'Purged expired audit log records');
-      const positions = ((result.rows ?? []) as Array<{ chain_position: string | number | null }>)
+      const purged: Array<[number, number]> = ((result.rows ?? []) as Array<{ chain_position: string | number | null }>)
         .filter((r) => r.chain_position !== null && r.chain_position !== undefined)
-        .map((r) => Number(r.chain_position))
-        .sort((x, y) => x - y);
-      const purgedPositions: Array<[number, number]> = [];
-      for (const p of positions) {
-        const last = purgedPositions[purgedPositions.length - 1];
-        if (last && p === last[1] + 1) last[1] = p;
-        else if (!last || p > last[1]) purgedPositions.push([p, p]);
-      }
-      // Imported lazily: audit.ts imports this module.
-      const { auditService } = await import('./audit.js');
-      await auditService.logSafe(tenantSlug, {
-        action: 'retention_run',
-        entityType: 'audit_log',
-        severity: 'medium',
-        metadata: { purgedLive: purgedCount, purgedArchive: 0, deletedCount: purgedCount, purgedPositions },
-      });
+        .map((r) => [Number(r.chain_position), Number(r.chain_position)]);
+      // Imported lazily: audit-retention imports audit.ts, which imports this module.
+      const { recordRetentionRun } = await import('./audit-retention.js');
+      await recordRetentionRun(
+        tenantSlug,
+        { metadata: { purgedLive: purgedCount, purgedArchive: 0, deletedCount: purgedCount } },
+        purged
+      );
     }
 
     return purgedCount;
