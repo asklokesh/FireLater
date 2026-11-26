@@ -2,6 +2,7 @@ import { Job, Worker } from 'bullmq';
 import { config } from '../../config/index.js';
 import { pool } from '../../config/database.js';
 import { logger } from '../../utils/logger.js';
+import { captureJobFailure } from '../../lib/jobErrors.js';
 import { tenantService } from '../../services/tenant.js';
 
 // Redis connection for worker
@@ -203,6 +204,7 @@ cleanupWorker.on('completed', (job, result) => {
 });
 
 cleanupWorker.on('failed', (job, err) => {
+  captureJobFailure('job.cleanup', job, err);
   logger.error({ jobId: job?.id, err }, 'Cleanup job failed');
 });
 

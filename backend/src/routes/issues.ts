@@ -85,6 +85,7 @@ const listIssuesQuerySchema = z.object({
 export default async function issueRoutes(app: FastifyInstance) {
   // List issues
   app.get('/', {
+    config: { replayOnTransientError: true },
     preHandler: [requirePermission('issues:read')],
   }, async (request, reply) => {
     const { tenantSlug } = request.user;
@@ -111,6 +112,7 @@ export default async function issueRoutes(app: FastifyInstance) {
 
   // Get issue by ID
   app.get<{ Params: { id: string } }>('/:id', {
+    config: { replayOnTransientError: true },
     preHandler: [requirePermission('issues:read')],
   }, async (request, reply) => {
     const { tenantSlug } = request.user;
