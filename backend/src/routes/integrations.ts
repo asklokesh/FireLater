@@ -1,5 +1,4 @@
 import { FastifyInstance } from 'fastify';
-import { z } from 'zod';
 import {
   apiKeysService,
   webhooksService,
@@ -8,83 +7,32 @@ import {
   INTEGRATION_TYPES,
 } from '../services/integrations.js';
 import { authenticate } from '../middleware/auth.js';
+import { validate } from '../middleware/validation.js';
+import {
+  createApiKeySchema,
+  createWebhookSchema,
+  validateApiKeySchema,
+  createIntegrationSchema,
+  updateApiKeySchema,
+  updateIntegrationSchema,
+  updateWebhookSchema,
+  type CreateApiKeyInput,
+  type CreateWebhookInput,
+  type CreateIntegrationInput,
+  type UpdateApiKeyInput,
+  type UpdateIntegrationInput,
+  type UpdateWebhookInput,
+} from '../schemas/integrations.js';
+
+// re-exported for existing importers/tests
+export { createApiKeySchema, createWebhookSchema };
 
 // ============================================
 // INTEGRATIONS, WEBHOOKS & API KEYS ROUTES
 // ============================================
 
-// API Key Schemas
-export const createApiKeySchema = z.object({
-  name: z.string().min(1).max(100),
-  description: z.string().max(500).optional(),
-  permissions: z.array(z.string()).optional(),
-  rateLimit: z.number().int().min(1).max(100000).optional(),
-  expiresAt: z.string().datetime().optional(),
-  ipWhitelist: z.array(z.string()).optional(),
-});
-
-const updateApiKeySchema = z.object({
-  name: z.string().min(1).max(100).optional(),
-  description: z.string().max(500).optional().nullable(),
-  permissions: z.array(z.string()).optional(),
-  rateLimit: z.number().int().min(1).max(100000).optional(),
-  isActive: z.boolean().optional(),
-  expiresAt: z.string().datetime().optional().nullable(),
-  ipWhitelist: z.array(z.string()).optional(),
-});
-
-// Webhook Schemas
-export const createWebhookSchema = z.object({
-  name: z.string().min(1).max(100),
-  description: z.string().max(500).optional(),
-  url: z.string().url().max(2048),
-  secret: z.string().max(255).optional(),
-  events: z.array(z.string()).min(1),
-  filters: z.record(z.any()).optional(),
-  retryCount: z.number().int().min(0).max(10).optional(),
-  retryDelay: z.number().int().min(1).max(3600).optional(),
-  timeout: z.number().int().min(1).max(120).optional(),
-  customHeaders: z.record(z.string()).optional(),
-});
-
-const updateWebhookSchema = z.object({
-  name: z.string().min(1).max(100).optional(),
-  description: z.string().max(500).optional().nullable(),
-  url: z.string().url().max(2048).optional(),
-  secret: z.string().max(255).optional().nullable(),
-  events: z.array(z.string()).min(1).optional(),
-  filters: z.record(z.any()).optional(),
-  isActive: z.boolean().optional(),
-  retryCount: z.number().int().min(0).max(10).optional(),
-  retryDelay: z.number().int().min(1).max(3600).optional(),
-  timeout: z.number().int().min(1).max(120).optional(),
-  customHeaders: z.record(z.string()).optional(),
-});
-
 // Integration Schemas
-const createIntegrationSchema = z.object({
-  name: z.string().min(1).max(100),
-  type: z.string().min(1).max(50),
-  description: z.string().max(500).optional(),
-  config: z.record(z.any()).optional(),
-  credentials: z.record(z.any()).optional(),
-  syncEnabled: z.boolean().optional(),
-  syncInterval: z.number().int().min(1).max(1440).optional(),
-  syncDirection: z.enum(['inbound', 'outbound', 'both']).optional(),
-  fieldMappings: z.record(z.any()).optional(),
-});
 
-const updateIntegrationSchema = z.object({
-  name: z.string().min(1).max(100).optional(),
-  description: z.string().max(500).optional().nullable(),
-  config: z.record(z.any()).optional(),
-  credentials: z.record(z.any()).optional(),
-  isActive: z.boolean().optional(),
-  syncEnabled: z.boolean().optional(),
-  syncInterval: z.number().int().min(1).max(1440).optional(),
-  syncDirection: z.enum(['inbound', 'outbound', 'both']).optional(),
-  fieldMappings: z.record(z.any()).optional(),
-});
 
 // Export schemas for testing
 export { updateWebhookSchema, createIntegrationSchema, updateIntegrationSchema };
@@ -130,9 +78,9 @@ export default async function integrationsRoutes(fastify: FastifyInstance) {
   });
 
   // Create API key
-  fastify.post('/api-keys', { preHandler: [authenticate] }, async (request, reply) => {
+  fastify.post('/api-keys', { preHandler: [authenticate, validate({ body: createApiKeySchema })] }, async (request, reply) => {
     const { tenantSlug, userId } = request.user;
-    const body = createApiKeySchema.parse(request.body);
+    const body = request.body as CreateApiKeyInput;
 
     try {
       const result = await apiKeysService.create(tenantSlug, userId, {
@@ -157,10 +105,10 @@ export default async function integrationsRoutes(fastify: FastifyInstance) {
   });
 
   // Update API key
-  fastify.patch('/api-keys/:id', { preHandler: [authenticate] }, async (request, reply) => {
+  fastify.patch('/api-keys/:id', { preHandler: [authenticate, validate({ body: updateApiKeySchema })] }, async (request, reply) => {
     const { tenantSlug } = request.user;
     const { id } = request.params as { id: string };
-    const body = updateApiKeySchema.parse(request.body);
+    const body = request.body as UpdateApiKeyInput;
 
     try {
       const key = await apiKeysService.update(tenantSlug, id, {
@@ -204,7 +152,7 @@ export default async function integrationsRoutes(fastify: FastifyInstance) {
   });
 
   // Validate API key (for testing)
-  fastify.post('/api-keys/validate', { preHandler: [authenticate] }, async (request, reply) => {
+  fastify.post('/api-keys/validate', { preHandler: [authenticate, validate({ body: validateApiKeySchema })] }, async (request, reply) => {
     const { tenantSlug } = request.user;
     const body = request.body as { key: string };
 
@@ -243,9 +191,9 @@ export default async function integrationsRoutes(fastify: FastifyInstance) {
   });
 
   // Create webhook
-  fastify.post('/webhooks', { preHandler: [authenticate] }, async (request, reply) => {
+  fastify.post('/webhooks', { preHandler: [authenticate, validate({ body: createWebhookSchema })] }, async (request, reply) => {
     const { tenantSlug, userId } = request.user;
-    const body = createWebhookSchema.parse(request.body);
+    const body = request.body as CreateWebhookInput;
 
     try {
       const webhook = await webhooksService.create(tenantSlug, userId, {
@@ -269,10 +217,10 @@ export default async function integrationsRoutes(fastify: FastifyInstance) {
   });
 
   // Update webhook
-  fastify.patch('/webhooks/:id', { preHandler: [authenticate] }, async (request, reply) => {
+  fastify.patch('/webhooks/:id', { preHandler: [authenticate, validate({ body: updateWebhookSchema })] }, async (request, reply) => {
     const { tenantSlug } = request.user;
     const { id } = request.params as { id: string };
-    const body = updateWebhookSchema.parse(request.body);
+    const body = request.body as UpdateWebhookInput;
 
     try {
       const webhook = await webhooksService.update(tenantSlug, id, {
@@ -389,9 +337,9 @@ export default async function integrationsRoutes(fastify: FastifyInstance) {
   });
 
   // Create integration
-  fastify.post('/', { preHandler: [authenticate] }, async (request, reply) => {
+  fastify.post('/', { preHandler: [authenticate, validate({ body: createIntegrationSchema })] }, async (request, reply) => {
     const { tenantSlug, userId } = request.user;
-    const body = createIntegrationSchema.parse(request.body);
+    const body = request.body as CreateIntegrationInput;
 
     try {
       const integration = await integrationsService.create(tenantSlug, userId, {
@@ -414,10 +362,10 @@ export default async function integrationsRoutes(fastify: FastifyInstance) {
   });
 
   // Update integration
-  fastify.patch('/:id', { preHandler: [authenticate] }, async (request, reply) => {
+  fastify.patch('/:id', { preHandler: [authenticate, validate({ body: updateIntegrationSchema })] }, async (request, reply) => {
     const { tenantSlug } = request.user;
     const { id } = request.params as { id: string };
-    const body = updateIntegrationSchema.parse(request.body);
+    const body = request.body as UpdateIntegrationInput;
 
     try {
       const integration = await integrationsService.update(tenantSlug, id, {

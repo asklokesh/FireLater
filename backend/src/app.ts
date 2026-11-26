@@ -3,6 +3,7 @@ import cookie from '@fastify/cookie';
 import jwt from '@fastify/jwt';
 import csrf from '@fastify/csrf-protection';
 import authRoutes from './routes/auth.js';
+import { validationPlugin } from './middleware/validation.js';
 import { config } from './config/index.js';
 import errorHandlerPlugin from './plugins/errorHandler.js';
 
@@ -38,6 +39,8 @@ export async function buildApp(): Promise<FastifyInstance> {
 
   // Global error handler (centralized)
   await app.register(errorHandlerPlugin);
+
+  await app.register(validationPlugin);
 
   // Register auth routes with /auth prefix
   await app.register(authRoutes, { prefix: '/auth' });

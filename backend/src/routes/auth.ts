@@ -1,9 +1,17 @@
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
-import { z } from 'zod';
 import { authService } from '../services/auth.js';
 import { tenantService } from '../services/tenant.js';
+import { validate } from '../middleware/validation.js';
 import { authenticate } from '../middleware/auth.js';
 import { BadRequestError, ConflictError } from '../utils/errors.js';
+import {
+  loginSchema, refreshSchema, changePasswordSchema, forgotPasswordSchema, resetPasswordSchema,
+  verifyEmailSchema, resendVerificationSchema, registerTenantSchema, registerUserSchema,
+  type LoginInput, type RefreshInput, type ChangePasswordInput, type ForgotPasswordInput,
+  type ResetPasswordInput, type VerifyEmailInput, type ResendVerificationInput,
+  type RegisterUserInput,
+  type RegisterTenantInput,
+} from '../schemas/auth.js';
 import { logger } from '../utils/logger.js';
 import { auditService } from '../services/audit.js';
 
@@ -25,65 +33,19 @@ const getRefreshTokenCookieOptions = () => ({
   maxAge: 7 * 24 * 60 * 60, // 7 days
 });
 
-const loginSchema = z.object({
-  email: z.string().email(),
-  password: z.string().min(1),
-  tenant: z.string().min(1).optional(), // Optional - can come from header
-});
-
-const refreshSchema = z.object({
-  refreshToken: z.string().min(1).optional(), // Optional - can come from cookie
-  tenant: z.string().min(1).optional(), // Optional - can come from header
-});
-
-const changePasswordSchema = z.object({
-  oldPassword: z.string().min(1),
-  newPassword: z.string().min(8),
-});
-
-const forgotPasswordSchema = z.object({
-  tenant: z.string().min(1),
-  email: z.string().email(),
-});
-
-const resetPasswordSchema = z.object({
-  tenant: z.string().min(1),
-  token: z.string().min(1),
-  newPassword: z.string().min(8),
-});
-
-const verifyEmailSchema = z.object({
-  tenant: z.string().min(1),
-  token: z.string().min(1),
-});
-
-const resendVerificationSchema = z.object({
-  tenant: z.string().min(1),
-  email: z.string().email(),
-});
-
-const registerTenantSchema = z.object({
-  tenantName: z.string().min(2).max(255),
-  tenantSlug: z.string().min(2).max(100).regex(/^[a-z0-9-]+$/),
-  adminEmail: z.string().email(),
-  adminName: z.string().min(2).max(255),
-  adminPassword: z.string().min(8),
-});
-
-const registerUserSchema = z.object({
-  email: z.string().email(),
-  password: z.string().min(8),
-  name: z.string().min(2).max(255),
-});
-
 export default async function authRoutes(app: FastifyInstance) {
   // Register endpoint - handles both tenant creation and user registration
-  app.post('/register', async (request: FastifyRequest, reply: FastifyReply) => {
+  // Body schema depends on the x-tenant-slug header (user vs tenant registration).
+  app.post('/register', {
+    preHandler: [validate({
+      body: (request) => (request.headers['x-tenant-slug'] ? registerUserSchema : registerTenantSchema),
+    })],
+  }, async (request: FastifyRequest, reply: FastifyReply) => {
     const tenantSlug = request.headers['x-tenant-slug'] as string | undefined;
 
     // If tenant slug in header, this is user registration in existing tenant
     if (tenantSlug) {
-      const body = registerUserSchema.parse(request.body);
+      const body = request.body as RegisterUserInput;
       const schema = tenantService.getSchemaName(tenantSlug);
 
       // Register user in tenant
@@ -131,7 +93,7 @@ export default async function authRoutes(app: FastifyInstance) {
       });
     } else {
       // No tenant slug - this is tenant registration
-      const body = registerTenantSchema.parse(request.body);
+      const body = request.body as RegisterTenantInput;
 
       const tenant = await tenantService.create({
         name: body.tenantName,
@@ -163,8 +125,10 @@ export default async function authRoutes(app: FastifyInstance) {
   });
 
   // Login
-  app.post('/login', async (request: FastifyRequest, reply: FastifyReply) => {
-    const body = loginSchema.parse(request.body);
+  app.post('/login', {
+    preHandler: [validate({ body: loginSchema })],
+  }, async (request: FastifyRequest, reply: FastifyReply) => {
+    const body = request.body as LoginInput;
     const tenantSlug = (request.headers['x-tenant-slug'] as string) || body.tenant;
 
     if (!tenantSlug) {
@@ -237,8 +201,10 @@ export default async function authRoutes(app: FastifyInstance) {
   });
 
   // Refresh token
-  app.post('/refresh', async (request: FastifyRequest, reply: FastifyReply) => {
-    const body = refreshSchema.parse(request.body);
+  app.post('/refresh', {
+    preHandler: [validate({ body: refreshSchema })],
+  }, async (request: FastifyRequest, reply: FastifyReply) => {
+    const body = request.body as RefreshInput;
     const refreshToken = body.refreshToken || request.cookies.refreshToken;
     const tenantSlug = (request.headers['x-tenant-slug'] as string) || body.tenant;
 
@@ -302,9 +268,9 @@ export default async function authRoutes(app: FastifyInstance) {
 
   // Change password
   app.put('/password', {
-    preHandler: [authenticate],
+    preHandler: [authenticate, validate({ body: changePasswordSchema })],
   }, async (request: FastifyRequest, reply: FastifyReply) => {
-    const body = changePasswordSchema.parse(request.body);
+    const body = request.body as ChangePasswordInput;
     const { userId, tenantSlug } = request.user;
     const schema = tenantService.getSchemaName(tenantSlug);
 
@@ -319,8 +285,10 @@ export default async function authRoutes(app: FastifyInstance) {
   });
 
   // Forgot password - request reset token
-  app.post('/forgot-password', async (request: FastifyRequest, reply: FastifyReply) => {
-    const body = forgotPasswordSchema.parse(request.body);
+  app.post('/forgot-password', {
+    preHandler: [validate({ body: forgotPasswordSchema })],
+  }, async (request: FastifyRequest, reply: FastifyReply) => {
+    const body = request.body as ForgotPasswordInput;
 
     await authService.requestPasswordReset(body.tenant, body.email);
 
@@ -331,8 +299,10 @@ export default async function authRoutes(app: FastifyInstance) {
   });
 
   // Reset password with token
-  app.post('/reset-password', async (request: FastifyRequest, reply: FastifyReply) => {
-    const body = resetPasswordSchema.parse(request.body);
+  app.post('/reset-password', {
+    preHandler: [validate({ body: resetPasswordSchema })],
+  }, async (request: FastifyRequest, reply: FastifyReply) => {
+    const body = request.body as ResetPasswordInput;
 
     await authService.resetPassword(body.tenant, body.token, body.newPassword);
 
@@ -340,8 +310,10 @@ export default async function authRoutes(app: FastifyInstance) {
   });
 
   // Verify email
-  app.post('/verify-email', async (request: FastifyRequest, reply: FastifyReply) => {
-    const body = verifyEmailSchema.parse(request.body);
+  app.post('/verify-email', {
+    preHandler: [validate({ body: verifyEmailSchema })],
+  }, async (request: FastifyRequest, reply: FastifyReply) => {
+    const body = request.body as VerifyEmailInput;
 
     const result = await authService.verifyEmail(body.tenant, body.token);
 
@@ -352,8 +324,10 @@ export default async function authRoutes(app: FastifyInstance) {
   });
 
   // Resend verification email
-  app.post('/resend-verification', async (request: FastifyRequest, reply: FastifyReply) => {
-    const body = resendVerificationSchema.parse(request.body);
+  app.post('/resend-verification', {
+    preHandler: [validate({ body: resendVerificationSchema })],
+  }, async (request: FastifyRequest, reply: FastifyReply) => {
+    const body = request.body as ResendVerificationInput;
 
     await authService.resendVerificationEmail(body.tenant, body.email);
 

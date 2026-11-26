@@ -1,5 +1,4 @@
 import { FastifyInstance } from 'fastify';
-import { z } from 'zod';
 import {
   cloudAccountService,
   cloudResourceService,
@@ -8,106 +7,51 @@ import {
 } from '../services/cloud.js';
 import { requirePermission } from '../middleware/auth.js';
 import { parsePagination, createPaginatedResponse } from '../utils/pagination.js';
+import { validate } from '../middleware/validation.js';
+import {
+  accountIdParamSchema,
+  applicationCostsQuerySchema,
+  applicationIdParamSchema,
+  createAccountSchema,
+  createMappingRuleSchema,
+  listAccountsQuerySchema,
+  listCostsQuerySchema,
+  listResourcesQuerySchema,
+  mapResourceSchema,
+  mappingRuleIdParamSchema,
+  resourceIdParamSchema,
+  updateAccountSchema,
+  type AccountIdParamInput,
+  type ApplicationCostsQueryInput,
+  type ApplicationIdParamInput,
+  type CreateAccountInput,
+  type CreateMappingRuleInput,
+  type MapResourceInput,
+  type MappingRuleIdParamInput,
+  type ResourceIdParamInput,
+  type UpdateAccountInput,
+  type ListAccountsQueryInput,
+  type ListResourcesQueryInput,
+  type ListCostsQueryInput,
+} from '../schemas/cloud.js';
 
 // ============================================
 // SCHEMAS
 // ============================================
 
-const createAccountSchema = z.object({
-  provider: z.enum(['aws', 'azure', 'gcp']),
-  accountId: z.string().min(1),
-  name: z.string().min(1).max(255),
-  description: z.string().max(1000).optional(),
-  credentialType: z.enum(['access_key', 'role_arn', 'service_account']),
-  credentials: z.record(z.unknown()).optional(),
-  roleArn: z.string().optional(),
-  externalId: z.string().optional(),
-  syncEnabled: z.boolean().optional(),
-  syncInterval: z.number().min(300).optional(),
-  syncResources: z.boolean().optional(),
-  syncCosts: z.boolean().optional(),
-  syncMetrics: z.boolean().optional(),
-  regions: z.array(z.string()).optional(),
-});
 
-const updateAccountSchema = z.object({
-  name: z.string().min(1).max(255).optional(),
-  description: z.string().max(1000).optional(),
-  credentialType: z.enum(['access_key', 'role_arn', 'service_account']).optional(),
-  credentials: z.record(z.unknown()).optional(),
-  roleArn: z.string().optional(),
-  externalId: z.string().optional(),
-  syncEnabled: z.boolean().optional(),
-  syncInterval: z.number().min(300).optional(),
-  syncResources: z.boolean().optional(),
-  syncCosts: z.boolean().optional(),
-  syncMetrics: z.boolean().optional(),
-  regions: z.array(z.string()).optional(),
-});
 
-const mapResourceSchema = z.object({
-  applicationId: z.string().uuid(),
-  environmentId: z.string().uuid().optional(),
-});
 
-const createMappingRuleSchema = z.object({
-  name: z.string().min(1).max(255),
-  description: z.string().max(1000).optional(),
-  priority: z.number().min(1).optional(),
-  provider: z.enum(['aws', 'azure', 'gcp']).optional(),
-  resourceType: z.string().optional(),
-  tagKey: z.string().min(1),
-  tagValuePattern: z.string().optional(),
-  applicationId: z.string().uuid(),
-  environmentType: z.string().optional(),
-});
 
 // Parameter validation schemas
-const accountIdParamSchema = z.object({
-  id: z.string().uuid(),
-});
 
-const resourceIdParamSchema = z.object({
-  id: z.string().uuid(),
-});
 
-const applicationIdParamSchema = z.object({
-  applicationId: z.string().uuid(),
-});
 
-const mappingRuleIdParamSchema = z.object({
-  id: z.string().uuid(),
-});
 
 // Query validation schemas
-const listAccountsQuerySchema = z.object({
-  page: z.coerce.number().int().positive().optional(),
-  per_page: z.coerce.number().int().min(1).max(100).optional(),
-  provider: z.enum(['aws', 'azure', 'gcp']).optional(),
-  status: z.enum(['active', 'inactive', 'error']).optional(),
-});
 
-const listResourcesQuerySchema = z.object({
-  page: z.coerce.number().int().positive().optional(),
-  per_page: z.coerce.number().int().min(1).max(100).optional(),
-  cloud_account_id: z.string().uuid().optional(),
-  resource_type: z.string().max(100).optional(),
-  application_id: z.string().uuid().optional(),
-  environment_id: z.string().uuid().optional(),
-  region: z.string().max(50).optional(),
-  is_deleted: z.enum(['true', 'false']).optional(),
-});
 
-const listCostsQuerySchema = z.object({
-  page: z.coerce.number().int().positive().optional(),
-  per_page: z.coerce.number().int().min(1).max(100).optional(),
-  cloud_account_id: z.string().uuid().optional(),
-  period_type: z.enum(['daily', 'weekly', 'monthly']).optional(),
-});
 
-const applicationCostsQuerySchema = z.object({
-  period_type: z.enum(['daily', 'weekly', 'monthly']).optional(),
-});
 
 export default async function cloudRoutes(app: FastifyInstance) {
   // ============================================
@@ -116,13 +60,13 @@ export default async function cloudRoutes(app: FastifyInstance) {
 
   // List cloud accounts
   app.get('/accounts', {
-    preHandler: [requirePermission('cloud_accounts:read')],
+    preHandler: [requirePermission('cloud_accounts:read'), validate({ query: listAccountsQuerySchema })],
   }, async (request, reply) => {
     const { tenantSlug } = request.user;
     const query = request.query as Record<string, string>;
 
     // Validate query parameters
-    const validatedQuery = listAccountsQuerySchema.parse(query);
+    const validatedQuery = request.query as ListAccountsQueryInput;
     const pagination = parsePagination(query);
 
     const { accounts, total } = await cloudAccountService.list(tenantSlug, pagination, {
@@ -134,10 +78,10 @@ export default async function cloudRoutes(app: FastifyInstance) {
 
   // Get cloud account
   app.get<{ Params: { id: string } }>('/accounts/:id', {
-    preHandler: [requirePermission('cloud_accounts:read')],
+    preHandler: [requirePermission('cloud_accounts:read'), validate({ params: accountIdParamSchema })],
   }, async (request, reply) => {
     const { tenantSlug } = request.user;
-    const { id } = accountIdParamSchema.parse(request.params);
+    const { id } = request.params as AccountIdParamInput;
 
     const account = await cloudAccountService.findById(tenantSlug, id);
 
@@ -154,21 +98,21 @@ export default async function cloudRoutes(app: FastifyInstance) {
 
   // Create cloud account
   app.post('/accounts', {
-    preHandler: [requirePermission('cloud_accounts:manage')],
+    preHandler: [requirePermission('cloud_accounts:manage'), validate({ body: createAccountSchema })],
   }, async (request, reply) => {
     const { tenantSlug } = request.user;
-    const data = createAccountSchema.parse(request.body);
+    const data = request.body as CreateAccountInput;
     const account = await cloudAccountService.create(tenantSlug, data);
     reply.status(201).send({ account });
   });
 
   // Update cloud account
   app.put<{ Params: { id: string } }>('/accounts/:id', {
-    preHandler: [requirePermission('cloud_accounts:manage')],
+    preHandler: [requirePermission('cloud_accounts:manage'), validate({ params: accountIdParamSchema, body: updateAccountSchema })],
   }, async (request, reply) => {
     const { tenantSlug } = request.user;
-    const { id } = accountIdParamSchema.parse(request.params);
-    const data = updateAccountSchema.parse(request.body);
+    const { id } = request.params as AccountIdParamInput;
+    const data = request.body as UpdateAccountInput;
 
     const account = await cloudAccountService.update(tenantSlug, id, data);
     reply.send({ account });
@@ -176,10 +120,10 @@ export default async function cloudRoutes(app: FastifyInstance) {
 
   // Delete cloud account
   app.delete<{ Params: { id: string } }>('/accounts/:id', {
-    preHandler: [requirePermission('cloud_accounts:manage')],
+    preHandler: [requirePermission('cloud_accounts:manage'), validate({ params: accountIdParamSchema })],
   }, async (request, reply) => {
     const { tenantSlug } = request.user;
-    const { id } = accountIdParamSchema.parse(request.params);
+    const { id } = request.params as AccountIdParamInput;
 
     await cloudAccountService.delete(tenantSlug, id);
     reply.status(204).send();
@@ -187,10 +131,10 @@ export default async function cloudRoutes(app: FastifyInstance) {
 
   // Test cloud account connection
   app.post<{ Params: { id: string } }>('/accounts/:id/test', {
-    preHandler: [requirePermission('cloud_accounts:manage')],
+    preHandler: [requirePermission('cloud_accounts:manage'), validate({ params: accountIdParamSchema })],
   }, async (request, reply) => {
     const { tenantSlug } = request.user;
-    const { id } = accountIdParamSchema.parse(request.params);
+    const { id } = request.params as AccountIdParamInput;
 
     const result = await cloudAccountService.testConnection(tenantSlug, id);
     reply.send(result);
@@ -202,13 +146,13 @@ export default async function cloudRoutes(app: FastifyInstance) {
 
   // List cloud resources
   app.get('/resources', {
-    preHandler: [requirePermission('cloud_resources:read')],
+    preHandler: [requirePermission('cloud_resources:read'), validate({ query: listResourcesQuerySchema })],
   }, async (request, reply) => {
     const { tenantSlug } = request.user;
     const query = request.query as Record<string, string>;
 
     // Validate query parameters
-    const validatedQuery = listResourcesQuerySchema.parse(query);
+    const validatedQuery = request.query as ListResourcesQueryInput;
     const pagination = parsePagination(query);
 
     const { resources, total } = await cloudResourceService.list(tenantSlug, pagination, {
@@ -233,10 +177,10 @@ export default async function cloudRoutes(app: FastifyInstance) {
 
   // Get cloud resource
   app.get<{ Params: { id: string } }>('/resources/:id', {
-    preHandler: [requirePermission('cloud_resources:read')],
+    preHandler: [requirePermission('cloud_resources:read'), validate({ params: resourceIdParamSchema })],
   }, async (request, reply) => {
     const { tenantSlug } = request.user;
-    const { id } = resourceIdParamSchema.parse(request.params);
+    const { id } = request.params as ResourceIdParamInput;
 
     const resource = await cloudResourceService.findById(tenantSlug, id);
 
@@ -253,11 +197,11 @@ export default async function cloudRoutes(app: FastifyInstance) {
 
   // Map resource to application
   app.post<{ Params: { id: string } }>('/resources/:id/map', {
-    preHandler: [requirePermission('cloud_resources:manage')],
+    preHandler: [requirePermission('cloud_resources:manage'), validate({ params: resourceIdParamSchema, body: mapResourceSchema })],
   }, async (request, reply) => {
     const { tenantSlug } = request.user;
-    const { id } = resourceIdParamSchema.parse(request.params);
-    const { applicationId, environmentId } = mapResourceSchema.parse(request.body);
+    const { id } = request.params as ResourceIdParamInput;
+    const { applicationId, environmentId } = request.body as MapResourceInput;
 
     const resource = await cloudResourceService.mapToApplication(
       tenantSlug,
@@ -270,10 +214,10 @@ export default async function cloudRoutes(app: FastifyInstance) {
 
   // Unmap resource from application
   app.delete<{ Params: { id: string } }>('/resources/:id/map', {
-    preHandler: [requirePermission('cloud_resources:manage')],
+    preHandler: [requirePermission('cloud_resources:manage'), validate({ params: resourceIdParamSchema })],
   }, async (request, reply) => {
     const { tenantSlug } = request.user;
-    const { id } = resourceIdParamSchema.parse(request.params);
+    const { id } = request.params as ResourceIdParamInput;
 
     const resource = await cloudResourceService.unmapFromApplication(tenantSlug, id);
     reply.send({ resource });
@@ -281,10 +225,10 @@ export default async function cloudRoutes(app: FastifyInstance) {
 
   // Get resources by application
   app.get<{ Params: { applicationId: string } }>('/applications/:applicationId/resources', {
-    preHandler: [requirePermission('cloud_resources:read')],
+    preHandler: [requirePermission('cloud_resources:read'), validate({ params: applicationIdParamSchema })],
   }, async (request, reply) => {
     const { tenantSlug } = request.user;
-    const { applicationId } = applicationIdParamSchema.parse(request.params);
+    const { applicationId } = request.params as ApplicationIdParamInput;
 
     const resources = await cloudResourceService.getResourcesByApplication(
       tenantSlug,
@@ -299,13 +243,13 @@ export default async function cloudRoutes(app: FastifyInstance) {
 
   // List cost reports
   app.get('/costs', {
-    preHandler: [requirePermission('cloud_costs:read')],
+    preHandler: [requirePermission('cloud_costs:read'), validate({ query: listCostsQuerySchema })],
   }, async (request, reply) => {
     const { tenantSlug } = request.user;
     const query = request.query as Record<string, string>;
 
     // Validate query parameters
-    const validatedQuery = listCostsQuerySchema.parse(query);
+    const validatedQuery = request.query as ListCostsQueryInput;
     const pagination = parsePagination(query);
 
     const { costs, total } = await cloudCostService.getCostSummary(tenantSlug, pagination, {
@@ -317,11 +261,11 @@ export default async function cloudRoutes(app: FastifyInstance) {
 
   // Get costs by application
   app.get<{ Params: { applicationId: string }; Querystring: { period_type?: string } }>('/applications/:applicationId/costs', {
-    preHandler: [requirePermission('cloud_costs:read')],
+    preHandler: [requirePermission('cloud_costs:read'), validate({ params: applicationIdParamSchema, query: applicationCostsQuerySchema })],
   }, async (request, reply) => {
     const { tenantSlug } = request.user;
-    const { applicationId } = applicationIdParamSchema.parse(request.params);
-    const queryParams = applicationCostsQuerySchema.parse(request.query);
+    const { applicationId } = request.params as ApplicationIdParamInput;
+    const queryParams = request.query as ApplicationCostsQueryInput;
     const periodType = queryParams.period_type || 'monthly';
 
     const costs = await cloudCostService.getCostsByApplication(
@@ -347,20 +291,20 @@ export default async function cloudRoutes(app: FastifyInstance) {
 
   // Create mapping rule
   app.post('/mapping-rules', {
-    preHandler: [requirePermission('cloud_resources:manage')],
+    preHandler: [requirePermission('cloud_resources:manage'), validate({ body: createMappingRuleSchema })],
   }, async (request, reply) => {
     const { tenantSlug } = request.user;
-    const data = createMappingRuleSchema.parse(request.body);
+    const data = request.body as CreateMappingRuleInput;
     const rule = await cloudMappingRuleService.create(tenantSlug, data);
     reply.status(201).send({ rule });
   });
 
   // Delete mapping rule
   app.delete<{ Params: { id: string } }>('/mapping-rules/:id', {
-    preHandler: [requirePermission('cloud_resources:manage')],
+    preHandler: [requirePermission('cloud_resources:manage'), validate({ params: mappingRuleIdParamSchema })],
   }, async (request, reply) => {
     const { tenantSlug } = request.user;
-    const { id } = mappingRuleIdParamSchema.parse(request.params);
+    const { id } = request.params as MappingRuleIdParamInput;
 
     await cloudMappingRuleService.delete(tenantSlug, id);
     reply.status(204).send();

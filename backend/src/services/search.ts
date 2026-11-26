@@ -17,13 +17,14 @@ import {
   validateFilterTree,
   type FilterGroup,
 } from '../lib/search/filters.js';
+import { MAX_PER_PAGE } from '../schemas/search.js';
 import { buildPrefixTsQuery, normalizeQuery, parseSearchQuery } from '../lib/search/query-parser.js';
 
 // ============================================
 // LIMITS (performance guards for large datasets)
 // ============================================
 
-export const MAX_PER_PAGE = 100;
+export { MAX_PER_PAGE };
 /** Deepest result reachable by paging (page * perPage). */
 export const MAX_RESULT_WINDOW = 1000;
 /** Per-statement timeout so a pathological query cannot hold a connection. */

@@ -1,84 +1,44 @@
 import { FastifyInstance } from 'fastify';
-import { z } from 'zod';
 import { applicationService } from '../services/applications.js';
 import { requirePermission } from '../middleware/auth.js';
 import { parsePagination, createPaginatedResponse } from '../utils/pagination.js';
+import { validate } from '../middleware/validation.js';
+import {
+  appEnvParamSchema,
+  appIdParamSchema,
+  createApplicationSchema,
+  createEnvironmentSchema,
+  listAppsQuerySchema,
+  updateApplicationSchema,
+  updateEnvironmentSchema,
+  type AppEnvParamInput,
+  type AppIdParamInput,
+  type CreateApplicationInput,
+  type CreateEnvironmentInput,
+  type UpdateApplicationInput,
+  type UpdateEnvironmentInput,
+  type ListAppsQueryInput,
+} from '../schemas/applications.js';
 
-const createApplicationSchema = z.object({
-  name: z.string().min(2).max(255),
-  description: z.string().max(2000).optional(),
-  tier: z.enum(['P1', 'P2', 'P3', 'P4']),
-  status: z.enum(['active', 'inactive', 'deprecated']).optional(),
-  lifecycleStage: z.enum(['development', 'staging', 'production', 'sunset']).optional(),
-  ownerUserId: z.string().uuid().optional(),
-  ownerGroupId: z.string().uuid().optional(),
-  supportGroupId: z.string().uuid().optional(),
-  businessUnit: z.string().max(255).optional(),
-  criticality: z.enum(['mission_critical', 'business_critical', 'business_operational', 'administrative']).optional(),
-  tags: z.array(z.string()).optional(),
-  metadata: z.record(z.unknown()).optional(),
-});
 
-const updateApplicationSchema = z.object({
-  name: z.string().min(2).max(255).optional(),
-  description: z.string().max(2000).optional(),
-  tier: z.enum(['P1', 'P2', 'P3', 'P4']).optional(),
-  status: z.enum(['active', 'inactive', 'deprecated']).optional(),
-  lifecycleStage: z.enum(['development', 'staging', 'production', 'sunset']).optional(),
-  ownerUserId: z.string().uuid().optional(),
-  ownerGroupId: z.string().uuid().optional(),
-  supportGroupId: z.string().uuid().optional(),
-  businessUnit: z.string().max(255).optional(),
-  criticality: z.enum(['mission_critical', 'business_critical', 'business_operational', 'administrative']).optional(),
-  tags: z.array(z.string()).optional(),
-  metadata: z.record(z.unknown()).optional(),
-});
 
-const createEnvironmentSchema = z.object({
-  name: z.string().min(2).max(100),
-  type: z.enum(['dev', 'test', 'staging', 'prod']),
-  url: z.string().url().optional(),
-  cloudProvider: z.enum(['aws', 'gcp', 'azure', 'on-prem']).optional(),
-  cloudAccount: z.string().max(255).optional(),
-  cloudRegion: z.string().max(50).optional(),
-  resourceIds: z.array(z.string()).optional(),
-  metadata: z.record(z.unknown()).optional(),
-});
 
-const updateEnvironmentSchema = createEnvironmentSchema.partial();
 
 // Parameter validation schemas
-const appIdParamSchema = z.object({
-  id: z.string().uuid(),
-});
 
-const appEnvParamSchema = z.object({
-  id: z.string().uuid(),
-  envId: z.string().uuid(),
-});
 
 // Query parameter validation schema
-const listAppsQuerySchema = z.object({
-  page: z.coerce.number().int().positive().optional(),
-  per_page: z.coerce.number().int().min(1).max(100).optional(),
-  tier: z.enum(['P1', 'P2', 'P3', 'P4']).optional(),
-  status: z.enum(['active', 'inactive', 'deprecated']).optional(),
-  search: z.string().max(200).optional(),
-  q: z.string().max(200).optional(),
-  owner_id: z.string().uuid().optional(),
-  support_group_id: z.string().uuid().optional(),
-});
 
 export default async function applicationRoutes(app: FastifyInstance) {
   // List applications
   app.get('/', {
-    preHandler: [requirePermission('applications:read')],
+    preHandler: [requirePermission('applications:read'), validate({ query: listAppsQuerySchema })],
   }, async (request, reply) => {
     const { tenantSlug } = request.user;
     const query = request.query as Record<string, string>;
 
     // Validate query parameters
-    const validatedQuery = listAppsQuerySchema.parse(query);
+    const validatedQuery = request.query as ListAppsQueryInput;
     const pagination = parsePagination(query);
 
     const filters = {
@@ -95,10 +55,10 @@ export default async function applicationRoutes(app: FastifyInstance) {
 
   // Get application by ID
   app.get<{ Params: { id: string } }>('/:id', {
-    preHandler: [requirePermission('applications:read')],
+    preHandler: [requirePermission('applications:read'), validate({ params: appIdParamSchema })],
   }, async (request, reply) => {
     const { tenantSlug } = request.user;
-    const { id } = appIdParamSchema.parse(request.params);
+    const { id } = request.params as AppIdParamInput;
 
     const application = await applicationService.findById(tenantSlug, id);
 
@@ -115,10 +75,10 @@ export default async function applicationRoutes(app: FastifyInstance) {
 
   // Create application
   app.post('/', {
-    preHandler: [requirePermission('applications:create')],
+    preHandler: [requirePermission('applications:create'), validate({ body: createApplicationSchema })],
   }, async (request, reply) => {
     const { tenantSlug, userId } = request.user;
-    const body = createApplicationSchema.parse(request.body);
+    const body = request.body as CreateApplicationInput;
 
     const application = await applicationService.create(tenantSlug, body, userId);
     reply.status(201).send(application);
@@ -126,11 +86,11 @@ export default async function applicationRoutes(app: FastifyInstance) {
 
   // Update application
   app.put<{ Params: { id: string } }>('/:id', {
-    preHandler: [requirePermission('applications:update')],
+    preHandler: [requirePermission('applications:update'), validate({ params: appIdParamSchema, body: updateApplicationSchema })],
   }, async (request, reply) => {
     const { tenantSlug, userId } = request.user;
-    const { id } = appIdParamSchema.parse(request.params);
-    const body = updateApplicationSchema.parse(request.body);
+    const { id } = request.params as AppIdParamInput;
+    const body = request.body as UpdateApplicationInput;
 
     const application = await applicationService.update(tenantSlug, id, body, userId);
     reply.send(application);
@@ -138,10 +98,10 @@ export default async function applicationRoutes(app: FastifyInstance) {
 
   // Delete application
   app.delete<{ Params: { id: string } }>('/:id', {
-    preHandler: [requirePermission('applications:delete')],
+    preHandler: [requirePermission('applications:delete'), validate({ params: appIdParamSchema })],
   }, async (request, reply) => {
     const { tenantSlug, userId } = request.user;
-    const { id } = appIdParamSchema.parse(request.params);
+    const { id } = request.params as AppIdParamInput;
 
     await applicationService.delete(tenantSlug, id, userId);
     reply.status(204).send();
@@ -149,10 +109,10 @@ export default async function applicationRoutes(app: FastifyInstance) {
 
   // Get application health score
   app.get<{ Params: { id: string } }>('/:id/health', {
-    preHandler: [requirePermission('applications:read')],
+    preHandler: [requirePermission('applications:read'), validate({ params: appIdParamSchema })],
   }, async (request, reply) => {
     const { tenantSlug } = request.user;
-    const { id } = appIdParamSchema.parse(request.params);
+    const { id } = request.params as AppIdParamInput;
 
     const health = await applicationService.getHealthScore(tenantSlug, id);
     reply.send(health);
@@ -164,10 +124,10 @@ export default async function applicationRoutes(app: FastifyInstance) {
 
   // List environments
   app.get<{ Params: { id: string } }>('/:id/environments', {
-    preHandler: [requirePermission('applications:read')],
+    preHandler: [requirePermission('applications:read'), validate({ params: appIdParamSchema })],
   }, async (request, reply) => {
     const { tenantSlug } = request.user;
-    const { id } = appIdParamSchema.parse(request.params);
+    const { id } = request.params as AppIdParamInput;
 
     const environments = await applicationService.listEnvironments(tenantSlug, id);
     reply.send({ data: environments });
@@ -175,11 +135,11 @@ export default async function applicationRoutes(app: FastifyInstance) {
 
   // Create environment
   app.post<{ Params: { id: string } }>('/:id/environments', {
-    preHandler: [requirePermission('applications:update')],
+    preHandler: [requirePermission('applications:update'), validate({ params: appIdParamSchema, body: createEnvironmentSchema })],
   }, async (request, reply) => {
     const { tenantSlug, userId } = request.user;
-    const { id } = appIdParamSchema.parse(request.params);
-    const body = createEnvironmentSchema.parse(request.body);
+    const { id } = request.params as AppIdParamInput;
+    const body = request.body as CreateEnvironmentInput;
 
     const environment = await applicationService.createEnvironment(tenantSlug, id, body, userId);
     reply.status(201).send(environment);
@@ -187,11 +147,11 @@ export default async function applicationRoutes(app: FastifyInstance) {
 
   // Update environment
   app.put<{ Params: { id: string; envId: string } }>('/:id/environments/:envId', {
-    preHandler: [requirePermission('applications:update')],
+    preHandler: [requirePermission('applications:update'), validate({ params: appEnvParamSchema, body: updateEnvironmentSchema })],
   }, async (request, reply) => {
     const { tenantSlug, userId } = request.user;
-    const { id, envId } = appEnvParamSchema.parse(request.params);
-    const body = updateEnvironmentSchema.parse(request.body);
+    const { id, envId } = request.params as AppEnvParamInput;
+    const body = request.body as UpdateEnvironmentInput;
 
     const environment = await applicationService.updateEnvironment(
       tenantSlug,
@@ -205,10 +165,10 @@ export default async function applicationRoutes(app: FastifyInstance) {
 
   // Delete environment
   app.delete<{ Params: { id: string; envId: string } }>('/:id/environments/:envId', {
-    preHandler: [requirePermission('applications:update')],
+    preHandler: [requirePermission('applications:update'), validate({ params: appEnvParamSchema })],
   }, async (request, reply) => {
     const { tenantSlug, userId } = request.user;
-    const { id, envId } = appEnvParamSchema.parse(request.params);
+    const { id, envId } = request.params as AppEnvParamInput;
 
     await applicationService.deleteEnvironment(tenantSlug, id, envId, userId);
     reply.status(204).send();

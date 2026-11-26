@@ -1,33 +1,21 @@
 import { FastifyInstance } from 'fastify';
-import { z } from 'zod';
 import { requirePermission } from '../middleware/auth.js';
 import { dataSecurityService } from '../services/data-security.js';
 import { maskingService } from '../lib/masking.js';
 import { NotFoundError } from '../utils/errors.js';
 import { logger } from '../utils/logger.js';
+import { validate } from '../middleware/validation.js';
+import {
+  addClassificationSchema,
+  unmaskSchema,
+  updateSettingsSchema,
+  type AddClassificationInput,
+  type UnmaskInput,
+  type UpdateSettingsInput,
+} from '../schemas/data-security.js';
 
-const updateSettingsSchema = z.object({
-  data_residency_region: z.string().max(50).optional(),
-  encryption_key_id: z.string().max(255).nullable().optional(),
-  pii_masking_enabled: z.boolean().optional(),
-  pci_tokenization_enabled: z.boolean().optional(),
-});
 
-const addClassificationSchema = z.object({
-  table_name: z.string().max(100),
-  field_name: z.string().max(100),
-  classification: z.enum(['PII', 'PCI', 'NPI', 'SENSITIVE']),
-  masking_strategy: z.enum(['full', 'partial', 'tokenize', 'hash']),
-  unmask_permission: z.string().max(100).optional(),
-});
 
-const unmaskSchema = z.object({
-  table_name: z.string().max(100),
-  field_name: z.string().max(100),
-  entity_id: z.string().max(255),
-  raw_value: z.string(),
-  reason: z.string().max(1000).optional(),
-});
 
 export default async function dataSecurityRoutes(app: FastifyInstance) {
   /**
@@ -48,10 +36,10 @@ export default async function dataSecurityRoutes(app: FastifyInstance) {
    * Requires admin:write permission.
    */
   app.put('/settings', {
-    preHandler: [requirePermission('admin:write')],
+    preHandler: [requirePermission('admin:write'), validate({ body: updateSettingsSchema })],
   }, async (request, reply) => {
     const { tenantSlug } = request.user;
-    const body = updateSettingsSchema.parse(request.body);
+    const body = request.body as UpdateSettingsInput;
 
     const updated = await dataSecurityService.updateSettings(tenantSlug, body);
     reply.send(updated);
@@ -75,10 +63,10 @@ export default async function dataSecurityRoutes(app: FastifyInstance) {
    * Requires admin:write permission.
    */
   app.post('/classifications', {
-    preHandler: [requirePermission('admin:write')],
+    preHandler: [requirePermission('admin:write'), validate({ body: addClassificationSchema })],
   }, async (request, reply) => {
     const { tenantSlug } = request.user;
-    const body = addClassificationSchema.parse(request.body);
+    const body = request.body as AddClassificationInput;
 
     const classification = await dataSecurityService.addClassification(tenantSlug, body);
     reply.code(201).send(classification);
@@ -95,10 +83,10 @@ export default async function dataSecurityRoutes(app: FastifyInstance) {
    * 3. Return the raw value — the caller already has it but this creates the audit trail.
    */
   app.post('/unmask', {
-    preHandler: [requirePermission('admin:write')],
+    preHandler: [requirePermission('admin:write'), validate({ body: unmaskSchema })],
   }, async (request, reply) => {
     const { tenantSlug, userId, email } = request.user;
-    const body = unmaskSchema.parse(request.body);
+    const body = request.body as UnmaskInput;
 
     // Verify the field is classified
     const classifications = await dataSecurityService.listClassifications(tenantSlug);

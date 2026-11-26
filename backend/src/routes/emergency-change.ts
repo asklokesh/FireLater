@@ -1,33 +1,24 @@
 import { FastifyInstance } from 'fastify';
-import { z } from 'zod';
 import { emergencyChangeService } from '../services/emergency-change.js';
 import { requirePermission } from '../middleware/auth.js';
+import { validate } from '../middleware/validation.js';
+import {
+  createEmergencyChangeSchema,
+  idParamSchema,
+  listQuerySchema,
+  postHocReviewSchema,
+  type CreateEmergencyChangeInput,
+  type IdParamInput,
+  type PostHocReviewInput,
+} from '../schemas/emergency-change.js';
 
 // ============================================
 // SCHEMAS
 // ============================================
 
-const createEmergencyChangeSchema = z.object({
-  title: z.string().min(5).max(500),
-  description: z.string().min(1).max(10000),
-  emergencyJustification: z.string().min(10).max(5000),
-  linkedIncidentId: z.string().min(1).max(255),
-  implementerId: z.string().uuid().optional(),
-  applicationId: z.string().uuid().optional(),
-});
 
-const postHocReviewSchema = z.object({
-  decision: z.enum(['approved', 'rejected']),
-  comment: z.string().max(5000).optional(),
-});
 
-const listQuerySchema = z.object({
-  post_review_status: z.enum(['pending', 'approved', 'rejected']).optional(),
-});
 
-const idParamSchema = z.object({
-  id: z.string().uuid(),
-});
 
 // ============================================
 // ROUTES
@@ -51,10 +42,10 @@ export default async function emergencyChangeRoutes(app: FastifyInstance) {
   // POST /emergency-changes
   // ----------------------------------------
   app.post('/', {
-    preHandler: [requirePermission('changes:create')],
+    preHandler: [requirePermission('changes:create'), validate({ body: createEmergencyChangeSchema })],
   }, async (request, reply) => {
     const { tenantSlug, userId } = request.user;
-    const body = createEmergencyChangeSchema.parse(request.body);
+    const body = request.body as CreateEmergencyChangeInput;
 
     const result = await emergencyChangeService.createEmergencyChange(tenantSlug, userId, {
       title: body.title,
@@ -89,10 +80,10 @@ export default async function emergencyChangeRoutes(app: FastifyInstance) {
   // GET /emergency-changes/:id
   // ----------------------------------------
   app.get<{ Params: { id: string } }>('/:id', {
-    preHandler: [requirePermission('changes:read')],
+    preHandler: [requirePermission('changes:read'), validate({ params: idParamSchema })],
   }, async (request, reply) => {
     const { tenantSlug } = request.user;
-    const { id } = idParamSchema.parse(request.params);
+    const { id } = request.params as IdParamInput;
 
     const change = await emergencyChangeService.getEmergencyChangeById(tenantSlug, id);
 
@@ -111,11 +102,11 @@ export default async function emergencyChangeRoutes(app: FastifyInstance) {
   // POST /emergency-changes/:id/review
   // ----------------------------------------
   app.post<{ Params: { id: string } }>('/:id/review', {
-    preHandler: [requirePermission('changes:approve')],
+    preHandler: [requirePermission('changes:approve'), validate({ params: idParamSchema, body: postHocReviewSchema })],
   }, async (request, reply) => {
     const { tenantSlug, userId, email } = request.user;
-    const { id } = idParamSchema.parse(request.params);
-    const body = postHocReviewSchema.parse(request.body);
+    const { id } = request.params as IdParamInput;
+    const body = request.body as PostHocReviewInput;
 
     await emergencyChangeService.submitPostHocReview(
       tenantSlug,

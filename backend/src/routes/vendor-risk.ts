@@ -1,47 +1,28 @@
 import { FastifyInstance } from 'fastify';
-import { z } from 'zod';
 import { vendorRiskService } from '../services/vendor-risk.js';
 import { requirePermission } from '../middleware/auth.js';
+import { validate } from '../middleware/validation.js';
+import {
+  createReviewSchema,
+  createVendorSchema,
+  linkApplicationSchema,
+  updateReviewSchema,
+  updateVendorSchema,
+  type CreateReviewInput,
+  type CreateVendorInput,
+  type LinkApplicationInput,
+  type UpdateReviewInput,
+  type UpdateVendorInput,
+} from '../schemas/vendor-risk.js';
 
 // ============================================
 // SCHEMAS
 // ============================================
 
-const createVendorSchema = z.object({
-  name: z.string().min(1).max(255),
-  description: z.string().max(5000).optional(),
-  website: z.string().url().max(500).optional(),
-  riskTier: z.enum(['critical', 'high', 'medium', 'low']).optional(),
-  criticality: z.enum(['mission_critical', 'important', 'standard', 'non_critical']).optional(),
-  contractReviewDate: z.string().date().optional(),
-  assessmentReviewDate: z.string().date().optional(),
-  primaryContactName: z.string().max(255).optional(),
-  primaryContactEmail: z.string().email().max(255).optional(),
-  isActive: z.boolean().optional(),
-  notes: z.string().max(10000).optional(),
-});
 
-const updateVendorSchema = createVendorSchema.partial();
 
-const linkApplicationSchema = z.object({
-  applicationId: z.string().min(1).max(255),
-  dependencyType: z.enum(['service', 'component', 'hosting', 'support', 'licensing']).optional(),
-  notes: z.string().max(2000).optional(),
-});
 
-const createReviewSchema = z.object({
-  reviewType: z.enum(['contract', 'security_assessment', 'due_diligence', 'annual_review']),
-  dueDate: z.string().date(),
-  reviewerId: z.string().max(255).optional(),
-  reviewerEmail: z.string().email().max(255).optional(),
-});
 
-const updateReviewSchema = z.object({
-  status: z.enum(['scheduled', 'in_progress', 'completed', 'overdue']).optional(),
-  completedDate: z.string().date().optional(),
-  findings: z.string().max(10000).optional(),
-  riskScore: z.number().int().min(1).max(10).optional(),
-});
 
 // ============================================
 // ROUTE REGISTRATION
@@ -73,12 +54,12 @@ export async function vendorRiskRoutes(fastify: FastifyInstance): Promise<void> 
 
   // POST /vendors — create vendor
   fastify.post('/vendors', {
-    preHandler: [requirePermission('admin:write')],
+    preHandler: [requirePermission('admin:write'), validate({ body: createVendorSchema })],
   }, async (request, reply) => {
     const tenantSlug = (request as unknown as { tenant: { slug: string } }).tenant.slug;
     const user = (request as unknown as { user: { id: string; email: string } }).user;
 
-    const body = createVendorSchema.parse(request.body);
+    const body = request.body as CreateVendorInput;
 
     const vendor = await vendorRiskService.createVendor(tenantSlug, {
       ...body,
@@ -130,12 +111,12 @@ export async function vendorRiskRoutes(fastify: FastifyInstance): Promise<void> 
 
   // PUT /vendors/:id — update vendor
   fastify.put('/vendors/:id', {
-    preHandler: [requirePermission('admin:write')],
+    preHandler: [requirePermission('admin:write'), validate({ body: updateVendorSchema })],
   }, async (request, reply) => {
     const { id } = request.params as { id: string };
     const tenantSlug = (request as unknown as { tenant: { slug: string } }).tenant.slug;
 
-    const body = updateVendorSchema.parse(request.body);
+    const body = request.body as UpdateVendorInput;
 
     const vendor = await vendorRiskService.updateVendor(tenantSlug, id, body);
 
@@ -156,12 +137,12 @@ export async function vendorRiskRoutes(fastify: FastifyInstance): Promise<void> 
 
   // POST /vendors/:id/applications — link application to vendor
   fastify.post('/vendors/:id/applications', {
-    preHandler: [requirePermission('admin:write')],
+    preHandler: [requirePermission('admin:write'), validate({ body: linkApplicationSchema })],
   }, async (request, reply) => {
     const { id } = request.params as { id: string };
     const tenantSlug = (request as unknown as { tenant: { slug: string } }).tenant.slug;
 
-    const body = linkApplicationSchema.parse(request.body);
+    const body = request.body as LinkApplicationInput;
 
     await vendorRiskService.linkApplication(
       tenantSlug,
@@ -224,12 +205,12 @@ export async function vendorRiskRoutes(fastify: FastifyInstance): Promise<void> 
 
   // POST /vendors/:id/reviews — create review
   fastify.post('/vendors/:id/reviews', {
-    preHandler: [requirePermission('admin:write')],
+    preHandler: [requirePermission('admin:write'), validate({ body: createReviewSchema })],
   }, async (request, reply) => {
     const { id } = request.params as { id: string };
     const tenantSlug = (request as unknown as { tenant: { slug: string } }).tenant.slug;
 
-    const body = createReviewSchema.parse(request.body);
+    const body = request.body as CreateReviewInput;
 
     const review = await vendorRiskService.createReview(tenantSlug, {
       vendorId: id,
@@ -244,12 +225,12 @@ export async function vendorRiskRoutes(fastify: FastifyInstance): Promise<void> 
 
   // PUT /vendors/reviews/:reviewId — update review
   fastify.put('/vendors/reviews/:reviewId', {
-    preHandler: [requirePermission('admin:write')],
+    preHandler: [requirePermission('admin:write'), validate({ body: updateReviewSchema })],
   }, async (request, reply) => {
     const { reviewId } = request.params as { reviewId: string };
     const tenantSlug = (request as unknown as { tenant: { slug: string } }).tenant.slug;
 
-    const body = updateReviewSchema.parse(request.body);
+    const body = request.body as UpdateReviewInput;
 
     const review = await vendorRiskService.updateReview(tenantSlug, reviewId, body);
 

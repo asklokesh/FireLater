@@ -1,5 +1,5 @@
 import { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
-import { z } from 'zod';
+import type { ZodTypeAny } from 'zod';
 import { requirePermission } from '../middleware/auth.js';
 import { ForbiddenError, NotFoundError } from '../utils/errors.js';
 import { validateBulkWebhookUrl } from '../utils/bulkWebhook.js';
@@ -16,6 +16,12 @@ import {
   type BulkPayload,
 } from '../services/bulk.js';
 import { bulkQueue, type BulkJobProgress } from '../jobs/bulkQueue.js';
+import { validate } from '../middleware/validation.js';
+import {
+  jobIdParamSchema,
+  type JobIdParamInput,
+} from '../schemas/bulk.js';
+import { defaultBodySchema } from '../schemas/index.js';
 
 // Permission action required for each operation
 const OPERATION_PERMISSION: Record<BulkOperation, string> = {
@@ -28,7 +34,12 @@ const OPERATION_PERMISSION: Record<BulkOperation, string> = {
 // 50,000 uuids is roughly 2 MB of JSON
 const BULK_BODY_LIMIT = 4 * 1024 * 1024;
 
-const jobIdParamSchema = z.object({ id: z.string().min(1).max(100) });
+
+/** Body schema of a bulk operation on the entity named in the path. */
+function bulkBodySchema(request: FastifyRequest, operation: BulkOperation): ZodTypeAny {
+  const { entity } = request.params as { entity: string };
+  return isBulkEntity(entity) ? getBulkSchema(entity, operation) : defaultBodySchema;
+}
 
 function authorize(operation: BulkOperation) {
   return async (request: FastifyRequest, reply: FastifyReply): Promise<void> => {
@@ -47,14 +58,15 @@ export default async function bulkRoutes(app: FastifyInstance) {
   for (const operation of ['update', 'delete', 'status', 'assign'] as const) {
     app.post<{ Params: { entity: string } }>(`/:entity/${operation}`, {
       bodyLimit: BULK_BODY_LIMIT,
-      preHandler: [authorize(operation)],
+      // authorize() answers 404 for an unknown entity first, so the body schema is chosen per entity
+      preHandler: [authorize(operation), validate({ body: (request) => bulkBodySchema(request, operation) })],
     }, async (request, reply) => {
       const { entity } = request.params;
       if (!isBulkEntity(entity) || !isBulkOperation(operation)) {
         throw new NotFoundError('Bulk entity', entity);
       }
       const { tenantSlug, userId } = request.user;
-      const payload = getBulkSchema(entity, operation).parse(request.body) as BulkPayload;
+      const payload = request.body as BulkPayload;
 
       if (payload.webhookUrl) {
         await validateBulkWebhookUrl(payload.webhookUrl);
@@ -86,9 +98,9 @@ export default async function bulkRoutes(app: FastifyInstance) {
 
   // Job status and progress
   app.get<{ Params: { id: string } }>('/jobs/:id', {
-    preHandler: [requirePermission('issues:read', 'problems:read', 'changes:read', 'requests:read')],
+    preHandler: [requirePermission('issues:read', 'problems:read', 'changes:read', 'requests:read'), validate({ params: jobIdParamSchema })],
   }, async (request, reply) => {
-    const { id } = jobIdParamSchema.parse(request.params);
+    const { id } = request.params as JobIdParamInput;
     const { tenantSlug, userId, roles } = request.user;
 
     const job = await bulkQueue.getJob(id);

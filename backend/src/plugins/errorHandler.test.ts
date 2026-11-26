@@ -60,6 +60,11 @@ describe('errorHandler plugin', () => {
       throw new InternalError('boom').withContext({ operation: 'svc.createOrder', orderId: 42, tenantSlug: 'other', headers: { authorization: 'Bearer x' } });
     });
     app.get('/inlinedup', async (_req, reply) => reply.code(400).send({ error: 'duplicate key value violates unique constraint "users_email_key"' }));
+    // the shape the validation middleware replies with (utils/validationErrors.ts)
+    app.get('/inlineval', async (_req, reply) => reply.code(400).send({
+      statusCode: 400, error: 'Validation Error', message: 'Request validation failed',
+      details: [{ location: 'body', field: 'title', message: 'Required', code: 'invalid_type', path: ['title'] }],
+    }));
     app.get('/recover', async (req) => {
       req.errorContext = { ...req.errorContext, fallback: async () => ({ source: 'db' }) };
       throw new CacheError();
@@ -195,6 +200,17 @@ describe('errorHandler plugin', () => {
     expect(b.userMessage).toBe(USER_MESSAGES.BAD_REQUEST);
     expect(b.userMessage).not.toContain('duplicate key');
     expect(b.userMessage).not.toContain('users_email_key');
+  });
+
+  it('gives inline validation-middleware replies the VALIDATION_ERROR code a thrown ZodError gets', async () => {
+    const res = await app.inject('/inlineval');
+    expect(res.statusCode).toBe(400);
+    const b = res.json();
+    expect(b).toMatchObject({ statusCode: 400, error: 'Validation Error', code: 'VALIDATION_ERROR', userMessage: USER_MESSAGES.VALIDATION_ERROR });
+    expect(b.details).toHaveLength(1);
+    expect(typeof b.requestId).toBe('string');
+    expect(b.userMessage).not.toContain('title');
+    expect((await app.inject('/zod')).json().code).toBe('VALIDATION_ERROR');
   });
 
   it('merges context set on the error into the tracked and logged context', async () => {

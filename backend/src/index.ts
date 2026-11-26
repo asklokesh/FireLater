@@ -14,6 +14,7 @@ import errorHandlerPlugin from './plugins/errorHandler.js';
 import { initErrorTracking } from './lib/errorTracking.js';
 import { registerDefaultRecoveryHandlers } from './lib/errorRecovery.js';
 
+import { validationPlugin } from './middleware/validation.js';
 import authRoutes from './routes/auth.js';
 import userRoutes from './routes/users.js';
 import groupRoutes from './routes/groups.js';
@@ -196,6 +197,9 @@ async function registerPlugins() {
 }
 
 async function registerRoutes() {
+  // Unified request sanitization + validation for every route registered below
+  await app.register(validationPlugin);
+
   // CSRF token endpoint - must be called before any state-changing operations
   app.get('/csrf-token', async (request, reply) => {
     const token = await reply.generateCsrf();
