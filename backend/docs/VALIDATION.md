@@ -120,6 +120,10 @@ Altered fields are logged for security auditing (`input_sanitized`, `validation_
   webhook signature must be verified (401) before the payload is judged (400); they still get the default body check.
 - `routes/audit.ts` `toQueryOptions()` re-parses `auditSearchQuerySchema` on an object it builds (the export drops
   `limit`/`offset`); it never parses `request.*` directly.
+- `routes/search.ts` parses values it decodes itself: the comma-separated `types` list and the JSON `filters`
+  parameter (`parseTypes`, `parseFiltersParam`).
+- `routes/emergency-change.ts` `GET /` narrows `post_review_status` to its enum with `listQuerySchema` after the
+  registry's length check (`emergencyChangesQuerySchema`).
 - No handler under `src/routes` calls `.parse(request.body|query|params)` or `.safeParse(...)` on raw request input;
   `grep -rnE '\.(parse|safeParse)\(request\.(body|query|params)' backend/src/routes` must stay empty.
 - 126 of 496 routes use the convention defaults only (`default` in `validationCoverage()`): reads and deletes whose
