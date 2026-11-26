@@ -274,6 +274,54 @@ export class AuditChainService {
     }
     return ranges;
   }
+
+  /**
+   * Delete live records whose retention_until has passed (legal holds and the
+   * newest record are kept) and record the purged chain positions, like the
+   * retention service, so verification accepts the gap. Kept for existing
+   * callers; the retention service (runForTenant) is the main purge path.
+   *
+   * @returns The number of records purged.
+   */
+  async purgeExpired(tenantSlug: string): Promise<number> {
+    const schema = tenantService.getSchemaName(tenantSlug);
+
+    const result = await pool.query(
+      `DELETE FROM ${schema}.audit_logs
+        WHERE retention_until IS NOT NULL
+          AND retention_until < NOW()
+          AND (legal_hold IS NULL OR legal_hold = false)
+          -- keep the newest record: it anchors prev_hash for the next write
+          AND sequence < (SELECT MAX(sequence) FROM ${schema}.audit_logs)
+        RETURNING chain_position`
+    );
+
+    const purgedCount = result.rowCount ?? 0;
+
+    if (purgedCount > 0) {
+      logger.info({ tenantSlug, purgedCount }, 'Purged expired audit log records');
+      const positions = ((result.rows ?? []) as Array<{ chain_position: string | number | null }>)
+        .filter((r) => r.chain_position !== null && r.chain_position !== undefined)
+        .map((r) => Number(r.chain_position))
+        .sort((x, y) => x - y);
+      const purgedPositions: Array<[number, number]> = [];
+      for (const p of positions) {
+        const last = purgedPositions[purgedPositions.length - 1];
+        if (last && p === last[1] + 1) last[1] = p;
+        else if (!last || p > last[1]) purgedPositions.push([p, p]);
+      }
+      // Imported lazily: audit.ts imports this module.
+      const { auditService } = await import('./audit.js');
+      await auditService.logSafe(tenantSlug, {
+        action: 'retention_run',
+        entityType: 'audit_log',
+        severity: 'medium',
+        metadata: { purgedLive: purgedCount, purgedArchive: 0, deletedCount: purgedCount, purgedPositions },
+      });
+    }
+
+    return purgedCount;
+  }
 }
 
 export const auditChainService = new AuditChainService();
