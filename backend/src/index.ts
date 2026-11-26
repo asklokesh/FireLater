@@ -10,7 +10,9 @@ import { config } from './config/index.js';
 import { testConnection, closeDatabase } from './config/database.js';
 import { testRedisConnection, closeRedis, redis } from './config/redis.js';
 import { logger } from './utils/logger.js';
-import { AppError } from './utils/errors.js';
+import errorHandlerPlugin from './plugins/errorHandler.js';
+import { initErrorTracking } from './lib/errorTracking.js';
+import { registerDefaultRecoveryHandlers } from './lib/errorRecovery.js';
 
 import authRoutes from './routes/auth.js';
 import userRoutes from './routes/users.js';
@@ -49,6 +51,8 @@ import recertificationRoutes from './routes/recertification.js';
 import regulatorySlaRoutes from './routes/regulatory-sla.js';
 import emergencyChangeRoutes from './routes/emergency-change.js';
 import { vendorRiskRoutes } from './routes/vendor-risk.js';
+import clientErrorRoutes from './routes/clientErrors.js';
+import { installProcessErrorHandlers } from './lib/processErrors.js';
 import searchRoutes from './routes/search.js';
 import wsRoutes from './routes/ws.js';
 import { realtimeBridge } from './lib/websocket/realtime-bridge.js';
@@ -464,6 +468,7 @@ async function registerRoutes() {
   await app.register(regulatorySlaRoutes, { prefix: '/v1/regulatory-sla' });
   await app.register(emergencyChangeRoutes, { prefix: '/v1/emergency-changes' });
   await app.register(vendorRiskRoutes, { prefix: '/v1/vendor-risk' });
+  await app.register(clientErrorRoutes, { prefix: '/v1/client-errors' });
   await app.register(searchRoutes, { prefix: '/v1/search' });
 
   // Real-time WebSocket endpoint
@@ -471,58 +476,16 @@ async function registerRoutes() {
   await app.register(wsRoutes, { prefix: '/v1/ws' });
 }
 
-function registerErrorHandler() {
-  app.setErrorHandler((error, request, reply) => {
-    logger.error({ err: error }, 'Request error');
-
-    if (error instanceof AppError) {
-      return reply.status(error.statusCode).send(error.toJSON());
-    }
-
-    // Handle Fastify validation errors
-    if (error instanceof Error && 'validation' in error) {
-      return reply.status(400).send({
-        statusCode: 400,
-        error: 'Validation Error',
-        message: 'Request validation failed',
-        details: (error as { validation: unknown }).validation,
-      });
-    }
-
-    // Handle Zod validation errors
-    if (error && typeof error === 'object' && 'name' in error && error.name === 'ZodError') {
-      const zodError = error as { issues?: unknown[] };
-      return reply.status(400).send({
-        statusCode: 400,
-        error: 'Validation Error',
-        message: 'Request validation failed',
-        details: zodError.issues,
-      });
-    }
-
-    // Check if error has statusCode property (for custom error classes)
-    if (error && typeof error === 'object' && 'statusCode' in error && typeof error.statusCode === 'number') {
-      const customError = error as { statusCode: number; error?: string; message?: string };
-      return reply.status(customError.statusCode).send({
-        statusCode: customError.statusCode,
-        error: customError.error || 'Error',
-        message: customError.message || 'An error occurred',
-      });
-    }
-
-    const errorMessage = error instanceof Error ? error.message : 'An unexpected error occurred';
-    return reply.status(500).send({
-      statusCode: 500,
-      error: 'Internal Server Error',
-      message: config.isDev ? errorMessage : 'An unexpected error occurred',
-    });
-  });
+async function registerErrorHandler() {
+  await initErrorTracking();
+  registerDefaultRecoveryHandlers();
+  await app.register(errorHandlerPlugin);
 }
 
 async function start() {
   try {
     await registerPlugins();
-    registerErrorHandler();
+    await registerErrorHandler();
     await registerRoutes();
 
     logger.info('Testing database connection...');
@@ -555,6 +518,9 @@ async function start() {
     process.exit(1);
   }
 }
+
+// Errors outside the request cycle (background jobs, timers) still reach error tracking
+installProcessErrorHandlers();
 
 async function shutdown() {
   logger.info('Shutting down...');

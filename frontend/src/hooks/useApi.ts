@@ -24,6 +24,8 @@ import {
   cabMeetingsApi,
 } from '@/lib/api';
 
+export { parseApiError, getErrorMessage, shouldRetryRequest } from '@/lib/errorMessages';
+
 // Types
 export interface IssueActivity {
   id: string;

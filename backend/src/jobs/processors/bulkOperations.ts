@@ -1,6 +1,7 @@
 import { Job, Worker } from 'bullmq';
 import { redisConnection } from '../../config/redis.js';
 import { logger } from '../../utils/logger.js';
+import { captureJobFailure } from '../../lib/jobErrors.js';
 import { validateBulkWebhookUrl } from '../../utils/bulkWebhook.js';
 import { executeBulk } from '../../services/bulk.js';
 import { BULK_QUEUE_NAME, type BulkJobData, type BulkJobProgress } from '../bulkQueue.js';
@@ -96,6 +97,7 @@ export function startBulkWorker(): Worker<BulkJobData> {
   worker = new Worker<BulkJobData>(BULK_QUEUE_NAME, processBulkJob, { connection, concurrency: 2 });
   worker.on('failed', (job, err) => {
     logger.error({ jobId: job?.id, err }, 'Bulk job failed (rolled back)');
+    captureJobFailure('job.bulk', job, err);
   });
   worker.on('completed', (job) => {
     logger.info({ jobId: job.id }, 'Bulk job completed');

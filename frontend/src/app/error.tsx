@@ -1,7 +1,8 @@
 'use client';
 
 import { useEffect } from 'react';
-import { ErrorDisplay } from '@/components/ui/error-boundary';
+import { ErrorDisplay, describeError } from '@/components/ui/error-boundary';
+import { reportClientError } from '@/lib/api';
 
 export default function GlobalError({
   error,
@@ -12,7 +13,10 @@ export default function GlobalError({
 }) {
   useEffect(() => {
     console.error('Application error:', error);
+    reportClientError(error);
   }, [error]);
+
+  const known = describeError(error);
 
   return (
     <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -20,7 +24,9 @@ export default function GlobalError({
         error={error}
         reset={reset}
         title="Application Error"
-        message="We encountered an unexpected error. Our team has been notified."
+        message={known.message ?? 'We encountered an unexpected error. Our team has been notified.'}
+        code={known.code}
+        requestId={known.requestId}
       />
     </div>
   );
