@@ -1,3 +1,4 @@
+import { shouldRetryHttp, httpRetryDelay, parseApiError } from './errorMessages';
 import axios, { AxiosInstance, AxiosError, InternalAxiosRequestConfig } from 'axios';
 
 // Warn if API URL is not configured in production
@@ -130,17 +131,54 @@ api.interceptors.response.use(
       }
     }
 
+    // Transient failures of idempotent requests are replayed automatically
+    if (originalRequest) {
+      const attempt = Number((originalRequest as { _retryCount?: number })._retryCount ?? 0);
+      if (shouldRetryHttp(originalRequest, error, attempt)) {
+        (originalRequest as { _retryCount?: number })._retryCount = attempt + 1;
+        await new Promise((resolve) => setTimeout(resolve, httpRetryDelay(attempt)));
+        return api(originalRequest);
+      }
+    }
+
     return Promise.reject(error);
   }
 );
+
+/** Report a frontend render error to the backend error tracking endpoint (fire and forget). */
+export function reportClientError(error: unknown, componentStack?: string): void {
+  try {
+    const e = error instanceof Error ? error : new Error(String(error));
+    const info = parseApiError(error);
+    void api
+      .post('/v1/client-errors', {
+        message: e.message.slice(0, 2000),
+        stack: e.stack?.slice(0, 10000),
+        componentStack: componentStack?.slice(0, 10000),
+        code: info.code === 'UNKNOWN' ? undefined : info.code,
+        url: typeof window !== 'undefined' ? window.location.pathname : undefined,
+      })
+      .catch(() => {});
+  } catch {
+    // reporting must never throw
+  }
+}
 
 // API Types
 export interface ApiError {
   statusCode: number;
   error: string;
+  /** Stable machine-readable code, see docs/ERROR_HANDLING.md */
+  code?: string;
   message: string;
+  /** Friendly message safe to show to end users */
+  userMessage?: string;
+  retryable?: boolean;
+  requestId?: string;
   details?: Record<string, string[]>;
 }
+
+export { parseApiError, getErrorMessage } from './errorMessages';
 
 export interface PaginatedResponse<T> {
   data: T[];

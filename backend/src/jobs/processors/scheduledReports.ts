@@ -2,6 +2,7 @@ import { Job, Worker } from 'bullmq';
 import { config } from '../../config/index.js';
 import { pool } from '../../config/database.js';
 import { logger } from '../../utils/logger.js';
+import { captureJobFailure } from '../../lib/jobErrors.js';
 import { reportExecutionService, scheduledReportService } from '../../services/reporting.js';
 
 // Redis connection for worker
@@ -133,6 +134,7 @@ scheduledReportsWorker.on('completed', (job) => {
 });
 
 scheduledReportsWorker.on('failed', (job, err) => {
+  captureJobFailure('job.scheduledReports', job, err);
   logger.error({ jobId: job?.id, jobName: job?.name, err }, 'Report job failed');
 });
 

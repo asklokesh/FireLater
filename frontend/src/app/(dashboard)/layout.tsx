@@ -1,10 +1,12 @@
 'use client';
 
 import { useEffect, useSyncExternalStore } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 import { Sidebar } from '@/components/layout/sidebar';
 import { Header } from '@/components/layout/header';
 import { useAuthStore } from '@/stores/auth';
+import { ErrorBoundary } from '@/components/ErrorBoundary';
+import { reportClientError } from '@/lib/api';
 
 const emptySubscribe = () => () => {};
 const getClientSnapshot = () => true;
@@ -16,6 +18,7 @@ export default function DashboardLayout({
   children: React.ReactNode;
 }) {
   const router = useRouter();
+  const pathname = usePathname();
   const { isAuthenticated, isLoading, checkAuth, _hasHydrated } = useAuthStore();
   const isClient = useSyncExternalStore(emptySubscribe, getClientSnapshot, getServerSnapshot);
 
@@ -52,7 +55,12 @@ export default function DashboardLayout({
       <div className="flex-1 flex flex-col overflow-hidden">
         <Header />
         <main className="flex-1 overflow-y-auto p-6 lg:p-8 animate-in">
-          {children}
+          <ErrorBoundary
+            resetKey={pathname}
+            onError={(error, info) => reportClientError(error, info.componentStack ?? undefined)}
+          >
+            {children}
+          </ErrorBoundary>
         </main>
       </div>
     </div>

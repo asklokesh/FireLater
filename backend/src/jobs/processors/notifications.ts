@@ -2,6 +2,7 @@ import { Job, Worker } from 'bullmq';
 import { config } from '../../config/index.js';
 import { pool } from '../../config/database.js';
 import { logger } from '../../utils/logger.js';
+import { captureJobFailure } from '../../lib/jobErrors.js';
 import { tenantService } from '../../services/tenant.js';
 import { emailService } from '../../services/email/index.js';
 import { slackService } from '../../services/slack/index.js';
@@ -456,6 +457,7 @@ notificationWorker.on('completed', (job) => {
 });
 
 notificationWorker.on('failed', (job, err) => {
+  captureJobFailure('job.notifications', job, err);
   logger.error({ jobId: job?.id, jobName: job?.name, err }, 'Notification job failed');
 });
 
