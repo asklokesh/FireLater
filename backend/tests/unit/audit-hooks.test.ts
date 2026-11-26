@@ -79,6 +79,8 @@ describe('hooks through a real Fastify app', () => {
   beforeEach(() => {
     mockPoolQuery.mockReset();
     logSpy = vi.spyOn(auditService, 'log').mockResolvedValue('id');
+    // No service-written row to merge into: the hook writes its own record.
+    vi.spyOn(auditService, 'currentSequence').mockResolvedValue(null);
     vi.spyOn(auditService, 'getCachedSettings').mockResolvedValue({
       retention_days: 365, log_reads: false, log_exports: true, sensitive_fields: [], archive_after_days: null, alerts_enabled: true,
     });
@@ -164,5 +166,33 @@ describe('hooks through a real Fastify app', () => {
     await settle();
     expect(logSpy.mock.calls[0][1].newValues).toMatchObject({ content: 'rebooted the printer' });
     await app.close();
+  });
+});
+
+describe('the hooks never make a route send twice', () => {
+  it('a route that calls reply.send() without returning it answers once, with no unhandled rejection', async () => {
+    const { errorHandlerPlugin } = await import('../../src/plugins/errorHandler.js');
+    const rejections: unknown[] = [];
+    const onRejection = (reason: unknown) => rejections.push(reason);
+    process.on('unhandledRejection', onRejection);
+    const app = Fastify();
+    await app.register(jwt, { secret: 'test-secret-test-secret-test-secret' });
+    await app.register(errorHandlerPlugin);
+    registerAuditHooks(app);
+    app.post('/v1/things', async (_request, reply) => {
+      await new Promise((r) => setTimeout(r, 5));
+      reply.send({ id: ID }); // not returned, like several existing routes
+    });
+    await app.listen({ port: 0, host: '127.0.0.1' });
+    const { port } = app.server.address() as { port: number };
+    const statuses: number[] = [];
+    for (let i = 0; i < 3; i++) {
+      statuses.push((await fetch(`http://127.0.0.1:${port}/v1/things`, { method: 'POST' })).status);
+    }
+    await new Promise((r) => setTimeout(r, 100));
+    await app.close();
+    process.off('unhandledRejection', onRejection);
+    expect(statuses).toEqual([200, 200, 200]);
+    expect(rejections).toEqual([]);
   });
 });

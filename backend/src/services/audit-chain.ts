@@ -23,8 +23,15 @@ function canonicalize(value: unknown): unknown {
   return value;
 }
 
-/** Fields of a record that are covered by its content digest (everything not in the hash payload itself). */
-export const AUDIT_CONTENT_FIELDS = [
+/**
+ * Fields of a record covered by its content digest (everything not in the hash
+ * payload itself), per digest version. Version 1 (rows sealed before
+ * digest_version existed, stored as NULL) did not cover the legacy `changes`
+ * column that services write directly; version 2 does. A row is always
+ * verified with the field list of the version it was sealed with, and the
+ * version itself is part of the record hash, so it cannot be downgraded.
+ */
+const AUDIT_CONTENT_FIELDS_V1 = [
   'user_email',
   'user_name',
   'entity_name',
@@ -40,6 +47,15 @@ export const AUDIT_CONTENT_FIELDS = [
   'request_id',
 ] as const;
 
+export const AUDIT_CONTENT_FIELDS = [...AUDIT_CONTENT_FIELDS_V1, 'changes'] as const;
+
+/** Digest version written by sealPending today. */
+export const AUDIT_DIGEST_VERSION = 2;
+
+function contentFieldsFor(version: number): readonly string[] {
+  return version >= 2 ? AUDIT_CONTENT_FIELDS : AUDIT_CONTENT_FIELDS_V1;
+}
+
 export interface ChainVerifyResult {
   valid: boolean;
   firstBrokenSequence?: number;
@@ -48,7 +64,7 @@ export interface ChainVerifyResult {
 
 const COLUMNS = [
   'sequence', 'chain_position', 'prev_hash', 'record_hash', 'content_digest', 'action',
-  'entity_type', 'entity_id', 'user_id', 'ip_address', 'created_at', 'metadata',
+  'entity_type', 'entity_id', 'user_id', 'ip_address', 'created_at', 'metadata', 'digest_version',
   ...AUDIT_CONTENT_FIELDS,
 ].join(', ');
 
@@ -72,9 +88,9 @@ export class AuditChainService {
    * (old/new values, changed fields, user email, outcome, ...). The digest is
    * stored with the record and included in the record hash.
    */
-  computeContentDigest(fields: Record<string, unknown>): string {
+  computeContentDigest(fields: Record<string, unknown>, version: number = AUDIT_DIGEST_VERSION): string {
     const picked: Record<string, unknown> = {};
-    for (const key of AUDIT_CONTENT_FIELDS) {
+    for (const key of contentFieldsFor(version)) {
       const v = fields[key];
       picked[key] = v === undefined ? null : v;
     }
@@ -166,6 +182,7 @@ export class AuditChainService {
       ip_address: string | null;
       created_at: Date | string;
       metadata: Record<string, unknown> | null;
+      digest_version?: number | string | null;
     };
     const rows = result.rows as Row[];
 
@@ -204,7 +221,9 @@ export class AuditChainService {
       if (position !== null) payload.chain_position = position;
       if (row.content_digest) {
         payload.content = row.content_digest;
-        if (this.computeContentDigest(row) !== row.content_digest) return broken(i, 'content digest mismatch');
+        const version = row.digest_version === null || row.digest_version === undefined ? 1 : Number(row.digest_version);
+        if (version >= 2) payload.digest_version = version;
+        if (this.computeContentDigest(row, version) !== row.content_digest) return broken(i, 'content digest mismatch');
       }
 
       if (this.computeHash(payload, row.prev_hash) !== row.record_hash) return broken(i, 'record hash mismatch');
@@ -254,34 +273,6 @@ export class AuditChainService {
       for (const range of row.ranges ?? []) ranges.push([Number(range[0]), Number(range[1])]);
     }
     return ranges;
-  }
-
-  /**
-   * Delete audit log records whose retention_until has passed, unless they are
-   * under a legal hold.
-   *
-   * @returns The number of records purged.
-   */
-  async purgeExpired(tenantSlug: string): Promise<number> {
-    const schema = tenantService.getSchemaName(tenantSlug);
-
-    const result = await pool.query(
-      `DELETE FROM ${schema}.audit_logs
-        WHERE retention_until IS NOT NULL
-          AND retention_until < NOW()
-          AND (legal_hold IS NULL OR legal_hold = false)
-          -- keep the newest record: it anchors prev_hash for the next write
-          AND sequence < (SELECT MAX(sequence) FROM ${schema}.audit_logs)
-        RETURNING id`
-    );
-
-    const purgedCount = result.rowCount ?? 0;
-
-    if (purgedCount > 0) {
-      logger.info({ tenantSlug, purgedCount }, 'Purged expired audit log records');
-    }
-
-    return purgedCount;
   }
 }
 

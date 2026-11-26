@@ -8,7 +8,6 @@ const m = vi.hoisted(() => ({
   getSettings: vi.fn(),
   updateSettings: vi.fn(),
   sealPending: vi.fn(),
-  cleanupOldLogs: vi.fn(),
   verifyChain: vi.fn(),
   applyRetentionPolicy: vi.fn(),
   runForTenant: vi.fn(),
@@ -36,7 +35,7 @@ vi.mock('../../../src/services/audit.js', async (importOriginal) => ({
   ...(await importOriginal<typeof import('../../../src/services/audit.js')>()),
   auditService: {
     query: m.query, exportLogs: m.exportLogs, logSafe: m.logSafe, getSettings: m.getSettings,
-    updateSettings: m.updateSettings, sealPending: m.sealPending, cleanupOldLogs: m.cleanupOldLogs,
+    updateSettings: m.updateSettings, sealPending: m.sealPending,
     getEntityHistory: vi.fn(), getUserActivity: vi.fn(), getSecurityEvents: vi.fn(),
     getFailedLogins: vi.fn(), getSummaryByUser: vi.fn(), getSummaryByEntity: vi.fn(),
   },
@@ -257,11 +256,15 @@ describe('audit API routes', () => {
       expect(res.json()).toEqual({ result: { archived: 2, purgedLive: 0, purgedArchive: 1 } });
     });
 
-    it('cleanup is audited', async () => {
-      m.cleanupOldLogs.mockResolvedValue(3);
+    it('cleanup purges through the retention service (no archiving) and attributes the run', async () => {
+      m.runForTenant.mockResolvedValue({ archived: 0, purgedLive: 2, purgedArchive: 1 });
       const res = await app.inject({ method: 'POST', url: '/v1/audit/cleanup' });
       expect(res.json()).toEqual({ deletedCount: 3 });
-      expect(m.logSafe).toHaveBeenCalledWith('acme', expect.objectContaining({ action: 'retention_run' }));
+      expect(m.runForTenant).toHaveBeenCalledWith('acme', expect.objectContaining({
+        archive: false,
+        mode: 'cleanup',
+        actor: expect.objectContaining({ httpMethod: 'POST', requestPath: '/v1/audit/cleanup' }),
+      }));
     });
   });
 });

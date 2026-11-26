@@ -3,7 +3,7 @@ import { pool } from '../config/database.js';
 import { tenantService } from './tenant.js';
 import { logger } from '../utils/logger.js';
 import { cacheService } from '../utils/cache.js';
-import { auditChainService, AUDIT_CONTENT_FIELDS } from './audit-chain.js';
+import { auditChainService, AUDIT_CONTENT_FIELDS, AUDIT_DIGEST_VERSION } from './audit-chain.js';
 import { auditAlertService } from './audit-alerts.js';
 import { AUDIT_SEARCH_VECTOR_SQL, type AuditOutcome, type AuditSeverity } from '../lib/audit-search.js';
 
@@ -122,12 +122,13 @@ export interface AuditSettingsUpdate {
 }
 
 // Columns shared by audit_logs and audit_logs_archive (archive adds archived_at).
+// `changes` is the legacy payload column that services write directly.
 const AUDIT_COLUMNS = [
   'id', 'user_id', 'user_email', 'user_name', 'action', 'entity_type', 'entity_id',
-  'entity_name', 'old_values', 'new_values', 'changed_fields', 'ip_address', 'user_agent',
+  'entity_name', 'old_values', 'new_values', 'changed_fields', 'changes', 'ip_address', 'user_agent',
   'request_id', 'session_id', 'metadata', 'created_at', 'sequence', 'prev_hash',
   'record_hash', 'retention_until', 'legal_hold', 'severity', 'outcome', 'http_method',
-  'request_path', 'status_code', 'content_digest', 'chain_position',
+  'request_path', 'status_code', 'content_digest', 'digest_version', 'chain_position',
 ].join(', ');
 
 /** Hard cap on the rows an export returns, so a request cannot exhaust memory. */
@@ -434,6 +435,132 @@ class AuditService {
   }
 
   /**
+   * Write the audit record of one HTTP request, keeping one row per action.
+   *
+   * Many services still write their own minimal row (user, action, entity and
+   * the legacy `changes` payload) with a direct INSERT while handling the
+   * request. When such a row exists for the same entity and user, was written
+   * after `afterSequence` (the highest sequence seen before the handler ran)
+   * and is not sealed yet, the request's context (IP, user agent, request id,
+   * field-level old/new values, changed fields, HTTP status) is merged into it
+   * instead of writing a second row; the service's action, entity type and
+   * `changes` are kept. The lookup and the merge run under the same advisory
+   * lock as sealPending, so a row is never changed after it is sealed. If the
+   * service row was sealed in the meantime it is left as it is and no second
+   * row is written. Without a service row the entry is written by log().
+   */
+  async logRequest(tenantSlug: string, entry: AuditLogEntry, afterSequence: number | null): Promise<string | null> {
+    if (afterSequence === null || !entry.entityId) return this.log(tenantSlug, entry);
+
+    const schema = tenantService.getSchemaName(tenantSlug);
+    const settings = this.peekSettings(tenantSlug);
+    const changedFields = entry.changedFields || detectChanges(entry.oldValues, entry.newValues);
+    const sensitive = [...new Set([...DEFAULT_SENSITIVE_FIELDS, ...(settings.sensitive_fields || [])])];
+    const ip = entry.ipAddress && isIP(entry.ipAddress) ? entry.ipAddress : null;
+
+    const client = await pool.connect();
+    let merged: { id: string; sealed: boolean } | null = null;
+    try {
+      await client.query('BEGIN');
+      await client.query('SELECT pg_advisory_xact_lock(hashtext($1))', [`${schema}:audit_chain`]);
+      const found = await client.query(
+        `SELECT id, record_hash FROM ${schema}.audit_logs
+          WHERE sequence > $1
+            AND entity_id = $2
+            AND user_id IS NOT DISTINCT FROM $3
+            AND request_id IS NULL
+            AND http_method IS NULL
+          ORDER BY sequence DESC
+          LIMIT 1`,
+        [afterSequence, entry.entityId, entry.userId || null]
+      );
+      const row = found.rows[0] as { id: string; record_hash: string | null } | undefined;
+      if (row && row.record_hash === null) {
+        await client.query(
+          `UPDATE ${schema}.audit_logs
+              SET user_email = COALESCE(user_email, $2),
+                  user_name = COALESCE(user_name, $3),
+                  entity_name = COALESCE(entity_name, $4),
+                  old_values = $5,
+                  new_values = $6,
+                  changed_fields = $7,
+                  ip_address = $8,
+                  user_agent = $9,
+                  request_id = $10,
+                  session_id = COALESCE(session_id, $11),
+                  metadata = COALESCE(metadata, '{}'::jsonb) || $12::jsonb,
+                  severity = $13,
+                  outcome = $14,
+                  http_method = $15,
+                  request_path = $16,
+                  status_code = $17,
+                  retention_until = COALESCE(retention_until,
+                    (SELECT CASE WHEN retention_days > 0
+                                 THEN created_at + INTERVAL '1 day' * retention_days END
+                       FROM ${schema}.audit_settings LIMIT 1))
+            WHERE id = $1 AND record_hash IS NULL`,
+          [
+            row.id,
+            entry.userEmail || null,
+            entry.userName || null,
+            entry.entityName || null,
+            JSON.stringify(maskSensitiveFields(entry.oldValues, sensitive)),
+            JSON.stringify(maskSensitiveFields(entry.newValues, sensitive)),
+            changedFields.length > 0 ? changedFields : null,
+            ip,
+            entry.userAgent || null,
+            entry.requestId || null,
+            entry.sessionId || null,
+            JSON.stringify(entry.metadata || {}),
+            entry.severity || 'info',
+            entry.outcome || 'success',
+            entry.httpMethod || null,
+            entry.requestPath || null,
+            entry.statusCode ?? null,
+          ]
+        );
+        merged = { id: row.id, sealed: false };
+      } else if (row) {
+        merged = { id: row.id, sealed: true };
+      }
+      await client.query('COMMIT');
+    } catch (error) {
+      await client.query('ROLLBACK').catch(() => undefined);
+      logger.error(
+        { err: error, action: entry.action, entityType: entry.entityType, entityId: entry.entityId },
+        'Failed to merge request audit record'
+      );
+      throw error;
+    } finally {
+      client.release();
+    }
+
+    if (!merged) return this.log(tenantSlug, entry);
+    if (merged.sealed) {
+      logger.debug({ auditLogId: merged.id }, 'Service audit record already sealed; request context not merged');
+      return merged.id;
+    }
+
+    await cacheService.invalidateTenant(tenantSlug, 'audit');
+    this.refreshSettingsIfStale(tenantSlug);
+    void this.sealPending(tenantSlug).catch((err) =>
+      logger.warn({ err, tenantSlug }, 'Failed to seal audit records into the hash chain')
+    );
+    return merged.id;
+  }
+
+  /** Highest sequence in the tenant's audit log (null when it cannot be read). */
+  async currentSequence(tenantSlug: string): Promise<number | null> {
+    const schema = tenantService.getSchemaName(tenantSlug);
+    try {
+      const result = await pool.query(`SELECT COALESCE(MAX(sequence), 0) AS seq FROM ${schema}.audit_logs`);
+      return Number(result.rows[0]?.seq ?? 0);
+    } catch {
+      return null;
+    }
+  }
+
+  /**
    * Give every unsealed record its place in the hash chain, whatever its age
    * and however it was inserted (auditService.log, or a service's own INSERT).
    * Under a per-tenant advisory lock each record gets the next chain position,
@@ -470,13 +597,14 @@ class AuditService {
 
       for (const row of pending.rows) {
         position += 1;
-        const digest = auditChainService.computeContentDigest(row);
+        const digest = auditChainService.computeContentDigest(row, AUDIT_DIGEST_VERSION);
         const recordHash = auditChainService.computeHash(
           {
             action: row.action,
             chain_position: position,
             content: digest,
             created_at: row.created_at instanceof Date ? row.created_at.toISOString() : row.created_at,
+            digest_version: AUDIT_DIGEST_VERSION,
             entity_id: row.entity_id,
             entity_type: row.entity_type,
             ip_address: row.ip_address,
@@ -488,9 +616,10 @@ class AuditService {
         );
         await client.query(
           `UPDATE ${schema}.audit_logs
-              SET prev_hash = $1, record_hash = $2, content_digest = $3, chain_position = $4
-            WHERE id = $5`,
-          [prevHash, recordHash, digest, position, row.id]
+              SET prev_hash = $1, record_hash = $2, content_digest = $3, chain_position = $4,
+                  digest_version = $5
+            WHERE id = $6`,
+          [prevHash, recordHash, digest, position, AUDIT_DIGEST_VERSION, row.id]
         );
         prevHash = recordHash;
         sealed += 1;
@@ -861,43 +990,16 @@ class AuditService {
   }
 
   /**
-   * Delete records older than the retention window from the live table and the
-   * archive. Records under legal hold are never deleted, and the newest live
-   * record is kept so the hash chain keeps its anchor.
+   * Delete records past the retention window from the live table and the
+   * archive. Delegates to the retention service so there is a single delete
+   * path: legal holds and the newest record are kept, and the purged chain
+   * positions are recorded so verification does not report them as tampering.
    */
   async cleanupOldLogs(tenantSlug: string): Promise<number> {
-    const schema = tenantService.getSchemaName(tenantSlug);
-
-    // Get retention setting
-    const settings = await this.getSettings(tenantSlug);
-
-    const result = await pool.query(
-      `DELETE FROM ${schema}.audit_logs
-       WHERE created_at < NOW() - INTERVAL '1 day' * $1
-         AND (legal_hold IS NULL OR legal_hold = false)
-         AND sequence < (SELECT MAX(sequence) FROM ${schema}.audit_logs)
-       RETURNING id`,
-      [settings.retention_days]
-    );
-    const archived = await pool.query(
-      `DELETE FROM ${schema}.audit_logs_archive
-       WHERE created_at < NOW() - INTERVAL '1 day' * $1
-         AND (legal_hold IS NULL OR legal_hold = false)
-       RETURNING id`,
-      [settings.retention_days]
-    );
-
-    const deletedCount = (result.rowCount || 0) + (archived.rowCount || 0);
-
-    if (deletedCount > 0) {
-      logger.info(
-        { tenantSlug, deletedCount, retentionDays: settings.retention_days },
-        'Cleaned up old audit logs'
-      );
-      await cacheService.invalidateTenant(tenantSlug, 'audit');
-    }
-
-    return deletedCount;
+    // Imported lazily: audit-retention imports this module.
+    const { auditRetentionService } = await import('./audit-retention.js');
+    const result = await auditRetentionService.purgeExpired(tenantSlug, { mode: 'cleanup' });
+    return result.purgedLive + result.purgedArchive;
   }
 }
 

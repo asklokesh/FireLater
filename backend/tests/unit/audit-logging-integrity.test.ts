@@ -66,18 +66,48 @@ describe('tamper evidence covers the whole record (reviewer finding 6)', () => {
     user_email: 'a@b.c', user_name: null, entity_name: 'Printer', old_values: { priority: 'low' },
     new_values: { priority: 'high' }, changed_fields: ['priority'], outcome: 'success', severity: 'info',
     http_method: 'PUT', request_path: '/v1/issues/x', status_code: 200, user_agent: null, request_id: null,
+    changes: { title: 'Printer', issueNumber: 'ISS-00001' },
   };
 
   function sealed(overrides: Record<string, unknown> = {}, position = 1, prev: string | null = null) {
-    const digest = auditChainService.computeContentDigest(content);
-    const payload = { ...base, sequence: position, chain_position: position, content: digest };
+    const digest = auditChainService.computeContentDigest(content, 2);
+    const payload = { ...base, sequence: position, chain_position: position, content: digest, digest_version: 2 };
     const hash = auditChainService.computeHash(payload, prev);
     return {
       sequence: position, chain_position: position, prev_hash: prev, record_hash: hash, content_digest: digest,
+      digest_version: 2,
       action: 'update', entity_type: 'issue', entity_id: null, user_id: 'u1', ip_address: null,
       created_at: new Date('2026-01-01T00:00:00.000Z'), metadata: {}, ...content, ...overrides,
     };
   }
+
+  /** A record sealed before digest_version existed (version 1: `changes` not covered). */
+  function sealedV1(overrides: Record<string, unknown> = {}) {
+    const digest = auditChainService.computeContentDigest(content, 1);
+    const payload = { ...base, sequence: 1, chain_position: 1, content: digest };
+    const hash = auditChainService.computeHash(payload, null);
+    return {
+      sequence: 1, chain_position: 1, prev_hash: null, record_hash: hash, content_digest: digest,
+      digest_version: null,
+      action: 'update', entity_type: 'issue', entity_id: null, user_id: 'u1', ip_address: null,
+      created_at: new Date('2026-01-01T00:00:00.000Z'), metadata: {}, ...content, ...overrides,
+    };
+  }
+
+  it('still accepts records sealed with the version 1 digest', async () => {
+    mockPoolQuery.mockResolvedValueOnce({ rows: [sealedV1()] });
+    expect(await auditChainService.verifyChain('acme')).toMatchObject({ valid: true, checkedCount: 1 });
+  });
+
+  it('detects a version 1 record whose old values were edited', async () => {
+    mockPoolQuery.mockResolvedValueOnce({ rows: [sealedV1({ old_values: { priority: 'critical' } })] });
+    expect((await auditChainService.verifyChain('acme')).valid).toBe(false);
+  });
+
+  it('detects a version 2 record relabelled as version 1 (no downgrade)', async () => {
+    mockPoolQuery.mockResolvedValueOnce({ rows: [sealed({ digest_version: null, changes: { title: 'x' } })] });
+    expect((await auditChainService.verifyChain('acme')).valid).toBe(false);
+  });
 
   it('accepts an untouched sealed chain', async () => {
     const r1 = sealed();
@@ -93,6 +123,7 @@ describe('tamper evidence covers the whole record (reviewer finding 6)', () => {
     ['user_email', { user_email: 'mallory@evil.test' }],
     ['outcome', { outcome: 'denied' }],
     ['entity_name', { entity_name: 'Other' }],
+    ['changes (legacy service payload)', { changes: { title: 'Rewritten' } }],
   ])('detects an edit of %s', async (_name, change) => {
     mockPoolQuery.mockResolvedValueOnce({ rows: [sealed(change)] });
     const result = await auditChainService.verifyChain('acme');
@@ -243,13 +274,35 @@ describe('retention policy (reviewer findings 4, 12, 13)', () => {
     expect(backfill).toContain('IS DISTINCT FROM');
   });
 
-  it('keeps the newest record and clears the cache when cleaning up by age', async () => {
-    mockPoolQuery.mockResolvedValue({ rows: [{ retention_days: 30 }], rowCount: 2 });
-    await auditService.cleanupOldLogs('acme');
+  it('manual cleanup uses the retention purge: newest record kept, purged positions recorded', async () => {
+    mockPoolQuery.mockImplementation(async (sql: string) => {
+      if (sql.includes('FROM tenant_acme.audit_settings')) return { rows: [{ retention_days: 30, archive_after_days: 7 }] };
+      if (sql.startsWith('DELETE FROM tenant_acme.audit_logs_archive')) return { rowCount: 0, rows: [] };
+      if (sql.startsWith('DELETE FROM tenant_acme.audit_logs')) {
+        return { rowCount: 2, rows: [{ chain_position: '4' }, { chain_position: '5' }] };
+      }
+      return { rowCount: 0, rows: [] };
+    });
+    const logSpy = vi.spyOn(auditService, 'logSafe').mockResolvedValue('run-1');
+    const result = await auditRetentionService.runForTenant('acme', {
+      archive: false,
+      mode: 'cleanup',
+      actor: { userId: 'admin-1' },
+    });
+    expect(result).toMatchObject({ archived: 0, purgedLive: 2, purgedArchive: 0 });
     const deletes = mockPoolQuery.mock.calls.map((c) => c[0] as string).filter((s) => s.startsWith('DELETE'));
     expect(deletes[0]).toContain('sequence < (SELECT MAX(sequence)');
+    expect(deletes[0]).toContain('RETURNING chain_position');
     expect(deletes.some((s) => s.includes('audit_logs_archive'))).toBe(true);
+    // archive: false never moves records
+    expect(mockPoolQuery.mock.calls.some((c) => (c[0] as string).includes('INSERT INTO tenant_acme.audit_logs_archive'))).toBe(false);
+    expect(logSpy).toHaveBeenCalledWith('acme', expect.objectContaining({
+      action: 'retention_run',
+      userId: 'admin-1',
+      metadata: expect.objectContaining({ mode: 'cleanup', deletedCount: 2, purgedPositions: [[4, 5]] }),
+    }));
     expect(mockInvalidate).toHaveBeenCalledWith('acme', 'audit');
+    logSpy.mockRestore();
   });
 
   it('rejects an archive window that is not shorter than the effective retention', () => {

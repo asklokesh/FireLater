@@ -3,6 +3,8 @@ import { pool } from '../config/database.js';
 import { tenantService } from '../services/tenant.js';
 import { auditService, diffValues, type AuditAction, type AuditLogEntry } from '../services/audit.js';
 import { logger } from '../utils/logger.js';
+import { captureException } from '../lib/errorTracking.js';
+import { buildErrorContext, isRecoveryReplay } from '../plugins/errorHandler.js';
 import type { AuditOutcome, AuditSeverity } from '../lib/audit-search.js';
 
 // ============================================
@@ -17,6 +19,12 @@ import type { AuditOutcome, AuditSeverity } from '../lib/audit-search.js';
 //   onResponse  - classify the request, snapshot the row again, diff the two
 //                 (field-level old/new values) and write the audit record
 //
+// One row per action: when the service handling the request already wrote its
+// own audit row for the entity (a direct INSERT), the request context is merged
+// into that row instead of adding a second one (auditService.logRequest).
+// Internal recovery replays (errorHandler retrying a GET via app.inject) are
+// not audited; the outer request is.
+//
 // Reads are logged only when the tenant enabled log_reads / log_exports.
 // Denied requests (403) are always logged. Writing happens after the response
 // has been sent, and a failure to audit never fails the request.
@@ -26,6 +34,8 @@ declare module 'fastify' {
   interface FastifyRequest {
     auditBefore?: Record<string, unknown> | null;
     auditCreated?: { id?: string; name?: string };
+    /** Highest audit sequence before the handler ran (finds rows the service wrote itself) */
+    auditAfterSequence?: number | null;
   }
 }
 
@@ -214,6 +224,7 @@ async function snapshot(
  */
 function isAuditable(request: FastifyRequest, statusCode?: number): boolean {
   if (request.method === 'OPTIONS' || request.method === 'HEAD') return false;
+  if (isRecoveryReplay(request)) return false;
   if (statusCode === 403 && request.url.startsWith('/v1/audit')) return true;
   return !SKIP_PREFIXES.some((p) => request.url.startsWith(p));
 }
@@ -233,11 +244,13 @@ export function registerAuditHooks(app: FastifyInstance): void {
     try {
       if (!MUTATING.has(request.method) || !isAuditable(request)) return;
       const target = resolveAuditTarget(request.url);
-      if (!target?.entity || !target.entityId) return;
+      if (!target) return;
 
       await request.jwtVerify();
       const tenantSlug = request.user?.tenantSlug;
       if (!tenantSlug) return;
+      request.auditAfterSequence = await auditService.currentSequence(tenantSlug);
+      if (!target.entity || !target.entityId) return;
       request.auditBefore = await snapshot(tenantSlug, target.entity, target.entityId);
     } catch {
       // not authenticated, or the snapshot failed: audit without a before-state
@@ -245,7 +258,11 @@ export function registerAuditHooks(app: FastifyInstance): void {
   });
 
   // Remember the id/name of a newly created entity from the response body.
-  app.addHook('onSend', async (request, reply, payload) => {
+  // Callback style on purpose: an async onSend hook adds a promise tick to every
+  // response, and a route that calls reply.send() without returning it then
+  // races its own completion (Fastify sends twice -> ERR_HTTP_HEADERS_SENT as an
+  // unhandled rejection, which the process error handler treats as fatal).
+  app.addHook('onSend', (request, reply, payload, done) => {
     try {
       if (
         request.method === 'POST' &&
@@ -263,14 +280,21 @@ export function registerAuditHooks(app: FastifyInstance): void {
     } catch {
       // not JSON: nothing to capture
     }
-    return payload;
+    done(null, payload);
   });
 
   app.addHook('onResponse', async (request, reply) => {
     try {
       await recordRequest(request, reply.statusCode);
     } catch (err) {
+      // The response has already been sent; report the failure like any other
+      // server error (error tracking with the request context) and move on.
       logger.error({ err, url: request.url }, 'Failed to write audit record for request');
+      try {
+        captureException(err, { ...buildErrorContext(request), operation: 'audit.recordRequest' });
+      } catch {
+        // error tracking must never throw out of a response hook
+      }
     }
   });
 }
@@ -385,5 +409,9 @@ async function recordRequest(request: FastifyRequest, statusCode: number): Promi
     },
   };
 
-  await auditService.log(tenantSlug, entry);
+  if (MUTATING.has(method) && !denied) {
+    await auditService.logRequest(tenantSlug, entry, request.auditAfterSequence ?? null);
+  } else {
+    await auditService.log(tenantSlug, entry);
+  }
 }

@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import Fastify from 'fastify';
 import jwt from '@fastify/jwt';
 
@@ -199,13 +199,14 @@ describe('auditService.log (hash chain)', () => {
     expect(mockClientRelease).toHaveBeenCalled();
 
     const update = calls.find((c) => (c[0] as string).startsWith('UPDATE'))!;
-    const digest = auditChainService.computeContentDigest({});
+    const digest = auditChainService.computeContentDigest({}, 2);
     const expected = auditChainService.computeHash(
       {
         action: 'update',
         chain_position: 1,
         content: digest,
         created_at: createdAt.toISOString(),
+        digest_version: 2,
         entity_id: ISSUE,
         entity_type: 'issue',
         ip_address: '10.0.0.1',
@@ -215,7 +216,7 @@ describe('auditService.log (hash chain)', () => {
       },
       'a'.repeat(64)
     );
-    expect(update[1]).toEqual(['a'.repeat(64), expected, digest, 1, 'row-1']);
+    expect(update[1]).toEqual(['a'.repeat(64), expected, digest, 1, 2, 'row-1']);
   });
 
   it('chains several pending records in sequence order', async () => {
@@ -373,11 +374,36 @@ describe('retention', () => {
     expect(sql).toContain('sequence < (SELECT MAX(sequence)');
   });
 
+  const catalog = (archiveColumns: string[]) => ({
+    rows: [
+      ...['id', 'action', 'changes', 'created_at'].map((c) => ({ table_name: 'audit_logs', column_name: c })),
+      ...archiveColumns.map((c) => ({ table_name: 'audit_logs_archive', column_name: c })),
+    ],
+  });
+
   it('archives in batches until a short batch comes back', async () => {
-    mockPoolQuery.mockResolvedValueOnce({ rowCount: 5000 }).mockResolvedValueOnce({ rowCount: 12 });
+    mockPoolQuery
+      .mockResolvedValueOnce(catalog(['id', 'action', 'changes', 'created_at', 'archived_at']))
+      .mockResolvedValueOnce({ rowCount: 5000 })
+      .mockResolvedValueOnce({ rowCount: 12 });
     const moved = await auditRetentionService.archiveOld('acme', 30);
     expect(moved).toBe(5012);
-    expect(mockPoolQuery).toHaveBeenCalledTimes(2);
+    expect(mockPoolQuery).toHaveBeenCalledTimes(3);
+  });
+
+  it('moves every live column, including the legacy changes payload', async () => {
+    mockPoolQuery
+      .mockResolvedValueOnce(catalog(['id', 'action', 'changes', 'created_at', 'archived_at']))
+      .mockResolvedValueOnce({ rowCount: 1 });
+    await auditRetentionService.archiveOld('acme', 30);
+    const sql = mockPoolQuery.mock.calls[1][0] as string;
+    expect(sql).toContain('INSERT INTO tenant_acme.audit_logs_archive ("id", "action", "changes", "created_at", archived_at)');
+  });
+
+  it('refuses to archive when the archive table lacks a live column', async () => {
+    mockPoolQuery.mockResolvedValueOnce(catalog(['id', 'action', 'created_at', 'archived_at']));
+    await expect(auditRetentionService.archiveOld('acme', 30)).rejects.toThrow(/missing columns: changes/);
+    expect(mockPoolQuery).toHaveBeenCalledTimes(1);
   });
 });
 
@@ -455,6 +481,7 @@ describe('audit hooks (field-level change tracking through a real Fastify app)',
   let settingsSpy: ReturnType<typeof vi.spyOn>;
   beforeEach(() => {
     logSpy = vi.spyOn(auditService, 'log').mockResolvedValue('id');
+    vi.spyOn(auditService, 'currentSequence').mockResolvedValue(null);
     settingsSpy = vi.spyOn(auditService, 'getCachedSettings').mockResolvedValue({
       retention_days: 365, log_reads: false, log_exports: true, sensitive_fields: [], archive_after_days: null, alerts_enabled: true,
     });
@@ -577,5 +604,101 @@ describe('audit hooks (field-level change tracking through a real Fastify app)',
     expect(res.statusCode).toBe(200);
     await settle();
     await app.close();
+  });
+});
+
+describe('one record per action: the request merges into the service-written row', () => {
+  const entry = {
+    userId: 'u1', userEmail: 'admin@acme.test', action: 'update' as const, entityType: 'issue', entityId: ISSUE,
+    oldValues: { title: 'Printer', priority: 'low' }, newValues: { title: 'Printer!', priority: 'high' },
+    changedFields: ['title', 'priority'], ipAddress: '10.0.0.1', userAgent: 'vitest', requestId: 'req-1',
+    httpMethod: 'PUT', requestPath: `/v1/issues/${ISSUE}`, statusCode: 200,
+  };
+  let logSpy: ReturnType<typeof vi.spyOn>;
+  let sealSpy: ReturnType<typeof vi.spyOn>;
+  beforeEach(() => {
+    logSpy = vi.spyOn(auditService, 'log').mockResolvedValue('new-row');
+    sealSpy = vi.spyOn(auditService, 'sealPending').mockResolvedValue(0);
+  });
+  afterEach(() => {
+    logSpy.mockRestore();
+    sealSpy.mockRestore();
+  });
+
+  it('merges the request context into an unsealed service row under the chain lock', async () => {
+    mockClientQuery.mockImplementation(async (sql: string) =>
+      sql.startsWith('SELECT id, record_hash') ? { rows: [{ id: 'svc-row', record_hash: null }] } : { rows: [], rowCount: 1 }
+    );
+    const id = await auditService.logRequest('acme', entry, 41);
+    expect(id).toBe('svc-row');
+    expect(logSpy).not.toHaveBeenCalled();
+    const sqls = mockClientQuery.mock.calls.map((c) => c[0] as string);
+    expect(sqls[0]).toBe('BEGIN');
+    expect(sqls[1]).toContain('pg_advisory_xact_lock');
+    const select = mockClientQuery.mock.calls[2];
+    expect(select[0]).toContain('sequence > $1');
+    expect(select[1]).toEqual([41, ISSUE, 'u1']);
+    const update = mockClientQuery.mock.calls.find((c) => (c[0] as string).startsWith('UPDATE'))!;
+    expect(update[0]).toContain('WHERE id = $1 AND record_hash IS NULL');
+    expect(update[0]).not.toContain('changes =');
+    expect(update[1].slice(0, 1)).toEqual(['svc-row']);
+    expect(update[1]).toEqual(expect.arrayContaining(['10.0.0.1', 'vitest', 'req-1', 'PUT', 200, ['title', 'priority']]));
+    expect(sqls[sqls.length - 1]).toBe('COMMIT');
+  });
+
+  it('writes nothing more when the service row was already sealed', async () => {
+    mockClientQuery.mockImplementation(async (sql: string) =>
+      sql.startsWith('SELECT id, record_hash') ? { rows: [{ id: 'svc-row', record_hash: 'h' }] } : { rows: [] }
+    );
+    expect(await auditService.logRequest('acme', entry, 41)).toBe('svc-row');
+    expect(logSpy).not.toHaveBeenCalled();
+    expect(mockClientQuery.mock.calls.some((c) => (c[0] as string).startsWith('UPDATE'))).toBe(false);
+  });
+
+  it('writes its own record when the service wrote none', async () => {
+    mockClientQuery.mockResolvedValue({ rows: [] });
+    expect(await auditService.logRequest('acme', entry, 41)).toBe('new-row');
+    expect(logSpy).toHaveBeenCalledWith('acme', entry);
+  });
+
+  it('writes its own record when no sequence watermark was taken', async () => {
+    expect(await auditService.logRequest('acme', entry, null)).toBe('new-row');
+    expect(mockClientQuery).not.toHaveBeenCalled();
+  });
+});
+
+describe('error recovery replays are not audited twice', () => {
+  it('a GET replayed after a transient failure writes one view record', async () => {
+    const { errorHandlerPlugin } = await import('../../src/plugins/errorHandler.js');
+    const { ServiceUnavailableError } = await import('../../src/lib/errors.js');
+    const { clearRecoveryHandlers, registerDefaultRecoveryHandlers } = await import('../../src/lib/errorRecovery.js');
+    clearRecoveryHandlers();
+    registerDefaultRecoveryHandlers();
+    const logSpy = vi.spyOn(auditService, 'log').mockResolvedValue('id');
+    const settingsSpy = vi.spyOn(auditService, 'getCachedSettings').mockResolvedValue({
+      retention_days: 365, log_reads: true, log_exports: true, sensitive_fields: [], archive_after_days: null, alerts_enabled: true,
+    });
+    const app = Fastify();
+    await app.register(jwt, { secret: 'test-secret-test-secret-test-secret' });
+    await app.register(errorHandlerPlugin);
+    registerAuditHooks(app);
+    let calls = 0;
+    app.get('/v1/issues/:id', {
+      config: { replayOnTransientError: true },
+      preHandler: [async (request) => { await request.jwtVerify(); }],
+    }, async () => {
+      if (calls++ === 0) throw new ServiceUnavailableError();
+      return { id: ISSUE };
+    });
+    const token = app.jwt.sign({ userId: 'u1', email: 'admin@acme.test', tenantSlug: 'acme', roles: ['admin'] });
+    const res = await app.inject({ method: 'GET', url: `/v1/issues/${ISSUE}`, headers: { authorization: `Bearer ${token}` } });
+    expect(res.statusCode).toBe(200);
+    expect(calls).toBe(2);
+    await new Promise((r) => setTimeout(r, 30));
+    const views = logSpy.mock.calls.filter((c) => c[1].action === 'view');
+    expect(views).toHaveLength(1);
+    await app.close();
+    logSpy.mockRestore();
+    settingsSpy.mockRestore();
   });
 });

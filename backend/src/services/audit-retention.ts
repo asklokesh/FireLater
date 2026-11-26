@@ -1,7 +1,7 @@
 import { pool } from '../config/database.js';
 import { tenantService } from './tenant.js';
 import { logger } from '../utils/logger.js';
-import { auditService } from './audit.js';
+import { auditService, type AuditLogEntry } from './audit.js';
 import { cacheService } from '../utils/cache.js';
 
 // ============================================
@@ -20,13 +20,30 @@ import { cacheService } from '../utils/cache.js';
 const ARCHIVE_BATCH_SIZE = 5000;
 const MAX_BATCHES_PER_RUN = 200;
 
-const COPY_COLUMNS = [
-  'id', 'user_id', 'user_email', 'user_name', 'action', 'entity_type', 'entity_id',
-  'entity_name', 'old_values', 'new_values', 'changed_fields', 'ip_address', 'user_agent',
-  'request_id', 'session_id', 'metadata', 'created_at', 'sequence', 'prev_hash',
-  'record_hash', 'retention_until', 'legal_hold', 'severity', 'outcome', 'http_method',
-  'request_path', 'status_code', 'content_digest', 'chain_position',
-].join(', ');
+/**
+ * Every column of the live table, read from the catalog, so a record is moved
+ * whole (including the legacy `changes` payload and any column added later).
+ * Archiving refuses to run when the archive table lacks one of them, because
+ * moving the row would silently drop that value.
+ */
+async function archiveCopyColumns(schema: string): Promise<string> {
+  const result = await pool.query(
+    `SELECT table_name, column_name
+       FROM information_schema.columns
+      WHERE table_schema = $1 AND table_name IN ('audit_logs', 'audit_logs_archive')
+      ORDER BY ordinal_position`,
+    [schema]
+  );
+  const rows = result.rows as Array<{ table_name: string; column_name: string }>;
+  const live = rows.filter((r) => r.table_name === 'audit_logs').map((r) => r.column_name);
+  const archive = new Set(rows.filter((r) => r.table_name === 'audit_logs_archive').map((r) => r.column_name));
+  if (live.length === 0) throw new Error(`No audit_logs table in schema ${schema}`);
+  const missing = live.filter((c) => !archive.has(c));
+  if (missing.length > 0) {
+    throw new Error(`audit_logs_archive in ${schema} is missing columns: ${missing.join(', ')} (run the migrations)`);
+  }
+  return live.map((c) => `"${c.replace(/"/g, '""')}"`).join(', ');
+}
 
 export interface RetentionRunResult {
   tenantSlug: string;
@@ -117,6 +134,7 @@ export class AuditRetentionService {
   /** Move records older than archiveAfterDays into the archive table. */
   async archiveOld(tenantSlug: string, archiveAfterDays: number): Promise<number> {
     const schema = tenantService.getSchemaName(tenantSlug);
+    const columns = await archiveCopyColumns(schema);
     let total = 0;
 
     for (let batch = 0; batch < MAX_BATCHES_PER_RUN; batch++) {
@@ -130,10 +148,10 @@ export class AuditRetentionService {
                ORDER BY created_at
                LIMIT ${ARCHIVE_BATCH_SIZE}
             )
-            RETURNING ${COPY_COLUMNS}
+            RETURNING ${columns}
          )
-         INSERT INTO ${schema}.audit_logs_archive (${COPY_COLUMNS}, archived_at)
-         SELECT ${COPY_COLUMNS}, NOW() FROM moved`,
+         INSERT INTO ${schema}.audit_logs_archive (${columns}, archived_at)
+         SELECT ${columns}, NOW() FROM moved`,
         [archiveAfterDays]
       );
       const count = moved.rowCount ?? 0;
@@ -144,77 +162,131 @@ export class AuditRetentionService {
     return total;
   }
 
-  /** Delete expired records from the live table. Legal holds are always kept. */
-  async purgeLive(tenantSlug: string): Promise<PurgeResult> {
+  /**
+   * Delete expired records from the live table: retention_until has passed
+   * (records without a stamp expire retentionDays after creation). Legal holds
+   * and the newest record are always kept.
+   */
+  async purgeLive(tenantSlug: string, retentionDays: number | null = null): Promise<PurgeResult> {
     const schema = tenantService.getSchemaName(tenantSlug);
     const result = await pool.query(
       `DELETE FROM ${schema}.audit_logs
-        WHERE retention_until IS NOT NULL
-          AND retention_until < NOW()
+        WHERE COALESCE(retention_until, created_at + INTERVAL '1 day' * $1) < NOW()
           AND (legal_hold IS NULL OR legal_hold = false)
           AND sequence < (SELECT MAX(sequence) FROM ${schema}.audit_logs)
-        RETURNING chain_position`
+        RETURNING chain_position`,
+      [retentionDays && retentionDays > 0 ? retentionDays : null]
     );
     return this.toPurgeResult(result);
   }
 
-  /** Delete expired records from the archive. Legal holds are always kept. */
-  async purgeArchive(tenantSlug: string): Promise<PurgeResult> {
+  /** Delete expired records from the archive (same rule as purgeLive). Legal holds are always kept. */
+  async purgeArchive(tenantSlug: string, retentionDays: number | null = null): Promise<PurgeResult> {
     const schema = tenantService.getSchemaName(tenantSlug);
     const result = await pool.query(
       `DELETE FROM ${schema}.audit_logs_archive
-        WHERE retention_until IS NOT NULL
-          AND retention_until < NOW()
+        WHERE COALESCE(retention_until, created_at + INTERVAL '1 day' * $1) < NOW()
           AND (legal_hold IS NULL OR legal_hold = false)
-        RETURNING chain_position`
+        RETURNING chain_position`,
+      [retentionDays && retentionDays > 0 ? retentionDays : null]
     );
     return this.toPurgeResult(result);
   }
 
-  private toPurgeResult(result: { rowCount?: number | null; rows?: Array<{ chain_position: string | number | null }> }): PurgeResult {
+  private toPurgeResult(
+    result: { rowCount?: number | null; rows?: Array<{ chain_position: string | number | null }> } | undefined
+  ): PurgeResult {
+    if (!result) return { count: 0, positions: [] };
     const positions = (result.rows ?? [])
       .filter((r) => r.chain_position !== null && r.chain_position !== undefined)
       .map((r) => Number(r.chain_position));
     return { count: result.rowCount ?? 0, positions: toRanges(positions) };
   }
 
-  /** Apply the tenant's retention policy once: re-stamp, archive, purge. */
-  async runForTenant(tenantSlug: string): Promise<RetentionRunResult> {
+  /**
+   * Apply the tenant's retention policy once: re-stamp, optionally archive,
+   * purge. The daily job, POST /v1/audit/retention/run and POST
+   * /v1/audit/cleanup (archive: false) all use it; see purgeAndRecord for the
+   * single delete path.
+   */
+  async runForTenant(
+    tenantSlug: string,
+    options: { archive?: boolean; mode?: string; actor?: Partial<AuditLogEntry> } = {}
+  ): Promise<RetentionRunResult> {
     const settings = await auditService.getSettings(tenantSlug);
 
     const backfilled =
       settings.retention_days > 0 ? await this.applyRetentionPolicy(tenantSlug, settings.retention_days) : 0;
     const archived =
-      settings.archive_after_days && settings.archive_after_days > 0
+      options.archive !== false && settings.archive_after_days && settings.archive_after_days > 0
         ? await this.archiveOld(tenantSlug, settings.archive_after_days)
         : 0;
-    const live = await this.purgeLive(tenantSlug);
-    const archive = await this.purgeArchive(tenantSlug);
+    const purged = await this.purgeAndRecord(tenantSlug, settings.retention_days, {
+      archived,
+      backfilled,
+      mode: options.mode,
+      actor: options.actor,
+    });
+    return { tenantSlug, backfilled, archived, ...purged };
+  }
+
+  /**
+   * Delete expired records (live and archive) without re-stamping or
+   * archiving: auditService.cleanupOldLogs. Same delete path as runForTenant.
+   */
+  async purgeExpired(
+    tenantSlug: string,
+    options: { mode?: string; actor?: Partial<AuditLogEntry> } = {}
+  ): Promise<{ purgedLive: number; purgedArchive: number }> {
+    const settings = await auditService.getSettings(tenantSlug);
+    return this.purgeAndRecord(tenantSlug, settings.retention_days, { archived: 0, backfilled: 0, ...options });
+  }
+
+  /**
+   * The only code path that deletes audit records. Every run that moved or
+   * deleted records (or was started by an admin) writes one `retention_run`
+   * record carrying the purged chain positions, so chain verification can
+   * tell a retention purge from a deleted record. `actor` attributes that
+   * record to the admin who triggered the run.
+   */
+  private async purgeAndRecord(
+    tenantSlug: string,
+    retentionDays: number,
+    run: { archived: number; backfilled: number; mode?: string; actor?: Partial<AuditLogEntry> }
+  ): Promise<{ purgedLive: number; purgedArchive: number }> {
+    const live = await this.purgeLive(tenantSlug, retentionDays);
+    const archive = await this.purgeArchive(tenantSlug, retentionDays);
     const purgedLive = live.count;
     const purgedArchive = archive.count;
-
-    const result: RetentionRunResult = { tenantSlug, backfilled, archived, purgedLive, purgedArchive };
+    const { archived, backfilled } = run;
 
     if (backfilled > 0 || archived > 0 || purgedLive > 0 || purgedArchive > 0) {
       // Cached audit queries no longer reflect the tables.
       await cacheService.invalidateTenant(tenantSlug, 'audit');
     }
 
-    if (archived > 0 || purgedLive > 0 || purgedArchive > 0) {
-      logger.info(result, 'Audit retention policy applied');
-      // Deleting audit data is itself an audited event. The purged chain
-      // positions are recorded so chain verification can tell a retention
-      // purge from a deleted record.
+    if (archived > 0 || purgedLive > 0 || purgedArchive > 0 || run.actor) {
+      logger.info({ tenantSlug, archived, purgedLive, purgedArchive, mode: run.mode }, 'Audit retention policy applied');
+      // Deleting audit data is itself an audited event.
       const purgedPositions = mergeRanges([...live.positions, ...archive.positions]).slice(0, MAX_RECORDED_RANGES);
       await auditService.logSafe(tenantSlug, {
+        ...(run.actor ?? {}),
         action: 'retention_run',
         entityType: 'audit_log',
         severity: 'medium',
-        metadata: { archived, purgedLive, purgedArchive, retentionDays: settings.retention_days, purgedPositions },
+        metadata: {
+          ...(run.mode ? { mode: run.mode } : {}),
+          archived,
+          purgedLive,
+          purgedArchive,
+          deletedCount: purgedLive + purgedArchive,
+          retentionDays,
+          purgedPositions,
+        },
       });
     }
 
-    return result;
+    return { purgedLive, purgedArchive };
   }
 
   /** Set or clear legal hold on every record matching the scope (live and archive). */

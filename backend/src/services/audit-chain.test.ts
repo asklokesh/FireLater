@@ -264,24 +264,4 @@ describe('AuditChainService', () => {
       expect(hash).toBe(expectedHash);
     });
   });
-
-  // ------------------------------------------------------------------
-  // purgeExpired
-  // ------------------------------------------------------------------
-
-  describe('purgeExpired', () => {
-    it('returns 0 when no records are purged', async () => {
-      (pool.query as ReturnType<typeof vi.fn>).mockResolvedValueOnce({ rowCount: 0, rows: [] });
-
-      const count = await service.purgeExpired('acme');
-      expect(count).toBe(0);
-    });
-
-    it('returns the number of purged records', async () => {
-      (pool.query as ReturnType<typeof vi.fn>).mockResolvedValueOnce({ rowCount: 7, rows: [] });
-
-      const count = await service.purgeExpired('acme');
-      expect(count).toBe(7);
-    });
-  });
 });

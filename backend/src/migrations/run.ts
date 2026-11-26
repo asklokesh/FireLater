@@ -38,6 +38,7 @@ import { migration035PrivilegedGrants } from './035_privileged_grants.js';
 import { migration036VendorRisk } from './036_vendor_risk.js';
 import { migration037AdvancedSearch } from './037_advanced_search.js';
 import { migration038AuditEnhancements } from './038_audit_enhancements.js';
+import { migration039AuditDigestVersion } from './039_audit_digest_version.js';
 
 interface Migration {
   name: string;
@@ -83,6 +84,7 @@ const migrations: Migration[] = [
   { name: '036_vendor_risk', up: migration036VendorRisk },
   { name: '037_advanced_search', up: migration037AdvancedSearch },
   { name: '038_audit_enhancements', up: migration038AuditEnhancements },
+  { name: '039_audit_digest_version', up: migration039AuditDigestVersion },
 ];
 
 async function ensureMigrationsTable() {

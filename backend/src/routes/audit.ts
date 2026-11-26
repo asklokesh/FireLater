@@ -417,10 +417,24 @@ const auditRoutes: FastifyPluginAsync = async (app) => {
     async (request, _reply) => {
       const { tenantSlug } = request.user;
 
-      const deletedCount = await auditService.cleanupOldLogs(tenantSlug);
-      await auditAdminAction(request, 'retention_run', 'audit_log', { metadata: { deletedCount, mode: 'cleanup' } });
+      // Same purge path as the scheduled retention run (records the purged
+      // chain positions, keeps legal holds and the newest record), without
+      // archiving. The retention_run record it writes is the admin audit entry.
+      const result = await auditRetentionService.runForTenant(tenantSlug, {
+        archive: false,
+        mode: 'cleanup',
+        actor: {
+          userId: request.user.userId,
+          userEmail: request.user.email,
+          ipAddress: request.ip,
+          userAgent: request.headers['user-agent'],
+          requestId: request.id,
+          httpMethod: request.method,
+          requestPath: request.url.split('?')[0],
+        },
+      });
 
-      return { deletedCount };
+      return { deletedCount: result.purgedLive + result.purgedArchive };
     }
   );
 
