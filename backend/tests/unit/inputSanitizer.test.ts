@@ -81,6 +81,19 @@ describe('sanitizer ends a tag where a browser does (quoted attribute values)', 
   ])('neutralises %j', (payload, needle) => {
     expect(s(payload, 'description').toLowerCase()).not.toContain(needle);
   });
+  it.each(['textarea', 'title', 'xmp', 'noembed', 'noframes', 'noscript', 'plaintext', 'iframe'])(
+    'drops a <%s> opener, whose content a browser reads as raw text, so a quote there hides no tag',
+    (el) => {
+      for (const q of ['"', "'"]) {
+        const out = s(`<${el}><a title=${q}</${el}><img src=x onerror=alert(1)>${q}>`, 'description');
+        expect(out.toLowerCase()).not.toContain(`<${el}`);
+        expect(out.toLowerCase()).not.toContain('<img');
+      }
+    },
+  );
+  it('writes a "<" kept inside an attribute value as &lt;', () => {
+    expect(s('<a title="1 < 2">x</a>', 'description')).toBe('<a title="1 &lt; 2">x</a>');
+  });
   it('does not treat a backtick as a quote (the tag ends at the first ">")', () => {
     expect(s('<a title=`>` onclick=alert(1)>x</a>', 'description')).toBe('<a title=`>` onclick=alert(1)>x</a>');
   });

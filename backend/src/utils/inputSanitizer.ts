@@ -24,7 +24,13 @@ const PLAIN_KEY = /^(title|name|\w*_?name|\w*Name|subject|email|\w*Email|slug|te
 const URL_KEY = /(url|href|link|endpoint|webhook)/i;
 const FORBIDDEN_KEYS = new Set(['__proto__', 'constructor', 'prototype']);
 const BLOCK_ELEMENTS = new Set(['script', 'style']);
-const DROP_ELEMENTS = new Set(['iframe', 'object', 'embed', 'link', 'meta', 'base', 'frame', 'frameset', 'applet']);
+// Raw-text / RCDATA elements (textarea, title, xmp, noembed, noframes, noscript, plaintext) are dropped too:
+// a browser does not tokenize tags inside them, so quotes there hide nothing. Without the opener, the browser
+// parses their content the way this scanner does.
+const DROP_ELEMENTS = new Set([
+  'iframe', 'object', 'embed', 'link', 'meta', 'base', 'frame', 'frameset', 'applet',
+  'textarea', 'title', 'xmp', 'noembed', 'noframes', 'noscript', 'plaintext',
+]);
 
 export class InputTooDeepError extends Error {
   constructor() {
@@ -101,7 +107,9 @@ function cleanTag(tag: string): string {
       }
     }
     const bad = name.startsWith('on') || name === 'srcdoc' || isDangerousUrl(value);
-    if (!bad) out += tag.slice(sepStart, end);
+    // A '<' kept inside an attribute value is written as &lt;, which a browser decodes to the same value,
+    // so no later reader (or raw-text context the value lands in) can see a tag start there.
+    if (!bad) out += tag.slice(sepStart, end).replace(/</g, '&lt;');
     i = end;
   }
   return out;

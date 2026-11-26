@@ -83,9 +83,12 @@ of an attribute name is part of the name. A tag whose name contains `<` is dropp
 would make the tag-end scans exceed a fixed multiple of its length has its remaining `<` escaped instead.
 
 - NUL/control characters are removed from all strings
-- `<script>`/`<style>` blocks are removed; `iframe`, `object`, `embed`, `link`, `meta`, `base` tags are removed; HTML comments are removed
+- `<script>`/`<style>` blocks are removed; `iframe`, `object`, `embed`, `link`, `meta`, `base` tags are removed, and so are the
+  raw-text openers and closers `textarea`, `title`, `xmp`, `noembed`, `noframes`, `noscript`, `plaintext` (a browser does not
+  tokenize tags inside them); HTML comments are removed
 - inside any remaining tag, `on*` event-handler attributes, `srcdoc`, and attributes whose value is a `javascript:`, `vbscript:` or `data:text/html` URL
   (after HTML-entity decoding and whitespace stripping) are removed
+- a `<` kept inside an attribute value is written as `&lt;` (a browser decodes it to the same value)
 - an unterminated comment, or an unterminated plain-field tag, only loses its own `<name` token; an unterminated dangerous tag
   (`<script`, `<style`, `<iframe`, ...) has its `<` escaped to `&lt;`; in every case the text after it is kept
 - prose is untouched: `Set online = true`, `a < b`, `use javascript: URLs` are stored as written
