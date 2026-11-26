@@ -3,7 +3,7 @@ import type { FastifyError, FastifyInstance, FastifyReply, FastifyRequest } from
 import {
   AppError, ErrorCode, ErrorContext, SPECIFIC_MESSAGE_CODES, USER_MESSAGES, codeForStatus, isRetryableError,
 } from '../lib/errors.js';
-import { captureException } from '../lib/errorTracking.js';
+import { captureException, mergeErrorContext, scrubContext } from '../lib/errorTracking.js';
 import { attemptRecovery } from '../lib/errorRecovery.js';
 import { logger } from '../utils/logger.js';
 
@@ -41,6 +41,7 @@ export interface ErrorResponseBody {
 export function buildErrorContext(request: FastifyRequest): ErrorContext {
   const user = (request as { user?: { userId?: string; tenantSlug?: string; tenantId?: string } }).user;
   const base = request.errorContext ?? {};
+  const route = `${request.method} ${request.routeOptions?.url ?? request.url?.split('?')[0]}`;
   return {
     ...base,
     requestId: String(request.id),
@@ -49,7 +50,8 @@ export function buildErrorContext(request: FastifyRequest): ErrorContext {
     tenantSlug: request.tenantSlug ?? user?.tenantSlug ?? base.tenantSlug,
     tenantId: request.tenant?.id ?? user?.tenantId ?? base.tenantId,
     userId: user?.userId ?? base.userId,
-    operation: base.operation ?? `${request.method} ${request.routeOptions?.url ?? request.url?.split('?')[0]}`,
+    route,
+    operation: base.operation ?? route,
   };
 }
 
@@ -154,13 +156,24 @@ export function normalizeError(error: unknown): {
   };
 }
 
+/** Copy of an error whose attached context is scrubbed, so the log line never carries secrets. */
+function errorForLog(error: unknown): unknown {
+  if (!(error instanceof Error)) return error;
+  const own = (error as { context?: unknown }).context;
+  if (!own || typeof own !== 'object') return error;
+  const copy = Object.create(Object.getPrototypeOf(error)) as Error & { context?: unknown };
+  Object.defineProperties(copy, Object.getOwnPropertyDescriptors(error));
+  copy.context = scrubContext(own as ErrorContext);
+  return copy;
+}
+
 /** Structured error log; level depends on severity. */
 export function logError(error: unknown, status: number, code: string, context: ErrorContext): void {
   const payload = {
-    err: error,
+    err: errorForLog(error),
     statusCode: status,
     errorCode: code,
-    ...context,
+    ...scrubContext(context),
   };
   if (status >= 500) logger.error(payload, 'Request failed');
   else if (status === 401 || status === 403 || status === 404) logger.info(payload, 'Request rejected');
@@ -168,7 +181,8 @@ export function logError(error: unknown, status: number, code: string, context: 
 }
 
 export async function errorHandler(error: FastifyError | Error, request: FastifyRequest, reply: FastifyReply) {
-  const context = buildErrorContext(request);
+  // Context set on the error (withContext) is kept; the error's own operation names what failed
+  const context = mergeErrorContext(error, buildErrorContext(request));
   const n = normalizeError(error);
 
   // Recovery: routes may register `fallback` / `retry` on request.errorContext
@@ -265,7 +279,9 @@ export async function errorHandlerPlugin(app: FastifyInstance): Promise<void> {
         message: err.message,
         ...body,
         code,
-        userMessage: userMessageFor(code, status, err.message),
+        // Inline bodies carry free text (often a raw database or library message), so the friendly
+        // text always comes from the code table; the specific text stays in `message`.
+        userMessage: USER_MESSAGES[code],
         retryable: isRetryableError({ statusCode: status }),
         requestId: String(request.id),
       });

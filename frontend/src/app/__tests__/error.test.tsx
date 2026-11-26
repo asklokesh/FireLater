@@ -16,6 +16,12 @@ describe('app/error.tsx', () => {
     expect(screen.queryByText(/relation x/)).not.toBeInTheDocument();
   });
 
+  it('shows the error code line for coded errors', () => {
+    const apiError = Object.assign(new Error('x'), { response: { status: 503, data: { code: 'SERVICE_UNAVAILABLE' } } });
+    render(<GlobalError error={apiError} reset={() => {}} />);
+    expect(screen.getByText(/Error code: SERVICE_UNAVAILABLE/)).toBeInTheDocument();
+  });
+
   it('shows the generic message for unknown errors', () => {
     render(<GlobalError error={new Error('boom internals')} reset={() => {}} />);
     expect(screen.getByText(/unexpected error/i)).toBeInTheDocument();

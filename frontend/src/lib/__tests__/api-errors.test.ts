@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 const h = vi.hoisted(() => {
   const instance: any = vi.fn(async () => ({ data: 'replayed' }));
@@ -54,10 +54,32 @@ describe('api response interceptor: automatic retry', () => {
   });
 });
 
+function memoryStorage(initial: Record<string, string> = {}) {
+  const data = new Map(Object.entries(initial));
+  return {
+    getItem: (k: string) => data.get(k) ?? null,
+    setItem: (k: string, v: string) => { data.set(k, String(v)); },
+    removeItem: (k: string) => { data.delete(k); },
+    clear: () => data.clear(),
+  };
+}
+
 describe('reportClientError', () => {
   beforeEach(() => {
     vi.resetModules();
     h.instance.post.mockClear();
+    vi.stubGlobal('localStorage', memoryStorage({ accessToken: 'token' }));
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it('does not report when signed out (the endpoint needs a session)', async () => {
+    vi.stubGlobal('localStorage', memoryStorage());
+    const { reportClientError } = await import('../api');
+    reportClientError(new Error('boom'));
+    expect(h.instance.post).not.toHaveBeenCalled();
   });
 
   it('posts a trimmed error with its code to /v1/client-errors', async () => {

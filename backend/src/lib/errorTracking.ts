@@ -10,13 +10,49 @@ export interface ErrorTracker {
 
 const SENSITIVE_KEY = /pass(word)?|secret|token|authorization|cookie|api[-_]?key|credential/i;
 
-/** Remove sensitive values from a context object before it leaves the process. */
-export function scrubContext(context: ErrorContext = {}): ErrorContext {
-  const out: ErrorContext = {};
-  for (const [k, v] of Object.entries(context)) {
-    out[k] = SENSITIVE_KEY.test(k) ? '[REDACTED]' : v;
+const MAX_SCRUB_DEPTH = 6;
+const REDACTED = '[REDACTED]';
+
+function scrubValue(value: unknown, depth: number, seen: WeakSet<object>): unknown {
+  if (value === null || typeof value !== 'object') return value;
+  if (value instanceof Date) return value;
+  if (seen.has(value)) return '[Circular]';
+  if (depth >= MAX_SCRUB_DEPTH) return '[Truncated]';
+  seen.add(value);
+  try {
+    if (Array.isArray(value)) return value.map((item) => scrubValue(item, depth + 1, seen));
+    const out: Record<string, unknown> = {};
+    for (const [k, v] of Object.entries(value)) {
+      out[k] = SENSITIVE_KEY.test(k) ? REDACTED : scrubValue(v, depth + 1, seen);
+    }
+    return out;
+  } finally {
+    seen.delete(value);
   }
-  return out;
+}
+
+/**
+ * Remove sensitive values from a context object before it leaves the process. Nested objects and
+ * arrays (headers, request bodies) are scrubbed too, down to MAX_SCRUB_DEPTH levels.
+ */
+export function scrubContext(context: ErrorContext = {}): ErrorContext {
+  return scrubValue(context, 0, new WeakSet()) as ErrorContext;
+}
+
+/**
+ * Merge the context attached to an error (AppError.withContext / options.context) into the context
+ * known at the capture site. The capture site wins for identity fields (request, tenant, user);
+ * the error's own `operation` wins, because it names what actually failed.
+ */
+export function mergeErrorContext(error: unknown, context: ErrorContext): ErrorContext {
+  const own = error && typeof error === 'object' ? (error as { context?: unknown }).context : undefined;
+  if (!own || typeof own !== 'object' || Array.isArray(own)) return context;
+  const merged: ErrorContext = { ...context };
+  for (const [k, v] of Object.entries(own as Record<string, unknown>)) {
+    if (v === undefined) continue;
+    if (k === 'operation' || merged[k] === undefined) merged[k] = v;
+  }
+  return merged;
 }
 
 /** Default tracker: only logs (no external dependency). */
@@ -27,7 +63,7 @@ class LogOnlyTracker implements ErrorTracker {
   }
 }
 
-/** Sentry tracker; @sentry/node is an optional runtime dependency loaded dynamically. */
+/** Sentry tracker; @sentry/node is loaded on demand, only when SENTRY_DSN is set. */
 class SentryTracker implements ErrorTracker {
   readonly name = 'sentry';
   constructor(private sentry: any) {}
@@ -85,8 +121,8 @@ export function captureException(error: unknown, context?: ErrorContext): void {
 }
 
 /**
- * Initialise tracking. Uses Sentry when SENTRY_DSN is set and @sentry/node is installed;
- * otherwise falls back to log-only tracking.
+ * Initialise tracking. Uses Sentry when SENTRY_DSN is set; otherwise (or if @sentry/node fails to
+ * load or initialise) falls back to log-only tracking.
  */
 export async function initErrorTracking(
   env: NodeJS.ProcessEnv = process.env,
@@ -94,7 +130,7 @@ export async function initErrorTracking(
 ): Promise<ErrorTracker> {
   const dsn = env.SENTRY_DSN;
   if (!dsn) {
-    logger.warn('Error tracking is log-only: set SENTRY_DSN and install @sentry/node to send errors to Sentry');
+    logger.warn('Error tracking is log-only: set SENTRY_DSN to send errors to Sentry');
     tracker = new LogOnlyTracker();
     return tracker;
   }
@@ -106,8 +142,9 @@ export async function initErrorTracking(
       tracesSampleRate: Number(env.SENTRY_TRACES_SAMPLE_RATE ?? 0),
     });
     tracker = new SentryTracker(sentry);
+    logger.info({ environment: env.NODE_ENV }, 'Error tracking sends errors to Sentry');
   } catch (err) {
-    logger.warn({ err }, 'SENTRY_DSN set but @sentry/node could not be loaded; using log-only error tracking');
+    logger.warn({ err }, 'SENTRY_DSN set but Sentry could not be initialised; using log-only error tracking');
     tracker = new LogOnlyTracker();
   }
   return tracker;

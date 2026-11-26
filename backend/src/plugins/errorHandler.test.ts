@@ -1,14 +1,15 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import Fastify, { FastifyInstance } from 'fastify';
-import { ZodError, z } from 'zod';
+import { z } from 'zod';
 
 vi.mock('../utils/logger.js', () => ({
   logger: { info: vi.fn(), error: vi.fn(), warn: vi.fn(), debug: vi.fn() },
 }));
 
 import { errorHandlerPlugin } from './errorHandler.js';
-import { RateLimitError, BadRequestError, NotFoundError, ValidationError, ConflictError, ServiceUnavailableError, CacheError } from '../lib/errors.js';
+import { InternalError, RateLimitError, BadRequestError, NotFoundError, ValidationError, ConflictError, ServiceUnavailableError, CacheError } from '../lib/errors.js';
 import { setErrorTracker } from '../lib/errorTracking.js';
+import { USER_MESSAGES } from '../lib/errors.js';
 import { clearRecoveryHandlers, registerDefaultRecoveryHandlers } from '../lib/errorRecovery.js';
 import { logger } from '../utils/logger.js';
 
@@ -55,6 +56,10 @@ describe('errorHandler plugin', () => {
     app.get('/legacy', async () => { throw Object.assign(new Error('teapot'), { statusCode: 418, error: 'Teapot' }); });
     app.get('/pg', async () => { throw Object.assign(new Error('deadlock'), { code: '40P01' }); });
     app.get('/ctx', async (req) => { req.errorContext = { ...req.errorContext, operation: 'custom.op', tenantSlug: 'acme' }; throw new Error('x'); });
+    app.get('/errctx', { preHandler: async (req: any) => { req.user = { userId: 'u1', tenantSlug: 'acme' }; } }, async () => {
+      throw new InternalError('boom').withContext({ operation: 'svc.createOrder', orderId: 42, tenantSlug: 'other', headers: { authorization: 'Bearer x' } });
+    });
+    app.get('/inlinedup', async (_req, reply) => reply.code(400).send({ error: 'duplicate key value violates unique constraint "users_email_key"' }));
     app.get('/recover', async (req) => {
       req.errorContext = { ...req.errorContext, fallback: async () => ({ source: 'db' }) };
       throw new CacheError();
@@ -177,9 +182,33 @@ describe('errorHandler plugin', () => {
     expect(res.statusCode).toBe(503);
   });
 
-  it('keeps the specific reason of inline { error } replies as userMessage', async () => {
+  it('keeps the specific reason of inline { error } replies in message, with the friendly userMessage from the code table', async () => {
     const b = (await app.inject('/inlineerr')).json();
-    expect(b).toMatchObject({ code: 'CONFLICT', message: 'Name already in use by another SLA', userMessage: 'Name already in use by another SLA' });
+    expect(b).toMatchObject({ code: 'CONFLICT', message: 'Name already in use by another SLA', userMessage: USER_MESSAGES.CONFLICT });
+  });
+
+  it('never uses raw inline error text as userMessage', async () => {
+    const res = await app.inject('/inlinedup');
+    expect(res.statusCode).toBe(400);
+    const b = res.json();
+    expect(b.code).toBe('BAD_REQUEST');
+    expect(b.userMessage).toBe(USER_MESSAGES.BAD_REQUEST);
+    expect(b.userMessage).not.toContain('duplicate key');
+    expect(b.userMessage).not.toContain('users_email_key');
+  });
+
+  it('merges context set on the error into the tracked and logged context', async () => {
+    await app.inject('/errctx');
+    expect(captured).toHaveLength(1);
+    const [, ctx] = captured[0];
+    // the error's operation wins, the route stays as its own field, request identity is kept
+    expect(ctx).toMatchObject({ operation: 'svc.createOrder', route: 'GET /errctx', orderId: 42, tenantSlug: 'acme', userId: 'u1', errorCode: 'INTERNAL_ERROR' });
+    const logged = (logger.error as any).mock.calls[0][0];
+    expect(logged).toMatchObject({ operation: 'svc.createOrder', route: 'GET /errctx', orderId: 42, tenantSlug: 'acme', userId: 'u1' });
+    expect(logged.headers).toEqual({ authorization: '[REDACTED]' });
+    expect(logged.err.context).toEqual({ operation: 'svc.createOrder', orderId: 42, tenantSlug: 'other', headers: { authorization: '[REDACTED]' } });
+    expect(logged.err).toBeInstanceOf(InternalError);
+    expect(logged.err.message).toBe('boom');
   });
 
   it('inline 403 replies (as sent by the csrf hook in index.ts) get the unified shape', async () => {

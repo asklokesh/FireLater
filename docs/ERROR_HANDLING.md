@@ -17,7 +17,7 @@ Errors thrown by routes and services are formatted by the central handler (`back
 }
 ```
 
-- `code` is stable and meant for client logic. `message` is technical (the raw message of unexpected 5xx errors is exposed only when `NODE_ENV=development`). `userMessage` is safe to show to end users; for `BAD_REQUEST` and `CONFLICT` it is the specific message of the error, and for inline `{ error: '...' }` replies it is that same text (already part of the reply); other codes use the generic text for the code. Do not put internal details into messages of 400/409 errors.
+- `code` is stable and meant for client logic. `message` is technical (the raw message of unexpected 5xx errors is exposed only when `NODE_ENV=development`). `userMessage` is safe to show to end users; for thrown `BAD_REQUEST` and `CONFLICT` errors it is the specific message of the error; inline `{ error: '...' }` replies (whose text is often a raw database or library message) keep that text in `message` and get the generic text for the code as `userMessage`, like every other code. Do not put internal details into messages of 400/409 errors.
 - `details` is only sent for client errors (e.g. validation issues).
 - `retryable` tells clients whether the same request may succeed later.
 
@@ -44,11 +44,11 @@ All classes extend `AppError` (`backend/src/lib/errors.ts`; `utils/errors.ts` re
 
 ## Context and logging
 
-On each request the plugin builds an error context: `requestId`, `method`, `url`, `tenantSlug`, `tenantId`, `userId` and `operation`. Routes may add to `request.errorContext`. Errors are logged with this context at `error` (5xx), `info` (401/403/404) or `warn` (other 4xx).
+On each request the plugin builds an error context: `requestId`, `method`, `url`, `tenantSlug`, `tenantId`, `userId`, `route` (for example `GET /v1/issues/:id`) and `operation` (the route unless set). Routes may add to `request.errorContext`. Context attached to the error with `withContext()` is merged in: its fields are added, its `operation` replaces the route operation, and the request fields (request, tenant, user) are kept. Failed jobs merge it the same way (the worker is kept as `worker`). Errors are logged with this context at `error` (5xx), `info` (401/403/404) or `warn` (other 4xx).
 
 ## Error tracking
 
-`backend/src/lib/errorTracking.ts` sends 5xx errors (thrown or inline), failed background jobs (every worker started by the app: cleanup, SLA breaches, health scores, notifications, cloud sync, scheduled reports and bulk), `unhandledRejection`/`uncaughtException` (the event is flushed, then the process exits with code 1 as Node does by default) and frontend render errors (`POST /v1/client-errors`) to a tracker, with scrubbed context. If `SENTRY_DSN` is set **and** the optional `@sentry/node` package is installed, Sentry is used (`SENTRY_TRACES_SAMPLE_RATE` optional). `@sentry/node` is not a dependency of this repository: install it (`npm install @sentry/node` in `backend`) to enable Sentry; otherwise errors are only logged. Use `setErrorTracker()` to plug in another tracker.
+`backend/src/lib/errorTracking.ts` sends 5xx errors (thrown or inline), failed background jobs (every worker started by the app: cleanup, SLA breaches, health scores, notifications, cloud sync, scheduled reports and bulk), `unhandledRejection`/`uncaughtException` (the event is flushed, then the process exits with code 1 as Node does by default) and frontend render errors (`POST /v1/client-errors`) to a tracker, with scrubbed context: values of keys that look secret (password, secret, token, authorization, cookie, api key, credential) are replaced by `[REDACTED]` at any depth in nested objects and arrays, in the tracked context and in the log line (including `err.context`). If `SENTRY_DSN` is set, Sentry (`@sentry/node`, a dependency of the backend) is used (`SENTRY_TRACES_SAMPLE_RATE` optional); otherwise errors are only logged. Use `setErrorTracker()` to plug in another tracker.
 
 ## Retries
 
@@ -72,5 +72,6 @@ A route can add its own `fallback` with `request.errorContext = { ...request.err
 ## Frontend
 
 - `frontend/src/lib/errorMessages.ts`: `parseApiError(error)` returns `{ code, message, retryable, requestId }`; messages come from the server `userMessage` or the code mapping. `shouldRetryRequest` is a React Query retry predicate (available, not set as the default).
-- `frontend/src/components/ErrorBoundary.tsx`: shows the friendly message and error code; wraps dashboard pages, clears itself when the route changes (`resetKey`) and reports the error to `POST /v1/client-errors`. `app/error.tsx` uses the same parsing.
+- `app/(dashboard)/error.tsx` and `app/error.tsx` (the Next.js error boundaries that catch a page that throws) show the friendly message and the error code line for errors that carry an API error code (a generic message otherwise, never the technical text) and report the error to `POST /v1/client-errors` (only when signed in, since the endpoint needs a session). Next.js clears them when the route changes.
+- `frontend/src/components/ui/error-boundary.tsx`: `ErrorDisplay` (used by both error pages, with optional `code` and `requestId`) and the `ErrorBoundary` class for wrapping a part of a page. The class shows the friendly message and code for coded errors, takes an element or a renderer as `fallback`, an `onError` callback for reporting, and a `resetKey` that clears a caught error when it changes.
 - The React Query default `retry: 1` in `providers/QueryProvider.tsx` is unchanged.

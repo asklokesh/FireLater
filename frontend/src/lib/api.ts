@@ -145,9 +145,14 @@ api.interceptors.response.use(
   }
 );
 
-/** Report a frontend render error to the backend error tracking endpoint (fire and forget). */
+/**
+ * Report a frontend render error to the backend error tracking endpoint (fire and forget).
+ * Skipped when signed out: the endpoint requires a session, and a 401 would start the
+ * refresh and login redirect of the response interceptor.
+ */
 export function reportClientError(error: unknown, componentStack?: string): void {
   try {
+    if (!getAccessToken()) return;
     const e = error instanceof Error ? error : new Error(String(error));
     const info = parseApiError(error);
     void api

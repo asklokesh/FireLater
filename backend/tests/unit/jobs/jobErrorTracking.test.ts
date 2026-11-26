@@ -3,6 +3,7 @@ import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { captureJobFailure } from '../../../src/lib/jobErrors.js';
 import { setErrorTracker } from '../../../src/lib/errorTracking.js';
+import { InternalError } from '../../../src/lib/errors.js';
 
 describe('job failure tracking', () => {
   it('sends job failures with queue, job and tenant context', () => {
@@ -12,6 +13,14 @@ describe('job failure tracking', () => {
     captureJobFailure('job.cleanup', { id: '7', name: 'purge', data: { tenantSlug: 'acme' } }, err);
     expect(captured[0][0]).toBe(err);
     expect(captured[0][1]).toMatchObject({ operation: 'job.cleanup', jobId: '7', jobName: 'purge', tenantSlug: 'acme' });
+  });
+
+  it('keeps context set on the error (its operation wins, the worker stays as its own field)', () => {
+    const captured: any[] = [];
+    setErrorTracker({ name: 't', captureException: (e, c) => { captured.push([e, c]); } });
+    const err = new InternalError('send failed').withContext({ operation: 'notify.email', recipientId: 'r1' });
+    captureJobFailure('job.notifications', { id: '9', name: 'email', data: { tenantSlug: 'acme' } }, err);
+    expect(captured[0][1]).toMatchObject({ operation: 'notify.email', worker: 'job.notifications', recipientId: 'r1', jobId: '9', tenantSlug: 'acme' });
   });
 
   it('tolerates a missing job (BullMQ passes undefined for stalled jobs)', () => {
