@@ -47,24 +47,43 @@ export interface SanitizeResult<T> {
 
 // eslint-disable-next-line no-control-regex
 const CONTROL_CHARS = /[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/g;
-const ENTITY = /&(?:#x([0-9a-f]{1,6})|#(\d{1,7})|(colon|tab|newline));?/gi;
+// Digit runs are unbounded: a browser accepts any number of leading zeros (&#x000006A; is 'j'),
+// so a capped run would decode a different character than the browser does.
+const ENTITY = /&(?:#x([0-9a-f]+)|#(\d+)|(colon|tab|newline|semi));?/gi;
 const DANGEROUS_URL = /^(javascript|vbscript|data:text\/html)/;
 
 const isSpace = (c: string) => c === ' ' || c === '\t' || c === '\n' || c === '\r' || c === '\f';
 const isAlpha = (c: string) => (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z');
 
-/** True when a (possibly entity-encoded, whitespace-padded) URL uses a script scheme. */
-export function isDangerousUrl(raw: string): boolean {
-  const decoded = raw
+/** Decode the entities a browser decodes in an attribute value, then drop whitespace and controls. */
+function decodeAttr(raw: string): string {
+  return raw
     .replace(ENTITY, (_m, hex, dec, named) => {
-      if (named) return named.toLowerCase() === 'colon' ? ':' : '';
+      if (named) {
+        const n = named.toLowerCase();
+        return n === 'colon' ? ':' : n === 'semi' ? ';' : '';
+      }
+      // parseInt of a very long run gives a huge number or Infinity; anything past U+10FFFF is
+      // U+FFFD in a browser, which can never complete a scheme name, so it decodes to nothing here.
       const code = hex ? parseInt(hex, 16) : parseInt(dec, 10);
-      return code > 0 && code < 0x110000 ? String.fromCodePoint(code) : '';
+      return code > 0 && code <= 0x10ffff ? String.fromCodePoint(code) : '';
     })
     // eslint-disable-next-line no-control-regex
     .replace(/[\u0000- \u007F]/g, '')
     .toLowerCase();
-  return DANGEROUS_URL.test(decoded);
+}
+
+/** True when a (possibly entity-encoded, whitespace-padded) URL uses a script scheme. */
+export function isDangerousUrl(raw: string): boolean {
+  return DANGEROUS_URL.test(decodeAttr(raw));
+}
+
+/**
+ * True when any ';'-separated item of an SVG animation `values` list uses a script scheme
+ * (<animate attributeName="href" values="x;javascript:...">).
+ */
+function hasDangerousListItem(raw: string): boolean {
+  return decodeAttr(raw).split(';').some((item) => DANGEROUS_URL.test(item));
 }
 
 /**
@@ -106,7 +125,10 @@ function cleanTag(tag: string): string {
         end = j;
       }
     }
-    const bad = name.startsWith('on') || name === 'srcdoc' || isDangerousUrl(value);
+    const bad = name.startsWith('on') || name === 'srcdoc' || isDangerousUrl(value)
+      || (name === 'values' && hasDangerousListItem(value))
+      // an SVG <set>/<animate> that targets an event handler attribute (attributeName="onload")
+      || (name === 'attributename' && decodeAttr(value).startsWith('on'));
     // A '<' kept inside an attribute value is written as &lt;, which a browser decodes to the same value,
     // so no later reader (or raw-text context the value lands in) can see a tag start there.
     if (!bad) out += tag.slice(sepStart, end).replace(/</g, '&lt;');

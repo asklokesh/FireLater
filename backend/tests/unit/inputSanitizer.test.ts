@@ -110,11 +110,34 @@ describe('sanitizer keeps the scheme-bypass guards (tab, newline, CR, entities)'
     '<a href="java\nscript:alert(1)">x</a>',
     '<a href="java\rscript:alert(1)">x</a>',
     '<a href="&#106;avascript:alert(1)">x</a>',
+    '<a href="&#00000106avascript:alert(1)">x</a>',
+    '<a href="&#x000006A;avascript:alert(1)">x</a>',
+    '<a href="&#x0000006A;avascript:alert(1)">x</a>',
+    '<a href="javascript&#0000000058;alert(1)">x</a>',
+    '<a href="&#x0000000000000000006A;avascript:alert(1)">x</a>',
     '<a href=" javascript:alert(1)">x</a>',
     '<math><a xlink:href="javascript:alert(1)">x</a></math>',
     '<form action="javascript:alert(1)"><button formaction="javascript:alert(1)">',
   ])('removes the script URL attribute from %j', (payload) => {
     expect(s(payload, 'description').toLowerCase()).not.toMatch(/(href|action)=/);
+  });
+  it.each([
+    '<svg><a><animate attributeName="href" values="x;javascript:alert(1)"/></a></svg>',
+    '<svg><a><animate attributeName="href" values="x&#59;javascript:alert(1)"/></a></svg>',
+    '<svg><a><animate attributeName="href" values="x&semi; java&#x0000073;cript:alert(1)"/></a></svg>',
+  ])('removes a script URL from an SVG animation values list in %j', (payload) => {
+    expect(s(payload, 'description').toLowerCase()).not.toMatch(/values=/);
+  });
+  it('removes an SVG animation target that names an event handler', () => {
+    expect(s('<svg><set attributeName="onload" to="alert(1)"/></svg>', 'description').toLowerCase())
+      .not.toMatch(/attributename=/);
+  });
+  it('keeps a harmless values list; an out-of-range code point fails closed', () => {
+    const ok = '<svg><animate attributeName="opacity" values="0;1;0"/></svg>';
+    expect(s(ok, 'description')).toBe(ok);
+    expect(isDangerousUrl('&#99999999999999999999;javascript:x')).toBe(true);
+    expect(isDangerousUrl('jav&#99999999999999999999;ascript:x')).toBe(true);
+    expect(isDangerousUrl('https://example.com/a;b')).toBe(false);
   });
   it.each([
     'java\tscript:alert(1)',
