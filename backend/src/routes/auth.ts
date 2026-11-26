@@ -5,6 +5,7 @@ import { tenantService } from '../services/tenant.js';
 import { authenticate } from '../middleware/auth.js';
 import { BadRequestError, ConflictError } from '../utils/errors.js';
 import { logger } from '../utils/logger.js';
+import { auditService } from '../services/audit.js';
 
 // Security warning: log if secure cookies are disabled in production
 const isSecureCookiesDisabled = process.env.NODE_ENV === 'production' && process.env.DISABLE_SECURE_COOKIES === 'true';
@@ -170,14 +171,47 @@ export default async function authRoutes(app: FastifyInstance) {
       throw new BadRequestError('Tenant is required (provide x-tenant-slug header or tenant in body)');
     }
 
-    const result = await authService.login(
-      {
-        tenantSlug,
-        email: body.email,
-        password: body.password,
-      },
-      (payload) => app.jwt.sign(payload)
-    );
+    let result: Awaited<ReturnType<typeof authService.login>>;
+    try {
+      result = await authService.login(
+        {
+          tenantSlug,
+          email: body.email,
+          password: body.password,
+        },
+        (payload) => app.jwt.sign(payload)
+      );
+    } catch (error) {
+      // Failed logins feed the brute-force alert rule. Never block the response.
+      void auditService.logSafe(tenantSlug, {
+        userEmail: body.email,
+        action: 'login_failed',
+        entityType: 'auth',
+        ipAddress: request.ip,
+        userAgent: request.headers['user-agent'],
+        requestId: request.id,
+        severity: 'medium',
+        outcome: 'failure',
+        httpMethod: request.method,
+        requestPath: '/v1/auth/login',
+        statusCode: (error as { statusCode?: number }).statusCode ?? 401,
+      });
+      throw error;
+    }
+
+    void auditService.logSafe(tenantSlug, {
+      userId: result.user?.id,
+      userEmail: result.user?.email ?? body.email,
+      userName: result.user?.name,
+      action: 'login',
+      entityType: 'auth',
+      ipAddress: request.ip,
+      userAgent: request.headers['user-agent'],
+      requestId: request.id,
+      httpMethod: request.method,
+      requestPath: '/v1/auth/login',
+      statusCode: 200,
+    });
 
     // Set refresh token as httpOnly cookie
     reply.setCookie('refreshToken', result.refreshToken, getRefreshTokenCookieOptions());

@@ -25,6 +25,8 @@ const RECOVERY_HEADER = 'x-error-recovery';
 // Per-process secret: only replays issued by this process carry it, so clients cannot forge the marker.
 const RECOVERY_TOKEN = randomUUID();
 const isReplay = (request: FastifyRequest) => request.headers[RECOVERY_HEADER] === RECOVERY_TOKEN;
+/** True for the internal app.inject replay of a GET that failed transiently (the outer request is the real one). */
+export const isRecoveryReplay = isReplay;
 
 export interface ErrorResponseBody {
   statusCode: number;
