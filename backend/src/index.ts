@@ -58,6 +58,8 @@ import { startBulkWorker, stopBulkWorker } from './jobs/processors/bulkOperation
 import { closeBulkQueue } from './jobs/bulkQueue.js';
 import bulkRoutes from './routes/bulk.js';
 import { setupSwagger } from './docs/swagger.js';
+import { registerAuditHooks } from './middleware/auditHooks.js';
+import { auditService } from './services/audit.js';
 
 const app = Fastify({
   logger: {
@@ -426,6 +428,9 @@ async function registerRoutes() {
     };
   });
 
+  // Application-wide audit trail (actions, field-level changes, denied access)
+  registerAuditHooks(app);
+
   await app.register(authRoutes, { prefix: '/v1/auth' });
   await app.register(userRoutes, { prefix: '/v1/users' });
   await app.register(groupRoutes, { prefix: '/v1/groups' });
@@ -550,6 +555,9 @@ async function start() {
 
     await app.listen({ port: config.port, host: config.host });
     logger.info(`Server listening on http://${config.host}:${config.port}`);
+
+    // Load each tenant's audit masking list so even the first audit write uses it
+    void auditService.warmSettings().catch((err) => logger.warn({ err }, 'Failed to warm audit settings'));
   } catch (err) {
     logger.error(err);
     process.exit(1);

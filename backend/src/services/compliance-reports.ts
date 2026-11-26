@@ -1,6 +1,12 @@
 import { pool } from '../config/database.js';
 import { tenantService } from './tenant.js';
 import { logger } from '../utils/logger.js';
+import { csvCell } from './audit.js';
+import {
+  AUDIT_REPORT_TEMPLATES,
+  generateAuditReport,
+  type AuditReportTemplate,
+} from './audit-reports.js';
 
 // ============================================
 // TYPES
@@ -12,7 +18,8 @@ export type ReportType =
   | 'sla_breach_evidence'
   | 'emergency_change_usage'
   | 'access_recertification_status'
-  | 'sod_violation_attempts';
+  | 'sod_violation_attempts'
+  | AuditReportTemplate;
 
 export interface ReportParams {
   from: Date;
@@ -62,6 +69,16 @@ export const REPORT_TYPE_META: Record<
     description: 'Denied actions due to SoD policy conflicts (SOX CC6.3 / PCI 6.4)',
     frameworks: ['SOX', 'PCI-DSS'],
   },
+  audit_trail_soc2: {
+    label: AUDIT_REPORT_TEMPLATES.audit_trail_soc2.label,
+    description: AUDIT_REPORT_TEMPLATES.audit_trail_soc2.description,
+    frameworks: [AUDIT_REPORT_TEMPLATES.audit_trail_soc2.framework],
+  },
+  audit_trail_iso27001: {
+    label: AUDIT_REPORT_TEMPLATES.audit_trail_iso27001.label,
+    description: AUDIT_REPORT_TEMPLATES.audit_trail_iso27001.description,
+    frameworks: [AUDIT_REPORT_TEMPLATES.audit_trail_iso27001.framework],
+  },
 };
 
 // ============================================
@@ -95,6 +112,17 @@ export class ComplianceReportsService {
         return this.accessRecertificationStatus(tenantSlug, schema, params.from, params.to);
       case 'sod_violation_attempts':
         return this.sodViolationAttempts(tenantSlug, schema, params.from, params.to);
+      case 'audit_trail_soc2':
+      case 'audit_trail_iso27001': {
+        const audit = await generateAuditReport(tenantSlug, reportType, params);
+        return {
+          reportType,
+          generatedAt: new Date(),
+          params,
+          summary: audit.summary,
+          data: audit.data,
+        };
+      }
       default: {
         const _exhaustive: never = reportType;
         throw new Error(`Unknown report type: ${String(_exhaustive)}`);
@@ -492,30 +520,18 @@ export class ComplianceReportsService {
         result.params.from.toISOString(),
         result.params.to.toISOString(),
       ];
-      return `${metaHeaders.join(',')}\n${metaValues.map((v) => this.csvEscape(String(v))).join(',')}`;
+      return `${metaHeaders.join(',')}\n${metaValues.map((v) => csvCell(v)).join(',')}`;
     }
 
     const headers = Object.keys(result.data[0]);
     const lines: string[] = [headers.join(',')];
 
     for (const row of result.data) {
-      const values = headers.map((h) => {
-        const val = row[h];
-        if (val === null || val === undefined) return '';
-        if (typeof val === 'object') return this.csvEscape(JSON.stringify(val));
-        return this.csvEscape(String(val));
-      });
-      lines.push(values.join(','));
+      // csvCell quotes commas, quotes and line breaks and neutralises spreadsheet formulas
+      lines.push(headers.map((h) => csvCell(row[h])).join(','));
     }
 
     return lines.join('\n');
-  }
-
-  private csvEscape(value: string): string {
-    if (value.includes(',') || value.includes('"') || value.includes('\n')) {
-      return `"${value.replace(/"/g, '""')}"`;
-    }
-    return value;
   }
 
   // ------------------------------------------------

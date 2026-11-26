@@ -18,6 +18,8 @@ const reportTypeSchema = z.enum([
   'emergency_change_usage',
   'access_recertification_status',
   'sod_violation_attempts',
+  'audit_trail_soc2',
+  'audit_trail_iso27001',
 ]);
 
 const generateReportSchema = z.object({
