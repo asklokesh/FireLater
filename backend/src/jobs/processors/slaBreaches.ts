@@ -2,6 +2,7 @@ import { Job, Worker } from 'bullmq';
 import { config } from '../../config/index.js';
 import { pool } from '../../config/database.js';
 import { logger } from '../../utils/logger.js';
+import { captureJobFailure } from '../../lib/jobErrors.js';
 import { tenantService } from '../../services/tenant.js';
 import { notificationQueue } from '../queues.js';
 import { slaService, SlaConfigForBreachCheck } from '../../services/sla.js';
@@ -360,6 +361,7 @@ slaBreachWorker.on('completed', (job, result) => {
 });
 
 slaBreachWorker.on('failed', (job, err) => {
+  captureJobFailure('job.slaBreaches', job, err);
   logger.error({ jobId: job?.id, err }, 'SLA breach check job failed');
 });
 

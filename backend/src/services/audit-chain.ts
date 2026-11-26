@@ -5,21 +5,118 @@ import { logger } from '../utils/logger.js';
 
 // ============================================
 // AUDIT CHAIN SERVICE
-// Immutable, tamper-evident audit trail via WORM + SHA-256 hash-chaining
+// Tamper-evident audit trail via SHA-256 hash-chaining
 // ============================================
+
+/** Recursively sort object keys so the same logical value always serializes the same way. */
+function canonicalize(value: unknown): unknown {
+  if (Array.isArray(value)) return value.map(canonicalize);
+  if (value instanceof Date) return value.toISOString();
+  if (value && typeof value === 'object') {
+    const source = value as Record<string, unknown>;
+    return Object.fromEntries(
+      Object.keys(source)
+        .sort()
+        .map((key) => [key, canonicalize(source[key])])
+    );
+  }
+  return value;
+}
+
+/**
+ * Fields of a record covered by its content digest (everything not in the hash
+ * payload itself), per digest version. Version 1 (rows sealed before
+ * digest_version existed, stored as NULL) did not cover the legacy `changes`
+ * column that services write directly; version 2 does. A row is always
+ * verified with the field list of the version it was sealed with, and the
+ * version itself is part of the record hash, so it cannot be downgraded.
+ */
+const AUDIT_CONTENT_FIELDS_V1 = [
+  'user_email',
+  'user_name',
+  'entity_name',
+  'old_values',
+  'new_values',
+  'changed_fields',
+  'outcome',
+  'severity',
+  'http_method',
+  'request_path',
+  'status_code',
+  'user_agent',
+  'request_id',
+] as const;
+
+export const AUDIT_CONTENT_FIELDS = [...AUDIT_CONTENT_FIELDS_V1, 'changes'] as const;
+
+/** Digest version written by sealPending today. */
+export const AUDIT_DIGEST_VERSION = 2;
+
+function contentFieldsFor(version: number): readonly string[] {
+  return version >= 2 ? AUDIT_CONTENT_FIELDS : AUDIT_CONTENT_FIELDS_V1;
+}
+
+export interface ChainVerifyResult {
+  valid: boolean;
+  firstBrokenSequence?: number;
+  checkedCount: number;
+}
+
+const COLUMNS = [
+  'sequence', 'chain_position', 'prev_hash', 'record_hash', 'content_digest', 'action',
+  'entity_type', 'entity_id', 'user_id', 'ip_address', 'created_at', 'metadata', 'digest_version',
+  ...AUDIT_CONTENT_FIELDS,
+].join(', ');
+
+/**
+ * First position in [start, end] that no range covers, or null when the
+ * ranges cover all of it. `ranges` must be sorted by start and merged.
+ */
+function firstUncovered(ranges: Array<[number, number]>, start: number, end: number): number | null {
+  let lo = 0;
+  let hi = ranges.length - 1;
+  let found = -1;
+  // Last range starting at or before `start`.
+  while (lo <= hi) {
+    const mid = (lo + hi) >> 1;
+    if (ranges[mid][0] <= start) {
+      found = mid;
+      lo = mid + 1;
+    } else {
+      hi = mid - 1;
+    }
+  }
+  if (found < 0 || ranges[found][1] < start) return start;
+  return ranges[found][1] >= end ? null : ranges[found][1] + 1;
+}
 
 export class AuditChainService {
   /**
-   * Compute a SHA-256 hash over a canonical (sorted-keys) JSON representation
-   * of the payload combined with the previous record's hash.
+   * Compute a SHA-256 hash over a canonical JSON representation of the payload
+   * combined with the previous record's hash.
    *
-   * Canonical JSON uses sorted top-level keys so that the same logical payload
-   * always produces the same hash regardless of insertion order.
+   * Canonical JSON sorts keys at every depth so that the same logical payload
+   * always produces the same hash regardless of insertion order, and nested
+   * values (e.g. metadata) are part of the hash.
    */
   computeHash(payload: Record<string, unknown>, prevHash: string | null): string {
-    const canonicalPayload = JSON.stringify(payload, Object.keys(payload).sort());
+    const canonicalPayload = JSON.stringify(canonicalize(payload));
     const data = `${canonicalPayload}|${prevHash ?? ''}`;
     return crypto.createHash('sha256').update(data, 'utf8').digest('hex');
+  }
+
+  /**
+   * SHA-256 over the parts of a record that are not in the hash payload
+   * (old/new values, changed fields, user email, outcome, ...). The digest is
+   * stored with the record and included in the record hash.
+   */
+  computeContentDigest(fields: Record<string, unknown>, version: number = AUDIT_DIGEST_VERSION): string {
+    const picked: Record<string, unknown> = {};
+    for (const key of contentFieldsFor(version)) {
+      const v = fields[key];
+      picked[key] = v === undefined ? null : v;
+    }
+    return crypto.createHash('sha256').update(JSON.stringify(canonicalize(picked)), 'utf8').digest('hex');
   }
 
   /**
@@ -47,26 +144,22 @@ export class AuditChainService {
   /**
    * Verify the integrity of the hash chain for a tenant over an optional date range.
    *
-   * Walks every audit log record in sequence order and re-derives the expected
-   * record_hash.  Stops at the first broken link and returns its sequence number.
+   * Walks the live and archived records in chain order and checks, for each:
+   *   - the record hash re-derived from its payload, content digest and prev_hash
+   *   - the content digest re-derived from old/new values, user, outcome, ...
+   *   - that prev_hash is the record hash of the preceding chain position
+   * and that no chain position is missing unless a retention run recorded
+   * purging it. Stops at the first broken record and returns its sequence.
    *
-   * Records that were inserted before migration 027 (record_hash IS NULL) are
-   * skipped — they pre-date the chain and cannot be retroactively verified.
-   *
-   * @returns { valid, firstBrokenSequence?, checkedCount }
+   * Records that were inserted before they were sealed (record_hash IS NULL)
+   * are skipped; the integrity job and the verify endpoint seal them first.
    */
-  async verifyChain(
-    tenantSlug: string,
-    from?: Date,
-    to?: Date
-  ): Promise<{ valid: boolean; firstBrokenSequence?: number; checkedCount: number }> {
+  async verifyChain(tenantSlug: string, from?: Date, to?: Date): Promise<ChainVerifyResult> {
     const schema = tenantService.getSchemaName(tenantSlug);
 
-    // Build optional date range filter
     const conditions: string[] = ['record_hash IS NOT NULL'];
     const params: unknown[] = [];
     let paramIdx = 1;
-
     if (from) {
       conditions.push(`created_at >= $${paramIdx++}`);
       params.push(from);
@@ -75,87 +168,145 @@ export class AuditChainService {
       conditions.push(`created_at <= $${paramIdx++}`);
       params.push(to);
     }
+    const where = `WHERE ${conditions.join(' AND ')}`;
+    const order = 'ORDER BY COALESCE(chain_position, sequence) ASC';
 
-    const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
+    let result;
+    try {
+      result = await pool.query(
+        `SELECT ${COLUMNS} FROM (
+           SELECT ${COLUMNS} FROM ${schema}.audit_logs
+           UNION ALL
+           SELECT ${COLUMNS} FROM ${schema}.audit_logs_archive
+         ) AS chain
+         ${where}
+         ${order}`,
+        params
+      );
+    } catch (error) {
+      if ((error as { code?: string }).code !== '42P01') throw error;
+      result = await pool.query(
+        `SELECT ${COLUMNS} FROM ${schema}.audit_logs ${where} ${order}`,
+        params
+      );
+    }
 
-    const result = await pool.query(
-      `SELECT
-         sequence,
-         prev_hash,
-         record_hash,
-         action,
-         entity_type,
-         entity_id,
-         user_id,
-         ip_address,
-         created_at,
-         metadata
-       FROM ${schema}.audit_logs
-       ${whereClause}
-       ORDER BY sequence ASC`,
-      params
-    );
-
-    const rows = result.rows as Array<{
-      sequence: number;
+    type Row = Record<string, unknown> & {
+      sequence: number | string;
+      chain_position?: number | string | null;
       prev_hash: string | null;
       record_hash: string;
+      content_digest?: string | null;
       action: string;
       entity_type: string;
       entity_id: string | null;
       user_id: string | null;
       ip_address: string | null;
-      created_at: Date;
+      created_at: Date | string;
       metadata: Record<string, unknown> | null;
-    }>;
+      digest_version?: number | string | null;
+    };
+    const rows = result.rows as Row[];
 
     if (rows.length === 0) {
       return { valid: true, checkedCount: 0 };
     }
 
-    let expectedPrevHash: string | null = rows[0].prev_hash;
+    const broken = (index: number, reason: string): ChainVerifyResult => {
+      const row = rows[index];
+      logger.warn(
+        { tenantSlug, sequence: row.sequence, reason, actualHash: row.record_hash },
+        'Audit chain integrity failure detected'
+      );
+      return { valid: false, firstBrokenSequence: Number(row.sequence), checkedCount: index };
+    };
 
-    for (const row of rows) {
-      // Build the same canonical payload that was used when writing the record
+    const gaps: Array<{ start: number; end: number; index: number }> = [];
+
+    for (let i = 0; i < rows.length; i++) {
+      const row = rows[i];
+      const position =
+        row.chain_position === null || row.chain_position === undefined ? null : Number(row.chain_position);
+
+      // Build the same canonical payload that was used when sealing the record
       const payload: Record<string, unknown> = {
         action: row.action,
-        created_at: row.created_at instanceof Date
-          ? row.created_at.toISOString()
-          : row.created_at,
+        created_at: row.created_at instanceof Date ? row.created_at.toISOString() : row.created_at,
         entity_id: row.entity_id,
         entity_type: row.entity_type,
         ip_address: row.ip_address,
         metadata: row.metadata ?? {},
-        sequence: row.sequence,
+        // pg returns BIGINT as a string; the hash was computed over the number.
+        sequence: Number(row.sequence),
         user_id: row.user_id,
       };
-
-      const expectedHash = this.computeHash(payload, row.prev_hash);
-
-      if (expectedHash !== row.record_hash) {
-        logger.warn(
-          { tenantSlug, sequence: row.sequence, expectedHash, actualHash: row.record_hash },
-          'Audit chain integrity failure detected'
-        );
-        return {
-          valid: false,
-          firstBrokenSequence: Number(row.sequence),
-          checkedCount: rows.indexOf(row),
-        };
+      if (position !== null) payload.chain_position = position;
+      if (row.content_digest) {
+        payload.content = row.content_digest;
+        const version = row.digest_version === null || row.digest_version === undefined ? 1 : Number(row.digest_version);
+        if (version >= 2) payload.digest_version = version;
+        if (this.computeContentDigest(row, version) !== row.content_digest) return broken(i, 'content digest mismatch');
       }
 
-      expectedPrevHash = row.record_hash;
+      if (this.computeHash(payload, row.prev_hash) !== row.record_hash) return broken(i, 'record hash mismatch');
+
+      if (i > 0 && position !== null) {
+        const prev = rows[i - 1];
+        const prevPosition =
+          prev.chain_position === null || prev.chain_position === undefined ? null : Number(prev.chain_position);
+        if (prevPosition !== null) {
+          if (position === prevPosition + 1) {
+            if (row.prev_hash !== prev.record_hash) return broken(i, 'prev_hash does not match the preceding record');
+          } else if (position > prevPosition + 1) {
+            gaps.push({ start: prevPosition + 1, end: position - 1, index: i });
+          }
+        }
+      }
     }
 
-    // Suppress unused variable warning — kept for future cross-record checks
-    void expectedPrevHash;
+    if (gaps.length > 0) {
+      // Gaps are only legitimate where a retention run recorded purging them.
+      const purged = await this.getPurgedRanges(schema);
+      for (const gap of gaps) {
+        const missing = firstUncovered(purged, gap.start, gap.end);
+        if (missing !== null) return broken(gap.index, `chain position ${missing} is missing`);
+      }
+    }
 
     return { valid: true, checkedCount: rows.length };
   }
 
+  /** Chain-position ranges that retention runs recorded as purged. */
+  private async getPurgedRanges(schema: string): Promise<Array<[number, number]>> {
+    const result = await pool.query(
+      `SELECT metadata->'purgedPositions' AS ranges
+         FROM (
+           SELECT metadata, action FROM ${schema}.audit_logs
+           UNION ALL
+           SELECT metadata, action FROM ${schema}.audit_logs_archive
+         ) AS runs
+        WHERE action = 'retention_run' AND metadata ? 'purgedPositions'`
+    );
+    const ranges: Array<[number, number]> = [];
+    for (const row of result.rows as Array<{ ranges: Array<[number, number]> | null }>) {
+      for (const range of row.ranges ?? []) ranges.push([Number(range[0]), Number(range[1])]);
+    }
+    // Sorted and merged, for firstUncovered.
+    ranges.sort((x, y) => x[0] - y[0]);
+    const merged: Array<[number, number]> = [];
+    for (const [a, b] of ranges) {
+      const last = merged[merged.length - 1];
+      if (last && a <= last[1] + 1) last[1] = Math.max(last[1], b);
+      else merged.push([a, b]);
+    }
+    return merged;
+  }
+
   /**
-   * Delete audit log records whose retention_until has passed, unless they are
-   * under a legal hold.
+   * Delete live records whose retention_until has passed (legal holds and the
+   * newest record are kept) and record the purged chain positions, like the
+   * retention service, so verification accepts the gap. Kept for existing
+   * callers; the retention service (runForTenant) is the main purge path.
    *
    * @returns The number of records purged.
    */
@@ -167,13 +318,27 @@ export class AuditChainService {
         WHERE retention_until IS NOT NULL
           AND retention_until < NOW()
           AND (legal_hold IS NULL OR legal_hold = false)
-        RETURNING id`
+          -- retention_run records document the gaps; they are never purged
+          AND action <> 'retention_run'
+          -- keep the newest record: it anchors prev_hash for the next write
+          AND sequence < (SELECT MAX(sequence) FROM ${schema}.audit_logs)
+        RETURNING chain_position`
     );
 
     const purgedCount = result.rowCount ?? 0;
 
     if (purgedCount > 0) {
       logger.info({ tenantSlug, purgedCount }, 'Purged expired audit log records');
+      const purged: Array<[number, number]> = ((result.rows ?? []) as Array<{ chain_position: string | number | null }>)
+        .filter((r) => r.chain_position !== null && r.chain_position !== undefined)
+        .map((r) => [Number(r.chain_position), Number(r.chain_position)]);
+      // Imported lazily: audit-retention imports audit.ts, which imports this module.
+      const { recordRetentionRun } = await import('./audit-retention.js');
+      await recordRetentionRun(
+        tenantSlug,
+        { metadata: { purgedLive: purgedCount, purgedArchive: 0, deletedCount: purgedCount } },
+        purged
+      );
     }
 
     return purgedCount;

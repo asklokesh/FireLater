@@ -15,6 +15,7 @@ import { parsePagination, createPaginatedResponse } from '../utils/pagination.js
 export default async function issueRoutes(app: FastifyInstance) {
   // List issues
   app.get('/', {
+    config: { replayOnTransientError: true },
     preHandler: [requirePermission('issues:read'), validate({ query: listIssuesQuerySchema })],
   }, async (request, reply) => {
     const { tenantSlug } = request.user;
@@ -39,6 +40,7 @@ export default async function issueRoutes(app: FastifyInstance) {
 
   // Get issue by ID
   app.get<{ Params: { id: string } }>('/:id', {
+    config: { replayOnTransientError: true },
     preHandler: [requirePermission('issues:read'), validate({ params: issueIdParamSchema })],
   }, async (request, reply) => {
     const { tenantSlug } = request.user;

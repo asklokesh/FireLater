@@ -1,5 +1,8 @@
 import { redis } from '../config/redis.js';
 import { logger } from './logger.js';
+import { withRetry } from '../lib/retry.js';
+import { attemptRecovery } from '../lib/errorRecovery.js';
+import { CacheError } from '../lib/errors.js';
 
 // ============================================
 // REDIS CACHING UTILITY
@@ -37,10 +40,11 @@ export class CacheService {
     } = options;
 
     const cacheKey = `${prefix}:${key}`;
+    let readFailed = false;
 
     try {
-      // Try to get from cache
-      const cached = await redis.get(cacheKey);
+      // Reads are idempotent: transient Redis failures (ECONNRESET, ...) are retried once
+      const cached = await withRetry(() => redis.get(cacheKey), { maxAttempts: 2, baseDelayMs: 50 });
       if (cached) {
         logger.debug({ key: cacheKey }, 'Cache hit');
         return JSON.parse(cached) as T;
@@ -48,15 +52,40 @@ export class CacheService {
 
       logger.debug({ key: cacheKey }, 'Cache miss');
     } catch (cacheError) {
-      // Redis read failure - log and continue with fetch
+      // Redis read failure or corrupt entry - log and continue with fetch
+      readFailed = true;
       logger.warn(
         { err: cacheError, key: cacheKey },
         'Failed to read from cache, fetching fresh data'
       );
     }
 
-    // Cache miss or error - fetch fresh data
-    const data = await fetcher();
+    // Fetch fresh data exactly once. After a failed read the registered recovery handlers
+    // (cache-fallback) serve it; the outcome is remembered so a failing source is never
+    // queried twice and its error is not swallowed.
+    let data: T;
+    if (readFailed) {
+      let fetched: { value: T } | undefined;
+      let failure: { error: unknown } | undefined;
+      const fetchOnce = async (): Promise<T> => {
+        try {
+          const value = await fetcher();
+          fetched = { value };
+          return value;
+        } catch (error) {
+          failure = { error };
+          throw error;
+        }
+      };
+      const recovery = await attemptRecovery<T>(
+        new CacheError('Cache read failed', { context: { operation: 'cache.getOrSet', key: cacheKey } }),
+        { operation: 'cache.getOrSet', fallback: fetchOnce }
+      );
+      if (failure) throw (failure as { error: unknown }).error;
+      data = recovery.recovered ? recovery.value : fetched ? (fetched as { value: T }).value : await fetcher();
+    } else {
+      data = await fetcher();
+    }
 
     // Try to cache the result (non-blocking)
     this.set(cacheKey, data, ttl).catch((err) => {

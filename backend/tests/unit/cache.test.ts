@@ -349,6 +349,78 @@ describe('Cache Service', () => {
       redis.get = originalGet;
     });
 
+    it('retries a transient Redis read failure and uses the cached value', async () => {
+      await cacheService.set('cache:transient-key', { v: 'cached' }, 10);
+      const originalGet = redis.get.bind(redis);
+      const spy = vi.spyOn(redis, 'get').mockRejectedValueOnce(Object.assign(new Error('reset'), { code: 'ECONNRESET' }));
+      const fetcher = vi.fn().mockResolvedValue({ v: 'fresh' });
+      const result = await cacheService.getOrSet('transient-key', fetcher, { ttl: 10 });
+      expect(result).toEqual({ v: 'cached' });
+      expect(fetcher).not.toHaveBeenCalled();
+      expect(spy).toHaveBeenCalledTimes(2);
+      spy.mockRestore();
+      void originalGet;
+    });
+
+    it('recovers via the cache-fallback handler when Redis reads keep failing', async () => {
+      const { registerDefaultRecoveryHandlers, clearRecoveryHandlers } = await import('../../src/lib/errorRecovery.js');
+      registerDefaultRecoveryHandlers();
+      const spy = vi.spyOn(redis, 'get').mockRejectedValue(new Error('down'));
+      const fetcher = vi.fn().mockResolvedValue({ v: 'from-source' });
+      try {
+        await expect(cacheService.getOrSet('down-key', fetcher, { ttl: 10 })).resolves.toEqual({ v: 'from-source' });
+        expect(fetcher).toHaveBeenCalledTimes(1);
+      } finally {
+        spy.mockRestore();
+        clearRecoveryHandlers();
+      }
+    });
+
+    it('queries a failing source only once when the cache read also fails', async () => {
+      const { registerDefaultRecoveryHandlers, clearRecoveryHandlers } = await import('../../src/lib/errorRecovery.js');
+      registerDefaultRecoveryHandlers();
+      const spy = vi.spyOn(redis, 'get').mockRejectedValue(new Error('down'));
+      const fetcher = vi.fn().mockRejectedValue(new Error('source down'));
+      try {
+        await expect(cacheService.getOrSet('both-down', fetcher, { ttl: 10 })).rejects.toThrow('source down');
+        expect(fetcher).toHaveBeenCalledTimes(1);
+      } finally {
+        spy.mockRestore();
+        clearRecoveryHandlers();
+      }
+    });
+
+    it('overwrites a corrupt cached value after fetching fresh data', async () => {
+      const { registerDefaultRecoveryHandlers, clearRecoveryHandlers } = await import('../../src/lib/errorRecovery.js');
+      registerDefaultRecoveryHandlers();
+      await redis.setex('cache:corrupt-key', 30, '{not json');
+      const fetcher = vi.fn().mockResolvedValue({ v: 'fresh' });
+      try {
+        await expect(cacheService.getOrSet('corrupt-key', fetcher, { ttl: 30 })).resolves.toEqual({ v: 'fresh' });
+        await new Promise((r) => setTimeout(r, 20));
+        expect(JSON.parse((await redis.get('cache:corrupt-key')) as string)).toEqual({ v: 'fresh' });
+        await expect(cacheService.getOrSet('corrupt-key', fetcher, { ttl: 30 })).resolves.toEqual({ v: 'fresh' });
+        expect(fetcher).toHaveBeenCalledTimes(1);
+      } finally {
+        clearRecoveryHandlers();
+      }
+    });
+
+    it('re-caches the value after recovering from a failed read', async () => {
+      const { registerDefaultRecoveryHandlers, clearRecoveryHandlers } = await import('../../src/lib/errorRecovery.js');
+      registerDefaultRecoveryHandlers();
+      const spy = vi.spyOn(redis, 'get').mockRejectedValueOnce(new Error('blip'));
+      const setSpy = vi.spyOn(cacheService, 'set');
+      try {
+        await cacheService.getOrSet('recache-key', async () => ({ v: 1 }), { ttl: 10 });
+        expect(setSpy).toHaveBeenCalledWith('cache:recache-key', { v: 1 }, 10);
+      } finally {
+        spy.mockRestore();
+        setSpy.mockRestore();
+        clearRecoveryHandlers();
+      }
+    });
+
     it('should handle delete errors in single key invalidation', async () => {
       const originalDel = redis.del;
       // Mock del to throw an error

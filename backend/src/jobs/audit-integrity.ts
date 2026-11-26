@@ -1,13 +1,17 @@
 import { pool } from '../config/database.js';
 import { logger } from '../utils/logger.js';
 import { auditChainService } from '../services/audit-chain.js';
+import { auditRetentionService } from '../services/audit-retention.js';
+import { auditService } from '../services/audit.js';
 
 // ============================================
 // AUDIT INTEGRITY JOB
 // Daily scheduled task that:
 //   1. Verifies the hash chain for every active tenant
-//   2. Purges audit log records whose retention window has expired
-//      (legal_hold records are always preserved)
+//   2. Applies the tenant's retention policy: stamps retention_until, moves
+//      records older than archive_after_days to the archive table and purges
+//      records whose retention window has expired (legal_hold records are
+//      always preserved)
 // ============================================
 
 export interface AuditIntegrityResult {
@@ -24,6 +28,9 @@ export interface AuditIntegrityResult {
 async function processAuditIntegrityForTenant(
   tenantSlug: string
 ): Promise<AuditIntegrityResult> {
+  // 0. Seal records that were inserted without going through auditService.log
+  await auditService.sealPending(tenantSlug);
+
   // 1. Verify chain integrity (no date filter = full history)
   const verifyResult = await auditChainService.verifyChain(tenantSlug);
 
@@ -43,8 +50,9 @@ async function processAuditIntegrityForTenant(
     );
   }
 
-  // 2. Purge expired records (honours legal_hold)
-  const purgedCount = await auditChainService.purgeExpired(tenantSlug);
+  // 2. Apply retention policy: archive old records, purge expired ones (honours legal_hold)
+  const retention = await auditRetentionService.runForTenant(tenantSlug);
+  const purgedCount = retention.purgedLive + retention.purgedArchive;
 
   return {
     tenantSlug,

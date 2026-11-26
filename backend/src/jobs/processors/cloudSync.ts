@@ -12,6 +12,7 @@ import crypto from 'crypto';
 import { config } from '../../config/index.js';
 import { pool } from '../../config/database.js';
 import { logger } from '../../utils/logger.js';
+import { captureJobFailure } from '../../lib/jobErrors.js';
 import { tenantService } from '../../services/tenant.js';
 
 // Redis connection for worker
@@ -957,6 +958,7 @@ cloudSyncWorker.on('completed', (job) => {
 });
 
 cloudSyncWorker.on('failed', (job, err) => {
+  captureJobFailure('job.cloudSync', job, err);
   logger.error({ jobId: job?.id, jobName: job?.name, err }, 'Cloud sync job failed');
 });
 
