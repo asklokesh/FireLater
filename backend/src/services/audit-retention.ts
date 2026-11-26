@@ -59,7 +59,19 @@ export interface PurgeResult {
   positions: Array<[number, number]>;
 }
 
-const MAX_RECORDED_RANGES = 1000;
+/**
+ * Purged ranges per retention_run record. A purge that leaves more ranges
+ * (for example around many legal-hold or surviving rows) is recorded across
+ * several retention_run records so no range is ever dropped.
+ */
+export const RANGES_PER_RECORD = 1000;
+
+/**
+ * retention_run records are never purged: they are the evidence that a gap in
+ * the chain is a retention purge and not a deleted record, and a gap stays in
+ * the chain for good.
+ */
+const KEEP_RETENTION_RUNS = "action <> 'retention_run'";
 
 /** Collapse chain positions into inclusive ranges. */
 function toRanges(positions: number[]): Array<[number, number]> {
@@ -83,6 +95,43 @@ function mergeRanges(ranges: Array<[number, number]>): Array<[number, number]> {
     else out.push([a, b]);
   }
   return out;
+}
+
+/**
+ * Write the retention_run record(s) for one purge, carrying every purged
+ * chain-position range in metadata.purgedPositions. Up to RANGES_PER_RECORD
+ * ranges fit in one record; beyond that the ranges continue in further
+ * retention_run records (metadata.part / metadata.parts, counts only on part
+ * 1). The records are written after the rows are gone, so a record that fails
+ * to write is logged with the ranges it should have carried.
+ */
+export async function recordRetentionRun(
+  tenantSlug: string,
+  entry: Partial<AuditLogEntry> & { metadata: Record<string, unknown> },
+  purged: Array<[number, number]>
+): Promise<void> {
+  const ranges = mergeRanges(purged);
+  const parts = Math.max(1, Math.ceil(ranges.length / RANGES_PER_RECORD));
+  for (let part = 1; part <= parts; part++) {
+    const purgedPositions = ranges.slice((part - 1) * RANGES_PER_RECORD, part * RANGES_PER_RECORD);
+    const metadata =
+      part === 1
+        ? { ...entry.metadata, purgedPositions, ...(parts > 1 ? { part, parts } : {}) }
+        : { ...(entry.metadata.mode ? { mode: entry.metadata.mode } : {}), part, parts, purgedPositions };
+    const id = await auditService.logSafe(tenantSlug, {
+      ...entry,
+      action: 'retention_run',
+      entityType: 'audit_log',
+      severity: 'medium',
+      metadata,
+    });
+    if (id === null) {
+      logger.error(
+        { tenantSlug, part, parts, purgedPositions },
+        'Could not record purged audit chain positions; verification will report these gaps'
+      );
+    }
+  }
 }
 
 /**
@@ -164,8 +213,8 @@ export class AuditRetentionService {
 
   /**
    * Delete expired records from the live table: retention_until has passed
-   * (records without a stamp expire retentionDays after creation). Legal holds
-   * and the newest record are always kept.
+   * (records without a stamp expire retentionDays after creation). Legal holds,
+   * retention_run records and the newest record are always kept.
    */
   async purgeLive(tenantSlug: string, retentionDays: number | null = null): Promise<PurgeResult> {
     const schema = tenantService.getSchemaName(tenantSlug);
@@ -173,6 +222,7 @@ export class AuditRetentionService {
       `DELETE FROM ${schema}.audit_logs
         WHERE COALESCE(retention_until, created_at + INTERVAL '1 day' * $1) < NOW()
           AND (legal_hold IS NULL OR legal_hold = false)
+          AND ${KEEP_RETENTION_RUNS}
           AND sequence < (SELECT MAX(sequence) FROM ${schema}.audit_logs)
         RETURNING chain_position`,
       [retentionDays && retentionDays > 0 ? retentionDays : null]
@@ -180,13 +230,14 @@ export class AuditRetentionService {
     return this.toPurgeResult(result);
   }
 
-  /** Delete expired records from the archive (same rule as purgeLive). Legal holds are always kept. */
+  /** Delete expired records from the archive (same rule as purgeLive). Legal holds and retention_run records are always kept. */
   async purgeArchive(tenantSlug: string, retentionDays: number | null = null): Promise<PurgeResult> {
     const schema = tenantService.getSchemaName(tenantSlug);
     const result = await pool.query(
       `DELETE FROM ${schema}.audit_logs_archive
         WHERE COALESCE(retention_until, created_at + INTERVAL '1 day' * $1) < NOW()
           AND (legal_hold IS NULL OR legal_hold = false)
+          AND ${KEEP_RETENTION_RUNS}
         RETURNING chain_position`,
       [retentionDays && retentionDays > 0 ? retentionDays : null]
     );
@@ -268,12 +319,8 @@ export class AuditRetentionService {
     if (archived > 0 || purgedLive > 0 || purgedArchive > 0 || run.actor) {
       logger.info({ tenantSlug, archived, purgedLive, purgedArchive, mode: run.mode }, 'Audit retention policy applied');
       // Deleting audit data is itself an audited event.
-      const purgedPositions = mergeRanges([...live.positions, ...archive.positions]).slice(0, MAX_RECORDED_RANGES);
-      await auditService.logSafe(tenantSlug, {
+      await recordRetentionRun(tenantSlug, {
         ...(run.actor ?? {}),
-        action: 'retention_run',
-        entityType: 'audit_log',
-        severity: 'medium',
         metadata: {
           ...(run.mode ? { mode: run.mode } : {}),
           archived,
@@ -281,9 +328,8 @@ export class AuditRetentionService {
           purgedArchive,
           deletedCount: purgedLive + purgedArchive,
           retentionDays,
-          purgedPositions,
         },
-      });
+      }, [...live.positions, ...archive.positions]);
     }
 
     return { purgedLive, purgedArchive };

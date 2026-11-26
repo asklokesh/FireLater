@@ -30,6 +30,8 @@ import { auditChainService } from '../../src/services/audit-chain.js';
 import { auditAlertService } from '../../src/services/audit-alerts.js';
 import {
   auditRetentionService,
+  recordRetentionRun,
+  RANGES_PER_RECORD,
   validateRetentionPolicy,
 } from '../../src/services/audit-retention.js';
 import { generateAuditReport } from '../../src/services/audit-reports.js';
@@ -154,6 +156,28 @@ describe('tamper evidence covers the whole record (reviewer finding 6)', () => {
       .mockResolvedValueOnce({ rows: [{ ranges: [[2, 2]] }] });
     const explained = await auditChainService.verifyChain('acme');
     expect(explained.valid).toBe(true);
+  });
+
+  it('accepts gaps recorded across several retention_run records and still names an unrecorded position', async () => {
+    const r1 = sealed();
+    const r2 = sealed({}, 2, r1.record_hash);
+    const r3 = sealed({}, 3, r2.record_hash);
+    const r9 = sealed({}, 9, 'a'.repeat(64));
+    mockPoolQuery
+      .mockResolvedValueOnce({ rows: [r1, r3, r9] })
+      .mockResolvedValueOnce({ rows: [{ ranges: [[6, 8]] }, { ranges: [[2, 2], [4, 5]] }] });
+    expect(await auditChainService.verifyChain('acme')).toMatchObject({ valid: true, checkedCount: 3 });
+
+    mockPoolQuery.mockReset();
+    mockPoolQuery
+      .mockResolvedValueOnce({ rows: [r1, r3, r9] })
+      .mockResolvedValueOnce({ rows: [{ ranges: [[6, 8]] }, { ranges: [[2, 2], [4, 4]] }] });
+    const result = await auditChainService.verifyChain('acme');
+    expect(result).toMatchObject({ valid: false, firstBrokenSequence: 9 });
+    expect(vi.mocked(logger.warn)).toHaveBeenCalledWith(
+      expect.objectContaining({ reason: 'chain position 5 is missing' }),
+      expect.any(String)
+    );
   });
 
   it('verifies the archive as well as the live table', async () => {
@@ -311,6 +335,53 @@ describe('retention policy (reviewer findings 4, 12, 13)', () => {
     expect(validateRetentionPolicy({ retention_days: 365, archive_after_days: 300 }, { retention_days: 200 })).toMatch(/smaller than retention_days/);
     expect(validateRetentionPolicy(current, { archive_after_days: 90 })).toBeNull();
     expect(validateRetentionPolicy(current, { retention_days: 90 })).toBeNull();
+  });
+
+  it('records every purged range: more than RANGES_PER_RECORD ranges continue in further retention_run records', async () => {
+    const logSpy = vi.spyOn(auditService, 'logSafe').mockResolvedValue('run-1');
+    const total = RANGES_PER_RECORD * 2 + 500;
+    const purged: Array<[number, number]> = Array.from({ length: total }, (_, i) => [i * 2 + 1, i * 2 + 1]);
+    await recordRetentionRun('acme', { userId: 'admin-1', metadata: { mode: 'cleanup', deletedCount: total } }, purged);
+    expect(logSpy).toHaveBeenCalledTimes(3);
+    const metas = logSpy.mock.calls.map((c) => c[1].metadata as Record<string, unknown>);
+    const recorded = metas.flatMap((m) => m.purgedPositions as Array<[number, number]>);
+    expect(recorded).toEqual(purged);
+    expect(metas.map((m) => [m.part, m.parts])).toEqual([[1, 3], [2, 3], [3, 3]]);
+    expect(metas[0].deletedCount).toBe(total);
+    expect(metas[1].deletedCount).toBeUndefined();
+    expect(logSpy.mock.calls.every((c) => c[1].action === 'retention_run' && c[1].userId === 'admin-1')).toBe(true);
+    logSpy.mockRestore();
+  });
+
+  it('logs the ranges a retention_run record could not carry', async () => {
+    const logSpy = vi.spyOn(auditService, 'logSafe').mockResolvedValue(null);
+    await recordRetentionRun('acme', { metadata: {} }, [[3, 4]]);
+    expect(vi.mocked(logger.error)).toHaveBeenCalledWith(
+      expect.objectContaining({ purgedPositions: [[3, 4]] }),
+      expect.stringContaining('Could not record purged audit chain positions')
+    );
+    logSpy.mockRestore();
+  });
+
+  it('never purges retention_run records, on every delete path', async () => {
+    await auditRetentionService.purgeLive('acme', 30);
+    await auditRetentionService.purgeArchive('acme', 30);
+    mockPoolQuery.mockResolvedValue({ rows: [], rowCount: 0 });
+    await auditChainService.purgeExpired('acme');
+    const deletes = mockPoolQuery.mock.calls.map((c) => c[0] as string).filter((s) => s.trimStart().startsWith('DELETE'));
+    expect(deletes).toHaveLength(3);
+    for (const sql of deletes) expect(sql).toContain("action <> 'retention_run'");
+  });
+
+  it('the chain purge records its positions through the same recorder', async () => {
+    mockPoolQuery.mockResolvedValueOnce({ rowCount: 3, rows: [{ chain_position: '7' }, { chain_position: '8' }, { chain_position: '10' }] });
+    const logSpy = vi.spyOn(auditService, 'logSafe').mockResolvedValue('run-1');
+    expect(await auditChainService.purgeExpired('acme')).toBe(3);
+    expect(logSpy).toHaveBeenCalledWith('acme', expect.objectContaining({
+      action: 'retention_run',
+      metadata: expect.objectContaining({ deletedCount: 3, purgedPositions: [[7, 8], [10, 10]] }),
+    }));
+    logSpy.mockRestore();
   });
 
   it('records which chain positions a purge removed', async () => {
