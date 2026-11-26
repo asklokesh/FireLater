@@ -16,7 +16,6 @@
  */
 
 export const MAX_DEPTH = 32;
-const MAX_TAG_LENGTH = 4096;
 const MAX_PASSES = 4;
 
 const SECRET_KEY = /pass(word|phrase)?|secret|token|credential|api[_-]?key|private[_-]?key|signature|hash|certificate/i;
@@ -62,38 +61,40 @@ export function isDangerousUrl(raw: string): boolean {
   return DANGEROUS_URL.test(decoded);
 }
 
-/** Remove dangerous attributes from one tag's text, preserving everything else verbatim. */
+/**
+ * Remove dangerous attributes from one tag's text, preserving everything else verbatim.
+ * Walks attributes with the same tokenizer rules as findTagEnd: an attribute name may start with
+ * any character (including '"', "'" and '='), a value is quoted only right after '='.
+ */
 function cleanTag(tag: string): string {
+  const n = tag.length;
   let i = 1; // after '<'
   if (tag[i] === '/') i++;
-  while (i < tag.length && !isSpace(tag[i]) && tag[i] !== '/' && tag[i] !== '>') i++;
-  const head = tag.slice(0, i);
-  let out = head;
-  const n = tag.length;
+  while (i < n && !isSpace(tag[i]) && tag[i] !== '/' && tag[i] !== '>') i++;
+  let out = tag.slice(0, i);
   while (i < n) {
     const sepStart = i;
-    while (i < n && (isSpace(tag[i]) || tag[i] === '/' || tag[i] === '"' || tag[i] === "'" || tag[i] === '`')) i++;
+    while (i < n && (isSpace(tag[i]) || tag[i] === '/')) i++;
     if (i >= n || tag[i] === '>') { out += tag.slice(sepStart); break; }
     const nameStart = i;
-    while (i < n && !isSpace(tag[i]) && tag[i] !== '=' && tag[i] !== '/' && tag[i] !== '>' && tag[i] !== '"' && tag[i] !== "'") i++;
-    if (i === nameStart) { i++; out += tag.slice(sepStart, i); continue; } // stray char, keep progressing
-    const name = tag.slice(nameStart, i).toLowerCase();
+    i++; // first name character, whatever it is
+    while (i < n && !isSpace(tag[i]) && tag[i] !== '/' && tag[i] !== '>' && tag[i] !== '=') i++;
+    // a browser would not run "\"onclick", but drop it too rather than rely on that
+    const name = tag.slice(nameStart, i).toLowerCase().replace(/^["'`=<]+/, '');
+    let end = i;
+    let value = '';
     let j = i;
     while (j < n && isSpace(tag[j])) j++;
-    let value = '';
-    let end = i;
     if (tag[j] === '=') {
       j++;
       while (j < n && isSpace(tag[j])) j++;
-      let vs = j;
       if (tag[j] === '"' || tag[j] === "'") {
-        const q = tag[j];
-        vs = j + 1;
-        let close = tag.indexOf(q, vs);
+        let close = tag.indexOf(tag[j], j + 1);
         if (close === -1) close = n;
-        value = tag.slice(vs, close);
+        value = tag.slice(j + 1, close);
         end = Math.min(close + 1, n);
       } else {
+        const vs = j;
         while (j < n && !isSpace(tag[j]) && tag[j] !== '>') j++;
         value = tag.slice(vs, j);
         end = j;
@@ -106,13 +107,61 @@ function cleanTag(tag: string): string {
   return out;
 }
 
+/**
+ * Index of the '>' that ends the tag opened at `lt`, following the HTML tokenizer: a quoted attribute
+ * value (" or ', not backtick) may hold '<' and '>', an unquoted value ends at whitespace or '>', and
+ * '<' inside a tag or attribute name is an ordinary character. Returns -1 when the input ends first.
+ * `<!...`, `<?...` and `</` + non-letter are bogus comments and end at the first '>'.
+ */
+function findTagEnd(input: string, lt: number, budget: { left: number }): number {
+  const n = input.length;
+  let p = lt + 1;
+  if (input[p] === '/') p++;
+  if (!isAlpha(input[p] ?? '')) return input.indexOf('>', p);
+  const start = p;
+  try {
+    while (p < n && !isSpace(input[p]) && input[p] !== '/' && input[p] !== '>') p++; // tag name ('<' included)
+    for (;;) {
+      // before attribute name ('/' is the self-closing marker, then reconsumed here)
+      while (p < n && (isSpace(input[p]) || input[p] === '/')) p++;
+      if (p >= n) return -1;
+      if (input[p] === '>') return p;
+      // attribute name (a leading '=' belongs to the name)
+      p++;
+      while (p < n && !isSpace(input[p]) && input[p] !== '/' && input[p] !== '>' && input[p] !== '=') p++;
+      // after attribute name
+      while (p < n && isSpace(input[p])) p++;
+      if (p >= n) return -1;
+      if (input[p] !== '=') continue;
+      // before attribute value
+      p++;
+      while (p < n && isSpace(input[p])) p++;
+      if (p >= n) return -1;
+      const q = input[p];
+      if (q === '"' || q === "'") {
+        const close = input.indexOf(q, p + 1);
+        if (close === -1) { p = n; return -1; }
+        p = close + 1;
+      } else {
+        while (p < n && !isSpace(input[p]) && input[p] !== '>') p++;
+      }
+    }
+  } finally {
+    budget.left -= p - start;
+  }
+}
+
 /** One linear pass over the HTML in `input`. */
 function scanHtml(input: string, stripAllTags: boolean): string {
   const lower = input.toLowerCase();
   const n = input.length;
+  const lastGt = input.lastIndexOf('>');
+  // Work cap for tag-end scans. Benign text uses a small multiple of its length; only crafted input
+  // (many tags that each run to the end unterminated) can exhaust it, and then every remaining '<'
+  // is escaped, which is safe and keeps the pass linear.
+  const budget = { left: 4 * n + 65_536 };
   let out = '';
   let i = 0;
-  let nextGt = -2; // cached position of the next '>' (-1 = none left)
   let noCommentEnd = false; // no further '-->' in the input
   const noBlockEnd = new Set<string>(); // block elements with no further closing tag
   while (i < n) {
@@ -127,31 +176,36 @@ function scanHtml(input: string, stripAllTags: boolean): string {
       continue;
     }
     if (!(isAlpha(c) || c === '/' || c === '!' || c === '?')) { out += '<'; i = lt + 1; continue; }
-    if (nextGt !== -1 && nextGt < lt) nextGt = input.indexOf('>', lt);
-    const nextLt = input.indexOf('<', lt + 1);
+    if (budget.left <= 0) { out += input.slice(lt).replace(/</g, '&lt;'); break; }
+    const gt = lt > lastGt ? -1 : findTagEnd(input, lt, budget);
     let end: number;
     let terminated = false;
-    if (nextGt !== -1 && nextGt < lt) nextGt = input.indexOf('>', lt);
-    if (nextGt !== -1 && (nextLt === -1 || nextGt < nextLt) && nextGt - lt <= MAX_TAG_LENGTH) {
-      end = nextGt + 1;
+    if (gt !== -1) {
+      end = gt + 1;
       terminated = true;
     } else {
-      end = Math.min(nextLt === -1 ? n : nextLt, lt + MAX_TAG_LENGTH);
+      const nextLt = input.indexOf('<', lt + 1);
+      end = nextLt === -1 ? n : nextLt;
     }
     const tag = input.slice(lt, end);
     const m = /^<\/?([a-zA-Z][a-zA-Z0-9:-]*)/.exec(tag.length > 64 ? tag.slice(0, 64) : tag);
     const name = m ? m[1].toLowerCase() : '';
     const closing = tag[1] === '/';
-    if (BLOCK_ELEMENTS.has(name) && !closing && terminated) {
+    // A browser keeps '<' in a tag name ("<img<x", "<scr<script>"): no real element is named that way,
+    // so the whole tag is dropped rather than cleaned.
+    let nameEnd = lt + (closing ? 2 : 1);
+    while (nameEnd < end && !isSpace(input[nameEnd]) && input[nameEnd] !== '/' && input[nameEnd] !== '>') nameEnd++;
+    const oddName = input.slice(lt + 1, nameEnd).includes('<', closing ? 1 : 0);
+    if (BLOCK_ELEMENTS.has(name) && !closing && terminated && !oddName) {
       const close = noBlockEnd.has(name) ? -1 : lower.indexOf(`</${name}`, end);
       if (close === -1) noBlockEnd.add(name);
       if (close !== -1) {
-        const closeEnd = lower.indexOf('>', close);
+        const closeEnd = findTagEnd(input, close, budget);
         i = closeEnd === -1 ? n : closeEnd + 1;
         continue;
       }
     }
-    const dropped = stripAllTags || BLOCK_ELEMENTS.has(name) || DROP_ELEMENTS.has(name) || !m;
+    const dropped = stripAllTags || oddName || BLOCK_ELEMENTS.has(name) || DROP_ELEMENTS.has(name) || !m;
     if (dropped) {
       if (terminated) { i = end; continue; }
       // Unterminated: keep the text after it. A dangerous name is escaped (it could be completed by

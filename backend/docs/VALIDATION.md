@@ -71,6 +71,10 @@ Write a real schema (and registry entry) whenever a handler reads specific field
 
 Sanitization is defence in depth, **not** a substitute for output encoding where data is rendered.
 It uses a linear-time tag scanner (no backtracking regexes), so hostile input cannot stall the event loop.
+The scanner ends a tag where a browser does: a `"` or `'` quoted attribute value may hold `>` and `<`
+(a backtick does not quote), an unquoted value ends at whitespace or `>`, and a quote or `=` at the start
+of an attribute name is part of the name. A tag whose name contains `<` is dropped. A crafted input that
+would make the tag-end scans exceed a fixed multiple of its length has its remaining `<` escaped instead.
 
 - NUL/control characters are removed from all strings
 - `<script>`/`<style>` blocks are removed; `iframe`, `object`, `embed`, `link`, `meta`, `base` tags are removed; HTML comments are removed
