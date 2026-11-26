@@ -259,10 +259,10 @@ describe('several validate() calls on one route are merged', () => {
   it('fills locations the route did not declare with registry/default schemas', async () => {
     const app = Fastify();
     await app.register(validationPlugin);
-    app.patch('/v1/audit/settings', { preHandler: [app.validate({})] }, async () => ({ ok: true }));
+    app.post('/v1/sod/policies', { preHandler: [app.validate({})] }, async () => ({ ok: true }));
     app.post('/v1/things/:id/act', { preHandler: [app.validate({ body: z.object({}).passthrough() })] }, async () => ({ ok: true }));
     expect((await app.inject({ method: 'POST', url: '/v1/things/not-uuid/act', payload: {} })).statusCode).toBe(400);
-    expect((await app.inject({ method: 'PATCH', url: '/v1/audit/settings', payload: { retention_days: 'x' } })).statusCode).toBe(400);
+    expect((await app.inject({ method: 'POST', url: '/v1/sod/policies', payload: { name: 'x' } })).statusCode).toBe(400);
     await app.close();
   });
 

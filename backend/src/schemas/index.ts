@@ -13,7 +13,6 @@ import * as sod from './sod.js';
 import * as makerChecker from './maker-checker.js';
 import * as recertification from './recertification.js';
 import * as attachments from './attachments.js';
-import * as audit from './audit.js';
 import * as migration from './migration.js';
 import * as q from './queries.js';
 import * as vendorRisk from './vendor-risk.js';
@@ -44,8 +43,10 @@ import * as roles from './roles.js';
 import * as search from './search.js';
 import * as settings from './settings.js';
 import * as users from './users.js';
+import * as sso from './sso.js';
 
 export * from './common.js';
+import { textIdSchema } from './common.js';
 export * as authSchemas from './auth.js';
 export * as issueSchemas from './issues.js';
 export * as sodSchemas from './sod.js';
@@ -83,6 +84,8 @@ export * as rolesSchemas from './roles.js';
 export * as searchSchemas from './search.js';
 export * as settingsSchemas from './settings.js';
 export * as usersSchemas from './users.js';
+export * as clientErrorsSchemas from './client-errors.js';
+export * as ssoSchemas from './sso.js';
 
 export interface RouteSchemas {
   body?: ZodTypeAny;
@@ -282,7 +285,8 @@ export const schemaRegistry: Record<string, RouteSchemas> = {
   'DELETE /v1/problems/:id/issues/:issueId': { params: problems.problemIssueParamSchema },
   'GET /v1/problems/:id/history': { params: problems.problemIdParamSchema },
   'POST /v1/problems/:id/convert-to-known-error': { params: problems.problemIdParamSchema },
-  'POST /v1/regulatory-sla/incidents/:incidentId/classify': { body: regulatorySla.classifyIncidentSchema },
+  'POST /v1/regulatory-sla/incidents/:incidentId/classify': { params: regulatorySla.incidentRefParamSchema, body: regulatorySla.classifyIncidentSchema },
+  'GET /v1/regulatory-sla/incidents/:incidentId/clocks': { params: regulatorySla.incidentRefParamSchema },
   'POST /v1/regulatory-sla/clocks/:clockId/notify': { body: regulatorySla.recordNotificationSchema },
   'GET /v1/regulatory-sla/summary': { query: regulatorySla.summaryQuerySchema },
   'POST /v1/regulatory-sla/frameworks': { body: regulatorySla.createFrameworkSchema },
@@ -347,6 +351,8 @@ export const schemaRegistry: Record<string, RouteSchemas> = {
   'POST /v1/vendor-risk/vendors': { body: vendorRisk.createVendorSchema },
   'PUT /v1/vendor-risk/vendors/:id': { body: vendorRisk.updateVendorSchema },
   'POST /v1/vendor-risk/vendors/:id/applications': { body: vendorRisk.linkApplicationSchema },
+  'DELETE /v1/vendor-risk/vendors/:id/applications/:appId': { params: vendorRisk.vendorAppLinkParamSchema },
+  'GET /v1/vendor-risk/applications/:appId/vendors': { params: vendorRisk.appRefParamSchema },
   'POST /v1/vendor-risk/vendors/:id/reviews': { body: vendorRisk.createReviewSchema },
   'PUT /v1/vendor-risk/vendors/reviews/:reviewId': { body: vendorRisk.updateReviewSchema },
 
@@ -409,7 +415,8 @@ export const schemaRegistry: Record<string, RouteSchemas> = {
   'POST /v1/recertification/items/:id/decide': { body: recertification.decideItemSchema },
   'POST /v1/attachments/upload-url': { body: attachments.uploadUrlSchema },
   'POST /v1/attachments/confirm-upload': { body: attachments.confirmUploadSchema },
-  'PATCH /v1/audit/settings': { body: audit.auditSettingsSchema },
+  'POST /v1/sso/callback/:tenantSlug/:providerId': { body: sso.samlCallbackBodySchema },
+
   'GET /v1/migration/:jobId': { params: migration.jobIdParamSchema },
   'POST /v1/migration/:jobId/execute': { params: migration.jobIdParamSchema, body: migration.executeMigrationBodySchema },
   'POST /v1/migration/templates': { body: migration.saveMappingTemplateSchema },
@@ -430,12 +437,14 @@ export const schemaRegistry: Record<string, RouteSchemas> = {
 // ---------------------------------------------------------------------------
 // Convention-based defaults for routes without an explicit entry above.
 //  - path params: `id`, `appId`, `incidentId`, `userId` must be UUIDs; every other
-//    param is a non-empty, whitespace-free string up to 255 chars
+//    param is a non-empty, whitespace-free string up to 255 chars. A route whose param of one
+//    of these names is NOT a UUID column must register an explicit params schema above
+//    (regulatory-sla incidentId and vendor-risk appId are VARCHAR(255) references).
 //  - GET query: optional numeric paging keys must be numbers, free-text keys are length-capped
 //  - POST/PUT/PATCH/DELETE body: must be a JSON object when present
 // ---------------------------------------------------------------------------
 const UUID_PARAMS = new Set(['id', 'appId', 'incidentId', 'userId']);
-const stringParam = z.string().min(1).max(255).regex(/^[^\s/\\<>]+$/, 'Must not contain whitespace, slashes or angle brackets');
+const stringParam = textIdSchema;
 
 /** Treat an empty query value (`?page=`) as "not provided". */
 const emptyAsUndefined = (v: unknown) => (v === '' ? undefined : v);

@@ -1,7 +1,8 @@
 import { FastifyPluginAsync, FastifyRequest } from 'fastify';
-import { isIP } from 'net';
-import { z } from 'zod';
 import { requirePermission } from '../middleware/auth.js';
+import { validate } from '../middleware/validation.js';
+import { noBodySchema, noQuerySchema } from '../schemas/common.js';
+import * as s from '../schemas/audit.js';
 import {
   auditService,
   AuditAction,
@@ -14,86 +15,33 @@ import { auditAlertService } from '../services/audit-alerts.js';
 import { auditRetentionService, validateRetentionPolicy } from '../services/audit-retention.js';
 import { AUDIT_REPORT_TEMPLATES } from '../services/audit-reports.js';
 import { complianceReportsService, type ReportType } from '../services/compliance-reports.js';
-import { AUDIT_OUTCOMES, AUDIT_SEVERITIES } from '../lib/audit-search.js';
+import {
+  auditSearchQuerySchema,
+  type AuditAlertRuleInput,
+  type AuditAlertRulePatch,
+  type AuditAlertsQuery,
+  type AuditEntityParams,
+  type AuditExportQuery,
+  type AuditFailedLoginsQuery,
+  type AuditLegalHoldInput,
+  type AuditReportParams,
+  type AuditReportQuery,
+  type AuditSecurityQuery,
+  type AuditSettingsInput,
+  type AuditUserActivityQuery,
+  type AuditUserParams,
+  type AuditVerifyQuery,
+} from '../schemas/audit.js';
 import { BadRequestError, NotFoundError } from '../utils/errors.js';
 import { validateDate, validateDateRange, validateLimit, validateOffset } from '../utils/validation.js';
 
-// ============================================
-// SCHEMAS
-// ============================================
-
-const severitySchema = z.enum(AUDIT_SEVERITIES);
-const outcomeSchema = z.enum(AUDIT_OUTCOMES);
-
-const searchQuerySchema = z.object({
-  q: z.string().trim().max(200).optional(),
-  userId: z.string().uuid().optional(),
-  action: z.string().max(60).optional(),
-  entityType: z.string().max(100).optional(),
-  entityId: z.string().uuid().optional(),
-  ipAddress: z
-    .string()
-    .refine((v) => isIP(v) !== 0, 'ipAddress must be a valid IPv4 or IPv6 address')
-    .optional(),
-  severity: severitySchema.optional(),
-  outcome: outcomeSchema.optional(),
-  source: z.enum(['live', 'archive', 'all']).optional(),
-  startDate: z.string().optional(),
-  endDate: z.string().optional(),
-  limit: z.string().optional(),
-  offset: z.string().optional(),
-});
-
-const alertRuleSchema = z.object({
-  name: z.string().trim().min(2).max(150),
-  description: z.string().max(2000).nullable().optional(),
-  actions: z.array(z.string().max(60)).max(30).optional(),
-  entityTypes: z.array(z.string().max(100)).max(30).optional(),
-  outcome: outcomeSchema.nullable().optional(),
-  threshold: z.number().int().min(1).max(100000),
-  windowMinutes: z.number().int().min(1).max(10080),
-  groupBy: z.enum(['user', 'ip', 'none']).optional(),
-  severity: severitySchema.optional(),
-  enabled: z.boolean().optional(),
-});
-
-const settingsSchema = z
-  .object({
-    retention_days: z.number().int().min(30).max(3650).optional(),
-    log_reads: z.boolean().optional(),
-    log_exports: z.boolean().optional(),
-    sensitive_fields: z.array(z.string().min(1).max(100)).max(100).optional(),
-    archive_after_days: z.number().int().min(1).max(3650).nullable().optional(),
-    alerts_enabled: z.boolean().optional(),
-  })
-  .refine(
-    (v) =>
-      v.archive_after_days == null ||
-      v.retention_days == null ||
-      v.archive_after_days < v.retention_days,
-    { message: 'archive_after_days must be smaller than retention_days' }
-  );
-
-const legalHoldSchema = z.object({
-  hold: z.boolean(),
-  userId: z.string().uuid().optional(),
-  entityType: z.string().max(100).optional(),
-  entityId: z.string().uuid().optional(),
-  startDate: z.string().datetime().optional(),
-  endDate: z.string().datetime().optional(),
-});
-
-const reportQuerySchema = z.object({
-  from: z.string().datetime(),
-  to: z.string().datetime(),
-  format: z.enum(['json', 'csv']).optional().default('json'),
-});
-
-const idParamSchema = z.object({ id: z.string().uuid() });
+// Request schemas live in ../schemas/audit.ts; each route declares them with validate(),
+// so they apply before the handler runs; handlers read typed input.
 
 /** Turn validated query-string input into service options. */
 function toQueryOptions(raw: unknown): AuditQueryOptions {
-  const q = searchQuerySchema.parse(raw);
+  // also called with a derived object (export drops limit/offset), so parse here as well
+  const q = auditSearchQuerySchema.parse(raw);
   const startDate = validateDate(q.startDate, 'startDate');
   const endDate = validateDate(q.endDate, 'endDate');
   validateDateRange(startDate, endDate, 365);
@@ -152,16 +100,16 @@ const auditRoutes: FastifyPluginAsync = async (app) => {
     return auditService.query(tenantSlug, toQueryOptions(request.query));
   };
 
-  app.get('/', { preHandler: [requirePermission('admin:read')] }, searchHandler);
-  app.get('/search', { preHandler: [requirePermission('admin:read')] }, searchHandler);
+  app.get('/', { preHandler: [requirePermission('admin:read'), validate({ query: s.auditSearchQuerySchema })] }, searchHandler);
+  app.get('/search', { preHandler: [requirePermission('admin:read'), validate({ query: s.auditSearchQuerySchema })] }, searchHandler);
 
   // Export the filtered audit trail (CSV or JSON). The export is itself audited.
   app.get<{ Querystring: Record<string, string | undefined> }>(
     '/export',
-    { preHandler: [requirePermission('admin:read')] },
+    { preHandler: [requirePermission('admin:read'), validate({ query: s.auditExportQuerySchema })] },
     async (request, reply) => {
       const { tenantSlug } = request.user;
-      const format = z.enum(['csv', 'json']).default('csv').parse(request.query.format);
+      const { format } = request.query as unknown as AuditExportQuery;
       const options = toQueryOptions({ ...request.query, limit: undefined, offset: undefined });
 
       const { rows, truncated } = await auditService.exportLogs(tenantSlug, options);
@@ -184,7 +132,7 @@ const auditRoutes: FastifyPluginAsync = async (app) => {
   // Compliance report templates (SOC 2 / ISO 27001 audit trail)
   app.get(
     '/reports/templates',
-    { preHandler: [requirePermission('admin:read')] },
+    { preHandler: [requirePermission('admin:read'), validate({ query: noQuerySchema })] },
     async () => ({
       templates: Object.entries(AUDIT_REPORT_TEMPLATES).map(([id, meta]) => ({ id, ...meta })),
     })
@@ -192,13 +140,11 @@ const auditRoutes: FastifyPluginAsync = async (app) => {
 
   app.get<{ Params: { template: string }; Querystring: Record<string, string | undefined> }>(
     '/reports/:template',
-    { preHandler: [requirePermission('admin:read')] },
+    { preHandler: [requirePermission('admin:read'), validate({ params: s.auditReportParamsSchema, query: s.auditReportQuerySchema })] },
     async (request, reply) => {
       const { tenantSlug } = request.user;
-      const template = z
-        .enum(Object.keys(AUDIT_REPORT_TEMPLATES) as [string, ...string[]])
-        .parse(request.params.template) as ReportType;
-      const query = reportQuerySchema.parse(request.query);
+      const template = (request.params as AuditReportParams).template as ReportType;
+      const query = request.query as unknown as AuditReportQuery;
       const from = new Date(query.from);
       const to = new Date(query.to);
       validateDateRange(from, to, 366);
@@ -225,11 +171,11 @@ const auditRoutes: FastifyPluginAsync = async (app) => {
   }>(
     '/entity/:entityType/:entityId',
     {
-      preHandler: [requirePermission('admin:read')],
+      preHandler: [requirePermission('admin:read'), validate({ params: s.auditEntityParamsSchema })],
     },
     async (request, _reply) => {
       const { tenantSlug } = request.user;
-      const { entityType, entityId } = request.params;
+      const { entityType, entityId } = request.params as AuditEntityParams;
 
       const logs = await auditService.getEntityHistory(tenantSlug, entityType, entityId);
 
@@ -244,12 +190,12 @@ const auditRoutes: FastifyPluginAsync = async (app) => {
   }>(
     '/user/:userId',
     {
-      preHandler: [requirePermission('admin:read')],
+      preHandler: [requirePermission('admin:read'), validate({ params: s.auditUserParamsSchema, query: s.auditUserActivityQuerySchema })],
     },
     async (request, _reply) => {
       const { tenantSlug } = request.user;
-      const { userId } = request.params;
-      const days = parseInt(request.query.days || '30', 10);
+      const { userId } = request.params as AuditUserParams;
+      const { days = 30 } = request.query as AuditUserActivityQuery;
 
       const logs = await auditService.getUserActivity(tenantSlug, userId, days);
 
@@ -263,11 +209,11 @@ const auditRoutes: FastifyPluginAsync = async (app) => {
   }>(
     '/security',
     {
-      preHandler: [requirePermission('admin:read')],
+      preHandler: [requirePermission('admin:read'), validate({ query: s.auditSecurityQuerySchema })],
     },
     async (request, _reply) => {
       const { tenantSlug } = request.user;
-      const hours = parseInt(request.query.hours || '24', 10);
+      const { hours = 24 } = request.query as AuditSecurityQuery;
 
       const events = await auditService.getSecurityEvents(tenantSlug, hours);
 
@@ -281,12 +227,11 @@ const auditRoutes: FastifyPluginAsync = async (app) => {
   }>(
     '/security/failed-logins',
     {
-      preHandler: [requirePermission('admin:read')],
+      preHandler: [requirePermission('admin:read'), validate({ query: s.auditFailedLoginsQuerySchema })],
     },
     async (request, _reply) => {
       const { tenantSlug } = request.user;
-      const hours = parseInt(request.query.hours || '24', 10);
-      const threshold = parseInt(request.query.threshold || '5', 10);
+      const { hours = 24, threshold = 5 } = request.query as AuditFailedLoginsQuery;
 
       const attempts = await auditService.getFailedLogins(tenantSlug, hours, threshold);
 
@@ -298,7 +243,7 @@ const auditRoutes: FastifyPluginAsync = async (app) => {
   app.get(
     '/summary/users',
     {
-      preHandler: [requirePermission('admin:read')],
+      preHandler: [requirePermission('admin:read'), validate({ query: noQuerySchema })],
     },
     async (request, _reply) => {
       const { tenantSlug } = request.user;
@@ -313,7 +258,7 @@ const auditRoutes: FastifyPluginAsync = async (app) => {
   app.get(
     '/summary/entities',
     {
-      preHandler: [requirePermission('admin:read')],
+      preHandler: [requirePermission('admin:read'), validate({ query: noQuerySchema })],
     },
     async (request, _reply) => {
       const { tenantSlug } = request.user;
@@ -328,7 +273,7 @@ const auditRoutes: FastifyPluginAsync = async (app) => {
   app.get(
     '/settings',
     {
-      preHandler: [requirePermission('admin:read')],
+      preHandler: [requirePermission('admin:read'), validate({ query: noQuerySchema })],
     },
     async (request, _reply) => {
       const { tenantSlug } = request.user;
@@ -352,11 +297,11 @@ const auditRoutes: FastifyPluginAsync = async (app) => {
   }>(
     '/settings',
     {
-      preHandler: [requirePermission('admin:write')],
+      preHandler: [requirePermission('admin:write'), validate({ body: s.auditSettingsSchema })],
     },
     async (request, _reply) => {
       const { tenantSlug, userId } = request.user;
-      const settings = settingsSchema.parse(request.body);
+      const settings = request.body as AuditSettingsInput;
 
       const before = await auditService.getSettings(tenantSlug);
       // The window must be valid against the policy as it will be, not just the request.
@@ -385,11 +330,11 @@ const auditRoutes: FastifyPluginAsync = async (app) => {
   }>(
     '/verify',
     {
-      preHandler: [requirePermission('admin:read')],
+      preHandler: [requirePermission('admin:read'), validate({ query: s.auditVerifyQuerySchema })],
     },
     async (request, _reply) => {
       const { tenantSlug } = request.user;
-      const { from, to } = request.query;
+      const { from, to } = request.query as AuditVerifyQuery;
 
       // Records inserted by services directly are sealed before verifying.
       await auditService.sealPending(tenantSlug);
@@ -412,7 +357,7 @@ const auditRoutes: FastifyPluginAsync = async (app) => {
   app.post(
     '/cleanup',
     {
-      preHandler: [requirePermission('admin:write')],
+      preHandler: [requirePermission('admin:write'), validate({ body: noBodySchema })],
     },
     async (request, _reply) => {
       const { tenantSlug } = request.user;
@@ -442,7 +387,7 @@ const auditRoutes: FastifyPluginAsync = async (app) => {
 
   app.get(
     '/retention/stats',
-    { preHandler: [requirePermission('admin:read')] },
+    { preHandler: [requirePermission('admin:read'), validate({ query: noQuerySchema })] },
     async (request) => {
       const { tenantSlug } = request.user;
       const [settings, storage] = await Promise.all([
@@ -456,7 +401,7 @@ const auditRoutes: FastifyPluginAsync = async (app) => {
   // Apply the retention policy now: archive, then purge expired records.
   app.post(
     '/retention/run',
-    { preHandler: [requirePermission('admin:write')] },
+    { preHandler: [requirePermission('admin:write'), validate({ body: noBodySchema })] },
     async (request) => {
       const { tenantSlug } = request.user;
       const result = await auditRetentionService.runForTenant(tenantSlug);
@@ -467,10 +412,10 @@ const auditRoutes: FastifyPluginAsync = async (app) => {
   // Place or release a legal hold on the records matching a scope.
   app.post(
     '/legal-hold',
-    { preHandler: [requirePermission('admin:write')] },
+    { preHandler: [requirePermission('admin:write'), validate({ body: s.auditLegalHoldSchema })] },
     async (request) => {
       const { tenantSlug } = request.user;
-      const body = legalHoldSchema.parse(request.body);
+      const body = request.body as AuditLegalHoldInput;
       const { hold, startDate, endDate, ...scope } = body;
       if (!scope.userId && !scope.entityType && !scope.entityId && !startDate && !endDate) {
         throw new BadRequestError('A legal hold needs at least one of userId, entityType, entityId, startDate, endDate');
@@ -495,16 +440,16 @@ const auditRoutes: FastifyPluginAsync = async (app) => {
 
   app.get(
     '/alert-rules',
-    { preHandler: [requirePermission('admin:read')] },
+    { preHandler: [requirePermission('admin:read'), validate({ query: noQuerySchema })] },
     async (request) => ({ rules: await auditAlertService.listRules(request.user.tenantSlug) })
   );
 
   app.post(
     '/alert-rules',
-    { preHandler: [requirePermission('admin:write')] },
+    { preHandler: [requirePermission('admin:write'), validate({ body: s.auditAlertRuleSchema })] },
     async (request, reply) => {
       const { tenantSlug, userId } = request.user;
-      const input = alertRuleSchema.parse(request.body);
+      const input = request.body as AuditAlertRuleInput;
       const rule = await auditAlertService.createRule(tenantSlug, input, userId).catch((err: { code?: string }) => {
         if (err.code === '23505') throw new BadRequestError(`An alert rule named "${input.name}" already exists`);
         throw err;
@@ -521,11 +466,11 @@ const auditRoutes: FastifyPluginAsync = async (app) => {
 
   app.patch<{ Params: { id: string } }>(
     '/alert-rules/:id',
-    { preHandler: [requirePermission('admin:write')] },
+    { preHandler: [requirePermission('admin:write'), validate({ params: s.auditIdParamSchema, body: s.auditAlertRulePatchSchema })] },
     async (request) => {
       const { tenantSlug } = request.user;
-      const { id } = idParamSchema.parse(request.params);
-      const input = alertRuleSchema.partial().parse(request.body);
+      const { id } = request.params;
+      const input = request.body as AuditAlertRulePatch;
       const rule = await auditAlertService.updateRule(tenantSlug, id, input);
       if (!rule) throw new NotFoundError('Alert rule');
       await auditAdminAction(request, 'config_change', 'audit_alert_rule', {
@@ -539,10 +484,10 @@ const auditRoutes: FastifyPluginAsync = async (app) => {
 
   app.delete<{ Params: { id: string } }>(
     '/alert-rules/:id',
-    { preHandler: [requirePermission('admin:write')] },
+    { preHandler: [requirePermission('admin:write'), validate({ params: s.auditIdParamSchema })] },
     async (request, reply) => {
       const { tenantSlug } = request.user;
-      const { id } = idParamSchema.parse(request.params);
+      const { id } = request.params;
       const deleted = await auditAlertService.deleteRule(tenantSlug, id);
       if (!deleted) throw new NotFoundError('Alert rule');
       await auditAdminAction(request, 'config_change', 'audit_alert_rule', { entityId: id, metadata: { deleted: true } });
@@ -554,28 +499,24 @@ const auditRoutes: FastifyPluginAsync = async (app) => {
 
   app.get<{ Querystring: { status?: string; severity?: string; limit?: string; offset?: string } }>(
     '/alerts',
-    { preHandler: [requirePermission('admin:read')] },
+    { preHandler: [requirePermission('admin:read'), validate({ query: s.auditAlertsQuerySchema })] },
     async (request) => {
-      const q = z
-        .object({
-          status: z.enum(['open', 'acknowledged']).optional(),
-          severity: severitySchema.optional(),
-        })
-        .parse(request.query);
+      const { status, severity, limit, offset } = request.query as AuditAlertsQuery;
       return auditAlertService.listAlerts(request.user.tenantSlug, {
-        ...q,
-        limit: validateLimit(request.query.limit, 200),
-        offset: validateOffset(request.query.offset),
+        status,
+        severity,
+        limit: validateLimit(limit, 200),
+        offset: validateOffset(offset),
       });
     }
   );
 
   app.post<{ Params: { id: string } }>(
     '/alerts/:id/acknowledge',
-    { preHandler: [requirePermission('admin:write')] },
+    { preHandler: [requirePermission('admin:write'), validate({ params: s.auditIdParamSchema, body: noBodySchema })] },
     async (request) => {
       const { tenantSlug, userId } = request.user;
-      const { id } = idParamSchema.parse(request.params);
+      const { id } = request.params;
       const alert = await auditAlertService.acknowledge(tenantSlug, id, userId);
       if (!alert) throw new NotFoundError('Open alert');
       return { alert };

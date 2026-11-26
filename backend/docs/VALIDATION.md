@@ -21,6 +21,9 @@ before all routes in `src/index.ts` (and `src/app.ts` for tests).
 }
 ```
 
+The error handler plugin (`src/plugins/errorHandler.ts`) adds `code: "VALIDATION_ERROR"` (the same code a thrown
+`ZodError` gets), `requestId`, `retryable: false` and a generic `userMessage` that never names fields or echoes input.
+
 Every route is sanitized and has at least one schema check (explicit or default). `app.validationCoverage()` lists each route as
 `explicit` (route-level `validate()` or an entry in `schemaRegistry`), `default` (convention schemas,
 below) or `baseline` (sanitization only; no input shape applies). The server logs a
@@ -61,7 +64,10 @@ function of the request (`body: (req) => ...`) when the shape depends on a heade
 
 ### Convention defaults (`lookupSchemas` in `src/schemas/index.ts`)
 
-- path params named `id`, `appId`, `incidentId`, `userId` must be UUIDs; other params are non-empty strings (max 255, no whitespace, slashes or angle brackets)
+- path params named `id`, `appId`, `incidentId`, `userId` must be UUIDs; other params are non-empty strings (max 255, no whitespace, slashes or angle brackets, `textIdSchema` in `common.ts`)
+- a route whose param of one of those names is a VARCHAR reference registers an explicit params schema with `textIdSchema`:
+  `regulatory-sla` `:incidentId` (`regulatory_clocks.incident_id`, migration 034) and `vendor-risk` `:appId`
+  (`vendor_application_links.application_id`, migration 036). Check the column type before adding a route with these names.
 - GET query: `page`, `per_page`, `limit`, `offset` must be numeric; `search`/`q` are length-capped; other keys pass through
 - POST/PUT/PATCH/DELETE body: must be a JSON object when present
 
@@ -93,9 +99,27 @@ would make the tag-end scans exceed a fixed multiple of its length has its remai
 Altered fields are logged for security auditing (`input_sanitized`, `validation_rejected`,
 `validation_rate_limited`) with field paths only, never values. The client is not told that a value was altered.
 
+## Routes with a request-dependent or route-level schema
+
+- `POST /v1/bulk/:entity/{update,delete,status,assign}` choose the body schema per entity with
+  `validate({ body: (request) => getBulkSchema(entity, operation) })`; `authorize()` answers 404 for an unknown entity first.
+- `POST /v1/client-errors` declares `validate({ body: clientErrorSchema })` on the route.
+- Every `/v1/audit` route declares `validate()` with schemas from `schemas/audit.ts` (route-level, so the checks hold
+  even where the route module is mounted without the plugin). Routes that read no input use `noQuerySchema` /
+  `noBodySchema` from `common.ts`, so they are explicit about it.
+- `POST /v1/sso/callback/:tenantSlug/:providerId` checks `SAMLResponse` (bounded, not decoded) before node-saml verifies it.
+  The server registers no `application/x-www-form-urlencoded` parser, so an IdP form post is answered 415 by Fastify
+  before validation; a JSON body reaches the schema. Adding a form parser is a separate change.
+
 ## Known exceptions
 
 - `POST /v1/email/webhook/{sendgrid,mailgun}/:tenantSlug` parse their provider payload in the handler because the
   webhook signature must be verified (401) before the payload is judged (400); they still get the default body check.
+- `routes/audit.ts` `toQueryOptions()` re-parses `auditSearchQuerySchema` on an object it builds (the export drops
+  `limit`/`offset`); it never parses `request.*` directly.
+- No handler under `src/routes` calls `.parse(request.body|query|params)` or `.safeParse(...)` on raw request input;
+  `grep -rnE '\.(parse|safeParse)\(request\.(body|query|params)' backend/src/routes` must stay empty.
+- 126 of 496 routes use the convention defaults only (`default` in `validationCoverage()`): reads and deletes whose
+  only input is a UUID path param or the paging keys. The coverage test ratchets the explicit count (370).
 - `GET` routes that only paginate use the convention query defaults rather than a dedicated schema.
 - Services still enforce their own business rules; schemas only check shape and size.

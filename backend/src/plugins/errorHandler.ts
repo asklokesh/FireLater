@@ -270,7 +270,9 @@ export async function errorHandlerPlugin(app: FastifyInstance): Promise<void> {
       if (!body || typeof body !== 'object' || Array.isArray(body) || 'code' in body) return payload;
       if (typeof body.message !== 'string' && typeof body.error !== 'string') return payload;
       const status = reply.statusCode;
-      const code = codeForStatus(status);
+      // The validation middleware replies inline; give it the same code a thrown ZodError gets.
+      const isValidation = status === 400 && body.error === 'Validation Error' && Array.isArray(body.details);
+      const code = isValidation ? ErrorCode.VALIDATION_ERROR : codeForStatus(status);
       const context = buildErrorContext(request);
       const err = new Error(typeof body.message === 'string' ? body.message : String(body.error));
       logError(err, status, code, context);

@@ -61,6 +61,7 @@ import * as r_emergency_change from '../../src/routes/emergency-change.js';
 import * as r_vendor_risk from '../../src/routes/vendor-risk.js';
 import * as r_search from '../../src/routes/search.js';
 import * as r_bulk from '../../src/routes/bulk.js';
+import * as r_client_errors from '../../src/routes/clientErrors.js';
 
 const MODULES: Array<[any, string]> = [
   [((r_auth as any).default ?? (r_auth as any).authRoutes), '/v1/auth'],
@@ -102,6 +103,7 @@ const MODULES: Array<[any, string]> = [
   [((r_vendor_risk as any).default ?? (r_vendor_risk as any).vendorRiskRoutes), '/v1/vendor-risk'],
   [((r_search as any).default ?? (r_search as any).searchRoutes), '/v1/search'],
   [((r_bulk as any).default ?? (r_bulk as any).bulkRoutes), '/v1/bulk'],
+  [(r_client_errors as any).default, '/v1/client-errors'],
 ];
 
 const ID = '4f1b3b3e-8f52-4c53-9d0e-0d5c3b1f0a11';
@@ -125,7 +127,39 @@ describe('real route modules: coverage', () => {
     const cov = app.validationCoverage();
     expect(cov.length).toBeGreaterThan(400);
     expect(cov.filter((c) => c.mode === 'baseline')).toEqual([]);
-    expect(cov.filter((c) => c.mode === 'explicit').length).toBeGreaterThan(cov.length * 0.6);
+    // Ratchet: 370 of 496 routes carry explicit schemas on this tree. Raise it when routes move from
+    // default to explicit; the remaining defaults are listed in docs/VALIDATION.md.
+    expect(cov.filter((c) => c.mode === 'explicit').length).toBeGreaterThanOrEqual(370);
+    expect(cov.filter((c) => c.mode === 'explicit').length).toBeGreaterThan(cov.length * 0.74);
+  });
+
+  it('every /v1/audit, bulk, client-errors and SAML callback route has an explicit schema', () => {
+    const cov = app.validationCoverage();
+    const watched = cov.filter((c) => /^\w+ \/v1\/(audit|bulk|client-errors)\b/.test(c.route) || c.route === 'POST /v1/sso/callback/:tenantSlug/:providerId');
+    expect(watched.length).toBeGreaterThanOrEqual(31);
+    expect(watched.filter((c) => c.mode !== 'explicit')).toEqual([]);
+  });
+
+  it('id-like params that are VARCHAR references accept non-UUID values (and still reject unsafe ones)', async () => {
+    const notValidation = async (method: string, url: string, payload?: unknown) => {
+      const res = await call(method, url, payload);
+      expect(res.body).not.toContain('Validation Error');
+    };
+    // regulatory_clocks.incident_id and vendor_application_links.application_id are VARCHAR(255)
+    await notValidation('POST', '/v1/regulatory-sla/incidents/INC-1001/classify', { classification: 'major' });
+    await notValidation('GET', '/v1/regulatory-sla/incidents/INC-1001/clocks');
+    await notValidation('DELETE', `/v1/vendor-risk/vendors/${ID}/applications/APP-1`);
+    await notValidation('GET', '/v1/vendor-risk/applications/APP-1/vendors');
+    for (const bad of ['INC%201001', 'INC%3C1']) {
+      const res = await call('GET', `/v1/regulatory-sla/incidents/${bad}/clocks`);
+      expect(res.status).toBe(400);
+      expect(res.body).toContain('"location":"params"');
+      const res2 = await call('GET', `/v1/vendor-risk/applications/${bad}/vendors`);
+      expect(res2.status).toBe(400);
+      expect(res2.body).toContain('"location":"params"');
+    }
+    // the vendor id next to appId is still a UUID
+    expect((await call('DELETE', '/v1/vendor-risk/vendors/nope/applications/APP-1')).status).toBe(400);
   });
 
   it('routes that call validate() still get default params/body checks (merged validators)', async () => {
@@ -158,6 +192,21 @@ describe('real route modules: input is rejected before reaching services', () =>
     ['POST', '/v1/recertification/items/' + ID + '/decide', { decision: 'maybe' }, 'decision'],
     ['POST', '/v1/attachments/upload-url', {}, 'filename'],
     ['PATCH', '/v1/audit/settings', { retention_days: 'x' }, 'retention_days'],
+    ['PATCH', '/v1/audit/settings', { archive_after_days: 'x' }, 'archive_after_days'],
+    ['PATCH', '/v1/audit/settings', { alerts_enabled: 'yes' }, 'alerts_enabled'],
+    ['PATCH', '/v1/audit/settings', { retention_days: 60, archive_after_days: 90 }, 'archive_after_days'],
+    ['POST', '/v1/audit/alert-rules', { name: 'x' }, 'threshold'],
+    ['PATCH', '/v1/audit/alert-rules/' + ID, { threshold: 0 }, 'threshold'],
+    ['POST', '/v1/audit/legal-hold', {}, 'hold'],
+    ['GET', '/v1/audit/reports/nope?from=2026-01-01T00:00:00Z&to=2026-02-01T00:00:00Z', undefined, 'template'],
+    ['GET', '/v1/audit/search?severity=loud', undefined, 'severity'],
+    ['GET', '/v1/audit/export?format=xml', undefined, 'format'],
+    ['GET', '/v1/audit/alerts?status=closed', undefined, 'status'],
+    ['GET', '/v1/audit/security?hours=abc', undefined, 'hours'],
+    ['POST', '/v1/audit/alerts/nope/acknowledge', undefined, 'id'],
+    ['POST', '/v1/client-errors', {}, 'message'],
+    ['POST', '/v1/bulk/issues/update', { ids: ['nope'] }, 'ids'],
+    ['POST', '/v1/sso/callback/acme/p1', {}, 'SAMLResponse'],
     ['POST', '/v1/pam/grants/' + ID + '/approve', { approverEmail: 'nope' }, 'approverEmail'],
     ['POST', '/v1/search/query', { page: 'x' }, 'page'],
     ['POST', '/v1/auth/register', { tenantName: 'x' }, 'tenantSlug'],

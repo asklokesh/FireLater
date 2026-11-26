@@ -1,4 +1,9 @@
 import { z } from 'zod';
+import { textIdSchema, uuidSchema } from './common.js';
+
+/** vendor_application_links.application_id is VARCHAR(255) (migration 036), not a UUID. */
+export const appRefParamSchema = z.object({ appId: textIdSchema });
+export const vendorAppLinkParamSchema = z.object({ id: uuidSchema, appId: textIdSchema });
 
 export const createVendorSchema = z.object({
   name: z.string().min(1).max(255),

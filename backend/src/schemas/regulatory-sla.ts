@@ -1,4 +1,8 @@
 import { z } from 'zod';
+import { textIdSchema } from './common.js';
+
+/** regulatory_clocks.incident_id is VARCHAR(255) (migration 034): incident references such as INC-1001. */
+export const incidentRefParamSchema = z.object({ incidentId: textIdSchema });
 
 export const classifyIncidentSchema = z.object({
   classification: z.string().min(1).max(50),
