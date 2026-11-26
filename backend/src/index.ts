@@ -12,6 +12,7 @@ import { testRedisConnection, closeRedis, redis } from './config/redis.js';
 import { logger } from './utils/logger.js';
 import { AppError } from './utils/errors.js';
 
+import { validationPlugin } from './middleware/validation.js';
 import authRoutes from './routes/auth.js';
 import userRoutes from './routes/users.js';
 import groupRoutes from './routes/groups.js';
@@ -190,6 +191,9 @@ async function registerPlugins() {
 }
 
 async function registerRoutes() {
+  // Unified request sanitization + validation for every route registered below
+  await app.register(validationPlugin);
+
   // CSRF token endpoint - must be called before any state-changing operations
   app.get('/csrf-token', async (request, reply) => {
     const token = await reply.generateCsrf();

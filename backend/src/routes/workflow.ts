@@ -1,71 +1,21 @@
 import { FastifyInstance } from 'fastify';
-import { z } from 'zod';
 import { workflowService } from '../services/workflow.js';
 import { requirePermission } from '../middleware/auth.js';
+import { validate } from '../middleware/validation.js';
+import {
+  createWorkflowRuleSchema,
+  updateWorkflowRuleSchema,
+  type CreateWorkflowRuleInput,
+  type UpdateWorkflowRuleInput,
+} from '../schemas/workflow.js';
 
 // ============================================
 // SCHEMAS
 // ============================================
 
-const workflowConditionSchema = z.object({
-  field: z.string().min(1),
-  operator: z.enum([
-    'equals',
-    'not_equals',
-    'contains',
-    'not_contains',
-    'starts_with',
-    'ends_with',
-    'greater_than',
-    'less_than',
-    'is_empty',
-    'is_not_empty',
-    'in_list',
-    'not_in_list',
-  ]),
-  value: z.union([z.string(), z.number(), z.boolean(), z.array(z.string())]),
-  logical_operator: z.enum(['AND', 'OR']).optional(),
-});
 
-const workflowActionSchema = z.object({
-  action_type: z.enum([
-    'set_field',
-    'assign_to_user',
-    'assign_to_group',
-    'change_status',
-    'change_priority',
-    'add_comment',
-    'send_notification',
-    'send_email',
-    'escalate',
-    'link_to_problem',
-    'create_task',
-  ]),
-  parameters: z.record(z.unknown()),
-  order: z.number().int().min(0),
-});
 
-const createWorkflowRuleSchema = z.object({
-  name: z.string().min(1).max(100),
-  description: z.string().max(500).optional(),
-  entityType: z.enum(['issue', 'problem', 'change', 'request']),
-  triggerType: z.enum(['on_create', 'on_update', 'on_status_change', 'on_assignment', 'scheduled']),
-  isActive: z.boolean().optional(),
-  conditions: z.array(workflowConditionSchema),
-  actions: z.array(workflowActionSchema),
-  executionOrder: z.number().int().min(0).optional(),
-  stopOnMatch: z.boolean().optional(),
-});
 
-const updateWorkflowRuleSchema = z.object({
-  name: z.string().min(1).max(100).optional(),
-  description: z.string().max(500).optional(),
-  isActive: z.boolean().optional(),
-  conditions: z.array(workflowConditionSchema).optional(),
-  actions: z.array(workflowActionSchema).optional(),
-  executionOrder: z.number().int().min(0).optional(),
-  stopOnMatch: z.boolean().optional(),
-});
 
 // ============================================
 // ROUTES
@@ -116,10 +66,10 @@ export default async function workflowRoutes(fastify: FastifyInstance) {
   // CREATE WORKFLOW RULE
   // ----------------------------------------
   fastify.post('/rules', {
-    preHandler: [requirePermission('workflows:write')],
+    preHandler: [requirePermission('workflows:write'), validate({ body: createWorkflowRuleSchema })],
   }, async (request, reply) => {
     const { tenantSlug, userId } = request.user;
-    const body = createWorkflowRuleSchema.parse(request.body);
+    const body = request.body as CreateWorkflowRuleInput;
 
     try {
       const rule = await workflowService.createWorkflowRule(
@@ -138,11 +88,11 @@ export default async function workflowRoutes(fastify: FastifyInstance) {
   // UPDATE WORKFLOW RULE
   // ----------------------------------------
   fastify.patch('/rules/:id', {
-    preHandler: [requirePermission('workflows:write')],
+    preHandler: [requirePermission('workflows:write'), validate({ body: updateWorkflowRuleSchema })],
   }, async (request, reply) => {
     const { tenantSlug } = request.user;
     const { id } = request.params as { id: string };
-    const body = updateWorkflowRuleSchema.parse(request.body);
+    const body = request.body as UpdateWorkflowRuleInput;
 
     try {
       const rule = await workflowService.updateWorkflowRule(tenantSlug, id, body);

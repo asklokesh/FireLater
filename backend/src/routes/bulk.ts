@@ -1,5 +1,4 @@
 import { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
-import { z } from 'zod';
 import { requirePermission } from '../middleware/auth.js';
 import { ForbiddenError, NotFoundError } from '../utils/errors.js';
 import { validateBulkWebhookUrl } from '../utils/bulkWebhook.js';
@@ -16,6 +15,11 @@ import {
   type BulkPayload,
 } from '../services/bulk.js';
 import { bulkQueue, type BulkJobProgress } from '../jobs/bulkQueue.js';
+import { validate } from '../middleware/validation.js';
+import {
+  jobIdParamSchema,
+  type JobIdParamInput,
+} from '../schemas/bulk.js';
 
 // Permission action required for each operation
 const OPERATION_PERMISSION: Record<BulkOperation, string> = {
@@ -28,7 +32,6 @@ const OPERATION_PERMISSION: Record<BulkOperation, string> = {
 // 50,000 uuids is roughly 2 MB of JSON
 const BULK_BODY_LIMIT = 4 * 1024 * 1024;
 
-const jobIdParamSchema = z.object({ id: z.string().min(1).max(100) });
 
 function authorize(operation: BulkOperation) {
   return async (request: FastifyRequest, reply: FastifyReply): Promise<void> => {
@@ -86,9 +89,9 @@ export default async function bulkRoutes(app: FastifyInstance) {
 
   // Job status and progress
   app.get<{ Params: { id: string } }>('/jobs/:id', {
-    preHandler: [requirePermission('issues:read', 'problems:read', 'changes:read', 'requests:read')],
+    preHandler: [requirePermission('issues:read', 'problems:read', 'changes:read', 'requests:read'), validate({ params: jobIdParamSchema })],
   }, async (request, reply) => {
-    const { id } = jobIdParamSchema.parse(request.params);
+    const { id } = request.params as JobIdParamInput;
     const { tenantSlug, userId, roles } = request.user;
 
     const job = await bulkQueue.getJob(id);

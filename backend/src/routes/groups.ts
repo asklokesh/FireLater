@@ -1,63 +1,41 @@
 import { FastifyInstance } from 'fastify';
-import { z } from 'zod';
 import { groupService } from '../services/groups.js';
 import { requirePermission } from '../middleware/auth.js';
 import { parsePagination, createPaginatedResponse } from '../utils/pagination.js';
+import { validate } from '../middleware/validation.js';
+import {
+  addMemberSchema,
+  createGroupSchema,
+  groupIdParamSchema,
+  groupMemberParamSchema,
+  listGroupsQuerySchema,
+  updateGroupSchema,
+  type AddMemberInput,
+  type CreateGroupInput,
+  type GroupIdParamInput,
+  type GroupMemberParamInput,
+  type UpdateGroupInput,
+  type ListGroupsQueryInput,
+} from '../schemas/groups.js';
 
-const createGroupSchema = z.object({
-  name: z.string().min(2).max(255),
-  description: z.string().max(1000).optional(),
-  type: z.enum(['team', 'department', 'distribution']).optional(),
-  parentId: z.string().uuid().optional(),
-  managerId: z.string().uuid().optional(),
-  email: z.string().email().optional(),
-  settings: z.record(z.unknown()).optional(),
-});
 
-const updateGroupSchema = z.object({
-  name: z.string().min(2).max(255).optional(),
-  description: z.string().max(1000).optional(),
-  type: z.enum(['team', 'department', 'distribution']).optional(),
-  parentId: z.string().uuid().optional(),
-  managerId: z.string().uuid().optional(),
-  email: z.string().email().optional(),
-  settings: z.record(z.unknown()).optional(),
-});
 
-const addMemberSchema = z.object({
-  userId: z.string().uuid(),
-  role: z.enum(['member', 'lead']).optional(),
-});
 
 // Parameter validation schemas
-const groupIdParamSchema = z.object({
-  id: z.string().uuid(),
-});
 
-const groupMemberParamSchema = z.object({
-  id: z.string().uuid(),
-  userId: z.string().uuid(),
-});
 
 // Query parameter validation schema
-const listGroupsQuerySchema = z.object({
-  page: z.coerce.number().int().positive().optional(),
-  per_page: z.coerce.number().int().min(1).max(100).optional(),
-  type: z.enum(['team', 'department', 'distribution']).optional(),
-  search: z.string().max(200).optional(),
-  q: z.string().max(200).optional(),
-});
 
 export default async function groupRoutes(app: FastifyInstance) {
   // List groups
   app.get('/', {
-    preHandler: [requirePermission('groups:read')],
+    preHandler: [requirePermission('groups:read'), validate({ query: listGroupsQuerySchema })],
   }, async (request, reply) => {
     const { tenantSlug } = request.user;
     const query = request.query as Record<string, string>;
 
     // Validate query parameters
-    const validatedQuery = listGroupsQuerySchema.parse(query);
+    const validatedQuery = request.query as ListGroupsQueryInput;
     const pagination = parsePagination(query);
 
     const filters = {
@@ -71,10 +49,10 @@ export default async function groupRoutes(app: FastifyInstance) {
 
   // Get group by ID
   app.get<{ Params: { id: string } }>('/:id', {
-    preHandler: [requirePermission('groups:read')],
+    preHandler: [requirePermission('groups:read'), validate({ params: groupIdParamSchema })],
   }, async (request, reply) => {
     const { tenantSlug } = request.user;
-    const { id } = groupIdParamSchema.parse(request.params);
+    const { id } = request.params as GroupIdParamInput;
 
     const group = await groupService.findById(tenantSlug, id);
 
@@ -91,10 +69,10 @@ export default async function groupRoutes(app: FastifyInstance) {
 
   // Create group
   app.post('/', {
-    preHandler: [requirePermission('groups:create')],
+    preHandler: [requirePermission('groups:create'), validate({ body: createGroupSchema })],
   }, async (request, reply) => {
     const { tenantSlug, userId } = request.user;
-    const body = createGroupSchema.parse(request.body);
+    const body = request.body as CreateGroupInput;
 
     const group = await groupService.create(tenantSlug, body, userId);
     reply.status(201).send(group);
@@ -102,11 +80,11 @@ export default async function groupRoutes(app: FastifyInstance) {
 
   // Update group
   app.put<{ Params: { id: string } }>('/:id', {
-    preHandler: [requirePermission('groups:update')],
+    preHandler: [requirePermission('groups:update'), validate({ params: groupIdParamSchema, body: updateGroupSchema })],
   }, async (request, reply) => {
     const { tenantSlug, userId } = request.user;
-    const { id } = groupIdParamSchema.parse(request.params);
-    const body = updateGroupSchema.parse(request.body);
+    const { id } = request.params as GroupIdParamInput;
+    const body = request.body as UpdateGroupInput;
 
     const group = await groupService.update(tenantSlug, id, body, userId);
     reply.send(group);
@@ -114,10 +92,10 @@ export default async function groupRoutes(app: FastifyInstance) {
 
   // Delete group
   app.delete<{ Params: { id: string } }>('/:id', {
-    preHandler: [requirePermission('groups:delete')],
+    preHandler: [requirePermission('groups:delete'), validate({ params: groupIdParamSchema })],
   }, async (request, reply) => {
     const { tenantSlug, userId } = request.user;
-    const { id } = groupIdParamSchema.parse(request.params);
+    const { id } = request.params as GroupIdParamInput;
 
     await groupService.delete(tenantSlug, id, userId);
     reply.status(204).send();
@@ -125,10 +103,10 @@ export default async function groupRoutes(app: FastifyInstance) {
 
   // Get group members
   app.get<{ Params: { id: string } }>('/:id/members', {
-    preHandler: [requirePermission('groups:read')],
+    preHandler: [requirePermission('groups:read'), validate({ params: groupIdParamSchema })],
   }, async (request, reply) => {
     const { tenantSlug } = request.user;
-    const { id } = groupIdParamSchema.parse(request.params);
+    const { id } = request.params as GroupIdParamInput;
 
     const members = await groupService.getMembers(tenantSlug, id);
     reply.send({ data: members });
@@ -136,11 +114,11 @@ export default async function groupRoutes(app: FastifyInstance) {
 
   // Add member to group
   app.post<{ Params: { id: string } }>('/:id/members', {
-    preHandler: [requirePermission('groups:update')],
+    preHandler: [requirePermission('groups:update'), validate({ params: groupIdParamSchema, body: addMemberSchema })],
   }, async (request, reply) => {
     const { tenantSlug, userId } = request.user;
-    const { id } = groupIdParamSchema.parse(request.params);
-    const body = addMemberSchema.parse(request.body);
+    const { id } = request.params as GroupIdParamInput;
+    const body = request.body as AddMemberInput;
 
     await groupService.addMember(tenantSlug, id, body.userId, body.role, userId);
     reply.status(201).send({ message: 'Member added successfully' });
@@ -148,10 +126,10 @@ export default async function groupRoutes(app: FastifyInstance) {
 
   // Remove member from group
   app.delete<{ Params: { id: string; userId: string } }>('/:id/members/:userId', {
-    preHandler: [requirePermission('groups:update')],
+    preHandler: [requirePermission('groups:update'), validate({ params: groupMemberParamSchema })],
   }, async (request, reply) => {
     const { tenantSlug, userId } = request.user;
-    const params = groupMemberParamSchema.parse(request.params);
+    const params = request.params as GroupMemberParamInput;
 
     await groupService.removeMember(tenantSlug, params.id, params.userId, userId);
     reply.status(204).send();

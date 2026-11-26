@@ -1,97 +1,25 @@
+import { validate } from '../middleware/validation.js';
 import { FastifyInstance } from 'fastify';
-import { z } from 'zod';
 import { issueService } from '../services/issues.js';
 import { requirePermission } from '../middleware/auth.js';
+import {
+  createIssueSchema, updateIssueSchema, assignSchema, resolveSchema, statusChangeSchema,
+  commentSchema, worklogSchema, linkProblemSchema, issueIdParamSchema, listIssuesQuerySchema,
+  type CreateIssueInput, type UpdateIssueInput, type AssignIssueInput, type ResolveIssueInput,
+  type IssueStatusChangeInput, type IssueCommentInput, type IssueWorklogInput, type IssueIdParams,
+  type ListIssuesQuery, type LinkProblemInput,
+} from '../schemas/issues.js';
 import { parsePagination, createPaginatedResponse } from '../utils/pagination.js';
 
-const createIssueSchema = z.object({
-  title: z.string().min(5).max(500),
-  description: z.string().max(10000).optional(),
-  priority: z.enum(['critical', 'high', 'medium', 'low']).optional(),
-  severity: z.enum(['S1', 'S2', 'S3', 'S4']).optional(),
-  impact: z.enum(['widespread', 'significant', 'moderate', 'minor']).optional(),
-  urgency: z.enum(['immediate', 'high', 'medium', 'low']).optional(),
-  categoryId: z.string().uuid().optional(),
-  issueType: z.enum(['issue', 'problem', 'question']).optional(),
-  source: z.enum(['portal', 'email', 'phone', 'monitoring', 'api']).optional(),
-  applicationId: z.string().uuid().optional(),
-  environmentId: z.string().uuid().optional(),
-  assignedTo: z.string().uuid().optional(),
-  assignedGroup: z.string().uuid().optional(),
-});
-
-const updateIssueSchema = z.object({
-  title: z.string().min(5).max(500).optional(),
-  description: z.string().max(10000).optional(),
-  priority: z.enum(['critical', 'high', 'medium', 'low']).optional(),
-  severity: z.enum(['S1', 'S2', 'S3', 'S4']).optional(),
-  impact: z.enum(['widespread', 'significant', 'moderate', 'minor']).optional(),
-  urgency: z.enum(['immediate', 'high', 'medium', 'low']).optional(),
-  categoryId: z.string().uuid().optional(),
-  assignedTo: z.string().uuid().optional(),
-  assignedGroup: z.string().uuid().optional(),
-  applicationId: z.string().uuid().optional(),
-  environmentId: z.string().uuid().optional(),
-  expectedVersion: z.string().max(64).optional(),
-});
-
-const assignSchema = z.object({
-  assignedTo: z.string().uuid().optional(),
-  assignedGroup: z.string().uuid().optional(),
-});
-
-const resolveSchema = z.object({
-  resolutionCode: z.string().min(1).max(100),
-  resolutionNotes: z.string().min(1).max(5000),
-});
-
-const statusChangeSchema = z.object({
-  status: z.enum(['new', 'assigned', 'in_progress', 'pending', 'resolved', 'closed']),
-  reason: z.string().max(500).optional(),
-});
-
-const commentSchema = z.object({
-  content: z.string().min(1).max(5000),
-  isInternal: z.boolean().optional(),
-});
-
-const worklogSchema = z.object({
-  timeSpent: z.number().min(1).max(1440), // max 24 hours in minutes
-  description: z.string().min(1).max(1000),
-  workDate: z.string().datetime().optional(),
-  billable: z.boolean().optional(),
-});
-
-// Parameter validation schemas
-const issueIdParamSchema = z.object({
-  id: z.string().uuid(),
-});
-
-// Query parameter validation schema
-const listIssuesQuerySchema = z.object({
-  page: z.coerce.number().int().positive().optional(),
-  per_page: z.coerce.number().int().min(1).max(100).optional(),
-  status: z.enum(['new', 'assigned', 'in_progress', 'pending', 'resolved', 'closed']).optional(),
-  priority: z.enum(['critical', 'high', 'medium', 'low']).optional(),
-  assigned_to: z.string().uuid().optional(),
-  assigned_group: z.string().uuid().optional(),
-  application_id: z.string().uuid().optional(),
-  reporter_id: z.string().uuid().optional(),
-  search: z.string().max(200).optional(),
-  q: z.string().max(200).optional(),
-  sla_breached: z.enum(['true', 'false']).optional(),
-});
 
 export default async function issueRoutes(app: FastifyInstance) {
   // List issues
   app.get('/', {
-    preHandler: [requirePermission('issues:read')],
+    preHandler: [requirePermission('issues:read'), validate({ query: listIssuesQuerySchema })],
   }, async (request, reply) => {
     const { tenantSlug } = request.user;
-    const query = request.query as Record<string, string>;
-
-    // Validate query parameters
-    const validatedQuery = listIssuesQuerySchema.parse(query);
+    const query = request.query as ListIssuesQuery;
+    const validatedQuery = query;
     const pagination = parsePagination(query);
 
     const filters = {
@@ -111,10 +39,10 @@ export default async function issueRoutes(app: FastifyInstance) {
 
   // Get issue by ID
   app.get<{ Params: { id: string } }>('/:id', {
-    preHandler: [requirePermission('issues:read')],
+    preHandler: [requirePermission('issues:read'), validate({ params: issueIdParamSchema })],
   }, async (request, reply) => {
     const { tenantSlug } = request.user;
-    const { id } = issueIdParamSchema.parse(request.params);
+    const { id } = request.params as IssueIdParams;
 
     const issue = await issueService.findById(tenantSlug, id);
 
@@ -131,10 +59,10 @@ export default async function issueRoutes(app: FastifyInstance) {
 
   // Create issue
   app.post('/', {
-    preHandler: [requirePermission('issues:create')],
+    preHandler: [requirePermission('issues:create'), validate({ body: createIssueSchema })],
   }, async (request, reply) => {
     const { tenantSlug, userId } = request.user;
-    const body = createIssueSchema.parse(request.body);
+    const body = request.body as CreateIssueInput;
 
     const issue = await issueService.create(tenantSlug, body, userId);
     reply.status(201).send(issue);
@@ -142,11 +70,11 @@ export default async function issueRoutes(app: FastifyInstance) {
 
   // Update issue
   app.put<{ Params: { id: string } }>('/:id', {
-    preHandler: [requirePermission('issues:update')],
+    preHandler: [requirePermission('issues:update'), validate({ params: issueIdParamSchema, body: updateIssueSchema })],
   }, async (request, reply) => {
     const { tenantSlug, userId } = request.user;
-    const { id } = issueIdParamSchema.parse(request.params);
-    const body = updateIssueSchema.parse(request.body);
+    const { id } = request.params as IssueIdParams;
+    const body = request.body as UpdateIssueInput;
 
     const issue = await issueService.update(tenantSlug, id, body, userId);
     reply.send(issue);
@@ -154,11 +82,11 @@ export default async function issueRoutes(app: FastifyInstance) {
 
   // Assign issue
   app.post<{ Params: { id: string } }>('/:id/assign', {
-    preHandler: [requirePermission('issues:assign')],
+    preHandler: [requirePermission('issues:assign'), validate({ params: issueIdParamSchema, body: assignSchema })],
   }, async (request, reply) => {
     const { tenantSlug, userId } = request.user;
-    const { id } = issueIdParamSchema.parse(request.params);
-    const body = assignSchema.parse(request.body);
+    const { id } = request.params as IssueIdParams;
+    const body = request.body as AssignIssueInput;
 
     const issue = await issueService.assign(
       tenantSlug,
@@ -172,10 +100,10 @@ export default async function issueRoutes(app: FastifyInstance) {
 
   // Escalate issue
   app.post<{ Params: { id: string } }>('/:id/escalate', {
-    preHandler: [requirePermission('issues:update')],
+    preHandler: [requirePermission('issues:update'), validate({ params: issueIdParamSchema })],
   }, async (request, reply) => {
     const { tenantSlug, userId } = request.user;
-    const { id } = issueIdParamSchema.parse(request.params);
+    const { id } = request.params as IssueIdParams;
 
     const issue = await issueService.escalate(tenantSlug, id, userId);
     reply.send(issue);
@@ -183,11 +111,11 @@ export default async function issueRoutes(app: FastifyInstance) {
 
   // Resolve issue
   app.post<{ Params: { id: string } }>('/:id/resolve', {
-    preHandler: [requirePermission('issues:resolve')],
+    preHandler: [requirePermission('issues:resolve'), validate({ params: issueIdParamSchema, body: resolveSchema })],
   }, async (request, reply) => {
     const { tenantSlug, userId } = request.user;
-    const { id } = issueIdParamSchema.parse(request.params);
-    const body = resolveSchema.parse(request.body);
+    const { id } = request.params as IssueIdParams;
+    const body = request.body as ResolveIssueInput;
 
     const issue = await issueService.resolve(
       tenantSlug,
@@ -201,10 +129,10 @@ export default async function issueRoutes(app: FastifyInstance) {
 
   // Close issue
   app.post<{ Params: { id: string } }>('/:id/close', {
-    preHandler: [requirePermission('issues:update')],
+    preHandler: [requirePermission('issues:update'), validate({ params: issueIdParamSchema })],
   }, async (request, reply) => {
     const { tenantSlug, userId } = request.user;
-    const { id } = issueIdParamSchema.parse(request.params);
+    const { id } = request.params as IssueIdParams;
 
     const issue = await issueService.close(tenantSlug, id, userId);
     reply.send(issue);
@@ -212,10 +140,10 @@ export default async function issueRoutes(app: FastifyInstance) {
 
   // Reopen issue
   app.post<{ Params: { id: string } }>('/:id/reopen', {
-    preHandler: [requirePermission('issues:update')],
+    preHandler: [requirePermission('issues:update'), validate({ params: issueIdParamSchema })],
   }, async (request, reply) => {
     const { tenantSlug, userId } = request.user;
-    const { id } = issueIdParamSchema.parse(request.params);
+    const { id } = request.params as IssueIdParams;
 
     const issue = await issueService.changeStatus(tenantSlug, id, 'in_progress', userId, 'Reopened');
     reply.send(issue);
@@ -223,11 +151,11 @@ export default async function issueRoutes(app: FastifyInstance) {
 
   // Change issue status (generic)
   app.post<{ Params: { id: string } }>('/:id/status', {
-    preHandler: [requirePermission('issues:update')],
+    preHandler: [requirePermission('issues:update'), validate({ params: issueIdParamSchema, body: statusChangeSchema })],
   }, async (request, reply) => {
     const { tenantSlug, userId } = request.user;
-    const { id } = issueIdParamSchema.parse(request.params);
-    const body = statusChangeSchema.parse(request.body);
+    const { id } = request.params as IssueIdParams;
+    const body = request.body as IssueStatusChangeInput;
 
     const issue = await issueService.changeStatus(
       tenantSlug,
@@ -245,10 +173,10 @@ export default async function issueRoutes(app: FastifyInstance) {
 
   // Get comments
   app.get<{ Params: { id: string } }>('/:id/comments', {
-    preHandler: [requirePermission('issues:read')],
+    preHandler: [requirePermission('issues:read'), validate({ params: issueIdParamSchema })],
   }, async (request, reply) => {
     const { tenantSlug } = request.user;
-    const { id } = issueIdParamSchema.parse(request.params);
+    const { id } = request.params as IssueIdParams;
 
     const comments = await issueService.getComments(tenantSlug, id);
     reply.send({ data: comments });
@@ -256,11 +184,11 @@ export default async function issueRoutes(app: FastifyInstance) {
 
   // Add comment
   app.post<{ Params: { id: string } }>('/:id/comments', {
-    preHandler: [requirePermission('issues:update')],
+    preHandler: [requirePermission('issues:update'), validate({ params: issueIdParamSchema, body: commentSchema })],
   }, async (request, reply) => {
     const { tenantSlug, userId } = request.user;
-    const { id } = issueIdParamSchema.parse(request.params);
-    const body = commentSchema.parse(request.body);
+    const { id } = request.params as IssueIdParams;
+    const body = request.body as IssueCommentInput;
 
     const comment = await issueService.addComment(
       tenantSlug,
@@ -278,10 +206,10 @@ export default async function issueRoutes(app: FastifyInstance) {
 
   // Get worklogs
   app.get<{ Params: { id: string } }>('/:id/worklogs', {
-    preHandler: [requirePermission('issues:read')],
+    preHandler: [requirePermission('issues:read'), validate({ params: issueIdParamSchema })],
   }, async (request, reply) => {
     const { tenantSlug } = request.user;
-    const { id } = issueIdParamSchema.parse(request.params);
+    const { id } = request.params as IssueIdParams;
 
     const worklogs = await issueService.getWorklogs(tenantSlug, id);
     reply.send({ data: worklogs });
@@ -289,11 +217,11 @@ export default async function issueRoutes(app: FastifyInstance) {
 
   // Add worklog
   app.post<{ Params: { id: string } }>('/:id/worklogs', {
-    preHandler: [requirePermission('issues:update')],
+    preHandler: [requirePermission('issues:update'), validate({ params: issueIdParamSchema, body: worklogSchema })],
   }, async (request, reply) => {
     const { tenantSlug, userId } = request.user;
-    const { id } = issueIdParamSchema.parse(request.params);
-    const body = worklogSchema.parse(request.body);
+    const { id } = request.params as IssueIdParams;
+    const body = request.body as IssueWorklogInput;
 
     const worklog = await issueService.addWorklog(
       tenantSlug,
@@ -313,10 +241,10 @@ export default async function issueRoutes(app: FastifyInstance) {
 
   // Get status history
   app.get<{ Params: { id: string } }>('/:id/history', {
-    preHandler: [requirePermission('issues:read')],
+    preHandler: [requirePermission('issues:read'), validate({ params: issueIdParamSchema })],
   }, async (request, reply) => {
     const { tenantSlug } = request.user;
-    const { id } = issueIdParamSchema.parse(request.params);
+    const { id } = request.params as IssueIdParams;
 
     const history = await issueService.getStatusHistory(tenantSlug, id);
     reply.send({ data: history });
@@ -342,10 +270,10 @@ export default async function issueRoutes(app: FastifyInstance) {
 
   // Get linked problem
   app.get<{ Params: { id: string } }>('/:id/problem', {
-    preHandler: [requirePermission('issues:read')],
+    preHandler: [requirePermission('issues:read'), validate({ params: issueIdParamSchema })],
   }, async (request, reply) => {
     const { tenantSlug } = request.user;
-    const { id } = issueIdParamSchema.parse(request.params);
+    const { id } = request.params as IssueIdParams;
 
     const problem = await issueService.getLinkedProblem(tenantSlug, id);
     reply.send({ data: problem });
@@ -353,15 +281,11 @@ export default async function issueRoutes(app: FastifyInstance) {
 
   // Link issue to problem
   app.post<{ Params: { id: string } }>('/:id/problem', {
-    preHandler: [requirePermission('issues:update')],
+    preHandler: [requirePermission('issues:update'), validate({ params: issueIdParamSchema, body: linkProblemSchema })],
   }, async (request, reply) => {
     const { tenantSlug, userId } = request.user;
-    const { id } = issueIdParamSchema.parse(request.params);
-    const body = z.object({
-      problemId: z.string().uuid(),
-      relationshipType: z.enum(['caused_by', 'related_to', 'duplicate_of']).optional(),
-      notes: z.string().max(1000).optional(),
-    }).parse(request.body);
+    const { id } = request.params as IssueIdParams;
+    const body = request.body as LinkProblemInput;
 
     await issueService.linkToProblem(
       tenantSlug,
@@ -376,10 +300,10 @@ export default async function issueRoutes(app: FastifyInstance) {
 
   // Unlink issue from problem
   app.delete<{ Params: { id: string } }>('/:id/problem', {
-    preHandler: [requirePermission('issues:update')],
+    preHandler: [requirePermission('issues:update'), validate({ params: issueIdParamSchema })],
   }, async (request, reply) => {
     const { tenantSlug } = request.user;
-    const { id } = issueIdParamSchema.parse(request.params);
+    const { id } = request.params as IssueIdParams;
 
     await issueService.unlinkFromProblem(tenantSlug, id);
     reply.send({ success: true });

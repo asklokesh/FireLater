@@ -4,6 +4,7 @@ import jwt from '@fastify/jwt';
 import csrf from '@fastify/csrf-protection';
 import { ZodError } from 'zod';
 import authRoutes from './routes/auth.js';
+import { validationPlugin } from './middleware/validation.js';
 import { config } from './config/index.js';
 
 /**
@@ -67,6 +68,8 @@ export async function buildApp(): Promise<FastifyInstance> {
       message: process.env.NODE_ENV === 'production' ? 'An unexpected error occurred' : error.message,
     });
   });
+
+  await app.register(validationPlugin);
 
   // Register auth routes with /auth prefix
   await app.register(authRoutes, { prefix: '/auth' });

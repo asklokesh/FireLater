@@ -1,158 +1,89 @@
 import { FastifyInstance } from 'fastify';
-import { z } from 'zod';
 import { oncallScheduleService, escalationPolicyService, icalExportService } from '../services/oncall.js';
 import { shiftSwapService } from '../services/shiftSwaps.js';
 import { requirePermission, optionalAuth } from '../middleware/auth.js';
 import { parsePagination, createPaginatedResponse } from '../utils/pagination.js';
 import { tenantService as _tenantService } from '../services/tenant.js';
 import { validateDate, validateDateRange } from '../utils/validation.js';
+import { validate } from '../middleware/validation.js';
+import {
+  addStepSchema,
+  addToRotationSchema,
+  createOverrideSchema,
+  createPolicySchema,
+  createScheduleSchema,
+  createShiftSchema,
+  createShiftSwapSchema,
+  idAppParamSchema,
+  idParamSchema,
+  idRotationParamSchema,
+  idShiftParamSchema,
+  idStepParamSchema,
+  scheduleIdParamSchema,
+  scheduleIdTokenParamSchema,
+  updatePolicySchema,
+  updateScheduleSchema,
+  updateShiftSwapSchema,
+  type AddStepInput,
+  type AddToRotationInput,
+  type CreateOverrideInput,
+  type CreatePolicyInput,
+  type CreateScheduleInput,
+  type CreateShiftInput,
+  type CreateShiftSwapInput,
+  type IdAppParamInput,
+  type IdParamInput,
+  type IdRotationParamInput,
+  type IdShiftParamInput,
+  type IdStepParamInput,
+  type ScheduleIdParamInput,
+  type ScheduleIdTokenParamInput,
+  type UpdatePolicyInput,
+  type UpdateScheduleInput,
+  type UpdateShiftSwapInput,
+  swapResponseBodySchema,
+  adminApproveBodySchema,
+  rotationPositionSchema,
+  linkApplicationSchema,
+  updateStepSchema,
+  type SwapResponseBodyInput,
+  type AdminApproveBodyInput,
+  type RotationPositionInput,
+  type LinkApplicationInput,
+  type UpdateStepInput,
+} from '../schemas/oncall.js';
 
 // ============================================
 // SCHEDULE SCHEMAS
 // ============================================
 
-const createScheduleSchema = z.object({
-  name: z.string().min(2).max(255),
-  description: z.string().max(1000).optional(),
-  timezone: z.string().max(100).optional(),
-  groupId: z.string().uuid().optional(),
-  rotationType: z.enum(['daily', 'weekly', 'bi_weekly', 'custom']).optional(),
-  rotationLength: z.number().int().min(1).max(52).optional(),
-  handoffTime: z.string().regex(/^\d{2}:\d{2}$/).optional(),
-  handoffDay: z.number().int().min(0).max(6).optional(),
-  color: z.string().max(20).optional(),
-  metadata: z.record(z.unknown()).optional(),
-});
 
-const updateScheduleSchema = z.object({
-  name: z.string().min(2).max(255).optional(),
-  description: z.string().max(1000).optional(),
-  timezone: z.string().max(100).optional(),
-  groupId: z.string().uuid().optional().nullable(),
-  rotationType: z.enum(['daily', 'weekly', 'bi_weekly', 'custom']).optional(),
-  rotationLength: z.number().int().min(1).max(52).optional(),
-  handoffTime: z.string().regex(/^\d{2}:\d{2}$/).optional(),
-  handoffDay: z.number().int().min(0).max(6).optional(),
-  isActive: z.boolean().optional(),
-  color: z.string().max(20).optional(),
-  metadata: z.record(z.unknown()).optional(),
-});
 
-const addToRotationSchema = z.object({
-  userId: z.string().uuid(),
-  position: z.number().int().min(1).optional(),
-});
 
-const createShiftSchema = z.object({
-  userId: z.string().uuid(),
-  startTime: z.string().datetime(),
-  endTime: z.string().datetime(),
-  shiftType: z.enum(['primary', 'secondary']).optional(),
-  layer: z.number().int().min(1).max(10).optional(),
-});
 
-const createOverrideSchema = z.object({
-  userId: z.string().uuid(),
-  startTime: z.string().datetime(),
-  endTime: z.string().datetime(),
-  reason: z.string().max(500).optional(),
-  originalUserId: z.string().uuid().optional(),
-});
 
 // ============================================
 // ESCALATION POLICY SCHEMAS
 // ============================================
 
-const createPolicySchema = z.object({
-  name: z.string().min(2).max(255),
-  description: z.string().max(1000).optional(),
-  repeatCount: z.number().int().min(1).max(10).optional(),
-  repeatDelayMinutes: z.number().int().min(1).max(60).optional(),
-  isDefault: z.boolean().optional(),
-  metadata: z.record(z.unknown()).optional(),
-});
 
-const updatePolicySchema = z.object({
-  name: z.string().min(2).max(255).optional(),
-  description: z.string().max(1000).optional(),
-  repeatCount: z.number().int().min(1).max(10).optional(),
-  repeatDelayMinutes: z.number().int().min(1).max(60).optional(),
-  isDefault: z.boolean().optional(),
-  isActive: z.boolean().optional(),
-  metadata: z.record(z.unknown()).optional(),
-});
 
-const addStepSchema = z.object({
-  stepNumber: z.number().int().min(1).optional(),
-  delayMinutes: z.number().int().min(0).max(120).optional(),
-  notifyType: z.enum(['schedule', 'user', 'group']),
-  scheduleId: z.string().uuid().optional(),
-  userId: z.string().uuid().optional(),
-  groupId: z.string().uuid().optional(),
-  notificationChannels: z.array(z.enum(['email', 'sms', 'slack', 'phone'])).optional(),
-});
 
 // ============================================
 // SHIFT SWAP SCHEMAS
 // ============================================
 
-const createShiftSwapSchema = z.object({
-  scheduleId: z.string().uuid(),
-  originalStart: z.string().datetime(),
-  originalEnd: z.string().datetime(),
-  offeredToUserId: z.string().uuid().optional(),
-  originalShiftId: z.string().uuid().optional(),
-  reason: z.string().max(500).optional(),
-  expiresAt: z.string().datetime().optional(),
-});
 
-const updateShiftSwapSchema = z.object({
-  reason: z.string().max(500).optional(),
-  offeredToUserId: z.string().uuid().nullable().optional(),
-  expiresAt: z.string().datetime().nullable().optional(),
-});
 
-const swapResponseSchema = z.object({
-  message: z.string().max(500).optional(),
-});
 
-const adminApproveSchema = z.object({
-  accepterUserId: z.string().uuid().optional(),
-});
 
 // Parameter validation schemas
-const idParamSchema = z.object({
-  id: z.string().uuid(),
-});
 
-const idRotationParamSchema = z.object({
-  id: z.string().uuid(),
-  rotationId: z.string().uuid(),
-});
 
-const idShiftParamSchema = z.object({
-  id: z.string().uuid(),
-  shiftId: z.string().uuid(),
-});
 
-const idAppParamSchema = z.object({
-  id: z.string().uuid(),
-  applicationId: z.string().uuid(),
-});
 
-const idStepParamSchema = z.object({
-  id: z.string().uuid(),
-  stepId: z.string().uuid(),
-});
 
-const scheduleIdParamSchema = z.object({
-  scheduleId: z.string().uuid(),
-});
 
-const scheduleIdTokenParamSchema = z.object({
-  scheduleId: z.string().uuid(),
-  token: z.string().min(1),
-});
 
 export default async function oncallRoutes(app: FastifyInstance) {
   // ========================================
@@ -178,10 +109,10 @@ export default async function oncallRoutes(app: FastifyInstance) {
 
   // Get schedule by ID
   app.get<{ Params: { id: string } }>('/schedules/:id', {
-    preHandler: [requirePermission('oncall:read')],
+    preHandler: [requirePermission('oncall:read'), validate({ params: idParamSchema })],
   }, async (request, reply) => {
     const { tenantSlug } = request.user;
-    const { id } = idParamSchema.parse(request.params);
+    const { id } = request.params as IdParamInput;
 
     const schedule = await oncallScheduleService.findById(tenantSlug, id);
 
@@ -198,10 +129,10 @@ export default async function oncallRoutes(app: FastifyInstance) {
 
   // Create schedule
   app.post('/schedules', {
-    preHandler: [requirePermission('oncall:manage')],
+    preHandler: [requirePermission('oncall:manage'), validate({ body: createScheduleSchema })],
   }, async (request, reply) => {
     const { tenantSlug, userId } = request.user;
-    const body = createScheduleSchema.parse(request.body);
+    const body = request.body as CreateScheduleInput;
 
     const schedule = await oncallScheduleService.create(tenantSlug, body, userId);
     reply.status(201).send(schedule);
@@ -209,11 +140,11 @@ export default async function oncallRoutes(app: FastifyInstance) {
 
   // Update schedule
   app.put<{ Params: { id: string } }>('/schedules/:id', {
-    preHandler: [requirePermission('oncall:manage')],
+    preHandler: [requirePermission('oncall:manage'), validate({ params: idParamSchema, body: updateScheduleSchema })],
   }, async (request, reply) => {
     const { tenantSlug, userId } = request.user;
-    const { id } = idParamSchema.parse(request.params);
-    const body = updateScheduleSchema.parse(request.body);
+    const { id } = request.params as IdParamInput;
+    const body = request.body as UpdateScheduleInput;
 
     const schedule = await oncallScheduleService.update(tenantSlug, id, body, userId);
     reply.send(schedule);
@@ -221,10 +152,10 @@ export default async function oncallRoutes(app: FastifyInstance) {
 
   // Delete schedule
   app.delete<{ Params: { id: string } }>('/schedules/:id', {
-    preHandler: [requirePermission('oncall:manage')],
+    preHandler: [requirePermission('oncall:manage'), validate({ params: idParamSchema })],
   }, async (request, reply) => {
     const { tenantSlug, userId } = request.user;
-    const { id } = idParamSchema.parse(request.params);
+    const { id } = request.params as IdParamInput;
 
     await oncallScheduleService.delete(tenantSlug, id, userId);
     reply.status(204).send();
@@ -232,10 +163,10 @@ export default async function oncallRoutes(app: FastifyInstance) {
 
   // Get schedule rotations
   app.get<{ Params: { id: string } }>('/schedules/:id/rotations', {
-    preHandler: [requirePermission('oncall:read')],
+    preHandler: [requirePermission('oncall:read'), validate({ params: idParamSchema })],
   }, async (request, reply) => {
     const { tenantSlug } = request.user;
-    const { id } = idParamSchema.parse(request.params);
+    const { id } = request.params as IdParamInput;
 
     const rotations = await oncallScheduleService.getRotations(tenantSlug, id);
     reply.send({ data: rotations });
@@ -243,11 +174,11 @@ export default async function oncallRoutes(app: FastifyInstance) {
 
   // Add user to rotation
   app.post<{ Params: { id: string } }>('/schedules/:id/rotations', {
-    preHandler: [requirePermission('oncall:manage')],
+    preHandler: [requirePermission('oncall:manage'), validate({ params: idParamSchema, body: addToRotationSchema })],
   }, async (request, reply) => {
     const { tenantSlug } = request.user;
-    const { id } = idParamSchema.parse(request.params);
-    const body = addToRotationSchema.parse(request.body);
+    const { id } = request.params as IdParamInput;
+    const body = request.body as AddToRotationInput;
 
     const rotation = await oncallScheduleService.addToRotation(
       tenantSlug,
@@ -260,11 +191,11 @@ export default async function oncallRoutes(app: FastifyInstance) {
 
   // Update rotation position
   app.put<{ Params: { id: string; rotationId: string } }>('/schedules/:id/rotations/:rotationId', {
-    preHandler: [requirePermission('oncall:manage')],
+    preHandler: [requirePermission('oncall:manage'), validate({ body: rotationPositionSchema, params: idRotationParamSchema })],
   }, async (request, reply) => {
     const { tenantSlug } = request.user;
-    const { id, rotationId } = idRotationParamSchema.parse(request.params);
-    const body = z.object({ position: z.number().int().min(1) }).parse(request.body);
+    const { id, rotationId } = request.params as IdRotationParamInput;
+    const body = request.body as RotationPositionInput;
 
     const rotation = await oncallScheduleService.updateRotationPosition(
       tenantSlug,
@@ -277,10 +208,10 @@ export default async function oncallRoutes(app: FastifyInstance) {
 
   // Remove from rotation
   app.delete<{ Params: { id: string; rotationId: string } }>('/schedules/:id/rotations/:rotationId', {
-    preHandler: [requirePermission('oncall:manage')],
+    preHandler: [requirePermission('oncall:manage'), validate({ params: idRotationParamSchema })],
   }, async (request, reply) => {
     const { tenantSlug } = request.user;
-    const { id, rotationId } = idRotationParamSchema.parse(request.params);
+    const { id, rotationId } = request.params as IdRotationParamInput;
 
     await oncallScheduleService.removeFromRotation(tenantSlug, id, rotationId);
     reply.status(204).send();
@@ -288,10 +219,10 @@ export default async function oncallRoutes(app: FastifyInstance) {
 
   // Get schedule shifts
   app.get<{ Params: { id: string } }>('/schedules/:id/shifts', {
-    preHandler: [requirePermission('oncall:read')],
+    preHandler: [requirePermission('oncall:read'), validate({ params: idParamSchema })],
   }, async (request, reply) => {
     const { tenantSlug } = request.user;
-    const { id } = idParamSchema.parse(request.params);
+    const { id } = request.params as IdParamInput;
     const query = request.query as Record<string, string>;
 
     // Validate and parse date parameters with defaults
@@ -311,11 +242,11 @@ export default async function oncallRoutes(app: FastifyInstance) {
 
   // Create shift
   app.post<{ Params: { id: string } }>('/schedules/:id/shifts', {
-    preHandler: [requirePermission('oncall:manage')],
+    preHandler: [requirePermission('oncall:manage'), validate({ params: idParamSchema, body: createShiftSchema })],
   }, async (request, reply) => {
     const { tenantSlug, userId } = request.user;
-    const { id } = idParamSchema.parse(request.params);
-    const body = createShiftSchema.parse(request.body);
+    const { id } = request.params as IdParamInput;
+    const body = request.body as CreateShiftInput;
 
     const shift = await oncallScheduleService.createShift(
       tenantSlug,
@@ -334,11 +265,11 @@ export default async function oncallRoutes(app: FastifyInstance) {
 
   // Create override
   app.post<{ Params: { id: string } }>('/schedules/:id/override', {
-    preHandler: [requirePermission('oncall:update')],
+    preHandler: [requirePermission('oncall:update'), validate({ params: idParamSchema, body: createOverrideSchema })],
   }, async (request, reply) => {
     const { tenantSlug, userId } = request.user;
-    const { id } = idParamSchema.parse(request.params);
-    const body = createOverrideSchema.parse(request.body);
+    const { id } = request.params as IdParamInput;
+    const body = request.body as CreateOverrideInput;
 
     const override = await oncallScheduleService.createOverride(
       tenantSlug,
@@ -357,10 +288,10 @@ export default async function oncallRoutes(app: FastifyInstance) {
 
   // Delete shift
   app.delete<{ Params: { id: string; shiftId: string } }>('/schedules/:id/shifts/:shiftId', {
-    preHandler: [requirePermission('oncall:manage')],
+    preHandler: [requirePermission('oncall:manage'), validate({ params: idShiftParamSchema })],
   }, async (request, reply) => {
     const { tenantSlug } = request.user;
-    const { id, shiftId } = idShiftParamSchema.parse(request.params);
+    const { id, shiftId } = request.params as IdShiftParamInput;
 
     await oncallScheduleService.deleteShift(tenantSlug, id, shiftId);
     reply.status(204).send();
@@ -368,10 +299,10 @@ export default async function oncallRoutes(app: FastifyInstance) {
 
   // Get linked applications
   app.get<{ Params: { id: string } }>('/schedules/:id/applications', {
-    preHandler: [requirePermission('oncall:read')],
+    preHandler: [requirePermission('oncall:read'), validate({ params: idParamSchema })],
   }, async (request, reply) => {
     const { tenantSlug } = request.user;
-    const { id } = idParamSchema.parse(request.params);
+    const { id } = request.params as IdParamInput;
 
     const applications = await oncallScheduleService.getLinkedApplications(tenantSlug, id);
     reply.send({ data: applications });
@@ -379,11 +310,11 @@ export default async function oncallRoutes(app: FastifyInstance) {
 
   // Link schedule to application
   app.post<{ Params: { id: string } }>('/schedules/:id/applications', {
-    preHandler: [requirePermission('oncall:manage')],
+    preHandler: [requirePermission('oncall:manage'), validate({ body: linkApplicationSchema, params: idParamSchema })],
   }, async (request, reply) => {
     const { tenantSlug } = request.user;
-    const { id } = idParamSchema.parse(request.params);
-    const body = z.object({ applicationId: z.string().uuid() }).parse(request.body);
+    const { id } = request.params as IdParamInput;
+    const body = request.body as LinkApplicationInput;
 
     await oncallScheduleService.linkToApplication(tenantSlug, id, body.applicationId);
     reply.status(204).send();
@@ -391,10 +322,10 @@ export default async function oncallRoutes(app: FastifyInstance) {
 
   // Unlink schedule from application
   app.delete<{ Params: { id: string; applicationId: string } }>('/schedules/:id/applications/:applicationId', {
-    preHandler: [requirePermission('oncall:manage')],
+    preHandler: [requirePermission('oncall:manage'), validate({ params: idAppParamSchema })],
   }, async (request, reply) => {
     const { tenantSlug } = request.user;
-    const { id, applicationId } = idAppParamSchema.parse(request.params);
+    const { id, applicationId } = request.params as IdAppParamInput;
 
     await oncallScheduleService.unlinkFromApplication(tenantSlug, id, applicationId);
     reply.status(204).send();
@@ -437,10 +368,10 @@ export default async function oncallRoutes(app: FastifyInstance) {
 
   // Get policy by ID
   app.get<{ Params: { id: string } }>('/escalation-policies/:id', {
-    preHandler: [requirePermission('oncall:read')],
+    preHandler: [requirePermission('oncall:read'), validate({ params: idParamSchema })],
   }, async (request, reply) => {
     const { tenantSlug } = request.user;
-    const { id } = idParamSchema.parse(request.params);
+    const { id } = request.params as IdParamInput;
 
     const policy = await escalationPolicyService.findById(tenantSlug, id);
 
@@ -459,10 +390,10 @@ export default async function oncallRoutes(app: FastifyInstance) {
 
   // Create policy
   app.post('/escalation-policies', {
-    preHandler: [requirePermission('oncall:manage')],
+    preHandler: [requirePermission('oncall:manage'), validate({ body: createPolicySchema })],
   }, async (request, reply) => {
     const { tenantSlug, userId } = request.user;
-    const body = createPolicySchema.parse(request.body);
+    const body = request.body as CreatePolicyInput;
 
     const policy = await escalationPolicyService.create(tenantSlug, body, userId);
     reply.status(201).send(policy);
@@ -470,11 +401,11 @@ export default async function oncallRoutes(app: FastifyInstance) {
 
   // Update policy
   app.put<{ Params: { id: string } }>('/escalation-policies/:id', {
-    preHandler: [requirePermission('oncall:manage')],
+    preHandler: [requirePermission('oncall:manage'), validate({ params: idParamSchema, body: updatePolicySchema })],
   }, async (request, reply) => {
     const { tenantSlug, userId } = request.user;
-    const { id } = idParamSchema.parse(request.params);
-    const body = updatePolicySchema.parse(request.body);
+    const { id } = request.params as IdParamInput;
+    const body = request.body as UpdatePolicyInput;
 
     const policy = await escalationPolicyService.update(tenantSlug, id, body, userId);
     reply.send(policy);
@@ -482,10 +413,10 @@ export default async function oncallRoutes(app: FastifyInstance) {
 
   // Delete policy
   app.delete<{ Params: { id: string } }>('/escalation-policies/:id', {
-    preHandler: [requirePermission('oncall:manage')],
+    preHandler: [requirePermission('oncall:manage'), validate({ params: idParamSchema })],
   }, async (request, reply) => {
     const { tenantSlug, userId } = request.user;
-    const { id } = idParamSchema.parse(request.params);
+    const { id } = request.params as IdParamInput;
 
     await escalationPolicyService.delete(tenantSlug, id, userId);
     reply.status(204).send();
@@ -493,10 +424,10 @@ export default async function oncallRoutes(app: FastifyInstance) {
 
   // Get policy steps
   app.get<{ Params: { id: string } }>('/escalation-policies/:id/steps', {
-    preHandler: [requirePermission('oncall:read')],
+    preHandler: [requirePermission('oncall:read'), validate({ params: idParamSchema })],
   }, async (request, reply) => {
     const { tenantSlug } = request.user;
-    const { id } = idParamSchema.parse(request.params);
+    const { id } = request.params as IdParamInput;
 
     const steps = await escalationPolicyService.getSteps(tenantSlug, id);
     reply.send({ data: steps });
@@ -504,11 +435,11 @@ export default async function oncallRoutes(app: FastifyInstance) {
 
   // Add step
   app.post<{ Params: { id: string } }>('/escalation-policies/:id/steps', {
-    preHandler: [requirePermission('oncall:manage')],
+    preHandler: [requirePermission('oncall:manage'), validate({ params: idParamSchema, body: addStepSchema })],
   }, async (request, reply) => {
     const { tenantSlug } = request.user;
-    const { id } = idParamSchema.parse(request.params);
-    const body = addStepSchema.parse(request.body);
+    const { id } = request.params as IdParamInput;
+    const body = request.body as AddStepInput;
 
     const step = await escalationPolicyService.addStep(tenantSlug, id, body);
     reply.status(201).send(step);
@@ -516,11 +447,11 @@ export default async function oncallRoutes(app: FastifyInstance) {
 
   // Update step
   app.put<{ Params: { id: string; stepId: string } }>('/escalation-policies/:id/steps/:stepId', {
-    preHandler: [requirePermission('oncall:manage')],
+    preHandler: [requirePermission('oncall:manage'), validate({ body: updateStepSchema, params: idStepParamSchema })],
   }, async (request, reply) => {
     const { tenantSlug } = request.user;
-    const { id, stepId } = idStepParamSchema.parse(request.params);
-    const body = addStepSchema.partial().parse(request.body);
+    const { id, stepId } = request.params as IdStepParamInput;
+    const body = request.body as UpdateStepInput;
 
     const step = await escalationPolicyService.updateStep(
       tenantSlug,
@@ -533,10 +464,10 @@ export default async function oncallRoutes(app: FastifyInstance) {
 
   // Delete step
   app.delete<{ Params: { id: string; stepId: string } }>('/escalation-policies/:id/steps/:stepId', {
-    preHandler: [requirePermission('oncall:manage')],
+    preHandler: [requirePermission('oncall:manage'), validate({ params: idStepParamSchema })],
   }, async (request, reply) => {
     const { tenantSlug } = request.user;
-    const { id, stepId } = idStepParamSchema.parse(request.params);
+    const { id, stepId } = request.params as IdStepParamInput;
 
     await escalationPolicyService.deleteStep(tenantSlug, id, stepId);
     reply.status(204).send();
@@ -589,10 +520,10 @@ export default async function oncallRoutes(app: FastifyInstance) {
 
   // Get shift swap by ID
   app.get<{ Params: { id: string } }>('/shift-swaps/:id', {
-    preHandler: [requirePermission('oncall:read')],
+    preHandler: [requirePermission('oncall:read'), validate({ params: idParamSchema })],
   }, async (request, reply) => {
     const { tenantSlug } = request.user;
-    const { id } = idParamSchema.parse(request.params);
+    const { id } = request.params as IdParamInput;
 
     const swap = await shiftSwapService.getById(tenantSlug, id);
     reply.send(swap);
@@ -600,10 +531,10 @@ export default async function oncallRoutes(app: FastifyInstance) {
 
   // Create new shift swap request
   app.post('/shift-swaps', {
-    preHandler: [requirePermission('oncall:update')],
+    preHandler: [requirePermission('oncall:update'), validate({ body: createShiftSwapSchema })],
   }, async (request, reply) => {
     const { tenantSlug, userId } = request.user;
-    const body = createShiftSwapSchema.parse(request.body);
+    const body = request.body as CreateShiftSwapInput;
 
     const swap = await shiftSwapService.create(tenantSlug, userId, body);
     reply.status(201).send(swap);
@@ -611,11 +542,11 @@ export default async function oncallRoutes(app: FastifyInstance) {
 
   // Update swap request (reason, offeredToUserId, expiresAt)
   app.put<{ Params: { id: string } }>('/shift-swaps/:id', {
-    preHandler: [requirePermission('oncall:update')],
+    preHandler: [requirePermission('oncall:update'), validate({ params: idParamSchema, body: updateShiftSwapSchema })],
   }, async (request, reply) => {
     const { tenantSlug, userId } = request.user;
-    const { id } = idParamSchema.parse(request.params);
-    const body = updateShiftSwapSchema.parse(request.body);
+    const { id } = request.params as IdParamInput;
+    const body = request.body as UpdateShiftSwapInput;
 
     const swap = await shiftSwapService.update(tenantSlug, id, userId, body);
     reply.send(swap);
@@ -623,10 +554,10 @@ export default async function oncallRoutes(app: FastifyInstance) {
 
   // Cancel own swap request
   app.post<{ Params: { id: string } }>('/shift-swaps/:id/cancel', {
-    preHandler: [requirePermission('oncall:update')],
+    preHandler: [requirePermission('oncall:update'), validate({ params: idParamSchema })],
   }, async (request, reply) => {
     const { tenantSlug, userId } = request.user;
-    const { id } = idParamSchema.parse(request.params);
+    const { id } = request.params as IdParamInput;
 
     const swap = await shiftSwapService.cancel(tenantSlug, id, userId);
     reply.send(swap);
@@ -634,11 +565,11 @@ export default async function oncallRoutes(app: FastifyInstance) {
 
   // Accept a swap offer
   app.post<{ Params: { id: string } }>('/shift-swaps/:id/accept', {
-    preHandler: [requirePermission('oncall:update')],
+    preHandler: [requirePermission('oncall:update'), validate({ body: swapResponseBodySchema, params: idParamSchema })],
   }, async (request, reply) => {
     const { tenantSlug, userId } = request.user;
-    const { id } = idParamSchema.parse(request.params);
-    const body = swapResponseSchema.parse(request.body || {});
+    const { id } = request.params as IdParamInput;
+    const body = request.body as SwapResponseBodyInput;
 
     const swap = await shiftSwapService.accept(tenantSlug, id, userId, body.message);
     reply.send(swap);
@@ -646,11 +577,11 @@ export default async function oncallRoutes(app: FastifyInstance) {
 
   // Reject a swap offer (if specifically offered)
   app.post<{ Params: { id: string } }>('/shift-swaps/:id/reject', {
-    preHandler: [requirePermission('oncall:update')],
+    preHandler: [requirePermission('oncall:update'), validate({ body: swapResponseBodySchema, params: idParamSchema })],
   }, async (request, reply) => {
     const { tenantSlug, userId } = request.user;
-    const { id } = idParamSchema.parse(request.params);
-    const body = swapResponseSchema.parse(request.body || {});
+    const { id } = request.params as IdParamInput;
+    const body = request.body as SwapResponseBodyInput;
 
     const swap = await shiftSwapService.reject(tenantSlug, id, userId, body.message);
     reply.send(swap);
@@ -658,11 +589,11 @@ export default async function oncallRoutes(app: FastifyInstance) {
 
   // Admin force-approve a swap
   app.post<{ Params: { id: string } }>('/shift-swaps/:id/admin-approve', {
-    preHandler: [requirePermission('oncall:manage')],
+    preHandler: [requirePermission('oncall:manage'), validate({ body: adminApproveBodySchema, params: idParamSchema })],
   }, async (request, reply) => {
     const { tenantSlug, userId } = request.user;
-    const { id } = idParamSchema.parse(request.params);
-    const body = adminApproveSchema.parse(request.body || {});
+    const { id } = request.params as IdParamInput;
+    const body = request.body as AdminApproveBodyInput;
 
     const swap = await shiftSwapService.adminApprove(
       tenantSlug,
@@ -675,10 +606,10 @@ export default async function oncallRoutes(app: FastifyInstance) {
 
   // Get swap statistics for a schedule
   app.get<{ Params: { scheduleId: string } }>('/shift-swaps/schedule/:scheduleId/stats', {
-    preHandler: [requirePermission('oncall:read')],
+    preHandler: [requirePermission('oncall:read'), validate({ params: scheduleIdParamSchema })],
   }, async (request, reply) => {
     const { tenantSlug } = request.user;
-    const { scheduleId } = scheduleIdParamSchema.parse(request.params);
+    const { scheduleId } = request.params as ScheduleIdParamInput;
     const query = request.query as Record<string, string>;
 
     const stats = await shiftSwapService.getScheduleStats(
@@ -696,10 +627,10 @@ export default async function oncallRoutes(app: FastifyInstance) {
 
   // Get iCal export for a schedule (authenticated)
   app.get<{ Params: { scheduleId: string } }>('/schedules/:scheduleId/ical', {
-    preHandler: [requirePermission('oncall:read')],
+    preHandler: [requirePermission('oncall:read'), validate({ params: scheduleIdParamSchema })],
   }, async (request, reply) => {
     const { tenantSlug, userId } = request.user;
-    const { scheduleId } = scheduleIdParamSchema.parse(request.params);
+    const { scheduleId } = request.params as ScheduleIdParamInput;
     const query = request.query as Record<string, string>;
 
     const from = validateDate(query.from, 'from');
@@ -723,10 +654,10 @@ export default async function oncallRoutes(app: FastifyInstance) {
 
   // Create a calendar subscription token
   app.post<{ Params: { scheduleId: string } }>('/schedules/:scheduleId/ical/subscribe', {
-    preHandler: [requirePermission('oncall:read')],
+    preHandler: [requirePermission('oncall:read'), validate({ params: scheduleIdParamSchema })],
   }, async (request, reply) => {
     const { tenantSlug, userId } = request.user;
-    const { scheduleId } = scheduleIdParamSchema.parse(request.params);
+    const { scheduleId } = request.params as ScheduleIdParamInput;
 
     const { token, url } = await icalExportService.createSubscriptionToken(
       tenantSlug,
@@ -739,9 +670,9 @@ export default async function oncallRoutes(app: FastifyInstance) {
 
   // Public iCal subscription endpoint (token-based auth)
   app.get<{ Params: { scheduleId: string; token: string } }>('/schedules/:scheduleId/ical/subscribe/:token', {
-    preHandler: [optionalAuth],
+    preHandler: [optionalAuth, validate({ params: scheduleIdTokenParamSchema })],
   }, async (request, reply) => {
-    const { scheduleId, token } = scheduleIdTokenParamSchema.parse(request.params);
+    const { scheduleId, token } = request.params as ScheduleIdTokenParamInput;
     const query = request.query as Record<string, string>;
 
     // Look up tenant from schedule and validate token (searches all tenant schemas)
@@ -776,10 +707,10 @@ export default async function oncallRoutes(app: FastifyInstance) {
 
   // Revoke a calendar subscription
   app.delete<{ Params: { scheduleId: string } }>('/schedules/:scheduleId/ical/subscribe', {
-    preHandler: [requirePermission('oncall:read')],
+    preHandler: [requirePermission('oncall:read'), validate({ params: scheduleIdParamSchema })],
   }, async (request, reply) => {
     const { tenantSlug, userId } = request.user;
-    const { scheduleId } = scheduleIdParamSchema.parse(request.params);
+    const { scheduleId } = request.params as ScheduleIdParamInput;
 
     await icalExportService.revokeSubscriptionToken(
       tenantSlug,

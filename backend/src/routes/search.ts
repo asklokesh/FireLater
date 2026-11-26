@@ -1,6 +1,6 @@
 import { FastifyInstance, FastifyRequest } from 'fastify';
 import { z } from 'zod';
-import { searchService, MAX_PER_PAGE } from '../services/search.js';
+import { searchService } from '../services/search.js';
 import { authService } from '../services/auth.js';
 import { tenantService } from '../services/tenant.js';
 import { requirePermission } from '../middleware/auth.js';
@@ -12,57 +12,39 @@ import {
   type SearchEntityType,
 } from '../lib/search/entities.js';
 import { FILTER_OPERATORS, filterGroupSchema, type FilterGroup } from '../lib/search/filters.js';
-import { MAX_QUERY_LENGTH } from '../lib/search/query-parser.js';
+import { validate } from '../middleware/validation.js';
+import {
+  analyticsQuerySchema,
+  entityTypeSchema,
+  historyQuerySchema,
+  idParamSchema,
+  searchQuerySchema,
+  suggestQuerySchema,
+  templateSchema,
+  type AnalyticsQueryInput,
+  type HistoryQueryInput,
+  type IdParamInput,
+  type SearchQueryInput,
+  type SuggestQueryInput,
+  type TemplateInput,
+  updateTemplateSchema,
+  searchBodyDefaultSchema,
+  type UpdateTemplateInput,
+  type SearchBodyDefaultInput,
+} from '../schemas/search.js';
 
 // Any one of these grants access to search; results are then limited to the
 // entity types the caller can actually read.
 const SEARCH_READ_PERMISSIONS = SEARCH_ENTITY_TYPES.map((t) => SEARCH_ENTITIES[t].permission);
 const ANALYTICS_PERMISSIONS = ['reports:read', 'admin:read'];
 
-const entityTypeSchema = z.enum(SEARCH_ENTITY_TYPES as [SearchEntityType, ...SearchEntityType[]]);
-const sortSchema = z.enum(['relevance', 'updated', 'created']);
 
-const searchBodySchema = z.object({
-  q: z.string().max(MAX_QUERY_LENGTH).optional(),
-  filters: filterGroupSchema.nullable().optional(),
-  entityTypes: z.array(entityTypeSchema).max(SEARCH_ENTITY_TYPES.length).optional(),
-  page: z.coerce.number().int().positive().optional(),
-  perPage: z.coerce.number().int().min(1).max(MAX_PER_PAGE).optional(),
-  sort: sortSchema.optional(),
-});
 
-const searchQuerySchema = z.object({
-  q: z.string().max(MAX_QUERY_LENGTH).optional(),
-  types: z.string().max(200).optional(),
-  filters: z.string().max(10000).optional(),
-  page: z.coerce.number().int().positive().optional(),
-  per_page: z.coerce.number().int().min(1).max(MAX_PER_PAGE).optional(),
-  sort: sortSchema.optional(),
-});
 
-const suggestQuerySchema = z.object({
-  q: z.string().max(100).default(''),
-  limit: z.coerce.number().int().min(1).max(10).optional(),
-});
 
-const historyQuerySchema = z.object({
-  limit: z.coerce.number().int().min(1).max(100).optional(),
-});
 
-const analyticsQuerySchema = z.object({
-  days: z.coerce.number().int().min(1).max(365).optional(),
-});
 
-const templateSchema = z.object({
-  name: z.string().trim().min(1).max(100),
-  description: z.string().max(500).nullable().optional(),
-  queryText: z.string().max(MAX_QUERY_LENGTH).optional(),
-  filters: filterGroupSchema.nullable().optional(),
-  entityTypes: z.array(entityTypeSchema).max(SEARCH_ENTITY_TYPES.length).optional(),
-  isShared: z.boolean().optional(),
-});
 
-const idParamSchema = z.object({ id: z.string().uuid() });
 
 function parseTypes(raw: string | undefined): SearchEntityType[] | undefined {
   if (!raw) return undefined;
@@ -99,8 +81,10 @@ export default async function searchRoutes(app: FastifyInstance) {
   const searchGuard = { preHandler: [requirePermission(...SEARCH_READ_PERMISSIONS)] };
 
   // GET /v1/search?q=...&types=issue,problem&filters={json}&page=1&per_page=20&sort=relevance
-  app.get('/', searchGuard, async (request, reply) => {
-    const query = searchQuerySchema.parse(request.query);
+  app.get('/', {
+    preHandler: [...searchGuard.preHandler, validate({ query: searchQuerySchema })],
+  }, async (request, reply) => {
+    const query = request.query as SearchQueryInput;
     const allowedTypes = await resolveAllowedTypes(request);
     const result = await searchService.search(
       request.user.tenantSlug,
@@ -118,8 +102,10 @@ export default async function searchRoutes(app: FastifyInstance) {
   });
 
   // POST /v1/search/query  (same as GET, for large filter trees)
-  app.post('/query', searchGuard, async (request, reply) => {
-    const body = searchBodySchema.parse(request.body ?? {});
+  app.post('/query', {
+    preHandler: [...searchGuard.preHandler, validate({ body: searchBodyDefaultSchema })],
+  }, async (request, reply) => {
+    const body = request.body as SearchBodyDefaultInput;
     const allowedTypes = await resolveAllowedTypes(request);
     const result = await searchService.search(
       request.user.tenantSlug,
@@ -142,8 +128,10 @@ export default async function searchRoutes(app: FastifyInstance) {
   });
 
   // GET /v1/search/suggest?q=pass  (autocomplete)
-  app.get('/suggest', searchGuard, async (request, reply) => {
-    const query = suggestQuerySchema.parse(request.query);
+  app.get('/suggest', {
+    preHandler: [...searchGuard.preHandler, validate({ query: suggestQuerySchema })],
+  }, async (request, reply) => {
+    const query = request.query as SuggestQueryInput;
     const allowedTypes = await resolveAllowedTypes(request);
     const suggestions = await searchService.suggest(
       request.user.tenantSlug,
@@ -155,8 +143,10 @@ export default async function searchRoutes(app: FastifyInstance) {
   });
 
   // Search history (always scoped to the calling user)
-  app.get('/history', searchGuard, async (request, reply) => {
-    const query = historyQuerySchema.parse(request.query);
+  app.get('/history', {
+    preHandler: [...searchGuard.preHandler, validate({ query: historyQuerySchema })],
+  }, async (request, reply) => {
+    const query = request.query as HistoryQueryInput;
     const history = await searchService.getHistory(request.user.tenantSlug, request.user.userId, query.limit);
     reply.send({ data: history });
   });
@@ -166,8 +156,10 @@ export default async function searchRoutes(app: FastifyInstance) {
     reply.send({ deleted });
   });
 
-  app.delete('/history/:id', searchGuard, async (request, reply) => {
-    const { id } = idParamSchema.parse(request.params);
+  app.delete('/history/:id', {
+    preHandler: [...searchGuard.preHandler, validate({ params: idParamSchema })],
+  }, async (request, reply) => {
+    const { id } = request.params as IdParamInput;
     await searchService.deleteHistoryEntry(request.user.tenantSlug, request.user.userId, id);
     reply.status(204).send();
   });
@@ -178,40 +170,50 @@ export default async function searchRoutes(app: FastifyInstance) {
     reply.send({ data: templates });
   });
 
-  app.post('/templates', searchGuard, async (request, reply) => {
-    const body = templateSchema.parse(request.body);
+  app.post('/templates', {
+    preHandler: [...searchGuard.preHandler, validate({ body: templateSchema })],
+  }, async (request, reply) => {
+    const body = request.body as TemplateInput;
     const template = await searchService.createTemplate(request.user.tenantSlug, request.user.userId, body);
     reply.status(201).send(template);
   });
 
-  app.get('/templates/:id', searchGuard, async (request, reply) => {
-    const { id } = idParamSchema.parse(request.params);
+  app.get('/templates/:id', {
+    preHandler: [...searchGuard.preHandler, validate({ params: idParamSchema })],
+  }, async (request, reply) => {
+    const { id } = request.params as IdParamInput;
     const template = await searchService.getTemplate(request.user.tenantSlug, request.user.userId, id);
     reply.send(template);
   });
 
-  app.patch('/templates/:id', searchGuard, async (request, reply) => {
-    const { id } = idParamSchema.parse(request.params);
-    const body = templateSchema.partial().parse(request.body);
+  app.patch('/templates/:id', {
+    preHandler: [...searchGuard.preHandler, validate({ body: updateTemplateSchema, params: idParamSchema })],
+  }, async (request, reply) => {
+    const { id } = request.params as IdParamInput;
+    const body = request.body as UpdateTemplateInput;
     const template = await searchService.updateTemplate(request.user.tenantSlug, request.user.userId, id, body);
     reply.send(template);
   });
 
-  app.delete('/templates/:id', searchGuard, async (request, reply) => {
-    const { id } = idParamSchema.parse(request.params);
+  app.delete('/templates/:id', {
+    preHandler: [...searchGuard.preHandler, validate({ params: idParamSchema })],
+  }, async (request, reply) => {
+    const { id } = request.params as IdParamInput;
     await searchService.deleteTemplate(request.user.tenantSlug, request.user.userId, id);
     reply.status(204).send();
   });
 
-  app.post('/templates/:id/use', searchGuard, async (request, reply) => {
-    const { id } = idParamSchema.parse(request.params);
+  app.post('/templates/:id/use', {
+    preHandler: [...searchGuard.preHandler, validate({ params: idParamSchema })],
+  }, async (request, reply) => {
+    const { id } = request.params as IdParamInput;
     const template = await searchService.useTemplate(request.user.tenantSlug, request.user.userId, id);
     reply.send(template);
   });
 
   // GET /v1/search/analytics?days=30  (tenant-wide, admin and report readers)
-  app.get('/analytics', { preHandler: [requirePermission(...ANALYTICS_PERMISSIONS)] }, async (request, reply) => {
-    const query = analyticsQuerySchema.parse(request.query);
+  app.get('/analytics', { preHandler: [requirePermission(...ANALYTICS_PERMISSIONS), validate({ query: analyticsQuerySchema })] }, async (request, reply) => {
+    const query = request.query as AnalyticsQueryInput;
     const analytics = await searchService.getAnalytics(request.user.tenantSlug, query.days);
     reply.send(analytics);
   });

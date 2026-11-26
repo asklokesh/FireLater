@@ -1,40 +1,28 @@
 import { FastifyInstance } from 'fastify';
-import { z } from 'zod';
 import { regulatorySlaService } from '../services/regulatory-sla.js';
 import { requirePermission } from '../middleware/auth.js';
+import { validate } from '../middleware/validation.js';
+import {
+  classifyIncidentSchema,
+  createDeadlineSchema,
+  createFrameworkSchema,
+  recordNotificationSchema,
+  summaryQuerySchema,
+  type ClassifyIncidentInput,
+  type CreateDeadlineInput,
+  type CreateFrameworkInput,
+  type RecordNotificationInput,
+  type SummaryQueryInput,
+} from '../schemas/regulatory-sla.js';
 
 // ============================================
 // VALIDATION SCHEMAS
 // ============================================
 
-const classifyIncidentSchema = z.object({
-  classification: z.string().min(1).max(50),
-  detectedAt: z.string().datetime().optional(),
-});
 
-const recordNotificationSchema = z.object({
-  actorId: z.string().min(1).max(255),
-  recipient: z.string().min(1).max(255),
-  evidence: z.string().min(1).max(5000),
-});
 
-const summaryQuerySchema = z.object({
-  from: z.string().datetime(),
-  to: z.string().datetime(),
-});
 
-const createFrameworkSchema = z.object({
-  code: z.string().min(1).max(50),
-  name: z.string().min(1).max(255),
-  description: z.string().max(2000).optional(),
-});
 
-const createDeadlineSchema = z.object({
-  deadlineType: z.string().min(1).max(50),
-  incidentClassification: z.string().max(50).optional(),
-  hoursFromDetection: z.number().int().positive(),
-  description: z.string().max(2000).optional(),
-});
 
 // ============================================
 // ROUTES
@@ -47,11 +35,11 @@ export default async function regulatorySlaRoutes(app: FastifyInstance) {
    */
   app.post<{ Params: { incidentId: string } }>(
     '/incidents/:incidentId/classify',
-    { preHandler: [requirePermission('issues:write')] },
+    { preHandler: [requirePermission('issues:write'), validate({ body: classifyIncidentSchema })] },
     async (request, reply) => {
       const { tenantSlug } = request.user;
       const { incidentId } = request.params;
-      const body = classifyIncidentSchema.parse(request.body);
+      const body = request.body as ClassifyIncidentInput;
 
       const detectedAt = body.detectedAt ? new Date(body.detectedAt) : new Date();
 
@@ -89,11 +77,11 @@ export default async function regulatorySlaRoutes(app: FastifyInstance) {
    */
   app.post<{ Params: { clockId: string } }>(
     '/clocks/:clockId/notify',
-    { preHandler: [requirePermission('issues:write')] },
+    { preHandler: [requirePermission('issues:write'), validate({ body: recordNotificationSchema })] },
     async (request, reply) => {
       const { tenantSlug, userId } = request.user;
       const { clockId } = request.params;
-      const body = recordNotificationSchema.parse(request.body);
+      const body = request.body as RecordNotificationInput;
 
       await regulatorySlaService.recordNotification(
         tenantSlug,
@@ -113,10 +101,10 @@ export default async function regulatorySlaRoutes(app: FastifyInstance) {
    */
   app.get(
     '/summary',
-    { preHandler: [requirePermission('reports:read')] },
+    { preHandler: [requirePermission('reports:read'), validate({ query: summaryQuerySchema })] },
     async (request, reply) => {
       const { tenantSlug } = request.user;
-      const query = summaryQuerySchema.parse(request.query);
+      const query = request.query as SummaryQueryInput;
 
       const summary = await regulatorySlaService.getAdherenceSummary(
         tenantSlug,
@@ -148,10 +136,10 @@ export default async function regulatorySlaRoutes(app: FastifyInstance) {
    */
   app.post(
     '/frameworks',
-    { preHandler: [requirePermission('admin:write')] },
+    { preHandler: [requirePermission('admin:write'), validate({ body: createFrameworkSchema })] },
     async (request, reply) => {
       const { tenantSlug } = request.user;
-      const body = createFrameworkSchema.parse(request.body);
+      const body = request.body as CreateFrameworkInput;
 
       const framework = await regulatorySlaService.createFramework(tenantSlug, body);
       reply.status(201).send(framework);
@@ -180,11 +168,11 @@ export default async function regulatorySlaRoutes(app: FastifyInstance) {
    */
   app.post<{ Params: { id: string } }>(
     '/frameworks/:id/deadlines',
-    { preHandler: [requirePermission('admin:write')] },
+    { preHandler: [requirePermission('admin:write'), validate({ body: createDeadlineSchema })] },
     async (request, reply) => {
       const { tenantSlug } = request.user;
       const { id: frameworkId } = request.params;
-      const body = createDeadlineSchema.parse(request.body);
+      const body = request.body as CreateDeadlineInput;
 
       const deadline = await regulatorySlaService.createDeadline(tenantSlug, {
         frameworkId,

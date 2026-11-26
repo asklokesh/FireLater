@@ -1,68 +1,47 @@
 import { FastifyInstance } from 'fastify';
-import { z } from 'zod';
 import { notificationService } from '../services/notifications.js';
 import { requirePermission } from '../middleware/auth.js';
 import { parsePagination, createPaginatedResponse } from '../utils/pagination.js';
+import { validate } from '../middleware/validation.js';
+import {
+  channelIdParamSchema,
+  createChannelSchema,
+  listNotificationsQuerySchema,
+  notificationIdParamSchema,
+  templateParamSchema,
+  updateChannelSchema,
+  updatePreferenceSchema,
+  updateTemplateSchema,
+  type ChannelIdParamInput,
+  type CreateChannelInput,
+  type NotificationIdParamInput,
+  type TemplateParamInput,
+  type UpdateChannelInput,
+  type UpdatePreferenceInput,
+  type UpdateTemplateInput,
+  type ListNotificationsQueryInput,
+} from '../schemas/notifications.js';
 
-const updatePreferenceSchema = z.object({
-  eventType: z.string(),
-  channelId: z.string().uuid(),
-  enabled: z.boolean(),
-});
 
-const createChannelSchema = z.object({
-  name: z.string().min(1).max(255),
-  type: z.enum(['email', 'in_app', 'slack', 'webhook']),
-  integrationId: z.string().uuid().optional(),
-  config: z.record(z.unknown()).optional(),
-  isDefault: z.boolean().optional(),
-});
 
-const updateChannelSchema = z.object({
-  name: z.string().min(1).max(255).optional(),
-  config: z.record(z.unknown()).optional(),
-  isDefault: z.boolean().optional(),
-  isActive: z.boolean().optional(),
-});
 
-const updateTemplateSchema = z.object({
-  subject: z.string().max(500).optional(),
-  bodyTemplate: z.string().optional(),
-  isActive: z.boolean().optional(),
-});
 
 // Parameter validation schemas
-const notificationIdParamSchema = z.object({
-  id: z.string().uuid(),
-});
 
-const channelIdParamSchema = z.object({
-  id: z.string().uuid(),
-});
 
-const templateParamSchema = z.object({
-  eventType: z.string().min(1).max(100),
-  channelType: z.enum(['email', 'in_app', 'slack', 'webhook']),
-});
 
 // Query parameter validation schema
-const listNotificationsQuerySchema = z.object({
-  page: z.coerce.number().int().positive().optional(),
-  per_page: z.coerce.number().int().min(1).max(100).optional(),
-  unread: z.enum(['true', 'false']).optional(),
-  event_type: z.string().max(100).optional(),
-});
 
 export default async function notificationRoutes(app: FastifyInstance) {
   // Get current user's notifications
   app.get('/', {
-    preHandler: [requirePermission('requests:read')],
+    preHandler: [requirePermission('requests:read'), validate({ query: listNotificationsQuerySchema })],
   }, async (request, reply) => {
     const { tenantSlug, userId } = request.user;
     const query = request.query as Record<string, string>;
 
     // Validate query parameters
-    const validatedQuery = listNotificationsQuerySchema.parse(query);
+    const validatedQuery = request.query as ListNotificationsQueryInput;
     const pagination = parsePagination(query);
 
     const filters = {
@@ -86,10 +65,10 @@ export default async function notificationRoutes(app: FastifyInstance) {
 
   // Mark notification as read
   app.post<{ Params: { id: string } }>('/:id/read', {
-    preHandler: [requirePermission('requests:read')],
+    preHandler: [requirePermission('requests:read'), validate({ params: notificationIdParamSchema })],
   }, async (request, reply) => {
     const { tenantSlug, userId } = request.user;
-    const { id } = notificationIdParamSchema.parse(request.params);
+    const { id } = request.params as NotificationIdParamInput;
 
     const notification = await notificationService.markAsRead(tenantSlug, id, userId);
     if (!notification) {
@@ -115,10 +94,10 @@ export default async function notificationRoutes(app: FastifyInstance) {
 
   // Delete notification
   app.delete<{ Params: { id: string } }>('/:id', {
-    preHandler: [requirePermission('requests:read')],
+    preHandler: [requirePermission('requests:read'), validate({ params: notificationIdParamSchema })],
   }, async (request, reply) => {
     const { tenantSlug, userId } = request.user;
-    const { id } = notificationIdParamSchema.parse(request.params);
+    const { id } = request.params as NotificationIdParamInput;
 
     await notificationService.delete(tenantSlug, id, userId);
     reply.status(204).send();
@@ -136,10 +115,10 @@ export default async function notificationRoutes(app: FastifyInstance) {
 
   // Update user's notification preference
   app.put('/preferences', {
-    preHandler: [requirePermission('requests:read')],
+    preHandler: [requirePermission('requests:read'), validate({ body: updatePreferenceSchema })],
   }, async (request, reply) => {
     const { tenantSlug, userId } = request.user;
-    const body = updatePreferenceSchema.parse(request.body);
+    const body = request.body as UpdatePreferenceInput;
 
     await notificationService.updateUserPreference(tenantSlug, userId, body.eventType, body.channelId, body.enabled);
     reply.send({ success: true });
@@ -157,10 +136,10 @@ export default async function notificationRoutes(app: FastifyInstance) {
 
   // Admin: Create notification channel
   app.post('/channels', {
-    preHandler: [requirePermission('settings:update')],
+    preHandler: [requirePermission('settings:update'), validate({ body: createChannelSchema })],
   }, async (request, reply) => {
     const { tenantSlug } = request.user;
-    const body = createChannelSchema.parse(request.body);
+    const body = request.body as CreateChannelInput;
 
     const channel = await notificationService.createChannel(tenantSlug, body);
     reply.status(201).send(channel);
@@ -168,11 +147,11 @@ export default async function notificationRoutes(app: FastifyInstance) {
 
   // Admin: Update notification channel
   app.put<{ Params: { id: string } }>('/channels/:id', {
-    preHandler: [requirePermission('settings:update')],
+    preHandler: [requirePermission('settings:update'), validate({ params: channelIdParamSchema, body: updateChannelSchema })],
   }, async (request, reply) => {
     const { tenantSlug } = request.user;
-    const { id } = channelIdParamSchema.parse(request.params);
-    const body = updateChannelSchema.parse(request.body);
+    const { id } = request.params as ChannelIdParamInput;
+    const body = request.body as UpdateChannelInput;
 
     const channel = await notificationService.updateChannel(tenantSlug, id, body);
     reply.send(channel);
@@ -190,11 +169,11 @@ export default async function notificationRoutes(app: FastifyInstance) {
 
   // Admin: Update notification template
   app.put<{ Params: { eventType: string; channelType: string } }>('/templates/:eventType/:channelType', {
-    preHandler: [requirePermission('settings:update')],
+    preHandler: [requirePermission('settings:update'), validate({ params: templateParamSchema, body: updateTemplateSchema })],
   }, async (request, reply) => {
     const { tenantSlug } = request.user;
-    const { eventType, channelType } = templateParamSchema.parse(request.params);
-    const body = updateTemplateSchema.parse(request.body);
+    const { eventType, channelType } = request.params as TemplateParamInput;
+    const body = request.body as UpdateTemplateInput;
 
     const template = await notificationService.updateTemplate(
       tenantSlug,

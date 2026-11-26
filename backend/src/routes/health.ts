@@ -1,35 +1,26 @@
 import { FastifyInstance } from 'fastify';
-import { z } from 'zod';
 import { healthScoreConfigService, healthScoreService } from '../services/health.js';
 import { requirePermission } from '../middleware/auth.js';
 import { parsePagination, createPaginatedResponse } from '../utils/pagination.js';
+import { validate } from '../middleware/validation.js';
+import {
+  applicationIdParamSchema,
+  historyQuerySchema,
+  tierParamSchema,
+  updateConfigSchema,
+  type ApplicationIdParamInput,
+  type HistoryQueryInput,
+  type TierParamInput,
+  type UpdateConfigInput,
+} from '../schemas/health.js';
 
 // Parameter validation schemas
-const tierParamSchema = z.object({
-  tier: z.enum(['P1', 'P2', 'P3', 'P4']),
-});
 
-const applicationIdParamSchema = z.object({
-  applicationId: z.string().uuid(),
-});
 
 // Query validation schemas (for future use with stricter validation)
-const _listScoresQuerySchema = z.object({
-  page: z.coerce.number().int().positive().optional(),
-  per_page: z.coerce.number().int().min(1).max(100).optional(),
-});
 
-const historyQuerySchema = z.object({
-  days: z.coerce.number().int().min(1).max(365).optional(),
-});
 
 // Update config schema
-const updateConfigSchema = z.object({
-  slaWeight: z.number().min(0).max(100).optional(),
-  issueWeight: z.number().min(0).max(100).optional(),
-  changeWeight: z.number().min(0).max(100).optional(),
-  incidentWeight: z.number().min(0).max(100).optional(),
-});
 
 export default async function healthRoutes(app: FastifyInstance) {
   // ============================================
@@ -47,10 +38,10 @@ export default async function healthRoutes(app: FastifyInstance) {
 
   // Get config by tier
   app.get<{ Params: { tier: string } }>('/config/:tier', {
-    preHandler: [requirePermission('health_scores:read')],
+    preHandler: [requirePermission('health_scores:read'), validate({ params: tierParamSchema })],
   }, async (request, reply) => {
     const { tenantSlug } = request.user;
-    const { tier } = tierParamSchema.parse(request.params);
+    const { tier } = request.params as TierParamInput;
 
     const config = await healthScoreConfigService.findByTier(tenantSlug, tier);
 
@@ -67,11 +58,11 @@ export default async function healthRoutes(app: FastifyInstance) {
 
   // Update config by tier
   app.put<{ Params: { tier: string } }>('/config/:tier', {
-    preHandler: [requirePermission('health_scores:manage')],
+    preHandler: [requirePermission('health_scores:manage'), validate({ params: tierParamSchema, body: updateConfigSchema })],
   }, async (request, reply) => {
     const { tenantSlug } = request.user;
-    const { tier } = tierParamSchema.parse(request.params);
-    const data = updateConfigSchema.parse(request.body);
+    const { tier } = request.params as TierParamInput;
+    const data = request.body as UpdateConfigInput;
 
     const config = await healthScoreConfigService.update(tenantSlug, tier, data);
     reply.send({ config });
@@ -104,10 +95,10 @@ export default async function healthRoutes(app: FastifyInstance) {
 
   // Get health score for application
   app.get<{ Params: { applicationId: string } }>('/applications/:applicationId', {
-    preHandler: [requirePermission('health_scores:read')],
+    preHandler: [requirePermission('health_scores:read'), validate({ params: applicationIdParamSchema })],
   }, async (request, reply) => {
     const { tenantSlug } = request.user;
-    const { applicationId } = applicationIdParamSchema.parse(request.params);
+    const { applicationId } = request.params as ApplicationIdParamInput;
 
     const score = await healthScoreService.getLatestForApplication(
       tenantSlug,
@@ -118,11 +109,11 @@ export default async function healthRoutes(app: FastifyInstance) {
 
   // Get health score history for application
   app.get<{ Params: { applicationId: string }; Querystring: { days?: string } }>('/applications/:applicationId/history', {
-    preHandler: [requirePermission('health_scores:read')],
+    preHandler: [requirePermission('health_scores:read'), validate({ params: applicationIdParamSchema, query: historyQuerySchema })],
   }, async (request, reply) => {
     const { tenantSlug } = request.user;
-    const { applicationId } = applicationIdParamSchema.parse(request.params);
-    const { days } = historyQuerySchema.parse(request.query);
+    const { applicationId } = request.params as ApplicationIdParamInput;
+    const { days } = request.query as HistoryQueryInput;
 
     const history = await healthScoreService.getHistoryForApplication(
       tenantSlug,
@@ -134,10 +125,10 @@ export default async function healthRoutes(app: FastifyInstance) {
 
   // Calculate/recalculate health score for application
   app.post<{ Params: { applicationId: string } }>('/applications/:applicationId/calculate', {
-    preHandler: [requirePermission('health_scores:manage')],
+    preHandler: [requirePermission('health_scores:manage'), validate({ params: applicationIdParamSchema })],
   }, async (request, reply) => {
     const { tenantSlug, userId } = request.user;
-    const { applicationId } = applicationIdParamSchema.parse(request.params);
+    const { applicationId } = request.params as ApplicationIdParamInput;
 
     const score = await healthScoreService.calculateForApplication(
       tenantSlug,

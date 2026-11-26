@@ -3,49 +3,37 @@ import { z } from 'zod';
 import { pamService } from '../services/pam.js';
 import { requirePermission } from '../middleware/auth.js';
 import { authenticate } from '../middleware/auth.js';
+import { validate } from '../middleware/validation.js';
+import {
+  activitySchema,
+  approveGrantSchema,
+  listGrantsQuerySchema,
+  requestGrantSchema,
+  revokeGrantSchema,
+  summaryQuerySchema,
+  upsertConfigSchema,
+  type ActivityInput,
+  type ListGrantsQueryInput,
+  type RequestGrantInput,
+  type SummaryQueryInput,
+  approveGrantBodySchema,
+  revokeGrantBodySchema,
+  upsertConfigBodySchema,
+  type ApproveGrantBodyInput,
+  type RevokeGrantBodyInput,
+  type UpsertConfigBodyInput,
+} from '../schemas/pam.js';
 
 // ============================================
 // VALIDATION SCHEMAS
 // ============================================
 
-const requestGrantSchema = z.object({
-  privilegeType: z.string().min(1).max(100),
-  resource: z.string().max(255).optional(),
-  reason: z.string().min(5).max(5000),
-  durationHours: z.number().int().min(1).max(72),
-});
 
-const approveGrantSchema = z.object({
-  approverEmail: z.string().email().optional(),
-});
 
-const revokeGrantSchema = z.object({
-  revokedBy: z.string().min(1).max(255).optional(),
-});
 
-const activitySchema = z.object({
-  activityType: z.enum(['login', 'query', 'command', 'config_change']),
-  activityDetail: z.string().max(5000).optional(),
-  ipAddress: z.string().max(45).optional(),
-});
 
-const upsertConfigSchema = z.object({
-  description: z.string().max(500).optional(),
-  maxDurationHours: z.number().int().min(1).max(720).optional(),
-  requiresApprover: z.boolean().optional(),
-  autoApprove: z.boolean().optional(),
-});
 
-const summaryQuerySchema = z.object({
-  from: z.string().datetime(),
-  to: z.string().datetime(),
-});
 
-const listGrantsQuerySchema = z.object({
-  status: z.enum(['pending', 'approved', 'active', 'expired', 'revoked']).optional(),
-  requesterId: z.string().optional(),
-  privilegeType: z.string().optional(),
-});
 
 // ============================================
 // ROUTES
@@ -55,9 +43,9 @@ export default async function pamRoutes(app: FastifyInstance): Promise<void> {
   // POST /pam/grants — request JIT elevation
   app.post<{ Body: z.infer<typeof requestGrantSchema> }>(
     '/grants',
-    { preHandler: [authenticate] },
+    { preHandler: [authenticate, validate({ body: requestGrantSchema })] },
     async (request, reply) => {
-      const body = requestGrantSchema.parse(request.body);
+      const body = request.body as RequestGrantInput;
       const { tenantSlug, userId, email } = request.user;
 
       const grant = await pamService.requestGrant(tenantSlug, {
@@ -76,10 +64,10 @@ export default async function pamRoutes(app: FastifyInstance): Promise<void> {
   // GET /pam/grants — list grants
   app.get<{ Querystring: z.infer<typeof listGrantsQuerySchema> }>(
     '/grants',
-    { preHandler: [authenticate] },
+    { preHandler: [authenticate, validate({ query: listGrantsQuerySchema })] },
     async (request, _reply) => {
       const { tenantSlug, userId, roles } = request.user;
-      const query = listGrantsQuerySchema.parse(request.query);
+      const query = request.query as ListGrantsQueryInput;
 
       // Admin can see all grants; regular users see only their own
       const isAdmin = roles.includes('admin');
@@ -116,11 +104,11 @@ export default async function pamRoutes(app: FastifyInstance): Promise<void> {
   // POST /pam/grants/:id/approve — approve a grant
   app.post<{ Params: { id: string }; Body: z.infer<typeof approveGrantSchema> }>(
     '/grants/:id/approve',
-    { preHandler: [requirePermission('admin:write')] },
+    { preHandler: [requirePermission('admin:write'), validate({ body: approveGrantBodySchema })] },
     async (request, _reply) => {
       const { tenantSlug, userId, email } = request.user;
       const { id } = request.params;
-      const body = approveGrantSchema.parse(request.body ?? {});
+      const body = request.body as ApproveGrantBodyInput;
 
       return pamService.approveGrant(tenantSlug, id, userId, body.approverEmail ?? email);
     }
@@ -129,11 +117,11 @@ export default async function pamRoutes(app: FastifyInstance): Promise<void> {
   // POST /pam/grants/:id/revoke — revoke a grant
   app.post<{ Params: { id: string }; Body: z.infer<typeof revokeGrantSchema> }>(
     '/grants/:id/revoke',
-    { preHandler: [requirePermission('admin:write')] },
+    { preHandler: [requirePermission('admin:write'), validate({ body: revokeGrantBodySchema })] },
     async (request, _reply) => {
       const { tenantSlug, userId } = request.user;
       const { id } = request.params;
-      const body = revokeGrantSchema.parse(request.body ?? {});
+      const body = request.body as RevokeGrantBodyInput;
 
       await pamService.revokeGrant(tenantSlug, id, body.revokedBy ?? userId);
       return { success: true };
@@ -143,11 +131,11 @@ export default async function pamRoutes(app: FastifyInstance): Promise<void> {
   // POST /pam/grants/:id/activity — log session activity
   app.post<{ Params: { id: string }; Body: z.infer<typeof activitySchema> }>(
     '/grants/:id/activity',
-    { preHandler: [authenticate] },
+    { preHandler: [authenticate, validate({ body: activitySchema })] },
     async (request, reply) => {
       const { tenantSlug, userId } = request.user;
       const { id } = request.params;
-      const body = activitySchema.parse(request.body);
+      const body = request.body as ActivityInput;
 
       await pamService.logActivity(
         tenantSlug,
@@ -187,11 +175,11 @@ export default async function pamRoutes(app: FastifyInstance): Promise<void> {
   // PUT /pam/config/:privilegeType — upsert JIT config
   app.put<{ Params: { privilegeType: string }; Body: z.infer<typeof upsertConfigSchema> }>(
     '/config/:privilegeType',
-    { preHandler: [requirePermission('admin:write')] },
+    { preHandler: [requirePermission('admin:write'), validate({ body: upsertConfigBodySchema })] },
     async (request, _reply) => {
       const { tenantSlug } = request.user;
       const { privilegeType } = request.params;
-      const body = upsertConfigSchema.parse(request.body ?? {});
+      const body = request.body as UpsertConfigBodyInput;
 
       await pamService.upsertConfig(tenantSlug, privilegeType, {
         description: body.description,
@@ -207,10 +195,10 @@ export default async function pamRoutes(app: FastifyInstance): Promise<void> {
   // GET /pam/summary — compliance summary
   app.get<{ Querystring: z.infer<typeof summaryQuerySchema> }>(
     '/summary',
-    { preHandler: [requirePermission('admin:read')] },
+    { preHandler: [requirePermission('admin:read'), validate({ query: summaryQuerySchema })] },
     async (request, _reply) => {
       const { tenantSlug } = request.user;
-      const { from, to } = summaryQuerySchema.parse(request.query);
+      const { from, to } = request.query as SummaryQueryInput;
 
       return pamService.getGrantSummary(tenantSlug, new Date(from), new Date(to));
     }
