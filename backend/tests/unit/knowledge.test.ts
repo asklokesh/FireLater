@@ -16,6 +16,14 @@ describe('KnowledgeService - N+1 Query Optimization', () => {
   beforeEach(async () => {
     vi.clearAllMocks();
     (tenantService.getSchemaName as any) = vi.fn().mockReturnValue(mockSchema);
+    // Transactions: BEGIN/COMMIT/ROLLBACK are no-ops, everything else goes to pool.query
+    (pool.connect as any) = vi.fn().mockResolvedValue({
+      query: (sql: unknown, ...rest: unknown[]) =>
+        /^\s*(BEGIN|COMMIT|ROLLBACK)/.test(String(sql))
+          ? Promise.resolve({ rows: [] })
+          : (pool.query as any)(sql, ...rest),
+      release: vi.fn(),
+    });
     // Clear Redis cache between tests
     const { redis } = await import('../../src/config/redis.js');
     await redis.flushdb();
@@ -276,7 +284,8 @@ describe('KnowledgeService - N+1 Query Optimization', () => {
 
       const result = await knowledgeService.createArticle(mockTenantSlug, params);
 
-      expect(pool.query).toHaveBeenCalledTimes(2);
+      // sequence + insert + history entry
+      expect(pool.query).toHaveBeenCalledTimes(3);
       expect(result.article_number).toBe('KB000001');
     });
   });
@@ -284,13 +293,14 @@ describe('KnowledgeService - N+1 Query Optimization', () => {
   describe('updateArticle', () => {
     it('should update only provided fields', async () => {
       (pool.query as any) = vi.fn()
+        .mockResolvedValueOnce({ rows: [{ id: '1', title: 'Old' }] }) // before
         .mockResolvedValueOnce({ rows: [{ id: '1', title: 'Updated' }] });
 
       const result = await knowledgeService.updateArticle(mockTenantSlug, '1', {
         title: 'Updated'
       });
 
-      const query = (pool.query as any).mock.calls[0][0];
+      const query = (pool.query as any).mock.calls[1][0];
       expect(query).toContain('title = $1');
       expect(query).toContain('updated_at = NOW()');
       expect(result.title).toBe('Updated');

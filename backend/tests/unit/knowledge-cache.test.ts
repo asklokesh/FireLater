@@ -18,6 +18,14 @@ describe('Knowledge Base Redis Caching (PERF-004)', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    // Transactions: BEGIN/COMMIT/ROLLBACK and history inserts are no-ops, everything else goes to pool.query
+    vi.spyOn(pool, 'connect').mockImplementation((async () => ({
+      query: (sql: unknown, ...rest: unknown[]) =>
+        /^\s*(BEGIN|COMMIT|ROLLBACK|INSERT INTO \S+\.kb_article_history)/.test(String(sql))
+          ? Promise.resolve({ rows: [] })
+          : (pool.query as any)(sql, ...rest),
+      release: () => undefined,
+    })) as any);
   });
 
   afterEach(() => {
@@ -167,6 +175,12 @@ describe('Knowledge Base Redis Caching (PERF-004)', () => {
       const invalidateSpy = vi.spyOn(cacheService, 'invalidate').mockResolvedValue(3);
 
       const mockQuery = vi.spyOn(pool, 'query').mockResolvedValueOnce({
+        rows: [{ id: '123', title: 'Old' }],
+        command: 'SELECT',
+        rowCount: 1,
+        oid: 0,
+        fields: [],
+      }).mockResolvedValueOnce({
         rows: [{ id: '123', title: 'Updated' }],
         command: 'UPDATE',
         rowCount: 1,
@@ -211,6 +225,12 @@ describe('Knowledge Base Redis Caching (PERF-004)', () => {
       const invalidateSpy = vi.spyOn(cacheService, 'invalidate').mockResolvedValue(1);
 
       const mockQuery = vi.spyOn(pool, 'query').mockResolvedValueOnce({
+        rows: [{ id: '123', title: 'Old' }],
+        command: 'SELECT',
+        rowCount: 1,
+        oid: 0,
+        fields: [],
+      }).mockResolvedValueOnce({
         rows: [{ id: '123', title: 'Updated' }],
         command: 'UPDATE',
         rowCount: 1,
@@ -241,6 +261,12 @@ describe('Knowledge Base Redis Caching (PERF-004)', () => {
       );
 
       const mockQuery = vi.spyOn(pool, 'query').mockResolvedValueOnce({
+        rows: [{ id: '123', title: 'Old' }],
+        command: 'SELECT',
+        rowCount: 1,
+        oid: 0,
+        fields: [],
+      }).mockResolvedValueOnce({
         rows: [{ id: '123', title: 'Updated' }],
         command: 'UPDATE',
         rowCount: 1,

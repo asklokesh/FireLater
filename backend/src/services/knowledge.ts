@@ -1,3 +1,5 @@
+import { isDeepStrictEqual } from 'node:util';
+import { z } from 'zod';
 import { pool } from '../config/database.js';
 import { tenantService } from './tenant.js';
 import { NotFoundError, BadRequestError } from '../utils/errors.js';
@@ -33,6 +35,8 @@ interface UpdateArticleParams {
   reviewerId?: string;
   tags?: string[];
   keywords?: string[];
+  /** User making the change; recorded in the version history */
+  updatedBy?: string;
 }
 
 interface SearchFilters {
@@ -45,6 +49,8 @@ interface SearchFilters {
   limit?: number;
   offset?: number;
 }
+
+const uuidSchema = z.string().uuid();
 
 class KnowledgeService {
   /**
@@ -355,37 +361,72 @@ class KnowledgeService {
       .replace(/[^a-z0-9]+/g, '-')
       .replace(/^-|-$/g, '');
 
-    const result = await pool.query(
-      `INSERT INTO ${schema}.kb_articles (
-        article_number, title, slug, content, summary,
-        type, status, visibility, category_id, author_id,
-        tags, keywords, related_problem_id, related_issue_id
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
-      RETURNING *`,
-      [
-        articleNumber,
-        params.title,
-        slug,
-        sanitizedContent,
-        params.summary || null,
-        params.type || 'how_to',
-        params.status || 'draft',
-        params.visibility || 'internal',
-        params.categoryId || null,
-        params.authorId,
-        params.tags || [],
-        params.keywords || [],
-        params.relatedProblemId || null,
-        params.relatedIssueId || null
-      ]
-    );
+    const client = await pool.connect();
+    let article: any;
+    try {
+      await client.query('BEGIN');
+      const result = await client.query(
+        `INSERT INTO ${schema}.kb_articles (
+          article_number, title, slug, content, summary,
+          type, status, visibility, category_id, author_id,
+          tags, keywords, related_problem_id, related_issue_id
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
+        RETURNING *`,
+        [
+          articleNumber,
+          params.title,
+          slug,
+          sanitizedContent,
+          params.summary || null,
+          params.type || 'how_to',
+          params.status || 'draft',
+          params.visibility || 'internal',
+          params.categoryId || null,
+          params.authorId,
+          params.tags || [],
+          params.keywords || [],
+          params.relatedProblemId || null,
+          params.relatedIssueId || null
+        ]
+      );
+      article = result.rows[0];
+
+      const values: Record<string, unknown> = {
+        title: article.title,
+        summary: article.summary,
+        type: article.type,
+        status: article.status,
+        visibility: article.visibility,
+        categoryId: article.category_id,
+        tags: article.tags,
+        keywords: article.keywords,
+      };
+      await client.query(
+        `INSERT INTO ${schema}.kb_article_history
+           (article_id, version, changed_by, action, content_snapshot, changes)
+         VALUES ($1, $2, $3, 'created', $4, $5)`,
+        [
+          article.id,
+          article.version,
+          params.authorId,
+          article.content,
+          JSON.stringify({ fields: ['content', ...Object.keys(values)], values }),
+        ]
+      );
+      await client.query('COMMIT');
+    } catch (error) {
+      await client.query('ROLLBACK').catch(() => undefined);
+      throw error;
+    } finally {
+      client.release();
+    }
 
     logger.info(`Created KB article ${articleNumber} in tenant ${tenantSlug}`);
 
     // Invalidate knowledge base cache for this tenant
     await this.invalidateCache(tenantSlug);
 
-    return result.rows[0];
+    return article;
   }
 
   /**
@@ -396,89 +437,91 @@ class KnowledgeService {
 
     const updates: string[] = [];
     const values: any[] = [];
+    // API field name -> column, for the history entry
+    const changed: Record<string, string> = {};
     let paramCount = 0;
 
-    if (params.title !== undefined) {
+    const set = (field: string, column: string, value: unknown) => {
       paramCount++;
-      updates.push(`title = $${paramCount}`);
-      values.push(params.title);
-    }
+      updates.push(`${column} = $${paramCount}`);
+      values.push(value);
+      changed[field] = column;
+    };
 
-    if (params.content !== undefined) {
-      paramCount++;
-      updates.push(`content = $${paramCount}`);
-      // Sanitize content to prevent XSS attacks
-      values.push(sanitizeMarkdown(params.content));
-    }
-
-    if (params.summary !== undefined) {
-      paramCount++;
-      updates.push(`summary = $${paramCount}`);
-      values.push(params.summary);
-    }
-
-    if (params.type !== undefined) {
-      paramCount++;
-      updates.push(`type = $${paramCount}`);
-      values.push(params.type);
-    }
-
-    if (params.status !== undefined) {
-      paramCount++;
-      updates.push(`status = $${paramCount}`);
-      values.push(params.status);
-    }
-
-    if (params.visibility !== undefined) {
-      paramCount++;
-      updates.push(`visibility = $${paramCount}`);
-      values.push(params.visibility);
-    }
-
-    if (params.categoryId !== undefined) {
-      paramCount++;
-      updates.push(`category_id = $${paramCount}`);
-      values.push(params.categoryId);
-    }
-
-    if (params.reviewerId !== undefined) {
-      paramCount++;
-      updates.push(`reviewer_id = $${paramCount}`);
-      values.push(params.reviewerId);
-    }
-
-    if (params.tags !== undefined) {
-      paramCount++;
-      updates.push(`tags = $${paramCount}`);
-      values.push(params.tags);
-    }
-
-    if (params.keywords !== undefined) {
-      paramCount++;
-      updates.push(`keywords = $${paramCount}`);
-      values.push(params.keywords);
-    }
+    if (params.title !== undefined) set('title', 'title', params.title);
+    // Sanitize content to prevent XSS attacks
+    if (params.content !== undefined) set('content', 'content', sanitizeMarkdown(params.content));
+    if (params.summary !== undefined) set('summary', 'summary', params.summary);
+    if (params.type !== undefined) set('type', 'type', params.type);
+    if (params.status !== undefined) set('status', 'status', params.status);
+    if (params.visibility !== undefined) set('visibility', 'visibility', params.visibility);
+    if (params.categoryId !== undefined) set('categoryId', 'category_id', params.categoryId);
+    if (params.reviewerId !== undefined) set('reviewerId', 'reviewer_id', params.reviewerId);
+    if (params.tags !== undefined) set('tags', 'tags', params.tags);
+    if (params.keywords !== undefined) set('keywords', 'keywords', params.keywords);
 
     if (updates.length === 0) {
       throw new BadRequestError('No fields to update');
     }
 
     updates.push(`updated_at = NOW()`);
+    updates.push(`version = COALESCE(version, 1) + 1`);
 
     paramCount++;
     values.push(articleId);
 
-    const query = `
-      UPDATE ${schema}.kb_articles
-      SET ${updates.join(', ')}
-      WHERE id = $${paramCount}
-      RETURNING *
-    `;
+    const client = await pool.connect();
+    let article: any;
+    try {
+      await client.query('BEGIN');
 
-    const result = await pool.query(query, values);
+      // Lock the row so concurrent edits get distinct versions and accurate before/after values
+      const beforeResult = await client.query(
+        `SELECT * FROM ${schema}.kb_articles WHERE id = $1 FOR UPDATE`,
+        [articleId]
+      );
+      if (beforeResult.rows.length === 0) {
+        throw new NotFoundError('Article', articleId);
+      }
+      const before = beforeResult.rows[0];
 
-    if (result.rows.length === 0) {
-      throw new NotFoundError('Article', articleId);
+      const result = await client.query(
+        `UPDATE ${schema}.kb_articles
+         SET ${updates.join(', ')}
+         WHERE id = $${paramCount}
+         RETURNING *`,
+        values
+      );
+      article = result.rows[0];
+
+      // Record only the fields whose value actually changed; content is kept in
+      // content_snapshot rather than the diff
+      const fields = Object.keys(changed).filter(
+        (field) => !isDeepStrictEqual(before[changed[field]], article[changed[field]])
+      );
+      const diff: Record<string, { from: unknown; to: unknown }> = {};
+      for (const field of fields) {
+        if (field === 'content') continue;
+        diff[field] = { from: before[changed[field]], to: article[changed[field]] };
+      }
+      await client.query(
+        `INSERT INTO ${schema}.kb_article_history
+           (article_id, version, changed_by, action, content_snapshot, changes)
+         VALUES ($1, $2, $3, 'updated', $4, $5)`,
+        [
+          article.id,
+          article.version,
+          params.updatedBy || null,
+          article.content,
+          JSON.stringify({ fields, values: diff }),
+        ]
+      );
+      await client.query('COMMIT');
+    } catch (error) {
+      await client.query('ROLLBACK').catch(() => undefined);
+      throw error;
+    } finally {
+      client.release();
     }
 
     logger.info(`Updated KB article ${articleId} in tenant ${tenantSlug}`);
@@ -486,7 +529,7 @@ class KnowledgeService {
     // Invalidate knowledge base cache for this tenant
     await this.invalidateCache(tenantSlug);
 
-    return result.rows[0];
+    return article;
   }
 
   /**
@@ -510,6 +553,113 @@ class KnowledgeService {
     await this.invalidateCache(tenantSlug);
 
     return { success: true };
+  }
+
+  /**
+   * Record a helpful / not helpful vote. One vote per user per article:
+   * a repeat vote replaces the earlier one. The article counters are
+   * recomputed from the stored votes in the same transaction.
+   */
+  async submitFeedback(
+    tenantSlug: string,
+    articleId: string,
+    userId: string,
+    isHelpful: boolean,
+    comment?: string
+  ) {
+    // Ids are UUIDs; anything else cannot name an article (and would make PostgreSQL raise 22P02)
+    if (!uuidSchema.safeParse(articleId).success) {
+      throw new NotFoundError('Article', articleId);
+    }
+
+    const schema = tenantService.getSchemaName(tenantSlug);
+
+    const client = await pool.connect();
+    let result: any;
+    try {
+      await client.query('BEGIN');
+
+      // Row lock serializes concurrent votes on the same article
+      const articleResult = await client.query(
+        `SELECT status FROM ${schema}.kb_articles WHERE id = $1 FOR UPDATE`,
+        [articleId]
+      );
+      if (articleResult.rows.length === 0) {
+        throw new NotFoundError('Article', articleId);
+      }
+      if (articleResult.rows[0].status !== 'published') {
+        throw new BadRequestError('Feedback can only be submitted on published articles');
+      }
+
+      const feedbackResult = await client.query(
+        `INSERT INTO ${schema}.kb_article_feedback (article_id, user_id, is_helpful, comment)
+         VALUES ($1, $2, $3, $4)
+         ON CONFLICT (article_id, user_id)
+         DO UPDATE SET is_helpful = EXCLUDED.is_helpful, comment = EXCLUDED.comment, created_at = NOW()
+         RETURNING *`,
+        [articleId, userId, isHelpful, comment || null]
+      );
+
+      const countsResult = await client.query(
+        `UPDATE ${schema}.kb_articles a
+         SET helpful_count = c.helpful, not_helpful_count = c.not_helpful
+         FROM (
+           SELECT COUNT(*) FILTER (WHERE is_helpful)::int AS helpful,
+                  COUNT(*) FILTER (WHERE NOT is_helpful)::int AS not_helpful
+           FROM ${schema}.kb_article_feedback WHERE article_id = $1
+         ) c
+         WHERE a.id = $1
+         RETURNING a.helpful_count, a.not_helpful_count`,
+        [articleId]
+      );
+
+      await client.query('COMMIT');
+      result = {
+        ...feedbackResult.rows[0],
+        helpful_count: countsResult.rows[0].helpful_count,
+        not_helpful_count: countsResult.rows[0].not_helpful_count,
+      };
+    } catch (error) {
+      await client.query('ROLLBACK').catch(() => undefined);
+      throw error;
+    } finally {
+      client.release();
+    }
+
+    await this.invalidateCache(tenantSlug);
+
+    return result;
+  }
+
+  /**
+   * Version history of an article, newest first
+   */
+  async getArticleHistory(tenantSlug: string, articleId: string) {
+    if (!uuidSchema.safeParse(articleId).success) {
+      throw new NotFoundError('Article', articleId);
+    }
+
+    const schema = tenantService.getSchemaName(tenantSlug);
+
+    const exists = await pool.query(
+      `SELECT 1 FROM ${schema}.kb_articles WHERE id = $1`,
+      [articleId]
+    );
+    if (exists.rows.length === 0) {
+      throw new NotFoundError('Article', articleId);
+    }
+
+    const result = await pool.query(
+      `SELECT h.id, h.article_id, h.version, h.changed_by, u.name AS changed_by_name,
+              h.action, h.content_snapshot, h.changes, h.created_at
+       FROM ${schema}.kb_article_history h
+       LEFT JOIN ${schema}.users u ON u.id = h.changed_by
+       WHERE h.article_id = $1
+       ORDER BY h.version DESC NULLS LAST, h.created_at DESC, h.id DESC`,
+      [articleId]
+    );
+
+    return result.rows;
   }
 
   /**
