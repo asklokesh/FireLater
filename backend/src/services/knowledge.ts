@@ -46,6 +46,13 @@ interface SearchFilters {
   offset?: number;
 }
 
+interface FeedbackParams {
+  isHelpful: boolean;
+  comment?: string;
+}
+
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 class KnowledgeService {
   /**
    * Get all articles with pagination and filtering
@@ -355,13 +362,27 @@ class KnowledgeService {
       .replace(/[^a-z0-9]+/g, '-')
       .replace(/^-|-$/g, '');
 
+    // One statement, so the article and its first history entry are saved together
     const result = await pool.query(
-      `INSERT INTO ${schema}.kb_articles (
-        article_number, title, slug, content, summary,
-        type, status, visibility, category_id, author_id,
-        tags, keywords, related_problem_id, related_issue_id
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
-      RETURNING *`,
+      `WITH created AS (
+        INSERT INTO ${schema}.kb_articles (
+          article_number, title, slug, content, summary,
+          type, status, visibility, category_id, author_id,
+          tags, keywords, related_problem_id, related_issue_id
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
+        RETURNING *
+      ), history AS (
+        INSERT INTO ${schema}.kb_article_history
+          (article_id, version, changed_by, action, content_snapshot, changes)
+        SELECT c.id, c.version, c.author_id, 'created', c.content,
+          (SELECT jsonb_object_agg(f.key, jsonb_build_object('from', 'null'::jsonb, 'to', f.value))
+             FROM jsonb_each(to_jsonb(c.*)) f
+            WHERE f.key IN ('title', 'content', 'summary', 'type', 'status', 'visibility',
+                            'category_id', 'tags', 'keywords', 'related_problem_id', 'related_issue_id')
+              AND f.value NOT IN ('null'::jsonb, '[]'::jsonb))
+        FROM created c
+      )
+      SELECT * FROM created`,
       [
         articleNumber,
         params.title,
@@ -389,9 +410,14 @@ class KnowledgeService {
   }
 
   /**
-   * Update article
+   * Update article, increment its version and record the change in its history
    */
-  async updateArticle(tenantSlug: string, articleId: string, params: UpdateArticleParams) {
+  async updateArticle(
+    tenantSlug: string,
+    articleId: string,
+    params: UpdateArticleParams,
+    userId?: string
+  ) {
     const schema = tenantService.getSchemaName(tenantSlug);
 
     const updates: string[] = [];
@@ -465,14 +491,40 @@ class KnowledgeService {
 
     updates.push(`updated_at = NOW()`);
 
-    paramCount++;
-    values.push(articleId);
+    updates.push(`version = COALESCE(a.version, 1) + 1`);
 
+    values.push(articleId, userId ?? null);
+    const idParam = paramCount + 1;
+    const userParam = paramCount + 2;
+
+    // One statement: the row lock makes `previous` the exact state being replaced,
+    // also under concurrent edits, and the history entry is saved with the update.
     const query = `
-      UPDATE ${schema}.kb_articles
-      SET ${updates.join(', ')}
-      WHERE id = $${paramCount}
-      RETURNING *
+      WITH previous AS (
+        SELECT * FROM ${schema}.kb_articles WHERE id = $${idParam} FOR UPDATE
+      ), updated AS (
+        UPDATE ${schema}.kb_articles a
+        SET ${updates.join(', ')}
+        FROM previous
+        WHERE a.id = previous.id
+        RETURNING a.*
+      ), history AS (
+        INSERT INTO ${schema}.kb_article_history
+          (article_id, version, changed_by, action, content_snapshot, changes, created_at)
+        SELECT u.id, u.version, $${userParam}::uuid, 'updated', u.content,
+          COALESCE(
+            (SELECT jsonb_object_agg(n.key, jsonb_build_object('from', o.value, 'to', n.value))
+               FROM jsonb_each(to_jsonb(u.*)) n
+               JOIN jsonb_each(to_jsonb(p.*)) o ON o.key = n.key
+              WHERE n.value IS DISTINCT FROM o.value
+                AND n.key NOT IN ('version', 'updated_at')),
+            '{}'::jsonb
+          ),
+          clock_timestamp()
+        FROM updated u
+        JOIN previous p ON p.id = u.id
+      )
+      SELECT * FROM updated
     `;
 
     const result = await pool.query(query, values);
@@ -510,6 +562,124 @@ class KnowledgeService {
     await this.invalidateCache(tenantSlug);
 
     return { success: true };
+  }
+
+  /**
+   * Save a user's helpful / not helpful vote on a published article.
+   * A user has one vote per article; voting again replaces vote and comment.
+   * The article's counters are recounted from the stored votes in the same
+   * transaction.
+   */
+  async submitFeedback(
+    tenantSlug: string,
+    articleId: string,
+    userId: string,
+    params: FeedbackParams
+  ) {
+    const schema = tenantService.getSchemaName(tenantSlug);
+
+    if (!UUID_RE.test(articleId)) {
+      throw new NotFoundError('Article', articleId);
+    }
+
+    const client = await pool.connect();
+    let saved;
+    try {
+      await client.query('BEGIN');
+
+      // Locking the article serializes votes on it, so no recount misses a vote
+      const article = await client.query(
+        `SELECT status FROM ${schema}.kb_articles WHERE id = $1 FOR UPDATE`,
+        [articleId]
+      );
+
+      if (article.rows.length === 0) {
+        throw new NotFoundError('Article', articleId);
+      }
+
+      if (article.rows[0].status !== 'published') {
+        throw new BadRequestError('Feedback can only be given on published articles');
+      }
+
+      const feedback = await client.query(
+        `INSERT INTO ${schema}.kb_article_feedback (article_id, user_id, is_helpful, comment)
+         VALUES ($1, $2, $3, $4)
+         ON CONFLICT (article_id, user_id) DO UPDATE
+         SET is_helpful = EXCLUDED.is_helpful, comment = EXCLUDED.comment, created_at = NOW()
+         RETURNING *`,
+        [articleId, userId, params.isHelpful, params.comment || null]
+      );
+
+      const counts = await client.query(
+        `UPDATE ${schema}.kb_articles
+         SET (helpful_count, not_helpful_count) = (
+           SELECT COUNT(*) FILTER (WHERE is_helpful), COUNT(*) FILTER (WHERE NOT is_helpful)
+           FROM ${schema}.kb_article_feedback
+           WHERE article_id = $1
+         )
+         WHERE id = $1
+         RETURNING helpful_count, not_helpful_count`,
+        [articleId]
+      );
+
+      await client.query('COMMIT');
+      saved = { ...feedback.rows[0], ...counts.rows[0] };
+    } catch (error) {
+      await client.query('ROLLBACK');
+      throw error;
+    } finally {
+      client.release();
+    }
+
+    // Cached articles and lists carry the counters
+    await this.invalidateCache(tenantSlug);
+
+    return saved;
+  }
+
+  /**
+   * Get the version history of an article, newest first
+   * Cached with 5-minute TTL, invalidated with the other KB caches
+   */
+  async getArticleHistory(tenantSlug: string, articleId: string) {
+    if (!UUID_RE.test(articleId)) {
+      throw new NotFoundError('Article', articleId);
+    }
+
+    const cacheKey = `${tenantSlug}:kb:history:${articleId}`;
+
+    return cacheService.getOrSet(
+      cacheKey,
+      async () => this.getArticleHistoryUncached(tenantSlug, articleId),
+      { ttl: 300 }
+    );
+  }
+
+  /**
+   * Internal uncached implementation of getArticleHistory
+   */
+  private async getArticleHistoryUncached(tenantSlug: string, articleId: string) {
+    const schema = tenantService.getSchemaName(tenantSlug);
+
+    const article = await pool.query(
+      `SELECT id FROM ${schema}.kb_articles WHERE id = $1`,
+      [articleId]
+    );
+
+    if (article.rows.length === 0) {
+      throw new NotFoundError('Article', articleId);
+    }
+
+    const result = await pool.query(
+      `SELECT h.*, u.name as changed_by_name
+       FROM ${schema}.kb_article_history h
+       LEFT JOIN ${schema}.users u ON h.changed_by = u.id
+       WHERE h.article_id = $1
+       ORDER BY h.version DESC, h.created_at DESC`,
+      [articleId]
+    );
+
+    return result.rows;
   }
 
   /**

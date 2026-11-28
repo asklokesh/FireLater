@@ -6,8 +6,10 @@ import { validate } from '../middleware/validation.js';
 import {
   createArticleSchema,
   updateArticleSchema,
+  articleFeedbackSchema,
   type CreateArticleInput,
   type UpdateArticleInput,
+  type ArticleFeedbackInput,
 } from '../schemas/knowledge.js';
 
 
@@ -94,14 +96,15 @@ export default async function knowledgeRoutes(app: FastifyInstance) {
   app.put('/:articleId', {
     preHandler: [requirePermission('kb:update'), validate({ body: updateArticleSchema })],
   }, async (request, _reply) => {
-    const { tenantSlug } = request.user;
+    const { tenantSlug, userId } = request.user;
     const { articleId } = request.params as { articleId: string };
     const validatedBody = request.body as UpdateArticleInput;
 
     const article = await knowledgeService.updateArticle(
       tenantSlug,
       articleId,
-      validatedBody
+      validatedBody,
+      userId
     );
 
     return article;
@@ -118,6 +121,27 @@ export default async function knowledgeRoutes(app: FastifyInstance) {
 
     reply.status(204);
     return;
+  });
+
+  // Submit helpful / not helpful feedback
+  app.post('/:articleId/feedback', {
+    preHandler: [requirePermission('kb:read'), validate({ body: articleFeedbackSchema })],
+  }, async (request, _reply) => {
+    const { tenantSlug, userId } = request.user;
+    const { articleId } = request.params as { articleId: string };
+    const validatedBody = request.body as ArticleFeedbackInput;
+
+    return knowledgeService.submitFeedback(tenantSlug, articleId, userId, validatedBody);
+  });
+
+  // Version history, newest first
+  app.get('/:articleId/history', {
+    preHandler: [requirePermission('kb:read')],
+  }, async (request, _reply) => {
+    const { tenantSlug } = request.user;
+    const { articleId } = request.params as { articleId: string };
+
+    return knowledgeService.getArticleHistory(tenantSlug, articleId);
   });
 
   // List categories
