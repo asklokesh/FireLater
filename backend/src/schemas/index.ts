@@ -229,6 +229,7 @@ export const schemaRegistry: Record<string, RouteSchemas> = {
   'POST /v1/health/applications/:applicationId/calculate': { params: health.applicationIdParamSchema },
   'POST /v1/kb': { body: knowledge.createArticleSchema },
   'PUT /v1/kb/:articleId': { body: knowledge.updateArticleSchema },
+  'POST /v1/kb/:articleId/feedback': { body: knowledge.articleFeedbackSchema },
   'POST /v1/notifications/:id/read': { params: notifications.notificationIdParamSchema },
   'DELETE /v1/notifications/:id': { params: notifications.notificationIdParamSchema },
   'PUT /v1/notifications/preferences': { body: notifications.updatePreferenceSchema },

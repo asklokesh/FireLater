@@ -27,6 +27,11 @@ export const updateArticleSchema = z.object({
   keywords: z.array(z.string()).optional(),
 });
 
+export const articleFeedbackSchema = z.object({
+  isHelpful: z.boolean(),
+  comment: z.string().max(2000).optional(),
+});
 
+export type ArticleFeedbackInput = z.infer<typeof articleFeedbackSchema>;
 export type CreateArticleInput = z.infer<typeof createArticleSchema>;
 export type UpdateArticleInput = z.infer<typeof updateArticleSchema>;

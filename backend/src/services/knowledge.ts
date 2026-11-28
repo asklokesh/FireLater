@@ -6,6 +6,13 @@ import type { PaginationParams } from '../types/index.js';
 import { getOffset } from '../utils/pagination.js';
 import { sanitizeMarkdown } from '../utils/contentSanitization.js';
 import { cacheService } from '../utils/cache.js';
+import { uuidSchema } from '../schemas/common.js';
+
+/** Article columns whose values are tracked in kb_article_history.changes */
+const HISTORY_FIELDS = [
+  'title', 'content', 'summary', 'type', 'status', 'visibility', 'category_id',
+  'tags', 'keywords', 'related_problem_id', 'related_issue_id',
+];
 
 interface CreateArticleParams {
   title: string;
@@ -355,13 +362,29 @@ class KnowledgeService {
       .replace(/[^a-z0-9]+/g, '-')
       .replace(/^-|-$/g, '');
 
+    // One statement, so the article and its first history entry are stored together or not at all
     const result = await pool.query(
-      `INSERT INTO ${schema}.kb_articles (
-        article_number, title, slug, content, summary,
-        type, status, visibility, category_id, author_id,
-        tags, keywords, related_problem_id, related_issue_id
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
-      RETURNING *`,
+      `WITH article AS (
+        INSERT INTO ${schema}.kb_articles (
+          article_number, title, slug, content, summary,
+          type, status, visibility, category_id, author_id,
+          tags, keywords, related_problem_id, related_issue_id
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
+        RETURNING *
+      ), history AS (
+        INSERT INTO ${schema}.kb_article_history
+          (article_id, version, changed_by, action, content_snapshot, changes)
+        SELECT a.id, a.version, a.author_id, 'created', a.content, (
+          SELECT jsonb_object_agg(f.name, CASE
+              WHEN f.name = 'content' THEN '{}'::jsonb
+              ELSE jsonb_build_object('to', to_jsonb(a) -> f.name)
+            END)
+          FROM unnest($15::text[]) AS f(name)
+          WHERE to_jsonb(a) -> f.name NOT IN ('null'::jsonb, '[]'::jsonb)
+        )
+        FROM article a
+      )
+      SELECT * FROM article`,
       [
         articleNumber,
         params.title,
@@ -376,7 +399,8 @@ class KnowledgeService {
         params.tags || [],
         params.keywords || [],
         params.relatedProblemId || null,
-        params.relatedIssueId || null
+        params.relatedIssueId || null,
+        HISTORY_FIELDS
       ]
     );
 
@@ -389,90 +413,79 @@ class KnowledgeService {
   }
 
   /**
-   * Update article
+   * Update article, increment its version and record the change in the history
    */
-  async updateArticle(tenantSlug: string, articleId: string, params: UpdateArticleParams) {
+  async updateArticle(
+    tenantSlug: string,
+    articleId: string,
+    params: UpdateArticleParams,
+    changedBy?: string
+  ) {
     const schema = tenantService.getSchemaName(tenantSlug);
 
     const updates: string[] = [];
+    const columns: string[] = [];
     const values: any[] = [];
     let paramCount = 0;
 
-    if (params.title !== undefined) {
+    const set = (column: string, value: unknown) => {
       paramCount++;
-      updates.push(`title = $${paramCount}`);
-      values.push(params.title);
-    }
+      updates.push(`${column} = $${paramCount}`);
+      columns.push(column);
+      values.push(value);
+    };
 
-    if (params.content !== undefined) {
-      paramCount++;
-      updates.push(`content = $${paramCount}`);
-      // Sanitize content to prevent XSS attacks
-      values.push(sanitizeMarkdown(params.content));
-    }
-
-    if (params.summary !== undefined) {
-      paramCount++;
-      updates.push(`summary = $${paramCount}`);
-      values.push(params.summary);
-    }
-
-    if (params.type !== undefined) {
-      paramCount++;
-      updates.push(`type = $${paramCount}`);
-      values.push(params.type);
-    }
-
-    if (params.status !== undefined) {
-      paramCount++;
-      updates.push(`status = $${paramCount}`);
-      values.push(params.status);
-    }
-
-    if (params.visibility !== undefined) {
-      paramCount++;
-      updates.push(`visibility = $${paramCount}`);
-      values.push(params.visibility);
-    }
-
-    if (params.categoryId !== undefined) {
-      paramCount++;
-      updates.push(`category_id = $${paramCount}`);
-      values.push(params.categoryId);
-    }
-
-    if (params.reviewerId !== undefined) {
-      paramCount++;
-      updates.push(`reviewer_id = $${paramCount}`);
-      values.push(params.reviewerId);
-    }
-
-    if (params.tags !== undefined) {
-      paramCount++;
-      updates.push(`tags = $${paramCount}`);
-      values.push(params.tags);
-    }
-
-    if (params.keywords !== undefined) {
-      paramCount++;
-      updates.push(`keywords = $${paramCount}`);
-      values.push(params.keywords);
-    }
+    if (params.title !== undefined) set('title', params.title);
+    // Sanitize content to prevent XSS attacks
+    if (params.content !== undefined) set('content', sanitizeMarkdown(params.content));
+    if (params.summary !== undefined) set('summary', params.summary);
+    if (params.type !== undefined) set('type', params.type);
+    if (params.status !== undefined) set('status', params.status);
+    if (params.visibility !== undefined) set('visibility', params.visibility);
+    if (params.categoryId !== undefined) set('category_id', params.categoryId);
+    if (params.reviewerId !== undefined) set('reviewer_id', params.reviewerId);
+    if (params.tags !== undefined) set('tags', params.tags);
+    if (params.keywords !== undefined) set('keywords', params.keywords);
 
     if (updates.length === 0) {
       throw new BadRequestError('No fields to update');
     }
 
     updates.push(`updated_at = NOW()`);
+    updates.push(`version = COALESCE(a.version, 1) + 1`);
 
-    paramCount++;
-    values.push(articleId);
+    const idParam = ++paramCount;
+    const userParam = ++paramCount;
+    const columnsParam = ++paramCount;
+    values.push(articleId, changedBy ?? null, columns);
 
+    // One statement: the row lock taken by old_article makes concurrent edits queue up, so each
+    // gets its own version and is compared with the values it actually replaced.
+    // clock_timestamp() (not the transaction start) keeps created_at in version order.
     const query = `
-      UPDATE ${schema}.kb_articles
-      SET ${updates.join(', ')}
-      WHERE id = $${paramCount}
-      RETURNING *
+      WITH old_article AS (
+        SELECT * FROM ${schema}.kb_articles WHERE id = $${idParam} FOR UPDATE
+      ), article AS (
+        UPDATE ${schema}.kb_articles a
+        SET ${updates.join(', ')}
+        FROM old_article o
+        WHERE a.id = o.id
+        RETURNING a.*
+      ), history AS (
+        INSERT INTO ${schema}.kb_article_history
+          (article_id, version, changed_by, action, content_snapshot, changes, created_at)
+        SELECT a.id, a.version, $${userParam}::uuid, 'updated', a.content, (
+          SELECT COALESCE(jsonb_object_agg(f.name, CASE
+              WHEN f.name = 'content' THEN jsonb_build_object('from', to_jsonb(o) -> f.name)
+              ELSE jsonb_build_object('from', to_jsonb(o) -> f.name, 'to', to_jsonb(a) -> f.name)
+            END), '{}'::jsonb)
+          FROM unnest($${columnsParam}::text[]) AS f(name)
+          WHERE to_jsonb(o) -> f.name IS DISTINCT FROM to_jsonb(a) -> f.name
+        ), clock_timestamp()
+        FROM article a
+        JOIN old_article o ON o.id = a.id
+      )
+      SELECT * FROM article
     `;
 
     const result = await pool.query(query, values);
@@ -510,6 +523,106 @@ class KnowledgeService {
     await this.invalidateCache(tenantSlug);
 
     return { success: true };
+  }
+
+  /**
+   * Store a helpful / not helpful vote. Each user has one vote per article, so a
+   * later vote replaces the earlier one. The article counters are recounted from
+   * the stored votes in the same transaction.
+   */
+  async submitFeedback(
+    tenantSlug: string,
+    articleId: string,
+    userId: string,
+    isHelpful: boolean,
+    comment?: string
+  ) {
+    // A malformed id cannot name an article (and PostgreSQL would reject it with an error)
+    if (!uuidSchema.safeParse(articleId).success) {
+      throw new NotFoundError('Article', articleId);
+    }
+
+    const schema = tenantService.getSchemaName(tenantSlug);
+    const client = await pool.connect();
+    let feedback;
+
+    try {
+      await client.query('BEGIN');
+
+      // The row lock serializes votes on one article, so no recount misses another vote
+      const article = await client.query(
+        `SELECT status FROM ${schema}.kb_articles WHERE id = $1 FOR UPDATE`,
+        [articleId]
+      );
+      if (article.rows.length === 0) {
+        throw new NotFoundError('Article', articleId);
+      }
+      if (article.rows[0].status !== 'published') {
+        throw new BadRequestError('Feedback can only be given on published articles');
+      }
+
+      const vote = await client.query(
+        `INSERT INTO ${schema}.kb_article_feedback (article_id, user_id, is_helpful, comment)
+         VALUES ($1, $2, $3, $4)
+         ON CONFLICT (article_id, user_id)
+         DO UPDATE SET is_helpful = EXCLUDED.is_helpful, comment = EXCLUDED.comment, created_at = NOW()
+         RETURNING *`,
+        [articleId, userId, isHelpful, comment || null]
+      );
+
+      const counts = await client.query(
+        `UPDATE ${schema}.kb_articles SET
+           helpful_count = (SELECT COUNT(*) FROM ${schema}.kb_article_feedback
+                            WHERE article_id = $1 AND is_helpful),
+           not_helpful_count = (SELECT COUNT(*) FROM ${schema}.kb_article_feedback
+                                WHERE article_id = $1 AND NOT is_helpful)
+         WHERE id = $1
+         RETURNING helpful_count, not_helpful_count`,
+        [articleId]
+      );
+
+      await client.query('COMMIT');
+      feedback = { ...vote.rows[0], ...counts.rows[0] };
+    } catch (error) {
+      await client.query('ROLLBACK');
+      throw error;
+    } finally {
+      client.release();
+    }
+
+    await this.invalidateCache(tenantSlug);
+
+    return feedback;
+  }
+
+  /**
+   * Get the version history of an article, newest first
+   */
+  async getArticleHistory(tenantSlug: string, articleId: string) {
+    if (!uuidSchema.safeParse(articleId).success) {
+      throw new NotFoundError('Article', articleId);
+    }
+
+    const schema = tenantService.getSchemaName(tenantSlug);
+
+    const article = await pool.query(
+      `SELECT id FROM ${schema}.kb_articles WHERE id = $1`,
+      [articleId]
+    );
+    if (article.rows.length === 0) {
+      throw new NotFoundError('Article', articleId);
+    }
+
+    const result = await pool.query(
+      `SELECT h.*, u.name AS changed_by_name
+       FROM ${schema}.kb_article_history h
+       LEFT JOIN ${schema}.users u ON u.id = h.changed_by
+       WHERE h.article_id = $1
+       ORDER BY h.version DESC, h.created_at DESC`,
+      [articleId]
+    );
+
+    return result.rows;
   }
 
   /**
