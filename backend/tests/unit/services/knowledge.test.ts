@@ -6,6 +6,14 @@ const mockQuery = vi.fn();
 vi.mock('../../../src/config/database.js', () => ({
   pool: {
     query: (...args: unknown[]) => mockQuery(...args),
+    // Transactions: BEGIN/COMMIT/ROLLBACK are no-ops, everything else goes to mockQuery
+    connect: async () => ({
+      query: (sql: unknown, ...rest: unknown[]) =>
+        /^\s*(BEGIN|COMMIT|ROLLBACK)/.test(String(sql))
+          ? Promise.resolve({ rows: [] })
+          : mockQuery(sql, ...rest),
+      release: () => undefined,
+    }),
   },
 }));
 
@@ -349,6 +357,7 @@ describe('KnowledgeService', () => {
   // ==================
   describe('updateArticle', () => {
     it('should update article fields', async () => {
+      mockQuery.mockResolvedValueOnce({ rows: [{ id: 'art-1', title: 'Old', status: 'draft' }] }); // before
       mockQuery.mockResolvedValueOnce({
         rows: [{ id: 'art-1', title: 'Updated Title', status: 'published' }],
       });
@@ -359,11 +368,12 @@ describe('KnowledgeService', () => {
       });
 
       expect(result).toHaveProperty('title', 'Updated Title');
-      expect(mockQuery.mock.calls[0][0]).toContain('title = $1');
-      expect(mockQuery.mock.calls[0][0]).toContain('status = $2');
+      expect(mockQuery.mock.calls[1][0]).toContain('title = $1');
+      expect(mockQuery.mock.calls[1][0]).toContain('status = $2');
     });
 
     it('should update content with sanitization', async () => {
+      mockQuery.mockResolvedValueOnce({ rows: [{ id: 'art-1', content: 'Old' }] }); // before
       mockQuery.mockResolvedValueOnce({
         rows: [{ id: 'art-1', content: 'New content' }],
       });
@@ -372,7 +382,7 @@ describe('KnowledgeService', () => {
         content: 'New content',
       });
 
-      expect(mockQuery.mock.calls[0][0]).toContain('content = $1');
+      expect(mockQuery.mock.calls[1][0]).toContain('content = $1');
     });
 
     it('should throw BadRequestError if no fields to update', async () => {
@@ -390,6 +400,7 @@ describe('KnowledgeService', () => {
     });
 
     it('should update all supported fields', async () => {
+      mockQuery.mockResolvedValueOnce({ rows: [{ id: 'art-1' }] }); // before
       mockQuery.mockResolvedValueOnce({ rows: [{ id: 'art-1' }] });
 
       await knowledgeService.updateArticle(tenantSlug, 'art-1', {
@@ -405,7 +416,7 @@ describe('KnowledgeService', () => {
         keywords: ['new-keyword'],
       });
 
-      const query = mockQuery.mock.calls[0][0];
+      const query = mockQuery.mock.calls[1][0];
       expect(query).toContain('title = $1');
       expect(query).toContain('content = $2');
       expect(query).toContain('summary = $3');
@@ -432,6 +443,16 @@ describe('KnowledgeService', () => {
 
       expect(result).toEqual({ success: true });
       expect(mockQuery.mock.calls[0][0]).toContain('DELETE FROM tenant_test.kb_articles');
+    });
+
+    it('deletes the feedback and history rows with the article', async () => {
+      mockQuery.mockResolvedValueOnce({ rows: [{ article_number: 'KB000001' }] });
+
+      await knowledgeService.deleteArticle(tenantSlug, 'art-1');
+
+      const sql = mockQuery.mock.calls[0][0];
+      expect(sql).toContain('DELETE FROM tenant_test.kb_article_feedback');
+      expect(sql).toContain('DELETE FROM tenant_test.kb_article_history');
     });
 
     it('should throw NotFoundError if article not found', async () => {
@@ -530,6 +551,177 @@ describe('KnowledgeService', () => {
 
       expect(mockQuery.mock.calls[0][0]).toContain('view_count = view_count + 1');
       expect(mockQuery.mock.calls[0][1]).toEqual(['art-1']);
+    });
+  });
+
+  // ==================
+  // VERSION HISTORY WRITES
+  // ==================
+  describe('history entries on create and update', () => {
+    const historyCall = () =>
+      mockQuery.mock.calls.find((c) => String(c[0]).includes('INSERT INTO tenant_test.kb_article_history'))!;
+
+    it('records a created entry with version, author and snapshot', async () => {
+      mockQuery
+        .mockResolvedValueOnce({ rows: [{ current_value: 5 }] })
+        .mockResolvedValueOnce({
+          rows: [{ id: 'art-1', version: 1, title: 'New Article', content: 'Body', status: 'draft' }],
+        });
+
+      await knowledgeService.createArticle(tenantSlug, { title: 'New Article', content: 'Body', authorId: 'user-1' });
+
+      const [sql, params] = historyCall();
+      expect(sql).toContain("'created'");
+      expect(params.slice(0, 4)).toEqual(['art-1', 1, 'user-1', 'Body']);
+      expect(JSON.parse(params[4]).fields).toContain('title');
+    });
+
+    it('lists the linked problem and issue in the created entry', async () => {
+      const relatedProblemId = '7a1c2f4e-9b3d-4e58-8c11-2d6f5a9e0b34';
+      const relatedIssueId = 'c4e8a1b7-2f60-4d9a-b5c3-8e1f7a2d6c90';
+      mockQuery
+        .mockResolvedValueOnce({ rows: [{ current_value: 6 }] })
+        .mockResolvedValueOnce({
+          rows: [{
+            id: 'art-1',
+            version: 1,
+            title: 'Linked Article',
+            content: 'Body',
+            status: 'draft',
+            related_problem_id: relatedProblemId,
+            related_issue_id: relatedIssueId,
+          }],
+        });
+
+      await knowledgeService.createArticle(tenantSlug, {
+        title: 'Linked Article',
+        content: 'Body',
+        authorId: 'user-1',
+        relatedProblemId,
+        relatedIssueId,
+      });
+
+      const changes = JSON.parse(historyCall()[1][4]);
+      expect(changes.fields).toEqual(expect.arrayContaining(['relatedProblemId', 'relatedIssueId']));
+      expect(changes.values).toMatchObject({ relatedProblemId, relatedIssueId });
+    });
+
+    it('records an updated entry with the new version, the user and only the fields that changed', async () => {
+      mockQuery
+        .mockResolvedValueOnce({
+          rows: [{ id: 'art-1', title: 'Same title', content: 'Same body', summary: null, tags: ['a'], status: 'draft' }],
+        })
+        .mockResolvedValueOnce({
+          rows: [{ id: 'art-1', version: 2, title: 'Same title', content: 'Same body', summary: 'New', tags: ['a'], status: 'published' }],
+        });
+
+      // A client resubmitting the whole article: title, content and tags are unchanged
+      await knowledgeService.updateArticle(tenantSlug, 'art-1', {
+        title: 'Same title',
+        content: 'Same body',
+        summary: 'New',
+        tags: ['a'],
+        status: 'published',
+        updatedBy: 'user-2',
+      });
+
+      const [sql, params] = historyCall();
+      expect(sql).toContain("'updated'");
+      expect(params.slice(0, 3)).toEqual(['art-1', 2, 'user-2']);
+      const changes = JSON.parse(params[4]);
+      expect(changes.fields).toEqual(['summary', 'status']);
+      expect(changes.values).toEqual({
+        summary: { from: null, to: 'New' },
+        status: { from: 'draft', to: 'published' },
+      });
+    });
+
+    it('lists content as changed only when it differs', async () => {
+      mockQuery
+        .mockResolvedValueOnce({ rows: [{ id: 'art-1', title: 'T title', content: 'Old' }] })
+        .mockResolvedValueOnce({ rows: [{ id: 'art-1', version: 2, title: 'T title', content: 'New' }] });
+
+      await knowledgeService.updateArticle(tenantSlug, 'art-1', { content: 'New', updatedBy: 'user-2' });
+
+      expect(JSON.parse(historyCall()[1][4]).fields).toEqual(['content']);
+    });
+
+    it('increments the version in the UPDATE statement', async () => {
+      mockQuery
+        .mockResolvedValueOnce({ rows: [{ id: 'art-1', title: 'Old title' }] })
+        .mockResolvedValueOnce({ rows: [{ id: 'art-1', version: 2, title: 'New title' }] });
+
+      await knowledgeService.updateArticle(tenantSlug, 'art-1', { title: 'New title' });
+
+      const update = mockQuery.mock.calls.find((c) => String(c[0]).includes('UPDATE tenant_test.kb_articles'))!;
+      expect(update[0]).toContain('version = COALESCE(version, 1) + 1');
+    });
+  });
+
+  // ==================
+  // FEEDBACK
+  // ==================
+  describe('submitFeedback', () => {
+    const ART = '3f2b8f1e-5c1a-4d63-9a77-0d9f1c1b2a10';
+
+    it('upserts one vote per user and returns the recomputed counters', async () => {
+      mockQuery
+        .mockResolvedValueOnce({ rows: [{ status: 'published' }] })
+        .mockResolvedValueOnce({ rows: [{ id: 'f1', article_id: ART, user_id: 'u1', is_helpful: false, comment: 'meh' }] })
+        .mockResolvedValueOnce({ rows: [{ helpful_count: 2, not_helpful_count: 1 }] });
+
+      const result = await knowledgeService.submitFeedback(tenantSlug, ART, 'u1', false, 'meh');
+
+      const upsert = mockQuery.mock.calls[1];
+      expect(upsert[0]).toContain('ON CONFLICT (article_id, user_id)');
+      expect(upsert[1]).toEqual([ART, 'u1', false, 'meh']);
+      expect(mockQuery.mock.calls[2][0]).toContain('COUNT(*) FILTER (WHERE is_helpful)');
+      expect(result).toMatchObject({ is_helpful: false, helpful_count: 2, not_helpful_count: 1 });
+    });
+
+    it('throws NotFoundError when the article does not exist', async () => {
+      mockQuery.mockResolvedValueOnce({ rows: [] });
+      await expect(knowledgeService.submitFeedback(tenantSlug, ART, 'u1', true)).rejects.toThrow(NotFoundError);
+    });
+
+    it.each(['draft', 'archived'])('throws BadRequestError for a %s article without storing a vote', async (status) => {
+      mockQuery.mockResolvedValueOnce({ rows: [{ status }] });
+      await expect(knowledgeService.submitFeedback(tenantSlug, ART, 'u1', true)).rejects.toThrow(BadRequestError);
+      expect(mockQuery).toHaveBeenCalledTimes(1);
+    });
+
+    it.each(['abc', 'KB000001', ''])('throws NotFoundError for the non-UUID id %j without querying', async (id) => {
+      await expect(knowledgeService.submitFeedback(tenantSlug, id, 'u1', true)).rejects.toThrow(NotFoundError);
+      expect(mockQuery).not.toHaveBeenCalled();
+    });
+  });
+
+  // ==================
+  // HISTORY READ
+  // ==================
+  describe('getArticleHistory', () => {
+    const ART = '3f2b8f1e-5c1a-4d63-9a77-0d9f1c1b2a10';
+
+    it('returns the entries newest first', async () => {
+      mockQuery
+        .mockResolvedValueOnce({ rows: [{ '?column?': 1 }] })
+        .mockResolvedValueOnce({ rows: [{ version: 2 }, { version: 1 }] });
+
+      const result = await knowledgeService.getArticleHistory(tenantSlug, ART);
+
+      expect(mockQuery.mock.calls[1][0]).toContain('ORDER BY h.version DESC');
+      expect(mockQuery.mock.calls[1][1]).toEqual([ART]);
+      expect(result).toEqual([{ version: 2 }, { version: 1 }]);
+    });
+
+    it('throws NotFoundError when the article does not exist', async () => {
+      mockQuery.mockResolvedValueOnce({ rows: [] });
+      await expect(knowledgeService.getArticleHistory(tenantSlug, ART)).rejects.toThrow(NotFoundError);
+    });
+
+    it.each(['abc', 'KB000001'])('throws NotFoundError for the non-UUID id %j without querying', async (id) => {
+      await expect(knowledgeService.getArticleHistory(tenantSlug, id)).rejects.toThrow(NotFoundError);
+      expect(mockQuery).not.toHaveBeenCalled();
     });
   });
 });
